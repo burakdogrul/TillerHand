@@ -96,9 +96,19 @@ Dockerfile
 |---|---|---|
 | Claude hook'ları | Sır yazımını engeller; `.py` dosyasını Ruff ile biçimlendirir ve lint hatasını AI'ya geri bildirir | Hazır (`.claude/settings.json`). Node.js gerekir |
 | Pre-commit | Ruff + sır taraması, commit öncesi | `uvx pre-commit install` (bir kez) |
-| CI | Lint, format, migration, test, açık taraması, Docker build, gitleaks | `.github/workflows/ci.yml` hazır; GitHub'a push et |
+| CI (+ Semgrep, kopya kod) | Lint, format, migration, test, açık taraması, Docker build, gitleaks | `.github/workflows/ci.yml` hazır; GitHub'a push et |
 | Dependabot | Haftalık bağımlılık PR'ları | `.github/dependabot.yml` hazır |
 | MCP | Sentry'deki hataları okuma (`/bakim`) | `.mcp.json` hazır; ilk kullanımda Sentry'ye giriş yap |
+
+## Kabul testleri ve özellik bayrakları
+
+**Kabul testleri** (`docs/TEST-PLANI.md` §1a): Test fonksiyonunun adı kriter kimliğini taşır (`test_O_01_1_...`). Pano JUnit raporunu okur:
+
+```bash
+uv run pytest --junitxml=test-results/junit.xml
+```
+
+**Özellik bayrakları** (`docs/BAYRAKLAR.md`): Acil kapatma yeniden deploy gerektirmemeli. Veritabanında `feature_flags` tablosu (`ad`, `acik`, `yuzde`, `guncellendi`) + süreç içinde 60 sn önbellek. Okuma tek bir yerden yapılır: `app/services/bayrak.py` → `bayrak_acik("ad", kullanici_id)`. Bayrağı değiştirmek bir admin ucu veya SQL ile yapılır ve loglanır.
 
 ## Sık yapılan AI hataları (bunlara dikkat)
 

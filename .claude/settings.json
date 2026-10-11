@@ -13,7 +13,11 @@
       "Bash(node .claude/hooks/commit-kapisi.mjs --onayla:*)"
     ],
     "ask": [
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Edit(./CLAUDE.md)",
+      "Edit(./.claude/**)",
+      "Edit(./.mcp.json)",
+      "Edit(./.github/workflows/**)"
     ],
     "deny": [
       "Read(./.env)",
@@ -57,6 +61,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/yikici-kalkan.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/paket-kapisi.mjs\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-kapisi.mjs\""
           }
         ]
@@ -69,6 +82,16 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/durum-panosu.mjs\" --sessiz",
             "timeout": 20
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/hatirlatma.mjs\""
           }
         ]
       }

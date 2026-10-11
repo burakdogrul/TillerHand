@@ -5,7 +5,7 @@ argument-hint: [proje fikri, 1-3 cümle]
 
 Fikir: $ARGUMENTS
 
-Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gibi davran: Her kararı `docs/KARAR-PROTOKOLU.md`'ye göre sor (AskUserQuestion, önerilen seçenek ilk sırada, her seçeneğin ne zaman daha iyi olduğu açıklamalı). Kendi kafana göre karar verme. Bu oturumda uygulama kodu yazma.
+Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gibi davran: Her kararı `docs/KARAR-PROTOKOLU.md`'ye göre sor (AskUserQuestion, önerilen seçenek ilk sırada, her seçeneğin ne zaman daha iyi olduğu açıklamalı). Kendi kafana göre karar verme. Bu oturumda uygulama kodu yazma. Her kararı tek yönlü / çift yönlü kapı olarak sınıfla (`docs/KARAR-PROTOKOLU.md` §2a); veritabanı, auth, ödeme ve veri modeli gibi tek yönlü kararlarda önce kurul görüşü al.
 
 **Devam etme:** `docs/ILERLEME.md` → `**Başlangıç adımı:**` 0'dan büyükse kaldığın adımdan devam et ve bunu kullanıcıya söyle. Her adım bitince bu satırı (`N/9`) ve `**Son güncelleme:**` satırını güncelle; sonra durum bloğunu yaz.
 
@@ -78,7 +78,8 @@ Bütün kararlar bitince:
 `mattpocock-skills:domain-modeling` ve `mattpocock-skills:codebase-design` ile:
 1. **Veri modeli:** Tablo/varlık taslağını göster. Belirsiz noktaları karar olarak sor: ilişki türü, silme davranışı (kalıcı / çöp kutusu), kişisel veri alanları, saklama süresi.
 2. **Kimlik ve yetki:** Giriş yöntemleri (e-posta + şifre, magic link, Google, Apple) ve roller. Çoklu seçimle sor.
-3. **Dış servisler:** Aylık maliyet tahminiyle tablo; ücretli olan her servis için onay al.
+3. **Dış servisler:** Aylık maliyet tahminiyle tablo; ücretli olan her servis için onay al. Her servisi `docs/HESAPLAR.md`'ye ekle (sahip, 2FA, bitiş tarihi; şifre yazma).
+3b. **Birim ekonomisi** (ücretli ürünse): `docs/BIRIM-EKONOMISI.md` girdilerini fiyat, komisyon, sabit ve kullanıcı başı maliyet tahminleriyle doldur. Katkı payı negatif veya değişken maliyet fiyatın %30'unu geçiyorsa bunu `maliyet` kararı olarak sor (fiyat / kullanım limiti / model seçimi).
 4. **Ortamlar:** Lokal / önizleme / prod ayrımı.
 5. `docs/SOZLUK.md`: Ana kavramlar, arayüz adları ve durum geçişleri. Arayüzde "sen" mi "siz" mi kullanılacağını sor.
 
@@ -100,7 +101,7 @@ AI eki kurulduysa `docs/AI.md` → model envanterini doldur: Hangi özellik hang
 
 ## Adım 8: Yol haritası → `docs/YOL-HARITASI.md`
 
-1. MVP özelliklerini tek oturumluk görevlere böl; Faz 0'daki kurulum görevlerini koru.
+1. MVP özelliklerini tek oturumluk görevlere böl; Faz 0'daki kurulum görevlerini koru. Her özelliğin ilk görevi "kabul testlerini yaz (kırmızı)" olsun (`docs/TEST-PLANI.md` §1a). Ödeme, AI, toplu bildirim ve veri silen özellikler için bayrak görevi ekle (`docs/BAYRAKLAR.md`).
 2. Sor: "Faz 1'de önce hangi özellikle başlayalım?" (öneri: en riskli veya en değerli olan).
 3. Sor: "Lansman hedefi ne?" (tarih / özellik tamamlanınca / sadece kişisel kullanım). Kişisel kullanımsa `docs/LANSMAN.md`'yi silmeyi öner.
 4. Yol haritasını özetle ve onay al.

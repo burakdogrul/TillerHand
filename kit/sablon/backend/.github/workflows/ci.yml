@@ -36,6 +36,22 @@ jobs:
         if: hashFiles('Dockerfile') != ''
         run: docker build -t app-ci .
 
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Statik güvenlik analizi (yüksek önemli bulgular CI'ı durdurur)
+        run: semgrep scan --config p/default --config p/owasp-top-ten --severity ERROR --error
+
+  kopya-kod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kopya kod oranı (eşik %5)
+        run: npx --yes jscpd@4 --threshold 5 --silent --ignore "**/node_modules/**,**/.next/**,**/dist/**,**/build/**,**/.venv/**,**/coverage/**,**/.expo/**" .
+
   sir-taramasi:
     runs-on: ubuntu-latest
     steps:

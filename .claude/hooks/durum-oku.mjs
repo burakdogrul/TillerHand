@@ -59,8 +59,10 @@ export function durumOku(kok) {
     }));
   const gorev = fazlar.reduce((a, f) => ({ bitti: a.bitti + f.bitti, toplam: a.toplam + f.toplam }), { bitti: 0, toplam: 0 });
 
+  // 8 sütun (Kapı ile, kit 2.3+) veya eski 7 sütun
   const kararlar = tabloSatirlari(bolumler(oku(d('docs/KARARLAR.md')))['Karar günlüğü'], 7)
-    .map(([no, tarih, asama, konu, soru, secilen, veren]) => ({ no, tarih, asama, konu, soru, secilen, veren }));
+    .map((c) => (c.length >= 8 ? c : [...c.slice(0, 6), '', c[6]]))
+    .map(([no, tarih, asama, konu, soru, secilen, kapi, veren]) => ({ no, tarih, asama, konu, soru, secilen, kapi, veren }));
 
   const listeler = [
     ['Güvenlik', 'docs/GUVENLIK.md'], ['Canlıya alma', 'docs/CANLIYA-ALMA.md'], ['Yasal / KVKK', 'docs/YASAL-KVKK.md'],

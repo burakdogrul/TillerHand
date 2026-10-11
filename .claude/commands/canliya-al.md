@@ -12,8 +12,11 @@ Kaynak listeler: `docs/CANLIYA-ALMA.md`, `docs/STACK.md` → "Canlıya alma", `d
    - `ilk` modunda paralel başlat: `guvenlik-denetcisi` alt ajanı (tüm kod tabanı; kurul toplantısına zaten katılıyorsa tekrar çalıştırma), `security-review` skill'i, `ponytail:ponytail-audit` (kalite, yük altında kırılacak yerler); arayüz varsa `impeccable:impeccable` → `audit` (erişilebilirlik, performans, responsive)
    - Son CI çalışmasının durumu (`gh run list --branch main --limit 1`, gh kuruluysa)
    - Lint, tip kontrolü, testler, build (`CLAUDE.md` → Komutlar)
-   - Bağımlılık açık taraması
-   - Sır taraması (`docs/GUVENLIK.md` §8)
+   - Bağımlılık açık taraması ve Semgrep (`docs/GUVENLIK.md` §9)
+   - Kabul testleri: MVP kriterlerinin tamamı yeşil mi (JUnit raporu)? Saldırgan testleri var mı?
+   - `docs/HESAPLAR.md` eksiksiz mi, 30 gün içinde dolan tarih var mı? `docs/BAYRAKLAR.md`'de riskli özellikler bayrakta mı?
+   - `docs/BIRIM-EKONOMISI.md`: katkı payı pozitif mi?
+   - Sır taraması (`docs/GUVENLIK.md` §9)
    - Kodda kalan `console.log` / `print` / `debugger` / `TODO` / test verisi
    - `.env.example` ile koddaki ortam değişkeni kullanımları uyumlu mu?
    - Commit edilmemiş değişiklik var mı?

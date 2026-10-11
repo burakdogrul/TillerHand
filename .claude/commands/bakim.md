@@ -15,7 +15,8 @@ Kaynak: `docs/BAKIM.md` ilgili bölüm + `docs/STACK.md` → "Bakım". `aylik` h
    - `docs/ILERLEME.md` ve `docs/MIMARI.md` kodla uyumlu mu?
    - Açık Dependabot PR'ları (`gh pr list --author app/dependabot`, gh kuruluysa): CI yeşil olanları merge için öner
    - MCP bağlıysa kendin bak: Sentry'de son dönemin yeni/artan hataları, Supabase'de güvenlik ve performans uyarıları (salt-okunur)
-   - `aylik`: `ponytail:ponytail-debt` ile ertelenmiş kısa yollar listesi
+   - `aylik`: `ponytail:ponytail-debt` ile ertelenmiş kısa yollar listesi; `npx --yes jscpd@4 --silent .` ile kopya kod oranı; `docs/METRIKLER.md`'ye dönem satırı (tanımlar dosyada); `docs/BIRIM-EKONOMISI.md` gerçek faturalarla; süresi geçen bayraklar; işlenmemiş geri bildirimler (`/geri-bildirim`)
+   - Her türde: `docs/HESAPLAR.md`'de 30 gün içinde dolan tarihler
    - `ceyreklik`: `ponytail:ponytail-audit` ve `guvenlik-denetcisi` ajanı ile tam denetim
 2. **Erişemediğin maddeleri** (uptime, maliyet panelleri, yedekler, sertifika/kart bitiş tarihleri) AskUserQuestion ile sor (Sorun yok / Sorun var / Bakamadım); cevaplarımı bekle.
 3. Güncellemeler için öneri ver: güvenli olanlar (yama/küçük sürüm) ve riskli olanlar (majör) ayrı. Hangilerinin uygulanacağını **çoklu seçimle** sor. Onaysız güncelleme yapma.

@@ -27,12 +27,13 @@
 ## 5. MVP kapsamı
 
 Her özellik bir kullanıcı hikayesi + kabul kriterleri. Kabul kriteri yoksa özellik hazır değildir.
+Her kriterin bir kimliği var (`Ö-01.1`). Kabul testleri bu kimliği test adında taşır; `/durum` panosu MVP ilerlemesini kutucuklardan değil **test sonuçlarından** okur (`docs/TEST-PLANI.md` §1a).
 
 ### Ö-01: [Özellik adı]
 **Hikaye:** [Kullanıcı] olarak [eylem] yapmak istiyorum, böylece [fayda].
 **Kabul kriterleri:**
-- [ ] [Gözlemlenebilir davranış: "Geçersiz e-posta girilince form gönderilmez ve hata mesajı gösterilir"]
-- [ ] [...]
+- [ ] Ö-01.1: [Gözlemlenebilir davranış: "Geçersiz e-posta girilince form gönderilmez ve hata mesajı gösterilir"]
+- [ ] Ö-01.2: [...]
 **Öncelik:** Olmazsa olmaz / Olsa iyi olur
 
 ### Ö-02: [Özellik adı]

@@ -22,6 +22,8 @@ Sen bu projenin uzman kurulunda **Test ve Kalite Uzmanı** üyesisin. Yapılan i
 - Hata düzeltmelerinde regresyon testi
 - Gösterilen kanıt (`docs/STACK.md` → Doğrulama) iddiayı destekliyor mu?
 - Kırılgan (flaky) test riski: zaman, sıra, ağ bağımlılığı
+- Kabul testleri: Her kabul kriterinin (Ö-01.1...) kimliğini taşıyan bir testi var mı, koddan önce mi yazıldı? PRD'de işaretli ama testi olmayan kriter KRİTİK'tir
+- Bayraklı özelliklerde bayrak kapalıyken de test var mı?
 
 ## Kaynakların
 

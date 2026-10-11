@@ -5,6 +5,41 @@ Kit sürümü `kit/SURUM` dosyasında. Bir projeyi güncellemek: projede `/kit-g
 
 ## [Yayınlanmamış]
 
+## [2.3.0] - 2026-10-11
+
+Araştırmaya dayalı 15 öneri.
+
+### Eklendi
+- **Güvenlik:**
+  - **Paket kapısı** (`paket-kapisi.mjs`): AI'nın kurmak istediği paket kurulumdan önce kayıt defterinden doğrulanır. Var olmayan paket engellenir. Çok yeni, az indirilmiş veya popüler bir pakete çok benzeyen paket için kullanıcıya sorulur (slopsquatting'e karşı).
+  - **Yıkıcı komut kalkanı** (`yikici-kalkan.mjs`): `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset`, volume silme, `git clean` engellenir. Prod deploy, ana dala push ve uzak veritabanı bağlantısı için kullanıcıya sorulur. Karar Claude Code'un izin katmanında verilir; AI kendisi atlayamaz.
+  - **Ajan yapılandırması koruması:** `CLAUDE.md`, `.claude/`, `.mcp.json` ve `.github/workflows/` düzenlemeleri kullanıcı onayı gerektirir. GUVENLIK.md'ye "AI ajanı güvenliği" bölümü eklendi.
+  - **CI'da Semgrep** ve TEST-PLANI'nda saldırgan testleri (IDOR, oturumsuz erişim, rol aşımı, XSS, girdi sınırı, log enjeksiyonu).
+- **Kalite:**
+  - **Kabul testleri yaşayan şartname oldu:** PRD kriterlerinin kimliği var (`Ö-01.1`), testler koddan önce kırmızı yazılır. Pano JUnit raporunu okur ve "işaretli ama testi yok/kırmızı" uyumsuzluğunu yakalar.
+  - **CI'da kopya kod denetimi** (jscpd, eşik %5).
+  - **Bağlam sağlığı:** Durum çubuğunda bağlam doluluğu gösterilir. Bir UserPromptSubmit hook'u 12 mesajda bir temel kuralları hatırlatır ve %50/%70 eşiklerinde `/clear` önerir.
+  - **`docs/METRIKLER.md`:** Görev süresi, düzeltme oranı, geri alma, kopya kod, kabul oranı aylık olarak kaydedilir; retro bu verilerle yapılır.
+- **Operasyon:**
+  - **Canlı izleme iş akışı** (web, backend): Kritik akışlar saatlik denenir, bozulursa issue açılır.
+  - **Bulut ajanları** (`claude-code-action`): CI kırmızıysa PR dalına düzeltme (döngü ve fork koruması ile) ve haftalık bakım issue'su. Değişkenle açılırlar.
+  - **`docs/HESAPLAR.md`:** Servis, sahip, 2FA ve bitiş tarihleri; pano 30 gün içinde dolanları uyarır.
+  - **`docs/BAYRAKLAR.md` ve STACK'lerde bayrak yöntemi:** Acil kapatma deploy gerektirmez.
+- **Ürün:**
+  - **Tek yönlü / çift yönlü kapı:** Karar günlüğüne "Kapı" sütunu eklendi. Tek yönlü kararlarda kurul görüşü ve ayrıntılı kayıt zorunlu.
+  - **`docs/BIRIM-EKONOMISI.md`:** Pano katkı payını, başa baş noktasını ve hedefteki kâr/zararı hesaplar.
+  - **`/geri-bildirim` komutu ve `docs/GERI-BILDIRIM.md`:** Gelen kutusu, temalar ve yol haritasına aktarma.
+- **DURUM panosu:**
+  - Yeni "Operasyon" sekmesi: hesaplar, bayraklar, GitHub (CI, açık PR'lar, canlı izleme; gh varsa 5 dk önbellekle).
+  - Kabul testi tablosu, metrik eğilimi, birim ekonomisi, geri bildirim, bağlam kartı, karar kapı filtresi.
+  - "Dikkat" listesi önem sırasına dizilir; ilk 6 madde gösterilir, kalanı açılır.
+
+### Değişti
+- **`docs/KARARLAR.md` karar günlüğü 8 sütun oldu (Kapı).** Pano eski 7 sütunlu tabloyu da okur. *(Elle uyarla: KARARLAR.md tablo başlığı)*
+- **`docs/MALIYET-GUNLUGU.md`'ye "Süre (dk)" sütunu eklendi.** *(Elle uyarla)*
+- **`docs/PRD.md` kabul kriterlerine kimlik eklendi.** *(Elle uyarla)*
+- **Komutlar güncellendi:** `/baslat`, `/planla`, `/gelistir`, `/bakim`, `/retro`, `/canliya-al` ve `/oturum-sonu` yeni kuralları uygular.
+
 ## [2.2.0] - 2026-10-11
 
 ### Değişti

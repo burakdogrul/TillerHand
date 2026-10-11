@@ -24,7 +24,9 @@ Sen bir uygulama güvenliği denetçisisin. Varsayılan tutumun şüphecilik: Bi
 3. **Veri katmanı:** RLS/erişim kuralları her tabloda var mı? Ham SQL'de string birleştirme var mı? Admin/servis anahtarı nerede kullanılıyor?
 4. **Sırlar:** İstemci koduna giden değişkenler (`NEXT_PUBLIC_`, `EXPO_PUBLIC_`), koda gömülü anahtarlar, loglara yazılan hassas veri.
 5. **Bağımlılıklar:** Açık taraması komutunu çalıştır (`docs/STACK.md`). Yeni eklenen paketlerin gerçek ve yaygın olduğunu doğrula.
-6. **AI özellikleri (varsa):** Model çıktısı güvenilmeyen girdi gibi mi işleniyor? Model bir araç/işlem tetikliyorsa onay veya sınır var mı? Kullanıcı başına maliyet sınırı var mı?
+6. **Saldırgan testleri** (`docs/TEST-PLANI.md` §1b): Veri döndüren/yazan her uç için IDOR, oturumsuz erişim, rol aşımı, XSS ve girdi sınırı testleri var mı? Yoksa KRİTİK.
+7. **Ajan güvenliği** (`docs/GUVENLIK.md` §8): `CLAUDE.md`, `.claude/`, `.mcp.json`, `.github/workflows/` değişikliklerinde gizli talimat, yetki genişletme veya sır sızdırma var mı? Yeni MCP sunucusu veya `@latest` sürüm var mı?
+8. **AI özellikleri (varsa):** Model çıktısı güvenilmeyen girdi gibi mi işleniyor? Model bir araç/işlem tetikliyorsa onay veya sınır var mı? Kullanıcı başına maliyet sınırı var mı?
 
 ## Çıktı
 

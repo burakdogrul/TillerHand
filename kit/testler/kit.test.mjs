@@ -118,11 +118,13 @@ test('durum çubuğu ve pano: kurulum öncesi ve sonrası', () => {
   const ilerleme = path.join(p, 'docs/ILERLEME.md');
   yaz(ilerleme, oku(ilerleme).replace(/^\*\*Aktif faz:\*\* .*$/m, '**Aktif faz:** Faz 1').replace(/^\*\*Soru modu:\*\* .*$/m, '**Soru modu:** açık · kapalı konular: tasarim'));
   const kararlar = path.join(p, 'docs/KARARLAR.md');
-  yaz(kararlar, oku(kararlar).replace('|---|---|---|---|---|---|---|\n', '|---|---|---|---|---|---|---|\n| 1 | 2026-01-01 | Başlangıç | teknik | Framework? | Next.js | kullanıcı |\n'));
+  const ayirici = '|---|---|---|---|---|---|---|---|\n';
+  assert.ok(oku(kararlar).includes(ayirici), 'karar günlüğü 8 sütun');
+  yaz(kararlar, oku(kararlar).replace(ayirici, ayirici + '| 1 | 2026-01-01 | Başlangıç | teknik | Framework? | Next.js | tek | kullanıcı |\n'));
   assert.match(durumCubugu(p), /▶ Faz 1 · .* · görev 0\/\d+ · soru: açık \(kapalı: tasarim\)/);
   const r = node(path.join(p, '.claude/hooks/durum-panosu.mjs'), p);
   assert.equal(r.status, 0, r.stderr);
   const html = oku(path.join(p, 'DURUM.html'));
   assert.ok(html.includes('Next.js') && html.includes('step now'), 'pano kararı ve aktif aşamayı gösteriyor');
-  assert.ok(html.includes('Dikkat gerektirenler') && (html.match(/role="tab"/g) ?? []).length === 8, 'pano: dikkat alanı ve 8 sekme');
+  assert.ok(html.includes('Dikkat gerektirenler') && (html.match(/role="tab"/g) ?? []).length === 9, 'pano: dikkat alanı ve 9 sekme');
 });

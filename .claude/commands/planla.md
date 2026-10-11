@@ -11,6 +11,8 @@ Bu adımda **kod yazma**, sadece plan çıkar.
 1. Gerekli bağlamı oku: `docs/YOL-HARITASI.md` (görev ve kabul kriteri), `docs/PRD.md` (ilgili özellik), `docs/MIMARI.md`, `docs/KARARLAR.md`. Görevin dokunacağı mevcut kodu oku.
 2. Projede benzer bir şey zaten var mı bak. Varsa onu yeniden kullan.
 3. **Karar noktalarını çıkar ve sor.** Bu görevde kullanıcının vermesi gereken kararları listele: kütüphane, kullanıcı akışı, veri alanı, hata davranışı, metin, tasarım vb. (`docs/KARAR-PROTOKOLU.md`). Daha önce verilmiş olanları `docs/KARARLAR.md`'den al, tekrar sorma. Kalanları AskUserQuestion ile sor. Büyük bir özellikse önce `mattpocock-skills:grilling` ile kapsamı sorgula. Modül sınırları belirsizse `mattpocock-skills:codebase-design` kullan.
+3b. **Kapı sınıfı:** Plandaki her kararı tek yönlü / çift yönlü olarak işaretle; tek yönlüler için kurul görüşü ve ayrıntılı kayıt zorunlu.
+3c. **Bayrak gerekiyor mu?** Ödeme, AI, toplu e-posta/bildirim, veri silme/taşıma veya büyük arayüz değişikliği içeriyorsa evet (`docs/BAYRAKLAR.md`).
 4. Planı şu biçimde yaz:
 
 ```
@@ -22,7 +24,10 @@ Bu adımda **kod yazma**, sadece plan çıkar.
 **Adımlar:** [numaralı, her biri doğrulanabilir]
 **Veri modeli / API değişikliği:** [varsa; migration gerekiyor mu?]
 **Yeni bağımlılık:** [varsa paket adı + neden + yerleşik alternatif neden yetmiyor]
-**Testler:** [hangi test eklenecek; kritik akış mı? → docs/TEST-PLANI.md]
+**Kabul testleri:** [hangi kriter kimlikleri (Ö-01.1...), test dosyası; koddan ÖNCE yazılır ve kırmızı olur]
+**Saldırgan testleri:** [veri döndüren/yazan uç varsa: IDOR, oturumsuz, rol, XSS, girdi sınırı]
+**Bayrak:** [gerekmiyor / bayrak adı + acil kapatma yolu]
+**Testler:** [diğer testler; kritik akış mı? → docs/TEST-PLANI.md]
 **Güvenlik/yasal etkisi:** [yetki, kişisel veri, sır, ödeme etkisi var mı?]
 **Riskler ve açık sorular:** [...]
 **Kapsam dışı bıraktıklarım:** [...]

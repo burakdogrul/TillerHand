@@ -8,6 +8,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { durumOku, oku, bolumler, bolumBul, sayac, tabloSatirlari } from './durum-oku.mjs';
 import { limitOku, ozet, seviye, ESIKLER } from './limit.mjs';
+import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku } from './pano-veri.mjs';
 
 const argumanlar = process.argv.slice(2);
 const sessiz = argumanlar.includes('--sessiz');
@@ -75,6 +76,15 @@ try {
   }).sort((x, y) => x.ad.localeCompare(y.ad));
 } catch { /* önizleme yok */ }
 
+const kabul = kabulDurumu(kok);
+const hesapListesi = hesaplar(oku(dosya('docs/HESAPLAR.md')));
+const bayrakListesi = bayraklar(oku(dosya('docs/BAYRAKLAR.md')));
+const ekonomi = birimEkonomisi(oku(dosya('docs/BIRIM-EKONOMISI.md')));
+const gb = geriBildirim(oku(dosya('docs/GERI-BILDIRIM.md')));
+const metrikKayitlari = metrikler(oku(dosya('docs/METRIKLER.md')));
+const github = d.kurulu ? ghDurumu(kok) : null;
+const baglam = baglamOku(kok);
+
 // Dikkat gerektirenler
 const dikkat = [];
 const ekle = (sev, metin, eylem = '') => dikkat.push({ sev, metin, eylem });
@@ -94,6 +104,23 @@ if (git?.ilerlemeEski >= 3) ekle('bilgi', `ILERLEME.md ${git.ilerlemeEski} commi
 const kapali = (a['Soru modu'] ?? '').match(/kapalı konular:\s*(.+)$/i)?.[1];
 if (kapali && !/^yok$/i.test(kapali)) ekle('bilgi', `Soru modu kapalı konular: ${kapali}. Bu konulardaki kararlar otomatik veriliyor.`, '/soru ac <konu>');
 if (d.kurulu && d.kurul.durum === 'kurulmadı' && !/başlangıç/i.test(a['Aktif faz'] ?? '')) ekle('bilgi', 'Uzman kurulu kurulmadı.', '/kurul kur');
+if (github?.canliIzleme?.length) ekle('kritik', `Canlı izleme: ${github.canliIzleme[0].title}`, 'Operasyon sekmesi → issue');
+const sonMain = github?.calismalar?.find((c) => /^(main|master)$/.test(c.headBranch) && c.workflowName === 'CI');
+if (sonMain?.conclusion === 'failure') ekle('uyari', 'main dalında son CI çalışması başarısız.', 'Operasyon sekmesi');
+for (const h of hesapListesi) for (const t of h.tarihler) {
+  if (t.kalan < 0) ekle('kritik', `${h.servis}: ${t.tur} tarihi geçti (${t.tarih}).`, 'docs/HESAPLAR.md');
+  else if (t.kalan <= 30) ekle('uyari', `${h.servis}: ${t.tur} ${t.kalan} gün sonra (${t.tarih}).`, 'Yenile veya otomatik yenilemeyi aç');
+}
+for (const h of hesapListesi.filter((x) => x.ikiFaYok)) ekle('uyari', `${h.servis} hesabında 2FA yok.`, 'docs/HESAPLAR.md');
+if (ekonomi && ekonomi.katki < 0) ekle('kritik', `Birim ekonomisi negatif: her ödeyen kullanıcı ${Math.abs(ekonomi.katki).toFixed(1)} ${ekonomi.paraBirimi} zarar ettiriyor.`, 'Fiyat veya maliyet kararı (/planla)');
+for (const k of kabul.uyumsuz.slice(0, 3)) ekle('uyari', `${k.id} PRD'de tamam işaretli ama kabul testi ${k.sonuc === 'kaldi' ? 'kırmızı' : k.test ? 'sonuçsuz' : 'yok'}.`, 'Testi çalıştır veya işareti kaldır');
+const geciken = bayrakListesi.filter((b) => b.gecikti);
+if (geciken.length) ekle('bilgi', `Kaldırma tarihi geçen ${geciken.length} bayrak: ${geciken.map((b) => b.ad).join(', ')}.`, 'Bayrağı ve eski kod yolunu kaldır');
+if (gb.yeni) ekle('bilgi', `${gb.yeni} işlenmemiş kullanıcı geri bildirimi var.`, '/geri-bildirim');
+if (baglam?.yuzde >= 70 && Date.now() - baglam.okundu < 3600e3) ekle('uyari', `Bağlam %${baglam.yuzde} dolu; yanıt kalitesi düşebilir.`, '/oturum-sonu ve /clear');
+// Önem sırası: kritik > uyarı > bilgi (aynı önemde eklenme sırası korunur)
+const ONEM = { kritik: 0, uyari: 1, bilgi: 2 };
+dikkat.sort((x, y) => ONEM[x.sev] - ONEM[y.sev]);
 const saglik = dikkat.some((x) => x.sev === 'kritik') ? 'kritik' : dikkat.some((x) => x.sev === 'uyari') ? 'uyari' : 'iyi';
 
 // Aktivite: son 14 gün commit sayısı ve birleşik akış
@@ -134,6 +161,7 @@ const tarihYaz = (t) => { const z = new Date(t); return Number.isNaN(z.getTime()
 const limitSev = (p, k) => (p == null ? 'bilgi' : p >= ESIKLER[k].kirmizi ? 'kritik' : p >= ESIKLER[k].sari ? 'uyari' : 'iyi');
 const KONULAR = ['urun', 'teknik', 'tasarim', 'icerik', 'veri', 'guvenlik', 'maliyet'];
 
+const dikkatSatiri = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${SEV[x.sev][1]}: </span>${md(x.metin)}</span>${x.eylem ? `<span class="eylem">→ ${md(x.eylem)}</span>` : ''}</li>`;
 const kutu = (etiket, deger, alt = '', bar = '') => `<div class="kpi"><div class="kpi-l">${e(etiket)}</div><div class="kpi-v">${deger}</div>${bar}<div class="kpi-s">${alt}</div></div>`;
 
 // ---------- bölümler ----------
@@ -161,9 +189,9 @@ const yolHaritasi = d.fazlar.length ? d.fazlar.map((f) => `
 </details>`).join('') : bos('Yol haritası henüz yok. `/baslat` Adım 8\'de oluşur.');
 
 const kararTablosu = d.kararlar.length ? `
-<div class="filters" role="group" aria-label="Konu filtresi"><button class="chip on" data-k="hepsi">Hepsi (${d.kararlar.length})</button>${KONULAR.filter((k) => d.kararlar.some((x) => x.konu === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.kararlar.filter((x) => x.konu === k).length})</button>`).join('')}<button class="chip" data-k="otomatik">otomatik (${otomatikKarar})</button></div>
-<div class="tw"><table id="kararlar"><thead><tr><th>#</th><th>Tarih</th><th>Aşama</th><th>Konu</th><th>Soru</th><th>Seçilen</th><th>Veren</th></tr></thead><tbody>
-${[...d.kararlar].reverse().map((k) => `<tr data-k="${e(k.konu)}" data-v="${/otomatik/i.test(k.veren) ? 'otomatik' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.tarih)}</td><td>${e(k.asama)}</td><td><span class="tag">${e(k.konu)}</span></td><td>${md(k.soru)}</td><td><b>${md(k.secilen)}</b></td><td>${/otomatik/i.test(k.veren) ? rozet('uyari', 'otomatik') : rozet('iyi', 'kullanıcı')}</td></tr>`).join('')}
+<div class="filters" role="group" aria-label="Konu filtresi"><button class="chip on" data-k="hepsi">Hepsi (${d.kararlar.length})</button>${KONULAR.filter((k) => d.kararlar.some((x) => x.konu === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.kararlar.filter((x) => x.konu === k).length})</button>`).join('')}<button class="chip" data-k="otomatik">otomatik (${otomatikKarar})</button><button class="chip" data-k="tek">tek yönlü (${d.kararlar.filter((k) => /^tek/i.test(k.kapi)).length})</button></div>
+<div class="tw"><table id="kararlar"><thead><tr><th>#</th><th>Tarih</th><th>Aşama</th><th>Konu</th><th>Soru</th><th>Seçilen</th><th>Kapı</th><th>Veren</th></tr></thead><tbody>
+${[...d.kararlar].reverse().map((k) => `<tr data-k="${e(k.konu)}" data-v="${/otomatik/i.test(k.veren) ? 'otomatik' : ''}" data-kapi="${/^tek/i.test(k.kapi) ? 'tek' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.tarih)}</td><td>${e(k.asama)}</td><td><span class="tag">${e(k.konu)}</span></td><td>${md(k.soru)}</td><td><b>${md(k.secilen)}</b></td><td>${/^tek/i.test(k.kapi) ? rozet('uyari', 'tek yönlü') : k.kapi ? `<span class="muted small">${e(k.kapi)}</span>` : ''}</td><td>${/otomatik/i.test(k.veren) ? rozet('uyari', 'otomatik') : rozet('iyi', 'kullanıcı')}</td></tr>`).join('')}
 </tbody></table></div>` : bos('Henüz karar verilmedi. Kararlar `/baslat` ile başlar.');
 
 const kurulBolumu = `
@@ -184,6 +212,8 @@ const kalite = `
     ${Object.keys(turSayim).length ? `<div class="rows">${Object.entries(turSayim).sort((x, y) => y[1] - x[1]).map(([t, n]) => `<div class="row"><span><code>${e(t)}</code></span>${cubuk(n, son30.length)}<span class="num muted">${n}</span></div>`).join('')}</div>` : ''}
     <p class="muted small">Yüksek düzeltme oranı, yeni özelliklerin sık bozulduğunu gösterebilir; retroda konuşulmalı.</p></section>
 </div>
+<section class="card"><h3>Kabul testleri</h3>${kabul.toplam ? `<div class="kpis mini">${kutu('Kriter', kabul.toplam)}${kutu('Testi olan', `${kabul.testli}/${kabul.toplam}`, '', cubuk(kabul.testli, kabul.toplam))}${kutu('Geçen', `${kabul.gecen}/${kabul.toplam}`, kabul.raporZamani ? `rapor: ${new Date(kabul.raporZamani).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'JUnit raporu yok', cubuk(kabul.gecen, kabul.toplam, 'iyi'))}</div>` : bos('PRD\'de kimlikli kabul kriteri yok (`Ö-01.1` biçimi).')}</section>
+<section class="card"><h3>Metrikler · aylık</h3>${metrikKayitlari.length ? `<div class="tw"><table><thead><tr><th>Dönem</th><th>Görev</th><th>Ort. süre (dk)</th><th>Ort. limit</th><th>Düzeltme</th><th>Geri alma</th><th>Kopya kod</th><th>Açık kritik</th><th>Kabul</th></tr></thead><tbody>${[...metrikKayitlari].reverse().slice(0, 8).map((m) => `<tr><td class="nw">${e(m.donem)}</td><td class="num">${e(m.gorev)}</td><td class="num">${e(m.sure)}</td><td class="num">${e(m.limit)}</td><td class="num">${e(m.duzeltme)}</td><td class="num">${e(m.geriAlma)}</td><td class="num">${e(m.kopya)}</td><td class="num">${e(m.kritik)}</td><td class="num">${e(m.kabul)}</td></tr>`).join('')}</tbody></table></div>` : bos('Henüz metrik kaydı yok. `/bakim aylik` ve `/retro` ekler.')}</section>
 <section class="card"><h3>Kritik akış testleri</h3>${kritikAkislar.length ? `<div class="tw"><table><thead><tr><th>#</th><th>Akış</th><th>Test türü</th><th>Dosya</th><th>Durum</th></tr></thead><tbody>${kritikAkislar.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(k.akis)}</td><td>${e(k.tur)}</td><td>${md(k.dosyaAdi)}</td><td>${/✅|yeşil|var/i.test(k.durum) ? rozet('iyi', 'var') : rozet('uyari', 'yok')}</td></tr>`).join('')}</tbody></table></div>` : bos('Test planı yok.')}</section>
 <section class="card"><h3>Bakım kaydı</h3>${bakim.length ? `<ul class="feed compact">${[...bakim].reverse().slice(0, 8).map((b) => akisSatiri({ zaman: b.tarih, tur: 'bakım', baslik: `${b.tur}: ${b.bulgu}`, ek: b.yapilan })).join('')}</ul>` : bos('Henüz bakım yapılmadı.', '/bakim haftalik')}
 ${sonRetro ? `<p class="muted small">Son retro: ${e(sonRetro)}</p>` : ''}</section>`;
@@ -203,12 +233,17 @@ const urun = `
     <h4>Problem</h4>${ilkCumle(bolumBul(prd, '1. Problem')) ? `<p>${md(ilkCumle(bolumBul(prd, '1. Problem')))}</p>` : bos('PRD henüz yazılmadı.', '/baslat')}
     <h4>Değer önerisi</h4>${ilkCumle(bolumBul(prd, '3. Değer')) ? `<p>${md(ilkCumle(bolumBul(prd, '3. Değer')))}</p>` : bos('-')}
     ${kapsamDisi.length ? `<h4>Kapsam dışı</h4><ul>${kapsamDisi.map((k) => `<li>${md(k)}</li>`).join('')}</ul>` : ''}</section>
-  <section class="card"><h3>MVP özellikleri · kabul kriterleri ${mvpKriter.bitti}/${mvpKriter.toplam}</h3>${mvp.length ? `<div class="rows">${mvp.map((o) => `<div class="row"><span>${md(o.baslik)} ${o.oncelik ? `<span class="tag">${e(o.oncelik)}</span>` : ''}</span>${cubuk(o.bitti, o.toplam)}<span class="num muted">${o.bitti}/${o.toplam}</span></div>`).join('')}</div>` : bos('MVP henüz tanımlanmadı.')}</section>
+  <section class="card"><h3>MVP özellikleri</h3>${mvp.length ? `<div class="rows">${mvp.map((o) => `<div class="row"><span>${md(o.baslik)} ${o.oncelik ? `<span class="tag">${e(o.oncelik)}</span>` : ''}</span>${cubuk(o.bitti, o.toplam)}<span class="num muted">${o.bitti}/${o.toplam}</span></div>`).join('')}</div>` : bos('MVP henüz tanımlanmadı.')}
+  ${kabul.toplam ? `<h4>Kabul kriterleri · test sonucu</h4><div class="tw"><table><thead><tr><th>Kriter</th><th>PRD</th><th>Test</th></tr></thead><tbody>${kabul.liste.map((k) => `<tr><td><code>${e(k.id)}</code> ${md(k.metin)}</td><td>${k.isaretli ? '✓' : ''}</td><td>${k.sonuc === 'gecti' ? rozet('iyi', 'geçti') : k.sonuc === 'kaldi' ? rozet('kritik', 'kaldı') : k.test ? rozet('bilgi', 'sonuç yok') : rozet('uyari', 'test yok')}</td></tr>`).join('')}</tbody></table></div>` : ''}</section>
 </div>
 <div class="grid2">
   <section class="card"><h3>Teknoloji</h3>${stack.length && !stack.every((s) => !s.secim) ? `<dl class="dl">${stack.map((s) => `<dt>${e(s.katman)}</dt><dd>${md(s.secim || '-')}</dd>`).join('')}</dl>` : bos('Stack seçilmedi.')}</section>
   <section class="card"><h3>Tasarım</h3>${tasarimYonu.length ? `<dl class="dl">${tasarimYonu.map((t) => `<dt>${e(t.alan)}</dt><dd>${md(t.secim)}</dd>`).join('')}</dl>` : bos('Tasarım yönü seçilmedi.', '/tasarim genel')}
     ${onizlemeler.length ? `<h4>Önizlemeler</h4><ul class="links">${onizlemeler.map((o) => `<li><b>${e(o.ad)}</b> ${o.dosyalar.map((f) => `<a href=".onizleme/${encodeURIComponent(o.ad)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f.replace('.html', ''))}</a>`).join(' ')}</li>`).join('')}</ul>` : ''}</section>
+</div>
+<div class="grid2">
+  <section class="card"><h3>Birim ekonomisi</h3>${ekonomi ? `<div class="kpis mini">${kutu('Katkı payı', `${ekonomi.katki.toFixed(1)} ${e(ekonomi.paraBirimi)}`, 'ödeyen kullanıcı başı / ay')}${kutu('Başa baş', ekonomi.basaBas ?? '—', ekonomi.basaBas ? 'ödeyen kullanıcı' : 'katkı negatif')}${kutu(`Hedefte (${ekonomi.hedef} kullanıcı)`, `${ekonomi.kar >= 0 ? '+' : ''}${Math.round(ekonomi.kar)} ${e(ekonomi.paraBirimi)}`, 'aylık kâr / zarar')}${ekonomi.degiskenOrani != null ? kutu('Değişken / fiyat', `%${Math.round(ekonomi.degiskenOrani)}`, ekonomi.degiskenOrani > 30 ? rozet('uyari', '%30 üstü') : '') : ''}</div>` : bos('Girdiler boş.', 'docs/BIRIM-EKONOMISI.md')}</section>
+  <section class="card"><h3>Kullanıcı geri bildirimi</h3>${gb.kayitlar.length ? `<div class="kpis mini">${kutu('Toplam', gb.kayitlar.length)}${kutu('Yeni', gb.yeni)}${kutu('Planlandı', gb.kayitlar.filter((k) => /planland/i.test(k.durum)).length)}</div>${gb.temalar.length ? `<h4>Öne çıkan temalar</h4><div class="rows">${gb.temalar.slice(0, 5).map((t) => `<div class="row"><span>${md(t.tema)}</span>${cubuk(t.sayi, gb.temalar[0].sayi)}<span class="num muted">${t.sayi}</span></div>`).join('')}</div>` : ''}` : bos('Henüz geri bildirim yok.', '/geri-bildirim')}</section>
 </div>
 <section class="card"><h3>Yayınlanmamış değişiklikler (CHANGELOG)</h3>${yayinlanmamis.length ? `<ul>${yayinlanmamis.map((s) => `<li>${md(s)}</li>`).join('')}</ul>` : bos('Yayınlanmamış değişiklik yok.')}</section>`;
 
@@ -221,14 +256,25 @@ const limitKart = (ad, k) => {
 };
 const limitBolumu = `
 <section class="card"><h3>Kullanım limiti</h3><div class="grid2 tight">${limitKart('5 saatlik', 'five_hour')}${limitKart('Haftalık', 'seven_day')}</div>
-<p class="muted small">${e(ozet(limit))}</p></section>
+<p class="muted small">${e(ozet(limit))}</p>
+<h4>Bağlam penceresi</h4>${baglam ? `<div class="lim"><div class="lim-h"><b>Son oturum</b>${rozet(baglam.yuzde >= 70 ? 'kritik' : baglam.yuzde >= 50 ? 'uyari' : 'iyi', `%${baglam.yuzde}`)}</div><div class="bar big ${baglam.yuzde >= 70 ? 'kritik' : baglam.yuzde >= 50 ? 'uyari' : 'iyi'}"><span style="width:${Math.min(100, baglam.yuzde)}%"></span><i style="left:50%"></i><i style="left:70%"></i></div><div class="muted small">%50'de /oturum-sonu + /clear önerilir · ${new Date(baglam.okundu).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla</div></div>` : bos('Bağlam bilgisi yok (durum çubuğu yazar).')}</section>
 <section class="card"><h3>Maliyet günlüğü</h3>${ortalamaMaliyet.length ? `<div class="kpis mini">${ortalamaMaliyet.map((m) => kutu(`Ortalama · ${m.boyut}`, `%${m.ort.toFixed(1)}`, `${m.n} kayıt`)).join('')}</div>
 <div class="tw"><table><thead><tr><th>Tarih</th><th>İş</th><th>Boyut</th><th>5s kullanım</th></tr></thead><tbody>${[...maliyet].reverse().slice(0, 15).map((m) => `<tr><td class="num nw">${e(m.tarih)}</td><td>${md(m.is)}</td><td>${e(m.boyut)}</td><td class="num">${Number.isNaN(m.fark) ? '-' : `%${m.fark}`}</td></tr>`).join('')}</tbody></table></div>` : bos('Henüz kayıt yok. `/gelistir` her görevin limit maliyetini buraya yazar.')}</section>`;
+
+const gunRozet = (t) => (t.kalan < 0 ? rozet('kritik', `${-t.kalan} gün geçti`) : t.kalan <= 30 ? rozet('uyari', `${t.kalan} gün`) : rozet('iyi', `${t.kalan} gün`));
+const operasyon = `
+<section class="card"><h3>Hesaplar ve son tarihler</h3>${hesapListesi.length ? `<div class="tw"><table><thead><tr><th>Servis</th><th>Amaç</th><th>Sahip</th><th>2FA</th><th>Plan</th><th>Tarihler</th></tr></thead><tbody>${hesapListesi.map((h) => `<tr><td><b>${e(h.servis)}</b></td><td>${e(h.amac)}</td><td>${e(h.sahip)}</td><td>${h.ikiFaYok ? rozet('uyari', 'yok') : e(h.ikiFa)}</td><td>${e(h.plan)}</td><td>${h.tarihler.map((t) => `<div class="nw">${e(t.tur)}: ${e(t.tarih)} ${gunRozet(t)}</div>`).join('') || '<span class="muted">-</span>'}</td></tr>`).join('')}</tbody></table></div>` : bos('Hesap envanteri boş.', 'docs/HESAPLAR.md')}</section>
+<section class="card"><h3>Özellik bayrakları</h3>${bayrakListesi.length ? `<div class="tw"><table><thead><tr><th>Bayrak</th><th>Amaç</th><th>Durum</th><th>Kaldırma</th><th>Acil kapatma</th></tr></thead><tbody>${bayrakListesi.map((b) => `<tr><td><code>${e(b.ad)}</code></td><td>${md(b.amac)}</td><td>${e(b.durum)}</td><td class="nw">${e(b.kaldirma)} ${b.gecikti ? rozet('uyari', 'gecikti') : ''}</td><td>${b.testsiz ? rozet('uyari', 'denenmedi') : rozet('iyi', 'denendi')}</td></tr>`).join('')}</tbody></table></div>` : bos('Bayrak yok.', 'docs/BAYRAKLAR.md')}</section>
+<section class="card"><h3>GitHub</h3>${github ? `
+  ${github.canliIzleme?.length ? `<p>${rozet('kritik', 'Canlı izleme bozuk')} ${github.canliIzleme.map((i) => `<a href="${e(i.url)}" target="_blank" rel="noopener">#${e(i.number)} ${e(i.title)}</a>`).join(', ')}</p>` : ''}
+  <h4>Son iş akışları</h4>${github.calismalar?.length ? `<div class="tw"><table><thead><tr><th>İş akışı</th><th>Dal</th><th>Sonuç</th><th>Zaman</th></tr></thead><tbody>${github.calismalar.map((c) => `<tr><td><a href="${e(c.url)}" target="_blank" rel="noopener">${e(c.workflowName)}</a></td><td><code>${e(c.headBranch)}</code></td><td>${c.conclusion === 'success' ? rozet('iyi', 'başarılı') : c.conclusion === 'failure' ? rozet('kritik', 'başarısız') : rozet('bilgi', c.conclusion || c.status)}</td><td class="num nw">${tarihYaz(c.createdAt)}</td></tr>`).join('')}</tbody></table></div>` : bos('Henüz çalışma yok.')}
+  <h4>Açık PR'lar</h4>${github.prlar?.length ? `<ul>${github.prlar.map((r) => `<li><a href="${e(r.url)}" target="_blank" rel="noopener">#${e(r.number)} ${e(r.title)}</a>${r.isDraft ? ' <span class="tag">taslak</span>' : ''}</li>`).join('')}</ul>` : bos('Açık PR yok.')}
+  <p class="muted small">gh CLI ile okunur, 5 dakikada bir yenilenir.</p>` : bos('GitHub bilgisi yok: gh CLI kurulu ve giriş yapılmış olmalı, depo GitHub\'a bağlı olmalı.')}</section>`;
 
 const SEKMELER = [
   ['genel', 'Genel', genel], ['yol', 'Yol haritası', yolHaritasi], ['kararlar', `Kararlar`, kararTablosu],
   ['kurul', 'Kurul', kurulBolumu], ['kalite', 'Kalite', kalite], ['aktivite', 'Aktivite', aktivite],
-  ['urun', 'Ürün ve teknik', urun], ['limit', 'Limit ve maliyet', limitBolumu],
+  ['urun', 'Ürün ve teknik', urun], ['operasyon', 'Operasyon', operasyon], ['limit', 'Limit ve maliyet', limitBolumu],
 ];
 
 const siradaki = d.siradaki[0] ?? (d.kitBekliyor ? '`/baslat [fikrin]`' : '-');
@@ -267,6 +313,7 @@ code{font:.86em var(--mono);background:var(--sunk);padding:.08em .38em;border-ra
 .ic{font-weight:700}.iyi .ic{color:var(--good)}.uyari .ic{color:#b07800}.kritik .ic{color:var(--crit)}.bilgi .ic{color:var(--muted)}
 @media (prefers-color-scheme:dark){.uyari .ic{color:var(--warn)}}
 .health{font-size:.85rem;padding:6px 12px}
+.daha{margin-top:8px}.daha summary{cursor:pointer;font-size:.84rem;color:var(--accent);font-weight:600;padding:4px 0}.daha .att{margin-top:8px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.kpis.mini{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin-bottom:12px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:4px;align-content:start;min-width:0}
 .kpis.mini .kpi{background:var(--sunk);border:0}
@@ -336,16 +383,18 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
       ${/başlangıç/i.test(a['Aktif faz'] ?? '') ? `<div><div class="now-l">Başlangıç adımı</div><div class="num">${e(a['Başlangıç adımı'] ?? '-')}</div></div>` : ''}
     </div>
     <div class="next"><div class="now-l">Sıradaki adım</div><div>${md(siradaki)}</div></div>
+    ${d.durum ? `<div class="now-l" style="margin-top:14px">Durum</div><p style="margin-top:4px">${md(d.durum)}</p>` : ''}
+    ${d.sonOturum.length ? `<div class="now-l" style="margin-top:10px">Son oturumda</div><ul style="margin-top:4px">${d.sonOturum.slice(0, 4).map((x) => `<li>${md(x)}</li>`).join('')}</ul>` : ''}
   </section>
   <section class="card" aria-labelledby="dikkat">
     <h3 id="dikkat">Dikkat gerektirenler <span class="muted small">(${dikkat.length})</span></h3>
-    ${dikkat.length ? `<ul class="att">${dikkat.map((x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${SEV[x.sev][1]}: </span>${md(x.metin)}</span>${x.eylem ? `<span class="eylem">→ ${md(x.eylem)}</span>` : ''}</li>`).join('')}</ul>` : `<p>${rozet('iyi', 'Her şey yolunda')} Bekleyen karar, kritik bulgu veya açık sorun yok.</p>`}
+    ${dikkat.length ? `<ul class="att">${dikkat.slice(0, 6).map(dikkatSatiri).join('')}</ul>${dikkat.length > 6 ? `<details class="daha"><summary>${dikkat.length - 6} madde daha</summary><ul class="att">${dikkat.slice(6).map(dikkatSatiri).join('')}</ul></details>` : ''}` : `<p>${rozet('iyi', 'Her şey yolunda')} Bekleyen karar, kritik bulgu veya açık sorun yok.</p>`}
   </section>
 </div>
 
 <div class="kpis">
   ${kutu('Görevler', `${d.gorev.bitti}/${d.gorev.toplam}`, `%${yuzde(d.gorev.bitti, d.gorev.toplam)} tamam`, cubuk(d.gorev.bitti, d.gorev.toplam))}
-  ${kutu('MVP kriterleri', `${mvpKriter.bitti}/${mvpKriter.toplam}`, `${mvp.length} özellik`, cubuk(mvpKriter.bitti, mvpKriter.toplam))}
+  ${kabul.toplam ? kutu('Kabul testleri', `${kabul.gecen}/${kabul.toplam}`, `${kabul.testli} kriterin testi var`, cubuk(kabul.gecen, kabul.toplam, 'iyi')) : kutu('MVP kriterleri', `${mvpKriter.bitti}/${mvpKriter.toplam}`, `${mvp.length} özellik`, cubuk(mvpKriter.bitti, mvpKriter.toplam))}
   ${kutu('Kararlar', d.kararlar.length, `${d.kararlar.length - otomatikKarar} kullanıcı · ${otomatikKarar} otomatik`)}
   ${kutu('Kurul', d.kurul.toplantilar.length, retSayisi ? `${retSayisi} RET` : `${d.kurul.uyeler.length} üye`)}
   ${kutu('Commit · 7 gün', git ? son7 : '-', git ? `${git.degisen.length} dosya bekliyor` : 'git yok')}
@@ -388,7 +437,7 @@ ${SEKMELER.map(([id, , icerik], i) => `<div class="panel" role="tabpanel" id="p-
       document.querySelectorAll('.filters .chip').forEach(function (x) { x.classList.toggle('on', x === c); });
       var k = c.dataset.k;
       document.querySelectorAll('#kararlar tbody tr').forEach(function (r) {
-        r.hidden = !(k === 'hepsi' || r.dataset.k === k || (k === 'otomatik' && r.dataset.v === 'otomatik'));
+        r.hidden = !(k === 'hepsi' || r.dataset.k === k || (k === 'otomatik' && r.dataset.v === 'otomatik') || (k === 'tek' && r.dataset.kapi === 'tek'));
       });
     });
   });

@@ -8,6 +8,11 @@ Claude Code ile bir projeyi fikirden canlıya ve bakıma kadar **soru sorarak** 
 - **Limitini gözetir.** 5 saatlik ve haftalık kullanım limitini hesaba katar.
 - **Az token harcar.** Her oturumu düşük maliyetle açar.
 - **Durumu raporlar.** Her işte uygun skill'i kullanır ve her cevabın sonunda nerede olduğunu söyler.
+- **Kendini korur.**
+  - Uydurma paket kurulumunu ve veri silen komutları engeller.
+  - Yapılandırma değişikliklerinde senden onay ister.
+  - Kabul testleri ve saldırgan testleri koddan önce yazılır.
+- **Operasyonu izler.** Hesap bitiş tarihlerini, özellik bayraklarını, birim ekonomisini, kullanıcı geri bildirimini ve canlı sistemi takip eder.
 
 > Bu README kitin kendisini anlatır. `/baslat` kurulumu yaptığında yerini projenin README'si alır.
 
@@ -76,6 +81,18 @@ claude
 | 8 Yol haritası | Görevler, öncelik, lansman hedefi | "Faz 1'de hangi özellikle başlayalım?" |
 | 9 Kapanış | Özet, durum panosu, ilk görev | - |
 
+## Koruma katmanları
+
+| Katman | Ne yapar |
+|---|---|
+| Sır engeli | Koda yazılan API anahtarı engellenir |
+| Paket kapısı | Kurulacak paket kayıt defterinden doğrulanır. Yoksa engellenir. Çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sana sorulur |
+| Yıkıcı komut kalkanı | `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset` engellenir. Prod deploy ve uzak veritabanı işlemleri için sana sorulur |
+| Yapılandırma onayı | `CLAUDE.md`, `.claude/`, `.mcp.json` ve iş akışı dosyaları senin onayın olmadan değişmez |
+| Commit kapısı | Kurul denetimi olmadan commit atılmaz |
+| CI | Lint, test, build, Semgrep, kopya kod, bağımlılık açıkları, sır taraması |
+| Canlı izleme ve bulut ajanları | İsteğe bağlı; GitHub değişkeniyle açılır (`CANLI_URL`, `CLAUDE_TAMIR`, `CLAUDE_BAKIM`) |
+
 ## Uzman kurulu
 
 Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur: `.claude/agents/kurul-*.md`. Her ajan seçilen stack'e ve projeye göre özelleştirilir.
@@ -126,6 +143,7 @@ Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur: `.claude
 | `/oturum-sonu` | İlerleme, kararlar ve durum panosunu günceller |
 | `/durum` | Ayrıntılı rapor + `DURUM.html` panosu (limit ve kurul dahil) |
 | `/kurul [kur\|topla <tür>]` | Uzman kurulunu kurar, değiştirir, toplar |
+| `/geri-bildirim [metin\|dosya]` | Kullanıcı geri bildirimlerini işler, temalara ayırır, yol haritasına aldırır |
 | `/soru [kapat\|ac] [konu]` | Soru modu: "tasarımda sorma", "tekrar sor" |
 | `/canliya-al [ilk]` | Güvenlik, kalite, KVKK ve lansman kontrolleri |
 | `/bakim [haftalik\|aylik\|ceyreklik]` | Düzenli bakım |
@@ -138,7 +156,7 @@ Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur: `.claude
 - Her cevabın sonunda bir durum bloğu.
 - Claude Code'un alt durum çubuğunda aşama, görev, soru modu ve limit.
 - `/durum` ile ayrıntılı rapor.
-- **`DURUM.html` kontrol paneli:** Proje sahibinin her şeyi takip ettiği sayfa. "Şimdi", "Dikkat gerektirenler" ve özet kutucukların altında 8 sekme var: genel, yol haritası, kararlar, kurul, kalite, aktivite, ürün ve teknik, limit ve maliyet. Her Claude cevabından sonra otomatik güncellenir ve açıkken 30 saniyede bir yenilenir. Tarayıcıda açık tutman yeterli.
+- **`DURUM.html` kontrol paneli:** Proje sahibinin her şeyi takip ettiği sayfa. "Şimdi", "Dikkat gerektirenler" ve özet kutucukların altında 9 sekme var: genel, yol haritası, kararlar, kurul, kalite (kabul testleri, metrikler), aktivite, ürün ve teknik (birim ekonomisi, geri bildirim), operasyon (hesaplar, bayraklar, GitHub), limit ve maliyet (bağlam dahil). Her Claude cevabından sonra otomatik güncellenir ve açıkken 30 saniyede bir yenilenir. Tarayıcıda açık tutman yeterli.
 
 ## Skill'ler nerede kullanılır
 
@@ -160,16 +178,18 @@ Tam tablo: [`docs/SKILLER.md`](docs/SKILLER.md).
 CLAUDE.md                      AI'nın anayasası (protokol, skill, stack, ilerleme içe aktarılır)
 docs/
   KARAR-PROTOKOLU.md           nasıl sorulur, soru modu, görsel önizleme, durum bloğu
-  KURUL.md  LIMIT-PLANI.md  MALIYET-GUNLUGU.md
+  KURUL.md  LIMIT-PLANI.md  MALIYET-GUNLUGU.md  METRIKLER.md
+  HESAPLAR.md  BAYRAKLAR.md  BIRIM-EKONOMISI.md  GERI-BILDIRIM.md
   SKILLER.md                   hangi işte hangi skill
   PRD MIMARI YOL-HARITASI ILERLEME KARARLAR SOZLUK TEST-PLANI
   GUVENLIK YASAL-KVKK CANLIYA-ALMA LANSMAN BAKIM RETRO
   STACK.md                     kurulumda tipin dosyasıyla değişir
 .claude/
-  commands/                    14 komut
+  commands/                    15 komut
   agents/                      inceleyici, guvenlik-denetcisi (+ kurulumda kurul-*)
   kurul/                       kurul rol şablonları (10 uzman) + KURALLAR.md
-  hooks/                       sır engeli, commit kapısı, oturum notu, durum çubuğu, limit, durum panosu
+  hooks/                       sır engeli, paket kapısı, yıkıcı komut kalkanı, commit kapısı, hatırlatma,
+                               oturum notu, durum çubuğu, limit, durum panosu
   settings.json                izinler, hook'lar, durum çubuğu, skill plugin'leri
 kit/                           kurulumdan sonra silinir
   kit.mjs                      kur / guncelle

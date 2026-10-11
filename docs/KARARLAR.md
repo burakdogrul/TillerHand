@@ -1,7 +1,7 @@
 # Kararlar
 
 > İki bölüm var:
-> 1. **Karar günlüğü:** Sorulan her karar tek satır. Kim verdi: `kullanıcı` veya `otomatik` (soru modu kapalıyken).
+> 1. **Karar günlüğü:** Sorulan her karar tek satır. Kapı: `tek` (geri dönüşü pahalı) / `çift` (kolay geri alınır). Kim verdi: `kullanıcı` veya `otomatik` (soru modu kapalıyken).
 > 2. **Ayrıntılı kayıtlar:** Mimariyi veya uzun vadeyi etkileyen kararlar (K-NNN). Kütüphane/servis seçimi, veri modeli, mimari yön.
 >
 > Bir karar sormadan önce buraya bak: daha önce verilmişse tekrar sorma, ona uy.
@@ -11,8 +11,8 @@
 
 `/durum` panosu bu tabloyu okur; sütunları değiştirme.
 
-| # | Tarih | Aşama | Konu | Soru | Seçilen | Karar veren |
-|---|---|---|---|---|---|---|
+| # | Tarih | Aşama | Konu | Soru | Seçilen | Kapı | Karar veren |
+|---|---|---|---|---|---|---|---|
 
 ## Ayrıntılı kayıtlar
 

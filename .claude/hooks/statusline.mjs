@@ -16,6 +16,20 @@ try {
 }
 limitYaz(kok, girdi.rate_limits);
 
+// Bağlam doluluğu: Claude Code'un hazır yüzdesi, yoksa son isteğin token toplamından hesap
+export function baglamYuzde(cw) {
+  if (!cw) return null;
+  if (typeof cw.used_percentage === 'number') return Math.round(cw.used_percentage);
+  const u = cw.current_usage;
+  if (!u || !cw.context_window_size) return null;
+  const toplam = (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0);
+  return Math.round((toplam / cw.context_window_size) * 100);
+}
+const baglam = baglamYuzde(girdi.context_window);
+if (baglam != null) {
+  try { fs.writeFileSync(`${kok}/.claude/.baglam.json`, JSON.stringify({ yuzde: baglam, okundu: Date.now() })); } catch { /* sessiz */ }
+}
+
 function limitParcasi() {
   const l = limitOku(kok);
   if (!l) return null;
@@ -44,6 +58,7 @@ try {
   }
   const limit = limitParcasi();
   if (limit) parcalar.push(limit);
+  if (baglam != null) parcalar.push(`bağlam %${baglam}${baglam >= 70 ? ' ⛔' : baglam >= 50 ? ' ⚠' : ''}`);
   console.log(parcalar.join(' · '));
 } catch {
   console.log('▶ durum okunamadı');

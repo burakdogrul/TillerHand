@@ -18,7 +18,7 @@ Amaç: Bu projede öğrendiklerini kaybetmemek ve kiti (bundan sonraki tüm proj
    - Sorular çok mu, az mı, yerinde mi? Hangi konuda soru modu kapatılmalı/açılmalı?
    - Hangi kontrol listesi maddesi gereksiz geldi, hangisi eksikti?
    - Bir dahaki projede neyi baştan farklı yapardın?
-3. **`docs/RETRO.md`'ye** bugünün tarihiyle kayıt ekle (şablon dosyada).
+3. **`docs/RETRO.md`'ye** bugünün tarihiyle kayıt ekle (şablon dosyada). `docs/METRIKLER.md`'ye dönem satırı ekle ve bir önceki dönemle karşılaştır: Görev süresi, düzeltme oranı ve kopya kod artıyor mu? Kullanıcının hissiyle veriler çelişiyorsa bunu açıkça söyle.
 4. **Dersleri sınıflandır:**
    - **Bu projeye özel** → `CLAUDE.md`, `docs/STACK.md` veya ilgili dokümana kural olarak ekle.
    - **Tüm projelere genel** → kite önerilecek.

@@ -1,0 +1,46 @@
+# Canlıda sentetik izleme: Kritik akışları (kayıt, giriş, ana eylem, ödeme test modu) saatte bir CANLI sitede dener.
+# Bozulursa "canli-izleme" etiketli bir issue açar (zaten açıksa yenisini açmaz).
+# Etkinleştirmek için:
+#   1. Settings > Variables > CANLI_URL = https://alanadin.com
+#   2. Prod'da yetkisi kısıtlı ayrı bir test hesabı aç: Settings > Secrets > CANLI_TEST_EPOSTA, CANLI_TEST_SIFRE
+#   3. Testleri tests/canli/*.spec.ts altına yaz (veri silmeyen, test hesabıyla sınırlı akışlar)
+name: Canlı izleme
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  izle:
+    if: vars.CANLI_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Kritik akışlar (canlı)
+        run: npx playwright test tests/canli --reporter=line
+        env:
+          BASE_URL: ${{ vars.CANLI_URL }}
+          CANLI_TEST_EPOSTA: ${{ secrets.CANLI_TEST_EPOSTA }}
+          CANLI_TEST_SIFRE: ${{ secrets.CANLI_TEST_SIFRE }}
+      - name: Bozulduysa issue aç
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(gh issue list --label canli-izleme --state open --json number -q '.[].number')" ]; then
+            gh label create canli-izleme --color D03B3B --force
+            gh issue create --label canli-izleme --title "Canlı izleme: kritik akış bozuk" \
+              --body "Çalışma kaydı: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi

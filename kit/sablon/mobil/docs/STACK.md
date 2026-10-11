@@ -91,9 +91,22 @@ eas.json             # build profilleri
 |---|---|---|
 | Claude hook'ları | Sır yazımını engeller; düzenlenen dosyayı Prettier ile biçimlendirir | Hazır (`.claude/settings.json`). Prettier projede kurulu olmalı |
 | Pre-commit | lint-staged (ESLint + Prettier) + sır taraması | `npm i -D husky lint-staged prettier` → `npm pkg set scripts.prepare="husky"` → `npx husky` |
-| CI | Lint, tip, test, expo-doctor, açık taraması, gitleaks | `.github/workflows/ci.yml` hazır |
+| CI (+ Semgrep, kopya kod) | Lint, tip, test, expo-doctor, açık taraması, gitleaks | `.github/workflows/ci.yml` hazır |
 | Dependabot | Haftalık küçük güncellemeler (Expo SDK paketleri hariç) | `.github/dependabot.yml` hazır |
 | MCP | Supabase (salt-okunur), Sentry | `.mcp.json`: `PROJE_REF`'i doldur. Supabase MCP'yi sadece **geliştirme** projesine bağla |
+
+## Kabul testleri ve özellik bayrakları
+
+**Kabul testleri** (`docs/TEST-PLANI.md` §1a): Jest testinin veya Maestro akışının adı kriter kimliğini taşır (`Ö-01.1`). Pano JUnit raporunu okur:
+
+```bash
+npx jest --reporters=default --reporters=jest-junit   # JEST_JUNIT_OUTPUT_DIR=test-results
+maestro test .maestro/ --format junit --output test-results/junit-e2e.xml
+```
+
+**Özellik bayrakları** (`docs/BAYRAKLAR.md`): Mağaza güncellemesi olmadan kapatılabilmeli. Uygulama açılışta uzaktan okur ve son bilinen değeri önbellekte tutar; ağ yoksa güvenli varsayılan (kapalı) kullanılır:
+- PostHog feature flags veya Firebase Remote Config; ya da Supabase `feature_flags` tablosu.
+- Okuma tek bir hook'tan yapılır: `hooks/useBayrak.ts`. Ödeme, AI ve bildirim gönderen özellikler bayraksız yayınlanmaz.
 
 ## Sık yapılan AI hataları (bunlara dikkat)
 

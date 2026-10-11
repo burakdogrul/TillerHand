@@ -22,6 +22,10 @@
 - [ ] Kullanılmayan servis, ortam değişkeni, özellik bayrağı, ölü kod temizliği.
 - [ ] `docs/ILERLEME.md`, `docs/MIMARI.md` güncel mi?
 - [ ] Analitik: başarı kriterlerine (`docs/PRD.md` §4) göre durum.
+- [ ] Kopya kod oranı (`npx jscpd --silent .`) ve `docs/METRIKLER.md`'ye aylık satır.
+- [ ] `docs/BIRIM-EKONOMISI.md` gerçek faturalarla güncel mi?
+- [ ] `docs/BAYRAKLAR.md`: kaldırma tarihi geçen bayraklar temizlendi mi?
+- [ ] `docs/GERI-BILDIRIM.md`: yeni geri bildirimler işlendi mi (`/geri-bildirim`)?
 
 ## Çeyreklik (3 ayda bir, ~yarım gün)
 
@@ -31,7 +35,7 @@
 - [ ] Majör sürüm güncellemeleri planla (framework, runtime, SDK).
 - [ ] `docs/YASAL-KVKK.md` ve yayındaki metinler güncel mi? Yeni veri/servis eklendi mi?
 - [ ] `docs/GUVENLIK.md` tam tur.
-- [ ] Alan adı, SSL, ödeme kartı, Apple/Google geliştirici hesabı bitiş tarihleri.
+- [ ] `docs/HESAPLAR.md`: bitiş tarihleri, 2FA, artık kullanılmayan hesaplar.
 
 ## Olay müdahale (site çöktü / veri sızdı / fatura patladı)
 

@@ -28,3 +28,6 @@ DURUM.html
 .onizleme/
 .claude/.limitler.json
 .claude/.kurul-onay
+.claude/.baglam.json
+.claude/.hatirlatma.json
+.claude/.gh-onbellek.json

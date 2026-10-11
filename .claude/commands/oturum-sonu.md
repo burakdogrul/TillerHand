@@ -20,6 +20,6 @@ Bu oturumu kapatıyoruz. Bir sonraki oturum (veya `/clear` sonrası) sıfır ba�
 7. `node .claude/hooks/durum-panosu.mjs` ile `DURUM.html`'i yenile.
 8. Commit edilmemiş iş varsa commit mesajı öner. Commit'i onayımla at.
 9. Faz bittiyse sırayla öner: `/kurul topla faz-sonu` (tam kurul, tahmini maliyetiyle birlikte), sonra `/retro`.
-10. Limiti oku. Kalan 5 saatlik payı ve sıfırlanma saatini sıradaki adımla birlikte söyle.
+10. Limiti ve bağlamı oku. Kalan 5 saatlik payı, sıfırlanma saatini ve bağlam %50'yi geçtiyse `/clear` önerisini sıradaki adımla birlikte söyle.
 
 Bitince durum bloğu ve tek satır: "Sonraki oturum: [sıradaki adım]".

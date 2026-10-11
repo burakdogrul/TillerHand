@@ -92,9 +92,23 @@ tests/               # e2e
 |---|---|---|
 | Claude hook'ları | Sır yazımını engeller; düzenlenen dosyayı Prettier ile biçimlendirir | Hazır (`.claude/settings.json`). Prettier projede kurulu olmalı |
 | Pre-commit | lint-staged (ESLint + Prettier) + sır taraması | `npm i -D husky lint-staged prettier` → `npm pkg set scripts.prepare="husky"` → `npx husky` |
-| CI | Lint, tip, test, build, açık taraması, gitleaks | `.github/workflows/ci.yml` hazır. GitHub > Settings > Variables'a `NEXT_PUBLIC_*` değerlerini ekle |
+| CI (+ Semgrep, kopya kod) | Lint, tip, test, build, açık taraması, gitleaks | `.github/workflows/ci.yml` hazır. GitHub > Settings > Variables'a `NEXT_PUBLIC_*` değerlerini ekle |
 | Dependabot | Haftalık küçük güncellemeler tek PR'da | `.github/dependabot.yml` hazır |
 | MCP | Playwright (tarayıcı), Supabase (salt-okunur), Sentry | `.mcp.json`: `PROJE_REF`'i doldur. Supabase MCP'yi sadece **geliştirme** projesine bağla |
+
+## Kabul testleri ve özellik bayrakları
+
+**Kabul testleri** (`docs/TEST-PLANI.md` §1a): Test adı kriter kimliğini taşır (`test('Ö-01.1 ...')`). Pano JUnit raporunu okur:
+
+```bash
+PLAYWRIGHT_JUNIT_OUTPUT_NAME=test-results/junit.xml npx playwright test --reporter=list,junit
+npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/junit-unit.xml
+```
+
+**Özellik bayrakları** (`docs/BAYRAKLAR.md`): Acil kapatma deploy gerektirmemeli. Bu yüzden ortam değişkeni değil, çalışma anında okunan bir kaynak kullanılır:
+- PostHog seçildiyse PostHog feature flags; değilse
+- Supabase'de `feature_flags` tablosu (`ad`, `acik`, `yuzde`) + sunucuda 60 sn önbellek. Okuma tek bir yardımcıdan yapılır: `lib/bayrak.ts` → `bayrakAcik('ad', kullanici)`.
+- Bayrak kontrolü sunucuda yapılır; istemci sadece sonucu görür.
 
 ## Sık yapılan AI hataları (bunlara dikkat)
 

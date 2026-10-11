@@ -33,9 +33,20 @@ Emin değilsen karar noktasıdır, sor.
 8. **Güncellik:** Sürüm, fiyat, kullanımdan kaldırma gibi değişebilen bilgiye dayanan seçeneklerde hafızana güvenme. Gerekirse önce araştır (`docs/SKILLER.md` → araştırma).
 9. **Tasarım kararlarında görsel önizleme zorunlu.** Bkz. bölüm 5.
 
+## 2a. Geri dönüş maliyeti: tek yönlü / çift yönlü kapı
+
+Her kararı sormadan önce sınıfla ve soru metninde belirt:
+
+- **Çift yönlü kapı:** Sonradan kolay ve ucuz değiştirilir (buton metni, renk, bir kütüphanenin iç kullanımı). Normal sorulur.
+- **Tek yönlü kapı:** Geri dönüşü pahalı veya imkânsız (veritabanı, auth sağlayıcısı, veri modeli, ödeme sağlayıcısı, alan adı, kişisel veri işleme, mağaza paket adı, herkese açık API sözleşmesi). Ek kurallar:
+  1. Soru metninde "Tek yönlü karar: sonradan değiştirmek [şu kadar] maliyetli" yazılır.
+  2. Sormadan önce `kurul-mimar` ve ilgiliyse `guvenlik-denetcisi` görüşü alınır ve seçeneklerin açıklamasına eklenir.
+  3. Cevaptan sonra `docs/KARARLAR.md`'ye ayrıntılı kayıt (K-NNN) zorunludur.
+  4. Kullanıcı acele etmiyorsa, büyük tek yönlü kararlar için "bir gün düşünüp sonra karar vermek" seçeneği de sunulur.
+
 ## 3. Cevap gelince
 
-1. Kararı `docs/KARARLAR.md` → **Karar günlüğü** tablosuna ekle (tarih, aşama, konu, soru, seçilen, karar veren: `kullanıcı`).
+1. Kararı `docs/KARARLAR.md` → **Karar günlüğü** tablosuna ekle (tarih, aşama, konu, soru, seçilen, kapı: `tek`/`çift`, karar veren: `kullanıcı`).
 2. Mimariyi veya uzun vadeyi etkileyen kararlarda aynı dosyaya ayrıntılı kayıt da (K-NNN) yaz.
 3. Kararın etkilediği dokümanı güncelle (STACK, MIMARI, TASARIM, PRD, SOZLUK…).
 4. Sonra uygula.

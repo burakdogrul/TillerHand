@@ -34,6 +34,13 @@
 - [ ] `docs/YASAL-KVKK.md` metinleri yayında ve linkli
 - [ ] Çerez bandı çalışıyor, onay öncesi analitik yüklenmiyor
 
+### Hesaplar, bayraklar, izleme
+- [ ] `docs/HESAPLAR.md` eksiksiz: her servis, hesap sahibi, 2FA, bitiş tarihleri
+- [ ] Riskli özellikler bayrak arkasında; acil kapatma en az bir kez denendi (`docs/BAYRAKLAR.md`)
+- [ ] Canlıda sentetik izleme açık (`.github/workflows/canli-izleme.yml`, `CANLI_URL` değişkeni tanımlı) ve bir hata denemesiyle uyarı geldiği görüldü
+- [ ] `docs/BIRIM-EKONOMISI.md`: katkı payı pozitif, başa baş noktası biliniyor
+- [ ] Kabul testlerinin tamamı yeşil (MVP kriterleri)
+
 ### Altyapı
 - [ ] Alan adı, SSL, `www` yönlendirmesi
 - [ ] Prod veritabanı ayrı proje/örnek; otomatik yedekleme açık

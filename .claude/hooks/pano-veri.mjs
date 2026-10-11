@@ -1,0 +1,174 @@
+// DURUM.html için ek veri kaynakları (test edilebilir saf fonksiyonlar + küçük okuyucular).
+// Kabul testleri, hesap son tarihleri, bayraklar, birim ekonomisi, geri bildirim, metrikler, GitHub durumu.
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { oku, bolumler, tabloSatirlari, etiketler } from './durum-oku.mjs';
+
+const GUN = 864e5;
+const tarihMi = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s).trim());
+export const kalanGun = (tarih, simdi = Date.now()) => Math.ceil((Date.parse(`${tarih}T00:00:00`) - simdi) / GUN);
+
+// ---------- kabul testleri ----------
+// Kriter kimliği PRD'de "Ö-01.1", testlerde "Ö-01.1" veya "O_01_1" olabilir; hepsi "O_01_1" anahtarına normalize edilir.
+const KIMLIK = /[ÖO][-_](\d{2})[._](\d+)/g;
+const anahtar = (m1, m2) => `O_${m1}_${m2}`;
+
+export function prdKriterleri(prdMetni) {
+  return [...prdMetni.matchAll(/^\s*- \[( |x)\]\s*(Ö-(\d{2})\.(\d+))\s*:?\s*(.*)$/gim)]
+    .filter((m) => !m[5].startsWith('['))
+    .map((m) => ({ id: m[2], anahtar: anahtar(m[3], m[4]), metin: m[5].trim(), isaretli: m[1].toLowerCase() === 'x' }));
+}
+
+const ATLA = new Set(['node_modules', '.git', '.next', 'dist', 'build', '.venv', 'venv', 'coverage', '.expo', 'kit', '.onizleme', '__pycache__', '.claude']);
+const TEST_DOSYASI = /(\.(test|spec)\.[cm]?[jt]sx?$)|(^test_.*\.py$)|(_test\.py$)|(\.maestro[\\/].*\.ya?ml$)/;
+
+export function testteGecenKimlikler(kok) {
+  const bulunan = new Set();
+  let sayac = 0;
+  (function gez(dir, derinlik) {
+    if (derinlik > 6 || sayac > 3000) return;
+    let girdiler = [];
+    try { girdiler = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of girdiler) {
+      if (ATLA.has(e.name)) continue;
+      const tam = path.join(dir, e.name);
+      if (e.isDirectory()) gez(tam, derinlik + 1);
+      else if (TEST_DOSYASI.test(path.relative(kok, tam)) || TEST_DOSYASI.test(e.name)) {
+        sayac++;
+        for (const m of oku(tam).matchAll(KIMLIK)) bulunan.add(anahtar(m[1], m[2]));
+      }
+    }
+  })(kok, 0);
+  return bulunan;
+}
+
+export function junitSonuclari(xmlMetinleri) {
+  const sonuc = new Map();
+  for (const xml of xmlMetinleri) {
+    for (const m of xml.matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g)) {
+      const ad = (m[1].match(/\bname="([^"]*)"/)?.[1] ?? '') + ' ' + (m[1].match(/\bclassname="([^"]*)"/)?.[1] ?? '');
+      const govde = m[2] ?? '';
+      if (/<skipped/.test(govde)) continue;
+      const kaldi = /<(failure|error)\b/.test(govde);
+      for (const k of ad.matchAll(KIMLIK)) {
+        const a = anahtar(k[1], k[2]);
+        sonuc.set(a, kaldi || sonuc.get(a) === 'kaldi' ? 'kaldi' : 'gecti');
+      }
+    }
+  }
+  return sonuc;
+}
+
+function junitDosyalari(kok) {
+  const adaylar = [];
+  for (const dir of ['test-results', 'reports', '.']) {
+    try {
+      for (const f of fs.readdirSync(path.join(kok, dir))) if (/junit.*\.xml$|\.junit\.xml$|^TEST-.*\.xml$/i.test(f)) adaylar.push(path.join(kok, dir, f));
+    } catch { /* klasör yok */ }
+  }
+  return adaylar.map((f) => ({ metin: oku(f), zaman: fs.statSync(f).mtimeMs }));
+}
+
+export function kabulDurumu(kok) {
+  const kriterler = prdKriterleri(oku(path.join(kok, 'docs/PRD.md')));
+  const testli = testteGecenKimlikler(kok);
+  const raporlar = junitDosyalari(kok);
+  const sonuclar = junitSonuclari(raporlar.map((r) => r.metin));
+  const liste = kriterler.map((k) => ({ ...k, test: testli.has(k.anahtar) || sonuclar.has(k.anahtar), sonuc: sonuclar.get(k.anahtar) ?? null }));
+  return {
+    liste,
+    raporZamani: raporlar.length ? Math.max(...raporlar.map((r) => r.zaman)) : null,
+    toplam: liste.length,
+    testli: liste.filter((k) => k.test).length,
+    gecen: liste.filter((k) => k.sonuc === 'gecti').length,
+    uyumsuz: liste.filter((k) => k.isaretli && k.sonuc !== 'gecti'),
+  };
+}
+
+// ---------- hesaplar ve bayraklar ----------
+export function hesaplar(metin, simdi = Date.now()) {
+  return tabloSatirlari(bolumler(metin)['Hesaplar'], 8)
+    .filter(([servis]) => servis && !servis.startsWith('['))
+    .map(([servis, amac, sahip, ikiFa, plan, bitis, anahtarYenileme]) => {
+      const tarihler = [['bitiş', bitis], ['anahtar yenileme', anahtarYenileme]].filter(([, t]) => tarihMi(t))
+        .map(([tur, t]) => ({ tur, tarih: t, kalan: kalanGun(t, simdi) }));
+      return { servis, amac, sahip, ikiFa, plan, tarihler, ikiFaYok: /^(hayır|yok|no)$/i.test(ikiFa) };
+    });
+}
+
+export function bayraklar(metin, simdi = Date.now()) {
+  return tabloSatirlari(bolumler(metin)['Bayraklar'], 7).filter(([ad]) => ad)
+    .map(([ad, amac, durum, sahip, eklendi, kaldirma, kapatmaTest]) => ({
+      ad, amac, durum, sahip, eklendi, kaldirma, kapatmaTest,
+      gecikti: tarihMi(kaldirma) && kalanGun(kaldirma, simdi) < 0,
+      testsiz: !/^(evet|✅|var)/i.test(kapatmaTest ?? ''),
+    }));
+}
+
+// ---------- birim ekonomisi ----------
+export function birimEkonomisi(metin) {
+  const e = etiketler(metin);
+  const s = (k) => { const v = parseFloat(String(e[k] ?? '').replace(/[^\d.,-]/g, '').replace(',', '.')); return Number.isFinite(v) ? v : 0; };
+  const fiyat = s('Fiyat (kullanıcı başı aylık)');
+  const komisyon = s('Ödeme komisyonu (%)');
+  const sabit = s('Sabit aylık maliyet');
+  const degisken = s('Kullanıcı başı değişken maliyet (aylık)');
+  const hedef = s('Hedef aktif kullanıcı');
+  const ucretsiz = Math.min(99, s('Ücretsiz kullanıcı oranı (%)'));
+  if (!fiyat && !sabit && !degisken) return null;
+  const katki = fiyat * (1 - komisyon / 100) - degisken;
+  // Her ödeyen kullanıcı, ücretsiz kullanıcıların değişken maliyetini de taşır
+  const ucretsizPayi = (ucretsiz / (100 - ucretsiz)) * degisken;
+  const etkinKatki = katki - ucretsizPayi;
+  const odeyen = hedef * (1 - ucretsiz / 100);
+  const gelir = odeyen * fiyat * (1 - komisyon / 100);
+  const maliyet = sabit + hedef * degisken;
+  return {
+    paraBirimi: e['Para birimi'] || '',
+    fiyat, katki, etkinKatki,
+    basaBas: etkinKatki > 0 ? Math.ceil(sabit / etkinKatki) : null,
+    hedef, gelir, maliyet, kar: gelir - maliyet,
+    degiskenOrani: fiyat ? (degisken / fiyat) * 100 : null,
+  };
+}
+
+// ---------- geri bildirim ve metrikler ----------
+export function geriBildirim(metin) {
+  const b = bolumler(metin);
+  const kayitlar = tabloSatirlari(b['Gelen kutusu'], 9).map(([no, tarih, kaynak, kullanici, ozet, tur, tema, oncelik, durum]) => ({ no, tarih, ozet, tur, tema, oncelik, durum }));
+  const temalar = tabloSatirlari(b['Temalar'], 3).map(([tema, sayi, ozellik, karar]) => ({ tema, sayi: parseInt(sayi, 10) || 0, ozellik, karar }))
+    .sort((x, y) => y.sayi - x.sayi);
+  return { kayitlar, temalar, yeni: kayitlar.filter((k) => /yeni/i.test(k.durum)).length };
+}
+
+export function metrikler(metin) {
+  return tabloSatirlari(bolumler(metin)['Kayıtlar'], 9)
+    .map(([donem, gorev, sure, limit, duzeltme, geriAlma, kopya, kritik, kabul]) => ({ donem, gorev, sure, limit, duzeltme, geriAlma, kopya, kritik, kabul }));
+}
+
+// ---------- GitHub (gh varsa, 5 dk önbellek) ----------
+export function ghDurumu(kok, simdi = Date.now()) {
+  const dosya = path.join(kok, '.claude', '.gh-onbellek.json');
+  try {
+    const o = JSON.parse(fs.readFileSync(dosya, 'utf8'));
+    if (simdi - o.zaman < 5 * 60e3) return o.veri;
+  } catch { /* önbellek yok */ }
+  const gh = (...a) => JSON.parse(execFileSync('gh', a, { cwd: kok, encoding: 'utf8', timeout: 8000, stdio: ['ignore', 'pipe', 'ignore'] }));
+  let veri = null;
+  try {
+    veri = {
+      calismalar: gh('run', 'list', '--limit', '8', '--json', 'workflowName,conclusion,status,headBranch,createdAt,url'),
+      prlar: gh('pr', 'list', '--limit', '10', '--json', 'number,title,isDraft,url,headRefName'),
+      canliIzleme: gh('issue', 'list', '--label', 'canli-izleme', '--state', 'open', '--json', 'number,title,url'),
+    };
+  } catch {
+    veri = null; // gh yok, giriş yapılmamış veya uzak depo yok
+  }
+  try { fs.writeFileSync(dosya, JSON.stringify({ zaman: simdi, veri })); } catch { /* sessiz */ }
+  return veri;
+}
+
+export function baglamOku(kok) {
+  try { return JSON.parse(fs.readFileSync(path.join(kok, '.claude', '.baglam.json'), 'utf8')); } catch { return null; }
+}
