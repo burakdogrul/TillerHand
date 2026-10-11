@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.0.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.1.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -32,6 +32,9 @@
 | 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, commit kapısı. |
 | 📊 **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit. |
 | ⏱️ **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur; işler limite göre planlanır, gerekirse güvenli durulur. |
+| 🌐 **Doğru kaynak** | Değişebilen bilgi birincil kaynaktan doğrulanır (kaynak ve tarihle); kütüphane dokümanı Context7'den güncel gelir. |
+| 🎨 **Logo ve video** | SVG logo ve marka paketi; kod ile üretilen, 120 BPM ritimli tanıtım videosu. |
+| 🔔 **Bildirim** | Claude soru sorduğunda veya uzun işi bitirdiğinde masaüstü bildirimi. |
 | 🪶 **Az token** | Açılışta yaklaşık 1.900 token; dokümanlar gerektiğinde okunur; kod haritası desteği. |
 
 ## 🚀 Hızlı başlangıç
@@ -278,6 +281,21 @@ flowchart TB
 | `/user-feedback` | Kullanıcı geri bildirimini yol haritasına işler |
 | `/retro` | Dersleri projeye ve kite geri yazar |
 | `/kit-update` | Projeyi kitin son sürümüne çeker |
+
+## 🧰 Yetenek paketleri
+
+| Yetenek | Nasıl | Not |
+|---|---|---|
+| **Kaynak araştırması** | `source-research` skill'i: önce resmi doküman, mevzuat ve standart; her iddiaya kaynak, tarih ve güven seviyesi; çelişkiler gösterilir | Yerleşik web arama ile çalışır |
+| **Güncel kütüphane dokümanı** | **Context7** MCP | Ücretsiz, her tipte açık |
+| **Site tarama** | **Firecrawl** MCP | İsteğe bağlı; API anahtarını kendin ortam değişkenine eklersin, AI görmez |
+| **Logo** | `logo-design`: marka soruları, 4-6 SVG konsept görsel önizlemeyle, seçim, iyileştirme, favicon/ikon/PNG paketi ve kullanım kuralları | API gerekmez |
+| **Tanıtım videosu** | `motion-video`: tek kesintisiz dönüşüm, gerçek imleç, kapalı formlu yaylar, 120 BPM; `renderAt(t)` + Playwright + ffmpeg ile MP4 | Remotion seçeneği (resmi plugin, varsayılan kapalı) |
+| **Uygulama içi hareket** | `ui-motion`: süre belirteçleri, yaylar, hareket azaltma, performans; Motion / Reanimated | Impeccable `animate` ile denetlenir |
+| **Güvenlik derinliği** | Trail of Bits: differential-review, insecure-defaults, sharp-edges, static-analysis, supply-chain-risk-auditor, agentic-actions-auditor, fp-check | `/findings-security` ve `security-auditor` kullanır |
+| **Gerçek tarayıcı ölçümü** | **Chrome DevTools** MCP (web) | `/findings-perf`, `/findings-ux` |
+| **Bildirim** | `notify.mjs`: soru veya onay beklerken ve 90 sn'den uzun iş bitince | Kapatmak: `KIT_NOTIFY=off` |
+| **Skill bütçesi** | Proje tipine göre gereksiz plugin'ler kapalı (örn. backend'de tasarım skill'leri) | Daha az token, daha doğru skill seçimi |
 
 ## 🧩 Skill'ler
 

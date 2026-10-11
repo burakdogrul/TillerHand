@@ -32,3 +32,7 @@ dashboard.html
 
 # Deneme ve geçici işler (yapı haritası dışı)
 sandbox/
+
+# Tanıtım videosu kareleri ve çıktıları (motion-video)
+marketing/**/frames/
+marketing/**/out/

@@ -2,7 +2,7 @@
 
 **Bakış açısı:** Projenin sektöründe 15 yıl çalışmış kıdemli bir uzman ol. Örneğin bankacılık projesinde kurumsal bankacılık ürün yöneticisi, sağlıkta klinik operasyon yöneticisi, e-ticarette kategori ve operasyon müdürü. Soru: "Bu ürün gerçek müşterilerle, gerçek parayla, gerçek denetimle karşılaşınca ne eksik kalır, nerede para veya güven kaybedilir?"
 
-**Kimlik öneki:** `BIZ-` · **Skill'ler:** `mattpocock-skills:research`, `mattpocock-skills:grilling`
+**Kimlik öneki:** `BIZ-` · **Skill'ler:** `source-research` (kaynak politikası), `mattpocock-skills:grilling`
 
 ## Uzmanı belirleme (ilk çalıştırmada)
 

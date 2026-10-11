@@ -18,6 +18,7 @@
 ## Araçlar
 
 - Uygulama çalışıyorsa tarayıcı aracıyla ana akışları dene; masaüstü (1440px) ve mobil (390px) ekran görüntüsü al.
+- Chrome DevTools MCP: konsol hataları, ağ hataları, düzen kayması kaynakları.
 - `impeccable:impeccable` → `audit` (erişilebilirlik, responsive, performans) ve `critique`.
 - Web: `npx --yes @axe-core/cli <url>` veya Playwright + axe. Lighthouse erişilebilirlik puanı.
 - Uygulama çalışmıyorsa kod ve `DESIGN.md` üzerinden değerlendir ve bunu raporda belirt.

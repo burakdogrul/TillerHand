@@ -19,6 +19,7 @@
 | Ne | Komut |
 |---|---|
 | Paket boyutu (Next.js) | `npm run build` çıktısındaki rota boyutları; `ANALYZE=true` kuruluysa bundle analizi |
+| Gerçek tarayıcı ölçümü | Chrome DevTools MCP: performans izi (LCP, CLS, INP), ağ şelalesi, ana thread blokları |
 | Lighthouse | `npx --yes lighthouse <url> --only-categories=performance --quiet --chrome-flags="--headless"` |
 | Sorgular | Kod haritasında veri erişim çağrılarını döngü içinde ara; Supabase/Postgres `pg_stat_statements` (erişim varsa) |
 | Yük denemesi (backend) | `npx --yes autocannon -d 10 <url>/health` veya `k6` |

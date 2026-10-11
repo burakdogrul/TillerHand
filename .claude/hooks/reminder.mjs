@@ -15,6 +15,7 @@ try { oturum = JSON.parse(fs.readFileSync(0, 'utf8')).session_id ?? ''; } catch 
 try { veri = JSON.parse(fs.readFileSync(sayacDosyasi, 'utf8')); } catch { /* ilk çalışma */ }
 if (veri.oturum !== oturum) veri = { oturum, sayi: 0 };
 veri.sayi++;
+veri.tur = Date.now(); // notify.mjs uzun işlerin süresini buradan hesaplar
 try { fs.mkdirSync(path.dirname(sayacDosyasi), { recursive: true }); fs.writeFileSync(sayacDosyasi, JSON.stringify(veri)); } catch { /* yazılamazsa sessiz geç */ }
 
 const notlar = [];

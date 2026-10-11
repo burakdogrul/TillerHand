@@ -15,6 +15,32 @@
 | ponytail | ponytail | `ponytail:` |
 | mattpocock-skills | mattpocock | `mattpocock-skills:` |
 
+## Kitin kendi skill'leri (`.claude/skills/`)
+
+| Skill | Ne zaman |
+|---|---|
+| `source-research` | Değişebilen her bilgi (sürüm, fiyat, kota, mevzuat, rakip); teknoloji seçimi; business ve legal raporları |
+| `logo-design` | Logo, ikon, favicon, marka paketi (SVG, API gerektirmez) |
+| `ui-motion` | Uygulama içi animasyon ve geçişler |
+| `motion-video` | Tanıtım videosu, açılış sayfası döngüsü (renderAt(t) + Playwright + ffmpeg) |
+
+## Araçlar (MCP)
+
+| Araç | Ne için | Not |
+|---|---|---|
+| **Context7** | Kütüphanelerin güncel ve sürüme özel dokümanı | Her tipte açık, ücretsiz |
+| **Chrome DevTools** | Gerçek tarayıcıda performans izi, ağ, konsol | Web'de; `/findings-perf`, `/findings-ux` |
+| **Playwright** | Arayüz kanıtı, ekran görüntüsü | Web'de |
+| **Sentry**, **Supabase** | Hata kayıtları, veritabanı uyarıları (salt-okunur) | `/maintain` |
+| **Firecrawl** | Site tarama | İsteğe bağlı, API anahtarı gerekir; `source-research` §5 |
+
+## Skill bütçesi
+
+Kurulu her plugin'in skill açıklamaları her oturumda bağlama yüklenir ve token harcar. Gereksiz plugin yanlış skill seçimine de yol açar. Bu yüzden:
+- Backend projelerinde arayüz tasarım plugin'leri kapalı gelir (`.claude/settings.json` → `enabledPlugins`).
+- Remotion kapalı gelir; `motion-video` gerektiğinde açmayı sorar.
+- Yeni bir plugin eklemek `teknik` karardır: aynı işi yapan bir skill zaten var mı, kaynak güvenilir mi, bağlam maliyeti nedir? Üçüncü taraf skill'ler bir saldırı yüzeyidir: kurmadan önce SKILL.md içeriğini oku.
+
 ## İletişim
 
 | Durum | Skill |
@@ -69,6 +95,7 @@
 | Durum | Skill / dosya |
 |---|---|
 | `/findings-<tür>` (tech, business, security, ux, perf, legal, all) | Yöntem `.claude/findings/protocol.md`, bakış açısı `.claude/findings/lenses/<tür>.md` |
+| Güvenlik derinliği | Trail of Bits: `differential-review`, `insecure-defaults`, `sharp-edges`, `static-analysis`, `supply-chain-risk-auditor`, `agentic-actions-auditor`, `fp-check` |
 | Business ve legal araştırması | `mattpocock-skills:research` + web araması |
 | Teknik ve performans taraması | `ponytail:ponytail-audit` |
 | UX taraması | `impeccable:impeccable` → `audit`, `critique` |

@@ -23,7 +23,8 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
      - macOS/Linux: `curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`
      - Installer Claude Code'a kendisini kullanıcı düzeyinde tanıtır (MCP, hook, skill). Sonra Claude Code yeniden başlatılır ve `/mcp` ile kontrol edilir. Otomatik indeks için: `codebase-memory-mcp config set auto_index true`. Kaynak: github.com/DeusData/codebase-memory-mcp
    - **Şimdilik kurma:** Küçük proje için yeterli; sonra kurulabilir.
-6. Fikir boşsa sor: "Ne yapmak istiyorsun? 1-3 cümleyle anlat."
+6. **Bildirimler:** Claude soru sorduğunda veya uzun bir işi bitirdiğinde masaüstü bildirimi gelir (`.claude/hooks/notify.mjs`). Kapatmak için `KIT_NOTIFY=off`.
+7. Fikir boşsa sor: "Ne yapmak istiyorsun? 1-3 cümleyle anlat."
 
 ## Adım 1: Fikri netleştir → `docs/product/prd.md`
 

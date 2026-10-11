@@ -20,6 +20,7 @@
     ".github/**",
     "scripts/*",
     "ai/**",
+    "marketing/**",
     ".previews/**",
     "package.json",
     "package-lock.json",

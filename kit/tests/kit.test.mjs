@@ -47,6 +47,7 @@ test('kur: web-saas + ai', () => {
   assert.ok(fs.existsSync(path.join(p, '.claude/structure.json')) && fs.existsSync(path.join(p, 'docs/architecture/structure.md')), 'yapı haritası ve rehberi');
   assert.ok(fs.existsSync(path.join(p, '.claude/findings/protocol.md')) && fs.existsSync(path.join(p, '.claude/commands/findings-business.md')), 'bulgu sistemi');
   assert.ok(!fs.existsSync(path.join(p, '.github/workflows/kit-tests.yml')), 'kite özel iş akışı projeye taşınmaz');
+  for (const sk of ['source-research', 'logo-design', 'ui-motion', 'motion-video']) assert.ok(fs.existsSync(path.join(p, `.claude/skills/${sk}/SKILL.md`)), `skill: ${sk}`);
   assert.match(oku(path.join(p, 'README.md')), /\[PROJE ADI\]/, 'README proje şablonu');
   const s = JSON.parse(oku(path.join(p, '.claude/settings.json')));
   assert.ok(s.hooks.PostToolUse && s.hooks.PreToolUse && s.statusLine && s.enabledPlugins, 'settings birleşti');

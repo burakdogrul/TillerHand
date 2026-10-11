@@ -27,7 +27,7 @@ const SADECE_KIT = ['.github/workflows/kit-tests.yml'];
 // Kitin sahiplendiği dosyalar: güncellemede kullanıcı değiştirmediyse yenisiyle değişir.
 // Diğerleri projeye aittir (CLAUDE.md, PRD, stack, settings.json...); güncelleme sadece eksikse ekler.
 const KIT_DOSYASI = [
-  /^\.claude\/(commands|agents|hooks|board|findings)\//,
+  /^\.claude\/(commands|agents|hooks|board|findings|skills)\//,
   /^docs\/(security\/checklist|operations\/(release-checklist|maintenance)|legal\/privacy-kvkk|workflow\/(decision-protocol|skills|usage-limits))\.md$/,
 ];
 const kitDosyasi = (rel) => KIT_DOSYASI.some((re) => re.test(rel));

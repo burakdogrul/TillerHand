@@ -17,6 +17,18 @@
 9. **AI ajanı ve LLM güvenliği:** Prompt injection yolları, modelin tetiklediği işlemler, `.mcp.json` ve `.claude/` değişiklikleri, `@latest` MCP sürümleri.
 10. **Saldırgan testleri:** `docs/quality/test-plan.md` §1b'deki testler veri döndüren her uç için var mı?
 
+## Trail of Bits skill'leri
+
+| Skill | Ne için |
+|---|---|
+| `differential-review` | Son değişikliklerin güvenlik etkisi ve etki alanı (git geçmişiyle) |
+| `insecure-defaults` | Sabit kodlanmış kimlik bilgisi, yedek sırlar, güvensiz varsayılan ayarlar |
+| `sharp-edges` | Hataya açık API'ler ve tehlikeli yapılandırmalar |
+| `static-analysis` | Semgrep ve CodeQL taraması, SARIF ayrıştırma |
+| `supply-chain-risk-auditor` | npm ve PyPI bağımlılıklarının tedarik zinciri riski |
+| `agentic-actions-auditor` | `.github/workflows/` içindeki Claude/AI iş akışlarının güvenliği |
+| `fp-check` | Her aday bulgunun yanlış alarm olmadığını doğrulama (protokol §2) |
+
 ## Araçlar
 
 | Ne | Komut |

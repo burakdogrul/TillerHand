@@ -5,6 +5,24 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.1.0] - 2026-10-12
+
+### Eklendi
+- **Kitin kendi skill'leri** (`.claude/skills/`, kit yönetiminde):
+  - `source-research`: Kaynak politikası (A-D güven seviyeleri, birincil kaynak önce, çapraz doğrulama, tarih ve sürüm), Türkiye resmi kaynak listesi, `docs/research/` kayıtları. İsteğe bağlı Firecrawl kurulumu: anahtar kullanıcının ortam değişkeninde kalır.
+  - `logo-design`: Marka özeti soruları, 4-6 SVG konsept (16 px okunurluk, tek renk hal), görsel önizleme, iyileştirme, marka paketi (favicon, apple-touch, 192/512, mobil ikonları), `docs/design/brand.md`.
+  - `motion-video`: N01ennn'in "UI motion design" prompt'undan uyarlandı. Kapalı formlu yay fonksiyonu (testle doğrulandı), vuruş haritası, 4 kare onay, 240 fps alt kareden hareket bulanıklığı, döngü dikişi ve belirlenimcilik kontrolü. Remotion seçeneği.
+  - `ui-motion`: Uygulama içi hareket kuralları (süre belirteçleri, yay ayarları, hareket azaltma, performans; Motion ve Reanimated).
+- **MCP:**
+  - Context7 her tipte (uzak HTTP).
+  - Chrome DevTools MCP web'de.
+  - Playwright ve Chrome DevTools sürümleri sabitlendi (`@latest` kaldırıldı).
+- **Trail of Bits güvenlik plugin'leri** (7 adet): security lens'ine ve `security-auditor`'a bağlandı.
+- **Remotion resmi plugin'i:** Tanımlı, varsayılan kapalı.
+- **Bildirim hook'u** (`notify.mjs`): Claude soru veya onay beklerken (Notification) ve 90 saniyeden uzun iş bitince (Stop) masaüstü bildirimi gelir. Windows, macOS ve Linux destekleniyor.
+- **Skill bütçesi:** Backend projelerinde arayüz tasarım plugin'leri kapalı gelir. `docs/workflow/skills.md`'ye bütçe kuralları eklendi.
+- **Yapı haritası:** `marketing/**` alanı eklendi (tanıtım videosu kaynakları; kareler ve çıktılar git dışı).
+
 ## [3.0.0] - 2026-10-12
 
 Profesyonel yapı ve bulgu raporları. **Kırıcı değişiklik:** dosya ve komut adları değişti, `.kit.json` biçimi değişti; 2.x projeleri otomatik güncellenemez.
