@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.1.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.1.1-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -255,10 +255,12 @@ flowchart TB
 ## 📊 Kontrol paneli ve raporlama
 
 - **Durum bloğu:** Her cevabın sonunda aşama, görev, soru modu, limit, kurul ve sıradaki adım.
+- **Masaüstü bildirimi:** Claude soru sorduğunda, onay beklediğinde veya 90 saniyeden uzun bir iş bittiğinde. Kapatmak için `KIT_NOTIFY=off`.
 - **Durum çubuğu:** Claude Code'un alt çubuğunda `▶ Faz 1 · G-012 · görev 7/23 · soru: açık · 5s %34 · hf %5 · bağlam %42`.
 - **`dashboard.html`:**
   - Üstte: Şimdi, Dikkat gerektirenler, özet kutucuklar.
   - 10 sekme: Genel, Yol haritası, Kararlar, Kurul, Bulgular, Kalite, Aktivite, Ürün ve teknik, Operasyon, Limit ve maliyet.
+  - Ürün ve teknik sekmesi: PRD, MVP ve kabul testleri, birim ekonomisi, geri bildirim, stack, tasarım, marka paketi, tanıtım videoları, araştırma notları.
   - Her Claude cevabından sonra kendiliğinden güncellenir ve açıkken 30 saniyede bir yenilenir.
 
 ## ⌨️ Komutlar
@@ -331,8 +333,9 @@ kit/
 - **Sürüm çıkarmak:**
   1. `kit/VERSION` dosyasındaki numarayı artır.
   2. `kit/CHANGELOG.md`'de "[Yayınlanmamış]" bölümünü sürüm numarasıyla adlandır.
-  3. Testleri çalıştır.
-  4. Commit at, `git tag vX.Y.Z` ile etiketle ve push et.
+  3. Rehberi (`kit/guide.html` ve yayımlı hali), panoyu (`.claude/hooks/dashboard.mjs`) ve bu README'yi güncelle. Yeni bir özellik üçünde de görünmeli.
+  4. Testleri çalıştır.
+  5. Commit at, `git tag vX.Y.Z` ile etiketle ve push et.
 - **Ders toplama:** Projelerdeki dersler `/retro` ile bu repoda bir dala gelir ve onayınla birleşir.
 - **Projeleri güncelleme:** Projeler yeni sürümü `/kit-update` ile alır. Senin değiştirdiğin dosyalar ezilmez; yeni hali yanına `.kit-new` olarak gelir.
 - **Yeni tip eklemek:** `kit/templates/<tip>/` klasörünü aç. İçine şunları koy:

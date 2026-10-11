@@ -161,6 +161,27 @@ export function bulguRaporlari(metin) {
   return { satirlar, son };
 }
 
+// ---------- Üretilen varlıklar: marka paketi (logo-design), tanıtım videoları (motion-video), araştırma notları (source-research) ----------
+export function uretimVarliklari(kok) {
+  const liste = (k) => { try { return fs.readdirSync(path.join(kok, k), { withFileTypes: true }); } catch { return []; } };
+  const markaKlasor = ['public/brand', 'assets/brand'].find((k) => liste(k).length) ?? null;
+  const marka = markaKlasor ? liste(markaKlasor).filter((f) => f.isFile()).map((f) => f.name).sort() : [];
+  const videolar = liste('marketing/motion').filter((f) => f.isDirectory()).map((f) => {
+    const k = `marketing/motion/${f.name}`;
+    const mp4 = [`${k}/out`, k].flatMap((d) => liste(d).filter((x) => x.isFile() && x.name.endsWith('.mp4')).map((x) => `${d}/${x.name}`))[0] ?? null;
+    return { ad: f.name, mp4 };
+  });
+  const arastirma = liste('docs/research')
+    .filter((f) => f.isFile() && f.name.endsWith('.md') && f.name !== 'README.md')
+    .map((f) => {
+      const dosya = `docs/research/${f.name}`;
+      const baslik = oku(path.join(kok, dosya)).match(/^#\s+(.+)$/m)?.[1] ?? f.name.replace(/\.md$/, '');
+      return { dosya, baslik };
+    })
+    .sort((x, y) => y.dosya.localeCompare(x.dosya));
+  return { markaKlasor, marka, markaRehberi: fs.existsSync(path.join(kok, 'docs/design/brand.md')), videolar, arastirma };
+}
+
 // ---------- GitHub (gh varsa, 5 dk önbellek) ----------
 export function ghDurumu(kok, simdi = Date.now()) {
   const dosya = path.join(kok, '.claude', 'state', 'github-cache.json');

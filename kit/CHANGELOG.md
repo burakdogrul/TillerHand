@@ -5,6 +5,13 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.1.1] - 2026-10-12
+
+### Değişti
+- Rehber (`kit/guide.html`) v3.1'e getirildi: 10 sekmeli pano ve bildirim, yeni skill tablosu (source-research, logo-design, ui-motion, motion-video, Trail of Bits), "Yetenek paketleri" bölümü, tüm koruma katmanları.
+- Pano: "Ürün ve teknik" sekmesine marka paketi, tanıtım videoları ve araştırma notları kartları eklendi (`uretimVarliklari`, testli).
+- README: bildirim, Ürün ve teknik sekmesinin içeriği; sürüm adımlarına "rehber, pano ve README güncellenir" kuralı.
+
 ## [3.1.0] - 2026-10-12
 
 ### Eklendi

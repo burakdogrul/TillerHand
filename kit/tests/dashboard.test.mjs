@@ -76,3 +76,21 @@ test('bulgu raporları: son rapor tür başına, sayılar ayrıştırılır', as
   assert.equal(r.son.business.saglik, 58);
   assert.equal(r.son.business.kritik, 1);
 });
+
+test('üretim varlıkları: marka paketi, video çıktısı, araştırma başlığı', async () => {
+  const { uretimVarliklari } = await import('../../.claude/hooks/dashboard-data.mjs');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'varlik-'));
+  assert.deepEqual(uretimVarliklari(p), { markaKlasor: null, marka: [], markaRehberi: false, videolar: [], arastirma: [] });
+  for (const k of ['assets/brand', 'marketing/motion/demo/out', 'marketing/motion/taslak', 'docs/research', 'docs/design']) fs.mkdirSync(path.join(p, k), { recursive: true });
+  fs.writeFileSync(path.join(p, 'assets/brand/logo.svg'), '<svg/>');
+  fs.writeFileSync(path.join(p, 'docs/design/brand.md'), '# Marka');
+  fs.writeFileSync(path.join(p, 'marketing/motion/demo/out/demo.mp4'), '');
+  fs.writeFileSync(path.join(p, 'docs/research/2026-10-01-odeme.md'), '# Ödeme sağlayıcıları\n');
+  fs.writeFileSync(path.join(p, 'docs/research/2026-10-05-kvkk.md'), 'başlıksız');
+  const v = uretimVarliklari(p);
+  assert.equal(v.markaKlasor, 'assets/brand');
+  assert.deepEqual(v.marka, ['logo.svg']);
+  assert.equal(v.markaRehberi, true);
+  assert.deepEqual(v.videolar, [{ ad: 'demo', mp4: 'marketing/motion/demo/out/demo.mp4' }, { ad: 'taslak', mp4: null }]);
+  assert.deepEqual(v.arastirma.map((r) => r.baslik), ['2026-10-05-kvkk', 'Ödeme sağlayıcıları']);
+});

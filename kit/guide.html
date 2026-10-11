@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · GitHub template · v3.0</p>
+  <p class="eyebrow">Claude Code · GitHub template · v3.1</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -172,7 +172,8 @@ html { scroll-behavior: smooth; }
     <a href="#limit">Limit</a>
     <a href="#rapor">Raporlama</a>
     <a href="#skiller">Skill'ler</a>
-    <a href="#kontroller">Otomatik kontroller</a>
+    <a href="#yetenekler">Yetenekler</a>
+    <a href="#kontroller">Koruma</a>
     <a href="#bulgular">Bulgular</a>
     <a href="#yapi">Yapı</a>
     <a href="#komutlar">Komutlar</a>
@@ -413,7 +414,7 @@ KULLANICIYA SORULMALI: yok</pre>
 <section id="rapor">
   <div class="section-head">
     <p class="eyebrow">Her an neredeyiz</p>
-    <h2>Dört raporlama katmanı</h2>
+    <h2>Raporlama ve bildirim</h2>
   </div>
   <div class="two">
     <div class="kv">
@@ -423,14 +424,21 @@ Aşama: Faz 1 · Görev: G-012 (7/23) · Soru modu: açık · Limit: 5s %34 hf %
 Yapıldı: kayıt formu + doğrulama, test yeşil · Kurul: ONAY (ux, qa)
 Otomatik kararlar: yok
 Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
+      <span class="k">Her zaman: Claude Code alt durum çubuğu</span>
+<pre class="term">▶ Faz 1 · G-012 · görev 7/23 · soru: açık · 5s %34 · hf %5 · bağlam %42</pre>
     </div>
     <div class="kv">
-      <span class="k">Her zaman: Claude Code alt durum çubuğu</span>
-<pre class="term">▶ Faz 1 · G-012 · görev 7/23 · soru: açık (kapalı: tasarim) · 5s %34 · hf %5</pre>
-      <span class="k">İstediğinde</span>
+      <span class="k">dashboard.html · her Claude cevabından sonra güncellenir</span>
       <ul class="plain">
-        <li><code>/dashboard</code>: Biten ve kalan işler, bekleyen kararlar, riskler, son kararlar, kontrol listeleri</li>
-        <li><code>dashboard.html</code>: Aşama ilerlemesi, kararlar (kullanıcı/otomatik), açık sorunlar ve kontrol listesi çubukları. <code>/wrap-up</code> her oturumda yeniler.</li>
+        <li><b>Üstte:</b> Şimdi (aşama, görev, sıradaki adım), Dikkat gerektirenler (önem sırasıyla), sağlık rozeti ve özet kutucuklar</li>
+        <li><b>10 sekme:</b> Genel · Yol haritası · Kararlar · Kurul · Bulgular · Kalite · Aktivite · Ürün ve teknik · Operasyon · Limit ve maliyet</li>
+        <li><b>Ürün ve teknik:</b> PRD, MVP ve kabul testleri, birim ekonomisi, geri bildirim, stack, tasarım, marka paketi, tanıtım videoları, araştırma notları</li>
+        <li>Açıkken 30 saniyede bir yenilenir; ek token harcamaz</li>
+      </ul>
+      <span class="k">Masaüstü bildirimi</span>
+      <ul class="plain">
+        <li>Claude soru sorduğunda veya onay beklediğinde</li>
+        <li>90 saniyeden uzun bir iş bittiğinde · kapatmak için <code>KIT_NOTIFY=off</code></li>
       </ul>
     </div>
   </div>
@@ -445,37 +453,61 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <table>
       <thead><tr><th>İş</th><th>Skill</th></tr></thead>
       <tbody>
+        <tr><td>Değişebilen bilgi: sürüm, fiyat, mevzuat, rakip</td><td class="f">source-research · Context7</td></tr>
+        <tr><td>Logo, ikon, marka paketi</td><td class="f">logo-design</td></tr>
+        <tr><td>Uygulama içi hareket</td><td class="f">ui-motion</td></tr>
+        <tr><td>Tanıtım videosu</td><td class="f">motion-video (Remotion isteğe bağlı)</td></tr>
         <tr><td>Durum blokları, ilerleme notları</td><td class="f">caveman:caveman</td></tr>
         <tr><td>Fikri ve büyük planları sorgulamak</td><td class="f">mattpocock-skills:grilling</td></tr>
         <tr><td>Sözlük, karar kaydı, veri modeli</td><td class="f">mattpocock-skills:domain-modeling</td></tr>
         <tr><td>Modül sınırları, mimari</td><td class="f">mattpocock-skills:codebase-design</td></tr>
-        <tr><td>Teknoloji karşılaştırma, güncel sürüm/fiyat</td><td class="f">mattpocock-skills:research</td></tr>
         <tr><td>Elle yapılacak kurulum (DNS, panel, mağaza)</td><td class="f">mattpocock-skills:wizard</td></tr>
         <tr><td>Her kod değişikliği</td><td class="f">ponytail:ponytail</td></tr>
         <tr><td>Kritik akış (auth, ödeme, veri)</td><td class="f">mattpocock-skills:tdd</td></tr>
         <tr><td>Hata ayıklama</td><td class="f">mattpocock-skills:diagnosing-bugs</td></tr>
         <tr><td>İnceleme · denetim · borç listesi</td><td class="f">ponytail-review · ponytail-audit · ponytail-debt</td></tr>
+        <tr><td>Güvenlik derinliği</td><td class="f">Trail of Bits: differential-review · insecure-defaults · sharp-edges · static-analysis · supply-chain-risk-auditor · agentic-actions-auditor · fp-check</td></tr>
         <tr><td>Stil yönüne göre arayüz</td><td class="f">taste-skill:* (yukarıdaki eşleme)</td></tr>
         <tr><td>Ürün bağlamı, tasarım sistemi, critique/audit/polish</td><td class="f">impeccable:impeccable</td></tr>
-        <tr><td>Palet, yazı tipi, belirteçler, marka, banner</td><td class="f">ui-ux-pro-max:*</td></tr>
+        <tr><td>Palet, yazı tipi, belirteçler, banner</td><td class="f">ui-ux-pro-max:*</td></tr>
         <tr><td>Kullanıcıya görünen her metin</td><td class="f">humanizer:humanizer</td></tr>
       </tbody>
     </table>
+  </div>
+  <p class="note">Skill bütçesi: Her plugin her oturumda bağlama yük ekler. Backend projelerinde arayüz tasarım plugin'leri, her tipte Remotion kapalı gelir. Yeni plugin eklemek teknik bir karardır; üçüncü taraf skill'ler kurulmadan önce okunur.</p>
+</section>
+
+<section id="yetenekler">
+  <div class="section-head">
+    <p class="eyebrow">.claude/skills · MCP</p>
+    <h2>Yetenek paketleri</h2>
+    <p class="lede">Çekirdek işler dışarıdan kurulan araçlara değil, kitin kendi skill'lerine dayanır; dış araçlar sadece fark yarattığı yerde ve proje tipine göre açılır.</p>
+  </div>
+  <div class="types">
+    <article class="type"><h3>Doğru kaynak</h3><p class="stack">source-research · Context7 · Firecrawl (isteğe bağlı)</p><ul><li>Önce resmi doküman, mevzuat, standart</li><li>Her iddiaya kaynak, tarih, güven seviyesi (A-D)</li><li>Kütüphane dokümanı Context7'den güncel</li><li>Firecrawl API anahtarı ister; anahtar senin ortam değişkeninde kalır</li></ul></article>
+    <article class="type"><h3>Logo</h3><p class="stack">logo-design · SVG</p><ul><li>Marka soruları → 4-6 konsept görsel önizlemeyle</li><li>16 px okunurluk, tek renk hal, koyu zemin</li><li>Favicon, uygulama ikonları, PNG boyutları, kullanım kuralları</li></ul></article>
+    <article class="type"><h3>Tanıtım videosu</h3><p class="stack">motion-video · renderAt(t) · Playwright · ffmpeg</p><ul><li>Tek kesintisiz dönüşüm, gerçek imleç, 120 BPM</li><li>Kapalı formlu yaylar (testle doğrulandı)</li><li>Önce vuruş haritası ve 4 kare onayı, sonra MP4</li></ul></article>
+    <article class="type"><h3>Arayüz hareketi</h3><p class="stack">ui-motion · Motion · Reanimated</p><ul><li>Süre belirteçleri, yaylar, sadece transform/opacity</li><li>Hareket azaltma tercihi zorunlu</li><li>Impeccable animate ile denetim</li></ul></article>
+    <article class="type"><h3>Güvenlik ve ölçüm</h3><p class="stack">Trail of Bits · Chrome DevTools MCP</p><ul><li>7 güvenlik skill'i /findings-security'de</li><li>Gerçek tarayıcıda performans izi, ağ, konsol</li></ul></article>
+    <article class="type"><h3>Bildirim</h3><p class="stack">notify.mjs</p><ul><li>Soru veya onay beklerken</li><li>Uzun iş bitince</li><li>Windows, macOS, Linux</li></ul></article>
   </div>
 </section>
 
 <section id="kontroller">
   <div class="section-head">
     <p class="eyebrow">Kurallar yazılı, kontroller otomatik</p>
-    <h2>Dört kontrol katmanı</h2>
+    <h2>Koruma katmanları</h2>
+    <p class="lede">Kararlar Claude Code'un izin katmanında verilir (izin ver · sor · engelle); AI bunları atlatamaz.</p>
   </div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Ne zaman</th><th>Katman</th><th>Ne yakalar</th></tr></thead>
       <tbody>
-        <tr><td>AI dosya yazarken</td><td>Claude hook'ları</td><td>Koda yazılan API anahtarı (engellenir), biçim, backend lint hataları; oturum başında aşama, soru modu ve bekleyen kararlar</td></tr>
+        <tr><td>AI dosya yazarken</td><td>Sır engeli · yapı koruyucu · yapılandırma onayı</td><td>Koda yazılan API anahtarı engellenir; harita dışı yeni dosya sorulur, dağınıklık (*.bak, *-old.*, kopya) engellenir; CLAUDE.md, .claude/, .mcp.json, iş akışı değişikliği sorulur</td></tr>
+        <tr><td>AI komut çalıştırırken</td><td>Yıkıcı komut kalkanı · paket kapısı · commit kapısı</td><td>DROP, TRUNCATE, koşulsuz DELETE, db reset engellenir; prod deploy sorulur; uydurma, çok yeni veya az kullanılan paket engellenir veya sorulur; kurul denetimi olmadan commit yok</td></tr>
         <tr><td>Commit anında</td><td>Pre-commit</td><td>Sahnelenmiş değişikliklerde sır, lint, format</td></tr>
-        <tr><td>Push ve PR</td><td>GitHub Actions</td><td>Lint, tip, test, build, bağımlılık açıkları, tüm geçmişte sır taraması</td></tr>
+        <tr><td>Push ve PR</td><td>GitHub Actions</td><td>Lint, tip, test, build, Semgrep, kopya kod, klasör yapısı, bağımlılık açıkları, tüm geçmişte sır taraması</td></tr>
+        <tr><td>Canlıda</td><td>Canlı izleme · bulut ajanları (isteğe bağlı)</td><td>Saatlik kritik akış testi; kırmızı CI'a düzeltme önerisi; haftalık bakım raporu</td></tr>
         <tr><td>Her hafta</td><td>Dependabot</td><td>Eskiyen bağımlılıklar; majörler planlı</td></tr>
       </tbody>
     </table>
@@ -601,7 +633,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.0.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.1.1 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

@@ -8,7 +8,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { durumOku, oku, bolumler, bolumBul, sayac, tabloSatirlari } from './status-read.mjs';
 import { limitOku, ozet, seviye, ESIKLER } from './usage.mjs';
-import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI } from './dashboard-data.mjs';
+import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari } from './dashboard-data.mjs';
 
 const argumanlar = process.argv.slice(2);
 const sessiz = argumanlar.includes('--sessiz');
@@ -68,6 +68,7 @@ const sonRetro = Object.keys(bolumler(oku(dosya('docs/quality/retros.md')))).fil
 const tasarimYonu = tabloSatirlari(bolumBul(bolumler(oku(dosya('docs/design/design-guide.md'))), '1. Seçilen'), 2)
   .filter(([, secim]) => secim && !secim.startsWith('[')).map(([alan, secim]) => ({ alan, secim }));
 
+const varlik = uretimVarliklari(kok);
 let onizlemeler = [];
 try {
   onizlemeler = fs.readdirSync(dosya('.previews'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => {
@@ -246,6 +247,11 @@ const urun = `
 <div class="grid2">
   <section class="card"><h3>Birim ekonomisi</h3>${ekonomi ? `<div class="kpis mini">${kutu('Katkı payı', `${ekonomi.katki.toFixed(1)} ${e(ekonomi.paraBirimi)}`, 'ödeyen kullanıcı başı / ay')}${kutu('Başa baş', ekonomi.basaBas ?? '—', ekonomi.basaBas ? 'ödeyen kullanıcı' : 'katkı negatif')}${kutu(`Hedefte (${ekonomi.hedef} kullanıcı)`, `${ekonomi.kar >= 0 ? '+' : ''}${Math.round(ekonomi.kar)} ${e(ekonomi.paraBirimi)}`, 'aylık kâr / zarar')}${ekonomi.degiskenOrani != null ? kutu('Değişken / fiyat', `%${Math.round(ekonomi.degiskenOrani)}`, ekonomi.degiskenOrani > 30 ? rozet('uyari', '%30 üstü') : '') : ''}</div>` : bos('Girdiler boş.', 'docs/product/unit-economics.md')}</section>
   <section class="card"><h3>Kullanıcı geri bildirimi</h3>${gb.kayitlar.length ? `<div class="kpis mini">${kutu('Toplam', gb.kayitlar.length)}${kutu('Yeni', gb.yeni)}${kutu('Planlandı', gb.kayitlar.filter((k) => /planland/i.test(k.durum)).length)}</div>${gb.temalar.length ? `<h4>Öne çıkan temalar</h4><div class="rows">${gb.temalar.slice(0, 5).map((t) => `<div class="row"><span>${md(t.tema)}</span>${cubuk(t.sayi, gb.temalar[0].sayi)}<span class="num muted">${t.sayi}</span></div>`).join('')}</div>` : ''}` : bos('Henüz geri bildirim yok.', '/user-feedback')}</section>
+</div>
+<div class="grid2">
+  <section class="card"><h3>Marka paketi</h3>${varlik.marka.length ? `<p class="muted small"><code>${e(varlik.markaKlasor)}</code> · ${varlik.marka.length} dosya${varlik.markaRehberi ? ' · <a href="docs/design/brand.md" target="_blank" rel="noopener">kullanım kuralları</a>' : ''}</p><ul class="links">${varlik.marka.map((f) => `<li><a href="${e(varlik.markaKlasor)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f)}</a></li>`).join('')}</ul>` : bos('Logo henüz yok.', 'logo-design')}</section>
+  <section class="card"><h3>Tanıtım ve araştırma</h3><h4>Videolar</h4>${varlik.videolar.length ? `<ul class="links">${varlik.videolar.map((v) => `<li><b>${e(v.ad)}</b> ${v.mp4 ? `<a href="${v.mp4.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">mp4</a>` : rozet('bilgi', 'render yok')}</li>`).join('')}</ul>` : bos('Video yok.', 'motion-video')}
+    <h4>Araştırma notları</h4>${varlik.arastirma.length ? `<ul class="links">${varlik.arastirma.slice(0, 8).map((r) => `<li><a href="${r.dosya.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">${md(r.baslik)}</a></li>`).join('')}</ul>` : bos('Not yok.', 'source-research')}</section>
 </div>
 <section class="card"><h3>Yayınlanmamış değişiklikler (CHANGELOG)</h3>${yayinlanmamis.length ? `<ul>${yayinlanmamis.map((s) => `<li>${md(s)}</li>`).join('')}</ul>` : bos('Yayınlanmamış değişiklik yok.')}</section>`;
 
