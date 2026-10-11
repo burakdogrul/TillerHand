@@ -1,0 +1,26 @@
+# Expo SDK'ya bağlı paketler Dependabot ile değil, 'npx expo install --fix' ile güncellenir.
+# Güvenlik güncellemeleri için: GitHub > Settings > Code security > Dependabot security updates: Açık.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      kucuk-guncellemeler:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "@expo/*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native/*"
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

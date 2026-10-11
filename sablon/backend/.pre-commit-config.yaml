@@ -1,0 +1,16 @@
+# Kurulum (bir kez): uvx pre-commit install
+# Sürümleri güncelle:  uvx pre-commit autoupdate
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: sir-taramasi
+        name: Sır taraması
+        entry: node .claude/hooks/guard-secrets.mjs --staged
+        language: system
+        pass_filenames: false

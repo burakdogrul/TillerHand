@@ -1,0 +1,18 @@
+# Bağımlılık güncellemeleri haftalık PR olarak gelir; CI yeşilse merge et.
+# Güvenlik güncellemeleri için: GitHub > Settings > Code security > Dependabot security updates: Açık.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      kucuk-guncellemeler:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"] # majörler /bakim ceyreklik ile, planlı
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

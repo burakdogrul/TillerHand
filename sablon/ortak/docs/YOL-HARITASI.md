@@ -1,0 +1,41 @@
+# Yol Haritası
+
+> Her görev **tek oturumda bitebilecek** büyüklükte olmalı (yaklaşık 1-3 saat, 1-5 dosya).
+> Büyük görünen görevi böl. AI'ya her zaman tek bir görev ver.
+> Biçim: `- [ ] G-NNN: [ne] — kabul: [nasıl anlarım bitti?]`
+
+## Faz 0 — Kurulum (iskelet)
+
+- [ ] G-001: Repo, git, `.gitignore`, `.env.example` hazır — kabul: ilk commit atıldı
+- [ ] G-002: Proje iskeleti kuruldu, lokal çalışıyor — kabul: `dev` komutu hatasız açılıyor
+- [ ] G-003: Lint, format, tip kontrolü, test altyapısı — kabul: 4 komut da çalışıyor
+- [ ] G-004: Pre-commit + CI (`docs/STACK.md` → "Otomatik kontroller") — kabul: sır içeren deneme commit'i reddediliyor; GitHub'da CI yeşil
+- [ ] G-005: **"Merhaba dünya" canlıda** — kabul: prod URL açılıyor (deploy hattını ilk gün kur)
+- [ ] G-006: Hata takibi (Sentry vb.) bağlandı — kabul: test hatası panelde görünüyor
+- [ ] G-007: `docs/SOZLUK.md` ilk terimler, (UI varsa) `docs/TASARIM.md` dolduruldu — kabul: AI ilk ekranı bu kurallarla yazıyor
+
+## Faz 1 — Çekirdek (MVP'nin olmazsa olmazları)
+
+- [ ] G-010: [Auth: kayıt / giriş / çıkış] — kabul: [...]
+- [ ] G-011: [Ana veri modeli + migration] — kabul: [...]
+- [ ] G-012: [Ana özellik Ö-01] — kabul: [PRD'deki kriterler]
+
+## Faz 2 — MVP tamamlama
+
+- [ ] G-020: [Ö-02] — kabul: [...]
+- [ ] G-021: Boş / hata / yükleniyor durumları tüm ekranlarda — kabul: [...]
+
+## Faz 3 — Canlıya hazırlık
+
+- [ ] G-030: `docs/GUVENLIK.md` kontrol listesi tamam
+- [ ] G-031: `docs/YASAL-KVKK.md` metinleri yayında
+- [ ] G-032: `docs/CANLIYA-ALMA.md` kontrol listesi tamam (`/canliya-al`)
+- [ ] G-033: Yedekleme + izleme + alarm kuruldu
+
+## Faz 4 — Lansman sonrası
+
+- [ ] [İlk kullanıcı geri bildirimlerinden gelen işler]
+
+## Fikir havuzu (planlanmamış)
+
+- [PRD'de "kapsam dışı" olan ama ileride yapılabilecek şeyler]

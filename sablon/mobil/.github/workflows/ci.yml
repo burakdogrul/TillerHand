@@ -1,0 +1,36 @@
+# Her push ve PR'da çalışır. Build (EAS) burada değil, EAS'ta yapılır.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx expo lint
+      - run: npx tsc --noEmit
+      - run: npm run --if-present test
+      - name: SDK uyumu
+        run: npx expo-doctor
+      - name: Bağımlılık açıkları (yüksek ve üstü)
+        run: npm audit --audit-level=high --omit=dev
+
+  sir-taramasi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tüm geçmiş taranır
+      # Kişisel hesapta ücretsiz; organizasyon deposunda GITLEAKS_LICENSE sırrı gerekir
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
