@@ -1,0 +1,75 @@
+# Her push ve PR'da çalışır. Kırmızıysa merge etme.
+# GitHub > Settings > Branches > main için "Require status checks" ile zorunlu kıl.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run --if-present test
+      - run: npm run build
+        env:
+          # Build sırasında okunan herkese açık değişkenler (gerçek sırlar burada olmaz)
+          NEXT_PUBLIC_SITE_URL: https://example.com
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      - name: Bağımlılık açıkları (yüksek ve üstü)
+        run: npm audit --audit-level=high --omit=dev
+
+  # Kritik akışlar için e2e. Playwright testleri yazılınca yorumu kaldır.
+  # e2e:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with: { node-version: 22, cache: npm }
+  #     - run: npm ci
+  #     - run: npx playwright install --with-deps chromium
+  #     - run: npx playwright test
+
+  structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Klasör yapısı (.claude/structure.json)
+        run: node .claude/hooks/structure-guard.mjs --check
+
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Statik güvenlik analizi (yüksek önemli bulgular CI'ı durdurur)
+        run: semgrep scan --config p/default --config p/owasp-top-ten --severity ERROR --error
+
+  kopya-kod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kopya kod oranı (eşik %5)
+        run: npx --yes jscpd@4 --threshold 5 --silent --ignore "**/node_modules/**,**/.next/**,**/dist/**,**/build/**,**/.venv/**,**/coverage/**,**/.expo/**" .
+
+  sir-taramasi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tüm geçmiş taranır
+      # Kişisel hesapta ücretsiz; organizasyon deposunda GITLEAKS_LICENSE sırrı gerekir
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

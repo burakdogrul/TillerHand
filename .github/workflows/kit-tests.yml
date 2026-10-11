@@ -1,0 +1,24 @@
+# Kitin kendi testleri. Sadece kit reposunda çalışır; `kit.mjs install` bu dosyayı projeye taşımaz.
+name: Kit testleri
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    if: hashFiles('kit/kit.mjs') != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Testler
+        run: node --test "kit/tests/*.test.mjs"
+      - name: YAML doğrulama
+        run: |
+          for f in kit/templates/*/.github/workflows/*.yml kit/templates/*/.github/dependabot.yml .github/workflows/*.yml; do
+            npx --yes yaml@2.5.1 valid < "$f" || { echo "Geçersiz YAML: $f"; exit 1; }
+          done

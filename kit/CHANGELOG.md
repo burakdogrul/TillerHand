@@ -1,9 +1,57 @@
 # Kit Değişiklik Günlüğü
 
-Kit sürümü `kit/SURUM` dosyasında. Bir projeyi güncellemek: projede `/kit-guncelle`.
+Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-guncelle`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
 ## [Yayınlanmamış]
+
+## [3.0.0] - 2026-10-12
+
+Profesyonel yapı ve bulgu raporları. **Kırıcı değişiklik:** dosya ve komut adları değişti, `.kit.json` biçimi değişti; 2.x projeleri otomatik güncellenemez.
+
+### Değişti
+- **Dosya ve klasör adları İngilizce kebab-case oldu** (içerik Türkçe). `docs/` alt klasörlere ayrıldı: `product`, `architecture`, `design`, `decisions`, `quality`, `security`, `legal`, `operations`, `workflow`, `findings`, `archive`.
+  - Örnekler: `docs/PRD.md` → `docs/product/prd.md`, `docs/ILERLEME.md` → `docs/workflow/progress.md`, `docs/KARARLAR.md` → `docs/decisions/log.md`.
+- **Komutlar İngilizce oldu:**
+
+  | Eski | Yeni | Eski | Yeni |
+  |---|---|---|---|
+  | `/baslat` | `/start` | `/oturum-sonu` | `/wrap-up` |
+  | `/planla` | `/plan-task` | `/canliya-al` | `/release` |
+  | `/gelistir` | `/build` | `/bakim` | `/maintain` |
+  | `/incele` | `/review-changes` | `/tasarim` | `/design` |
+  | `/hata-ayikla` | `/fix-bug` | `/soru` | `/ask-mode` |
+  | `/durum` | `/dashboard` | `/kurul` | `/board` |
+  | `/kit-guncelle` | `/kit-update` | `/geri-bildirim` | `/user-feedback` |
+
+  Argümanlar da İngilizce: `setup`, `convene`, `first`, `on`/`off`, `weekly`/`monthly`/`quarterly`.
+- **Ajanlar:** `inceleyici` → `code-reviewer`, `guvenlik-denetcisi` → `security-auditor`, `kurul-*` → `board-*`.
+- **Hook dosyaları:**
+  - İngilizce adlar aldı: `dashboard.mjs`, `commit-gate.mjs`, `package-gate.mjs`, `destructive-guard.mjs`, `usage.mjs`, `reminder.mjs`, `status-read.mjs`, `dashboard-data.mjs`.
+  - Çalışma durumu dosyaları `.claude/state/` altında toplandı.
+- **Pano:** `DURUM.html` → `dashboard.html`. Tasarım önizlemeleri `.previews/` altında.
+- **Kit iç yapısı:**
+  - `kit/sablon` → `kit/templates`, `mobil` → `mobile`, `ekler` → `addons`.
+  - `SURUM`/`KAYNAK` → `VERSION`/`SOURCE`, `REHBER.html` → `guide.html`, `testler` → `tests`.
+  - Özel dosya uzantıları: `.ekle` → `.append`, `.birlestir.json` → `.merge.json`. Çakışma dosyası: `.yeni` → `.kit-new`.
+  - `kit.mjs`: `kur`/`guncelle` → `install`/`update`, `--tip`/`--ekler`/`--proje` → `--type`/`--addons`/`--project`. `.kit.json` alanları İngilizce.
+- **Ayrıntılı kararlar ADR dosyalarına taşındı:** `docs/decisions/adr-NNNN-*.md` (şablon `adr-template.md`). Karar günlüğü `docs/decisions/log.md`.
+
+### Eklendi
+- **Korunan proje yapısı:**
+  - Tip başına özellik bazlı yapı haritası (`.claude/structure.json`) ve rehberi (`docs/architecture/structure.md`).
+  - `structure-guard.mjs`: Harita dışı yeni dosya için kullanıcıya sorulur; dağınıklık kalıpları (`*.bak`, `*-old.*`, kopya, `temp/`, `deneme*`) engellenir; `--check` ile tüm depo denetlenir.
+  - Her tipin CI'ına `structure` işi eklendi. Kurul Mimarı ve `/findings-tech` da yapıyı denetler.
+  - `sandbox/` (git dışı deneme alanı) ve `docs/archive/` eklendi.
+- **Bulgu raporları:**
+  - Komutlar: `/findings-tech`, `/findings-business`, `/findings-security`, `/findings-ux`, `/findings-perf`, `/findings-legal`, `/findings-all`.
+  - Ortak protokol (`.claude/findings/protocol.md`), tür başına bakış açısı (`lenses/`) ve rapor şablonu.
+  - En fazla 20 bulgu; önem puanı = etki + olasılık + yayılım + aciliyet; alan sağlık puanı; önceki raporla karşılaştırma.
+  - Rapor sonrası düzeltme planı, kurul görüşü ve yol haritasına aktarma.
+  - Business raporu sektör uzmanı rolünü PRD'den çıkarır, kullanıcıya onaylatır ve web araştırması yapar; ayarlar `docs/findings/config.md`'de tutulur.
+- **Panoya "Bulgular" sekmesi:** tür başına sağlık puanı ve değişimi, rapor geçmişi; kritik bulgular "Dikkat" alanına düşer.
+- **README yenilendi:** banner (`kit/assets/banner.svg`), rozetler, Mermaid diyagramları.
+- **Kitin kendi CI'ı:** `.github/workflows/kit-tests.yml` (projeye taşınmaz).
 
 ## [2.3.0] - 2026-10-11
 

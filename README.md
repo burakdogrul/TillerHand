@@ -1,26 +1,61 @@
-# Vibe Coding Kit
+<p align="center">
+  <img src="kit/assets/banner.svg" alt="Vibe Coding Kit: Claude Code ile soru odaklı, kurul denetimli, profesyonel yapıda proje geliştirme" width="100%">
+</p>
 
-Claude Code ile bir projeyi fikirden canlıya ve bakıma kadar **soru sorarak** yürüten proje şablonu.
+<p align="center">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.0.0-2a78d6?style=flat-square">
+  <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
+  <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
+  <img alt="Dil" src="https://img.shields.io/badge/dil-T%C3%BCrk%C3%A7e-5b6577?style=flat-square">
+</p>
 
-- **Kararları sen verirsin.** AI hiçbir kararı kendi başına vermez. Her adımda seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar.
-- **Tasarımı görerek seçersin.** Tasarım kararları görsel önizlemelerle sorulur.
-- **Uzman kurulu denetler.** Projeye özel uzman ajanlar planı, görevi, her commit'i ve fazı denetler.
-- **Limitini gözetir.** 5 saatlik ve haftalık kullanım limitini hesaba katar.
-- **Az token harcar.** Her oturumu düşük maliyetle açar.
-- **Durumu raporlar.** Her işte uygun skill'i kullanır ve her cevabın sonunda nerede olduğunu söyler.
-- **Kendini korur.**
-  - Uydurma paket kurulumunu ve veri silen komutları engeller.
-  - Yapılandırma değişikliklerinde senden onay ister.
-  - Kabul testleri ve saldırgan testleri koddan önce yazılır.
-- **Operasyonu izler.** Hesap bitiş tarihlerini, özellik bayraklarını, birim ekonomisini, kullanıcı geri bildirimini ve canlı sistemi takip eder.
+<p align="center">
+  <a href="#-hızlı-başlangıç">Hızlı başlangıç</a> ·
+  <a href="#-nasıl-çalışır">Nasıl çalışır</a> ·
+  <a href="#-bulgu-raporları">Bulgular</a> ·
+  <a href="#-proje-yapısı">Yapı</a> ·
+  <a href="#-komutlar">Komutlar</a> ·
+  <a href="#-kiti-geliştirmek">Geliştirme</a>
+</p>
 
-> Bu README kitin kendisini anlatır. `/baslat` kurulumu yaptığında yerini projenin README'si alır.
+---
 
-## Gereksinimler
+**Vibe Coding Kit**, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götüren bir GitHub template reposudur. AI kod yazar, ama **kararları sen verirsin**: her adımda seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar. Projeye özel bir **uzman kurulu** her işi denetler, **koruma katmanları** tehlikeli işlemleri engeller, **bulgu raporları** projeyi 100 üzerinden puanlar ve proje her an **profesyonel bir klasör yapısında** kalır.
 
-- [Claude Code](https://claude.com/claude-code)
-- Git, Node.js 18+ (kurulum aracı ve hook'lar için)
-- Skill plugin'leri: Proje açıldığında Claude Code bunları kurmayı önerir (`.claude/settings.json`). Elle kurmak için:
+| | |
+|---|---|
+| 🧭 **Soru odaklı** | Teknik, ürün, tasarım, veri, güvenlik ve maliyet kararları gerekçeli seçeneklerle sorulur. Tasarım kararları görsel önizlemeyle sorulur. |
+| 🏛️ **Uzman kurulu** | Ürün, Mimar, Güvenlik, UX, KVKK, QA ve diğer üyeler planı, görevi, her commit'i ve fazı denetler. |
+| 🔎 **Bulgu raporları** | `/findings-tech`, `-business`, `-security`, `-ux`, `-perf`, `-legal`: En önemli 20 bulgu, puanlı ve düzeltme yöntemli. |
+| 🗂️ **Korunan yapı** | Özellik bazlı klasör haritası; harita dışı yazım sorulur, dağınıklık engellenir, CI denetler. |
+| 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, commit kapısı. |
+| 📊 **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit. |
+| ⏱️ **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur; işler limite göre planlanır, gerekirse güvenli durulur. |
+| 🪶 **Az token** | Açılışta yaklaşık 1.900 token; dokümanlar gerektiğinde okunur; kod haritası desteği. |
+
+## 🚀 Hızlı başlangıç
+
+**Gereksinimler:** [Claude Code](https://claude.com/claude-code), Git, Node.js 18+
+
+1. Bu repoda **Use this template → Create a new repository** ile yeni repo aç.
+2. Klonla ve Claude Code'u başlat:
+
+```bash
+git clone https://github.com/<kullanici>/<yeni-proje>.git
+cd <yeni-proje>
+claude
+```
+
+3. Proje açılınca Claude Code, tanımlı skill plugin'lerini kurmayı önerir. Kabul et.
+4. Başlat:
+
+```
+/start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
+```
+
+<details>
+<summary><b>Skill plugin'lerini elle kurmak</b></summary>
 
 ```
 /plugin marketplace add juliusbrussee/caveman
@@ -38,8 +73,12 @@ Claude Code ile bir projeyi fikirden canlıya ve bakıma kadar **soru sorarak** 
 /plugin install ponytail@ponytail
 /plugin install mattpocock-skills@mattpocock
 ```
+</details>
 
-**Önerilen: Kod haritası** ([codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp), MIT). AI kodu dosya dosya okumak yerine sorgular; proje büyüdükçe oturum başına ciddi token tasarrufu sağlar. `/baslat` kurmak isteyip istemediğini sorar. Kurulum script'ini kendi terminalinde çalıştırırsın:
+<details>
+<summary><b>Önerilen: kod haritası (codebase-memory-mcp)</b></summary>
+
+AI kodu dosya dosya okumak yerine sorgular; proje büyüdükçe ciddi token tasarrufu sağlar. `/start` kurmak isteyip istemediğini sorar. Kurulumu kendi terminalinde yaparsın ([kaynak](https://github.com/DeusData/codebase-memory-mcp)):
 
 ```powershell
 # Windows (PowerShell)
@@ -52,167 +91,238 @@ Unblock-File .\install.ps1
 # macOS / Linux
 curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash
 ```
+</details>
 
-## Yeni proje başlatmak
+## 🧭 Nasıl çalışır
 
-1. GitHub'da bu repoda **Use this template → Create a new repository**.
-2. Yeni repoyu klonla ve Claude Code'u aç:
-
-```bash
-git clone https://github.com/<kullanici>/<yeni-proje>.git
-cd <yeni-proje>
-claude
+```mermaid
+flowchart LR
+    A["/start<br/>fikir → plan"] --> B["Faz 0<br/>kurulum, CI, ilk deploy"]
+    B --> C{"Her görev"}
+    C --> D["/plan-task<br/>kararlar + kurul"]
+    D --> E["/build<br/>önce kabul testleri"]
+    E --> F["/review-changes<br/>+ commit kapısı"]
+    F --> G["/wrap-up"]
+    G --> C
+    C -->|"faz sonu"| H["/findings-*<br/>/board convene<br/>/retro"]
+    H --> I["/release first"]
+    I --> J["/maintain<br/>haftalık · aylık · çeyreklik"]
 ```
 
-3. `/baslat Serbest çalışanlar için fatura takip uygulaması`
+### `/start` sihirbazı
 
-`/baslat` sihirbazı 9 adımda ilerler. Her adımda sorar, cevabını kaydeder, kaldığı yerden devam edebilir:
-
-| Adım | Ne olur | Örnek sorular |
+| Adım | Ne olur | Örnek soru |
 |---|---|---|
-| 0 Hazırlık | Ortam, skill, limit ve kod haritası kontrolü | "Impeccable kurulu değil. Kurup devam edelim mi?" |
-| 1 Fikir → PRD | Fikir sorgulanır (grilling) | "İlk sürümde hangi özellikler olsun?" (çoklu seçim) |
-| 2 Proje tipi | Web/SaaS, mobil, backend; AI özelliği | "Web mi, mobil mi? Senin kullanıcın için şu daha iyi, çünkü…" |
-| 3 Kurulum | `kit/kit.mjs kur` tipi yerleştirir, `kit/`'i siler | - |
-| 4 Teknoloji | Tipin karar kataloğundan tek tek | "Backend dili: FastAPI (önerilen) / Node + Hono / Go?" |
-| 5 Mimari | Veri modeli, kimlik, roller, servisler ve maliyet | "Silinen kayıt çöp kutusuna mı gitsin, kalıcı mı silinsin?" |
-| 6 Kurul | Tipe göre önerilen uzman kurulunu onaylarsın, model dağılımını seçersin | "Kurulda kimler olsun?" (çoklu seçim) |
-| 7 Tasarım | Görsel önizlemelerle stil, renk, yazı tipi, detaylar | "Bu üç açılış sayfasından hangisi? Premium / Minimal / Cesur" |
-| 8 Yol haritası | Görevler, öncelik, lansman hedefi | "Faz 1'de hangi özellikle başlayalım?" |
-| 9 Kapanış | Özet, durum panosu, ilk görev | - |
+| 0 Hazırlık | Ortam, skill, limit, kod haritası | "Impeccable kurulu değil. Kurup devam edelim mi?" |
+| 1 Fikir | Fikir sorgulanır → PRD | "İlk sürümde hangi özellikler olsun?" (çoklu seçim) |
+| 2 Tip | Web/SaaS, mobil veya backend; AI özelliği var mı | "Kullanıcın masa başında çalışıyor; web öneriyorum. Uygun mu?" |
+| 3 Kurulum | Seçilen tip ve yapı haritası yerleşir, `kit/` silinir | - |
+| 4 Teknoloji | Tipin karar kataloğu (10-12 karar) | "Veritabanı: Supabase / Neon + Better Auth / Firebase?" |
+| 5 Mimari | Veri modeli, roller, servisler, hesaplar, birim ekonomisi | "Silinen fatura çöp kutusuna mı gitsin?" |
+| 6 Kurul | Uzman kurulu ve model dağılımı | "Kurulda kimler olsun?" |
+| 7 Tasarım | Görsel önizlemelerle stil, renk, yazı tipi | "Bu üç açılış sayfasından hangisi?" |
+| 8 Yol haritası | Kabul testi önce gelen görevler, öncelik | "Faz 1'de hangi özellikle başlayalım?" |
+| 9 Kapanış | Özet, pano, ilk görev | - |
 
-## Koruma katmanları
+### Karar protokolü
+
+```mermaid
+sequenceDiagram
+    participant AI as Claude
+    participant K as Kurul
+    participant S as Sen
+    AI->>AI: Karar noktası mı? Tek yönlü mü?
+    opt Tek yönlü karar (veritabanı, auth, ödeme, veri modeli)
+        AI->>K: Görüş iste
+        K-->>AI: Mimar + Güvenlik değerlendirmesi
+    end
+    AI->>S: 2-4 seçenek, önerilen ilk sırada, ne zaman hangisi daha iyi
+    S-->>AI: Seçim
+    AI->>AI: docs/decisions/log.md (+ ADR) kaydet, uygula
+    AI->>S: Durum bloğu
+```
+
+"Tasarımda sorma" dersen sadece o konu kapanır ve o konudaki kararlar "otomatik" olarak kaydedilir; `/ask-mode on` ile tekrar açılır. Veri silme, prod deploy ve para harcatan işlemler her zaman onay ister.
+
+## 🏛️ Uzman kurulu
+
+Seçilen ürün tipine göre senin projende özelleştirilmiş ajanlar (`.claude/agents/board-*.md`) oluşturulur. Kurul danışmandır; kritik bulguda (RET) iş bitmez ve sana sorulur.
+
+| Tip | Önerilen kurul |
+|---|---|
+| Web / SaaS | Ürün · Mimar · Güvenlik · UX · Performans · KVKK · QA (+ DevOps, AI) |
+| Mobil | Ürün · Mimar · Güvenlik · UX · Mobil Platform · KVKK · QA (+ DevOps, AI) |
+| Backend | Ürün · Mimar · Güvenlik · API · DevOps · QA (+ KVKK, AI) |
+
+| Toplantı | Ne zaman | Kim | Model |
+|---|---|---|---|
+| Plan | `/plan-task` sonunda | Ürün + Mimar + ilgililer | üyenin modeli |
+| Görev sonu | `/build` sonunda | ilgili en fazla 3 üye | üyenin modeli |
+| Commit | Her commit (hook zorunlu kılar) | ilgili en fazla 2 üye, sadece diff | haiku |
+| Faz sonu, canlıya alma | `/board convene`, `/release first` | tüm kurul | üyenin modeli |
+
+## 🔎 Bulgu raporları
+
+Projeyi bir uzman gözüyle tarar ve en önemli **en fazla 20 bulguyu** kanıtla, puanla ve nasıl düzeltileceğiyle `docs/findings/<tür>/` altına yazar. Her rapor bir öncekiyle karşılaştırılır (yeni / devam / kötüleşti / çözüldü) ve panoda eğilim olarak görünür.
+
+| Komut | Bakış açısı | Örnek bulgular |
+|---|---|---|
+| `/findings-tech` | Kıdemli mimar | Tekrar eden yetki kontrolü, kullanılmayan export'lar, N+1 sorgu, yapı ihlali |
+| `/findings-business` | Sektörün kıdemli uzmanı (örn. bankacılıkta bankacı); web araştırmalı | Mutabakat akışı yok, iade kuralı eksik, rakiplerin standart özelliği yok |
+| `/findings-security` | Saldırgan | IDOR, istemciye sızan anahtar, imzasız webhook |
+| `/findings-ux` | Kullanıcı ve UX araştırmacısı | Boş durum yok, kontrast yetersiz, klavye ile erişilemiyor |
+| `/findings-perf` | Performans ve FinOps | Büyük istemci paketi, önbelleksiz sorgu, AI maliyeti sınırsız |
+| `/findings-legal` | Uyum uzmanı (hukuki görüş değildir) | Envanterde olmayan kişisel veri, eksik rıza, lisans uyumsuzluğu |
+| `/findings-all` | Seçilenlerin hepsi, paralel | Birleşik özet ve ortak düzeltme planı |
+
+**Puanlama**
+
+| Boyut | Puan |
+|---|---|
+| Etki | 0-40 |
+| Olasılık | 0-25 |
+| Yayılım | 0-20 |
+| Aciliyet | 0-15 |
+
+- **Bulgu önemi** = dört boyutun toplamı (0-100). Seviyeler: Kritik ≥80 · Yüksek 60-79 · Orta 40-59 · Düşük <40.
+- **Alan sağlık puanı** = 100 − ceza. Ceza: Kritik 15 · Yüksek 8 · Orta 4 · Düşük 1.
+- **Rapor sonrası:** Düzeltme planı (hızlı kazanımlar / planlı / büyük işler), ilgili kurul üyesinin görüşü ve hangi bulguların yol haritasına gireceği sorusu.
+
+## 🗂️ Proje yapısı
+
+Kurulumdan sonra her proje bu düzende başlar ve **bu düzende kalır**. Kod özellik bazlıdır: bir özelliğe ait her şey `features/<özellik>/` altında durur.
+
+```
+.
+├── .claude/                 # komutlar, ajanlar, hook'lar, kurul, bulgular, structure.json
+├── .github/                 # CI, Dependabot, bulut ajanları
+├── docs/
+│   ├── product/             # prd · roadmap · glossary · launch · feedback · unit-economics
+│   ├── architecture/        # overview · stack · structure
+│   ├── design/              # design-guide
+│   ├── decisions/           # log.md + adr-NNNN-*.md
+│   ├── quality/             # test-plan · metrics · retros
+│   ├── security/            # checklist
+│   ├── legal/               # privacy-kvkk
+│   ├── operations/          # release-checklist · maintenance · accounts · feature-flags
+│   ├── workflow/            # progress · decision-protocol · skills · board · usage-limits · cost-log
+│   ├── findings/            # /findings-* raporları
+│   └── archive/             # artık geçerli olmayan dokümanlar
+├── src/  veya  app/         # özellik bazlı kod (tipe göre; docs/architecture/structure.md)
+├── tests/
+├── sandbox/                 # deneme ve geçici işler (git'e girmez)
+└── CLAUDE.md · README.md · CHANGELOG.md
+```
+
+```mermaid
+flowchart LR
+    W["Yeni dosya yazılacak"] --> S{"sandbox/ altında mı?"}
+    S -->|evet| OK["✓ serbest"]
+    S -->|hayır| D{"Dağınıklık kalıbı mı?<br/>*.bak · *-old.* · kopya · temp/"}
+    D -->|evet| X["⛔ engellenir"]
+    D -->|hayır| H{"structure.json<br/>haritasında mı?"}
+    H -->|evet| OK
+    H -->|hayır| Q["❓ sana sorulur<br/>(teknik karar)"]
+```
+
+Yapı dört yerde korunur: yazım anında hook, her PR'da CI (`structure` işi), kurul Mimarı ve `/findings-tech`.
+
+## 🛡️ Koruma katmanları
+
+```mermaid
+flowchart TB
+    T["Claude bir araç çağırıyor"] --> W{"Dosya yazma mı?"}
+    W -->|evet| SG["Sır engeli<br/>Yapı koruyucu<br/>Yapılandırma onayı"]
+    W -->|hayır| B{"Komut mu?"}
+    B -->|evet| BG["Yıkıcı komut kalkanı<br/>Paket kapısı<br/>Commit kapısı (kurul)"]
+    SG --> P["Claude Code izin katmanı<br/>izin ver · sor · engelle"]
+    BG --> P
+    P --> CI["Push → CI<br/>lint · test · build · Semgrep · kopya kod · yapı · sır taraması"]
+```
 
 | Katman | Ne yapar |
 |---|---|
 | Sır engeli | Koda yazılan API anahtarı engellenir |
-| Paket kapısı | Kurulacak paket kayıt defterinden doğrulanır. Yoksa engellenir. Çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sana sorulur |
-| Yıkıcı komut kalkanı | `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset` engellenir. Prod deploy ve uzak veritabanı işlemleri için sana sorulur |
-| Yapılandırma onayı | `CLAUDE.md`, `.claude/`, `.mcp.json` ve iş akışı dosyaları senin onayın olmadan değişmez |
+| Paket kapısı | Paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur |
+| Yıkıcı komut kalkanı | `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset` engellenir; prod deploy ve uzak veritabanı işlemleri sorulur |
+| Yapı koruyucu | Harita dışı yeni dosya sorulur, dağınıklık dosyaları engellenir |
+| Yapılandırma onayı | `CLAUDE.md`, `.claude/`, `.mcp.json` ve iş akışı dosyaları onayın olmadan değişmez |
 | Commit kapısı | Kurul denetimi olmadan commit atılmaz |
-| CI | Lint, test, build, Semgrep, kopya kod, bağımlılık açıkları, sır taraması |
-| Canlı izleme ve bulut ajanları | İsteğe bağlı; GitHub değişkeniyle açılır (`CANLI_URL`, `CLAUDE_TAMIR`, `CLAUDE_BAKIM`) |
 
-## Uzman kurulu
+## 📊 Kontrol paneli ve raporlama
 
-Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur: `.claude/agents/kurul-*.md`. Her ajan seçilen stack'e ve projeye göre özelleştirilir.
+- **Durum bloğu:** Her cevabın sonunda aşama, görev, soru modu, limit, kurul ve sıradaki adım.
+- **Durum çubuğu:** Claude Code'un alt çubuğunda `▶ Faz 1 · G-012 · görev 7/23 · soru: açık · 5s %34 · hf %5 · bağlam %42`.
+- **`dashboard.html`:**
+  - Üstte: Şimdi, Dikkat gerektirenler, özet kutucuklar.
+  - 10 sekme: Genel, Yol haritası, Kararlar, Kurul, Bulgular, Kalite, Aktivite, Ürün ve teknik, Operasyon, Limit ve maliyet.
+  - Her Claude cevabından sonra kendiliğinden güncellenir ve açıkken 30 saniyede bir yenilenir.
 
-| Tip | Önerilen kurul |
-|---|---|
-| Web / SaaS | Ürün, Mimar, Güvenlik, UX, Performans/SEO, KVKK, QA (+ DevOps, + AI) |
-| Mobil | Ürün, Mimar, Güvenlik, UX, Mobil Platform, KVKK, QA (+ DevOps, + AI) |
-| Backend | Ürün, Mimar, Güvenlik, API, DevOps, QA (+ KVKK, + AI) |
-
-- **Toplantılar:**
-  - Plan onayından önce ve görev bitince ilgili üyeler toplanır.
-  - Her commit'te hafif denetim yapılır: en fazla 2 üye, hızlı model, sadece değişen satırlar. Hook bunu zorunlu kılar.
-  - Faz sonunda ve canlıya almadan önce tüm kurul toplanır.
-- **Yetki:** Kurul danışmandır. Kritik bulguda (güvenlik açığı, veri kaybı, yasal ihlal) iş bitmez ve sana sorulur.
-- **Model:** Önerilen karma: Mimar ve Güvenlik `sonnet`, diğer üyeler `haiku`.
-- **Komutlar:** `/kurul` durumu gösterir, `/kurul kur` kurulu değiştirir, `/kurul topla faz-sonu` toplantı yapar. Kararlar `docs/KURUL.md`'deki toplantı günlüğüne yazılır.
-
-## Limit farkındalığı
-
-- **Limit okuma:**
-  - Masaüstü uygulamasında `get_usage` aracıyla okunur.
-  - Terminalde ve IDE'de Claude Code'un durum çubuğuna gönderdiği `rate_limits` bilgisiyle okunur (`node .claude/hooks/limit.mjs`).
-  - Alt durum çubuğunda her zaman `5s %34 · hf %5` biçiminde görünür.
-- **Seviyeler:** Yeşil, sarı (5 saatlikte %60 üstü) ve kırmızı (5 saatlikte %85 üstü). Sarı veya kırmızı seviyede iş başlamadan önce tahmini maliyet söylenir ve şu seçenekler sunulur:
-  - Limite sığanı yap, kalanını sıraya koy
-  - Hepsini başlat; limit dolunca kaydet, yenilenince devam et (masaüstünde zamanlanmış görevle otomatik)
-  - Ucuz modele geçerek devam et
-  - Kurulu hafiflet
-- **Güvenli durma:** 5 saatlik %90'da iş yarım bırakılmaz. Mevcut adım tamamlanır, "Kaldığı yer" kaydedilir ve durulur.
-- **Kalibrasyon:** Görev maliyetleri `docs/MALIYET-GUNLUGU.md`'ye yazılır; tahminler zamanla gerçek verilere oturur.
-
-## Az token
-
-- Oturum açılışında sadece `CLAUDE.md` (özet kurallar) ve `docs/ILERLEME.md` yüklenir, toplam yaklaşık 1.700 token. Önceki sürümde bu yaklaşık 8.000 token'dı.
-- Diğer dokümanlar sadece gerektiğinde okunur.
-- Kod haritası bağlıysa kod, dosyalar okunmadan sorgulanır.
-
-## Proje boyunca
+## ⌨️ Komutlar
 
 | Komut | Ne yapar |
 |---|---|
-| `/planla [görev]` | Görevin karar noktalarını sorar, plan çıkarır, onay alır |
-| `/gelistir [görev]` | Uygular; yeni karar çıkarsa durup sorar; çalıştığını kanıtlar |
-| `/tasarim [kapsam]` | Tasarım kararlarını görsel önizlemelerle aldırır ve uygular |
-| `/incele` | Bağımsız inceleme ve güvenlik ajanları + ponytail-review |
-| `/hata-ayikla [belirti]` | Kök neden, kırmızı test, düzeltme |
-| `/oturum-sonu` | İlerleme, kararlar ve durum panosunu günceller |
-| `/durum` | Ayrıntılı rapor + `DURUM.html` panosu (limit ve kurul dahil) |
-| `/kurul [kur\|topla <tür>]` | Uzman kurulunu kurar, değiştirir, toplar |
-| `/geri-bildirim [metin\|dosya]` | Kullanıcı geri bildirimlerini işler, temalara ayırır, yol haritasına aldırır |
-| `/soru [kapat\|ac] [konu]` | Soru modu: "tasarımda sorma", "tekrar sor" |
-| `/canliya-al [ilk]` | Güvenlik, kalite, KVKK ve lansman kontrolleri |
-| `/bakim [haftalik\|aylik\|ceyreklik]` | Düzenli bakım |
+| `/start [fikir]` | 9 adımlı başlangıç sihirbazı |
+| `/plan-task [görev]` | Karar noktalarını sorar, kurul görüşüyle plan çıkarır |
+| `/build [görev]` | Önce kabul testleri, sonra uygulama; kanıt ve kurul denetimi |
+| `/design [kapsam]` | Görsel önizlemeli tasarım kararları |
+| `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |
+| `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme |
+| `/findings-<tür>` | `tech` · `business` · `security` · `ux` · `perf` · `legal` · `all` |
+| `/board [setup\|convene]` | Uzman kurulunu kurar, değiştirir, toplar |
+| `/ask-mode [on\|off] [konu]` | Soru modunu yönetir |
+| `/dashboard` | Ayrıntılı rapor ve kontrol paneli |
+| `/wrap-up` | Oturumu kapatır, ilerlemeyi kaydeder |
+| `/release [first]` | Canlıya alma kontrolleri |
+| `/maintain [weekly\|monthly\|quarterly]` | Düzenli bakım |
+| `/user-feedback` | Kullanıcı geri bildirimini yol haritasına işler |
 | `/retro` | Dersleri projeye ve kite geri yazar |
-| `/kit-guncelle` | Projeyi kitin son sürümüne çeker |
+| `/kit-update` | Projeyi kitin son sürümüne çeker |
 
-**Soru modu:** Konular `urun`, `teknik`, `tasarim`, `icerik`, `veri`, `guvenlik` ve `maliyet`. "Tasarımda sorma" dersen sadece o konu kapanır; AI önerilen seçeneği seçer ve kararı "otomatik" diye raporlar. "Tekrar sor" ile açılır. Veri silme, prod deploy ve para harcatan işlemler her zaman onay ister.
-
-**Raporlama:**
-- Her cevabın sonunda bir durum bloğu.
-- Claude Code'un alt durum çubuğunda aşama, görev, soru modu ve limit.
-- `/durum` ile ayrıntılı rapor.
-- **`DURUM.html` kontrol paneli:** Proje sahibinin her şeyi takip ettiği sayfa. "Şimdi", "Dikkat gerektirenler" ve özet kutucukların altında 9 sekme var: genel, yol haritası, kararlar, kurul, kalite (kabul testleri, metrikler), aktivite, ürün ve teknik (birim ekonomisi, geri bildirim), operasyon (hesaplar, bayraklar, GitHub), limit ve maliyet (bağlam dahil). Her Claude cevabından sonra otomatik güncellenir ve açıkken 30 saniyede bir yenilenir. Tarayıcıda açık tutman yeterli.
-
-## Skill'ler nerede kullanılır
-
-Tam tablo: [`docs/SKILLER.md`](docs/SKILLER.md).
+## 🧩 Skill'ler
 
 | Alan | Skill |
 |---|---|
 | Rapor dili | Caveman (sorular ve dokümanlar tam cümle) |
-| Fikir sorgulama, alan modeli, mimari, araştırma, TDD, hata ayıklama | Matt Pocock skills |
-| Kod: en küçük tam çözüm, inceleme, denetim | Ponytail |
-| Stil yönü: Premium/Apple, minimal, cesur, brutalist | Taste Skill (yöne göre) |
-| Ürün bağlamı, tasarım sistemi, critique/audit/polish | Impeccable |
-| Renk, yazı tipi, belirteçler, marka, banner | UI UX Pro Max |
+| Fikir, alan modeli, mimari, araştırma, TDD, hata ayıklama | Matt Pocock skills |
+| En küçük tam çözüm, kod incelemesi, denetim | Ponytail |
+| Stil yönüne göre arayüz (premium, minimal, cesur, brutalist) | Taste Skill |
+| Ürün bağlamı, tasarım sistemi, critique, audit, polish | Impeccable |
+| Renk, yazı tipi, tasarım belirteçleri, marka | UI UX Pro Max |
 | Kullanıcıya görünen metinler | Humanizer |
 
-## Yapı
+Tam eşleme: [`docs/workflow/skills.md`](docs/workflow/skills.md)
+
+## 🛠️ Kiti geliştirmek
 
 ```
-CLAUDE.md                      AI'nın anayasası (protokol, skill, stack, ilerleme içe aktarılır)
-docs/
-  KARAR-PROTOKOLU.md           nasıl sorulur, soru modu, görsel önizleme, durum bloğu
-  KURUL.md  LIMIT-PLANI.md  MALIYET-GUNLUGU.md  METRIKLER.md
-  HESAPLAR.md  BAYRAKLAR.md  BIRIM-EKONOMISI.md  GERI-BILDIRIM.md
-  SKILLER.md                   hangi işte hangi skill
-  PRD MIMARI YOL-HARITASI ILERLEME KARARLAR SOZLUK TEST-PLANI
-  GUVENLIK YASAL-KVKK CANLIYA-ALMA LANSMAN BAKIM RETRO
-  STACK.md                     kurulumda tipin dosyasıyla değişir
-.claude/
-  commands/                    15 komut
-  agents/                      inceleyici, guvenlik-denetcisi (+ kurulumda kurul-*)
-  kurul/                       kurul rol şablonları (10 uzman) + KURALLAR.md
-  hooks/                       sır engeli, paket kapısı, yıkıcı komut kalkanı, commit kapısı, hatırlatma,
-                               oturum notu, durum çubuğu, limit, durum panosu
-  settings.json                izinler, hook'lar, durum çubuğu, skill plugin'leri
-kit/                           kurulumdan sonra silinir
-  kit.mjs                      kur / guncelle
-  sablon/web-saas|mobil|backend   STACK (karar kataloğu dahil), TASARIM, CI, Dependabot, MCP, pre-commit…
-  sablon/ekler/ai              AI.md, evals/, prompts/
-  proje/README.md              projenin README şablonu
-  CHANGELOG.md  SURUM  KAYNAK  REHBER.html  testler/
+kit/
+├── kit.mjs                  # install · update
+├── templates/
+│   ├── web-saas/            # stack, design-guide, structure.json, CI, Dependabot, MCP, pre-commit
+│   ├── mobile/
+│   ├── backend/
+│   └── addons/ai/           # docs/ai/guide.md, ai/evals, ai/prompts
+├── project/README.md        # projenin README şablonu
+├── assets/banner.svg
+├── tests/                   # node --test "kit/tests/*.test.mjs"
+├── CHANGELOG.md · VERSION · SOURCE · guide.html
 ```
 
-## Kiti geliştirmek
-
-- Testler: `node --test "kit/testler/*.test.mjs"`
-- Dersler projelerden `/retro` ile gelir. `/retro` bu repoda bir dal açar ve onayınla push eder.
-- Sürüm çıkarmak için:
-  1. `kit/SURUM` dosyasındaki numarayı artır.
+- **Test:** `node --test "kit/tests/*.test.mjs"` (CI'da `kit-tests` iş akışı çalıştırır).
+- **Sürüm çıkarmak:**
+  1. `kit/VERSION` dosyasındaki numarayı artır.
   2. `kit/CHANGELOG.md`'de "[Yayınlanmamış]" bölümünü sürüm numarasıyla adlandır.
   3. Testleri çalıştır.
   4. Commit at, `git tag vX.Y.Z` ile etiketle ve push et.
-- Projeler `/kit-guncelle` ile yeni sürümü alır. Senin değiştirdiğin dosyalar ezilmez, yeni hali yanına `.yeni` olarak gelir.
-- Yeni tip eklemek için `kit/sablon/<tip>/` klasörü aç. Gerekli dosyalar:
-  - `docs/STACK.md` ("Karar noktaları" bölümü dahil)
-  - `.claude/settings.birlestir.json`
+- **Ders toplama:** Projelerdeki dersler `/retro` ile bu repoda bir dala gelir ve onayınla birleşir.
+- **Projeleri güncelleme:** Projeler yeni sürümü `/kit-update` ile alır. Senin değiştirdiğin dosyalar ezilmez; yeni hali yanına `.kit-new` olarak gelir.
+- **Yeni tip eklemek:** `kit/templates/<tip>/` klasörünü aç. İçine şunları koy:
+  - `docs/architecture/stack.md` ("Karar noktaları" bölümü dahil)
+  - `docs/architecture/structure.md`
+  - `.claude/structure.json`
+  - `.claude/settings.merge.json`
   - `.claude/hooks/format.mjs`
-  - `.gitignore.ekle`
+  - `.gitignore.append`
   - `.env.example`
-- Yeni ek eklemek için `kit/sablon/ekler/<ad>/` klasörü aç. Mevcut bir dosyanın sonuna eklenecek içerik için `x.ekle`, JSON birleştirmek için `x.birlestir.json` adını kullan.
+- **Yeni ek eklemek:** `kit/templates/addons/<ad>/` klasörünü aç. Var olan bir dosyanın sonuna eklenecek içerik için `x.append`, JSON birleştirmek için `x.merge.json` adını kullan.

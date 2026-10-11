@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Claude Code alt durum çubuğu: aşama, görev ilerlemesi, soru modu ve kullanım limitleri.
 // Örnek: ▶ Faz 1 · G-012 · görev 7/23 · soru: açık (kapalı: tasarim) · 5s %34 · hf %5
-// Claude Code'un gönderdiği rate_limits bilgisini .claude/.limitler.json'a da yazar (limit.mjs okur).
+// Claude Code'un gönderdiği rate_limits bilgisini .claude/state/usage.json'a da yazar (usage.mjs okur).
 import fs from 'node:fs';
-import { durumOku } from './durum-oku.mjs';
-import { limitYaz, limitOku, seviye } from './limit.mjs';
+import { durumOku } from './status-read.mjs';
+import { limitYaz, limitOku, seviye } from './usage.mjs';
 
 let kok = process.cwd();
 let girdi = {};
@@ -27,7 +27,7 @@ export function baglamYuzde(cw) {
 }
 const baglam = baglamYuzde(girdi.context_window);
 if (baglam != null) {
-  try { fs.writeFileSync(`${kok}/.claude/.baglam.json`, JSON.stringify({ yuzde: baglam, okundu: Date.now() })); } catch { /* sessiz */ }
+  try { fs.mkdirSync(`${kok}/.claude/state`, { recursive: true }); fs.writeFileSync(`${kok}/.claude/state/context.json`, JSON.stringify({ yuzde: baglam, okundu: Date.now() })); } catch { /* sessiz */ }
 }
 
 function limitParcasi() {
@@ -44,7 +44,7 @@ try {
   const d = durumOku(kok);
   const parcalar = [];
   if (d.kitBekliyor) {
-    parcalar.push('◆ Kit kurulmadı · başlamak için: /baslat [fikrin]');
+    parcalar.push('◆ Kit kurulmadı · başlamak için: /start [fikrin]');
   } else {
     const a = d.alanlar;
     const soru = (a['Soru modu'] ?? 'açık')

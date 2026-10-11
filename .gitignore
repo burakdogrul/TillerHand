@@ -17,17 +17,18 @@ Thumbs.db
 CLAUDE.local.md
 
 # Kit güncellemesinden gelen, birleştirilmeyi bekleyen dosyalar
-*.yeni
+*.kit-new
 
 # Loglar
 *.log
 logs/
 
 # Kit tarafından üretilen çıktılar
-DURUM.html
-.onizleme/
-.claude/.limitler.json
-.claude/.kurul-onay
-.claude/.baglam.json
-.claude/.hatirlatma.json
-.claude/.gh-onbellek.json
+dashboard.html
+.previews/
+
+# Kit çalışma durumu (limit, bağlam, onaylar, önbellek)
+.claude/state/
+
+# Deneme ve geçici işler (yapı haritası dışı)
+sandbox/

@@ -7,10 +7,11 @@
       "Bash(git log:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(node .claude/hooks/durum-panosu.mjs)",
-      "Bash(node kit/kit.mjs kur:*)",
-      "Bash(node .claude/hooks/limit.mjs:*)",
-      "Bash(node .claude/hooks/commit-kapisi.mjs --onayla:*)"
+      "Bash(node .claude/hooks/dashboard.mjs)",
+      "Bash(node kit/kit.mjs install:*)",
+      "Bash(node .claude/hooks/usage.mjs:*)",
+      "Bash(node .claude/hooks/commit-gate.mjs --approve:*)",
+      "Bash(node .claude/hooks/structure-guard.mjs --check)"
     ],
     "ask": [
       "Bash(git push:*)",
@@ -61,16 +62,25 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/yikici-kalkan.mjs\""
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/destructive-guard.mjs\""
           },
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/paket-kapisi.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/package-gate.mjs\"",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-kapisi.mjs\""
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-gate.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/structure-guard.mjs\""
           }
         ]
       }
@@ -80,7 +90,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/durum-panosu.mjs\" --sessiz",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs\" --sessiz",
             "timeout": 20
           }
         ]
@@ -91,7 +101,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/hatirlatma.mjs\""
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/reminder.mjs\""
           }
         ]
       }

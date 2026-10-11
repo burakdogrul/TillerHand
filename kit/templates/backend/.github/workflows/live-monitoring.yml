@@ -1,0 +1,44 @@
+# Canlıda sentetik izleme: /health ve kritik uçları saatte bir CANLI ortamda dener.
+# Bozulursa "live-monitoring" etiketli bir issue açar (zaten açıksa yenisini açmaz).
+# Etkinleştirmek için:
+#   1. Settings > Variables > LIVE_URL = https://api.alanadin.com
+#   2. Kritik uç testleri (veri silmeyen, test hesabıyla sınırlı): tests/live/ altına pytest olarak
+#   3. Gerekirse Settings > Secrets > LIVE_TEST_TOKEN (prod'da yetkisi kısıtlı test hesabı)
+name: Canlı izleme
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  izle:
+    if: vars.LIVE_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sağlık
+        run: curl -fsS --max-time 10 "${{ vars.LIVE_URL }}/health"
+      - uses: astral-sh/setup-uv@v5
+        if: hashFiles('tests/live/**') != ''
+      - name: Kritik uçlar (canlı)
+        if: hashFiles('tests/live/**') != ''
+        run: uv sync --locked && uv run pytest tests/live -q
+        env:
+          BASE_URL: ${{ vars.LIVE_URL }}
+          LIVE_TEST_TOKEN: ${{ secrets.LIVE_TEST_TOKEN }}
+      - name: Bozulduysa issue aç
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(gh issue list --label live-monitoring --state open --json number -q '.[].number')" ]; then
+            gh label create live-monitoring --color D03B3B --force
+            gh issue create --label live-monitoring --title "Canlı izleme: API bozuk" \
+              --body "Çalışma kaydı: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
