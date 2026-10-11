@@ -2,7 +2,7 @@
 description: Projenin ayrıntılı durum raporunu verir ve DURUM.html panosunu yeniler.
 ---
 
-1. `node .claude/hooks/durum-panosu.mjs` çalıştır. Bu komut `DURUM.html`'i üretir.
+1. `node .claude/hooks/durum-panosu.mjs` çalıştır. Bu komut `DURUM.html` kontrol panelini üretir (her Claude cevabından sonra Stop hook'u da otomatik üretir; sayfa açıkken 30 sn'de bir yenilenir). Sekmeler: Genel, Yol haritası, Kararlar, Kurul, Kalite, Aktivite, Ürün ve teknik, Limit ve maliyet.
 2. Limiti oku (`docs/LIMIT-PLANI.md` §1). `docs/ILERLEME.md`, `docs/YOL-HARITASI.md`, `docs/KARARLAR.md` ve `docs/KURUL.md`'yi oku ve şu raporu ver:
 
 ```

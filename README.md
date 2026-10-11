@@ -134,7 +134,11 @@ Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur: `.claude
 
 **Soru modu:** Konular `urun`, `teknik`, `tasarim`, `icerik`, `veri`, `guvenlik` ve `maliyet`. "Tasarımda sorma" dersen sadece o konu kapanır; AI önerilen seçeneği seçer ve kararı "otomatik" diye raporlar. "Tekrar sor" ile açılır. Veri silme, prod deploy ve para harcatan işlemler her zaman onay ister.
 
-**Raporlama:** Her cevabın sonunda durum bloğu, Claude Code'un alt durum çubuğunda aşama/görev/soru modu, `/durum` ile ayrıntılı rapor ve `DURUM.html` panosu.
+**Raporlama:**
+- Her cevabın sonunda bir durum bloğu.
+- Claude Code'un alt durum çubuğunda aşama, görev, soru modu ve limit.
+- `/durum` ile ayrıntılı rapor.
+- **`DURUM.html` kontrol paneli:** Proje sahibinin her şeyi takip ettiği sayfa. "Şimdi", "Dikkat gerektirenler" ve özet kutucukların altında 8 sekme var: genel, yol haritası, kararlar, kurul, kalite, aktivite, ürün ve teknik, limit ve maliyet. Her Claude cevabından sonra otomatik güncellenir ve açıkken 30 saniyede bir yenilenir. Tarayıcıda açık tutman yeterli.
 
 ## Skill'ler nerede kullanılır
 

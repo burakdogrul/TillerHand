@@ -5,6 +5,18 @@ Kit sürümü `kit/SURUM` dosyasında. Bir projeyi güncellemek: projede `/kit-g
 
 ## [Yayınlanmamış]
 
+## [2.2.0] - 2026-10-11
+
+### Değişti
+- **DURUM.html proje sahibinin kontrol paneline dönüştü:**
+  - Üst bölümde "Şimdi" (aşama, görev, sıradaki adım) ve "Dikkat gerektirenler" alanları var. Burada kurul RET'i, limit, bekleyen kararlar, yarıda kalan iş, açık sorunlar, eski ILERLEME ve soru modu görünür.
+  - Genel sağlık rozeti: Yolunda / Dikkat / Engel var.
+  - Özet kutucuklar: görevler, MVP kabul kriterleri, kararlar, kurul, son 7 günün commit'leri, limit.
+  - 8 sekme: Genel, Yol haritası (görev listesi, aktif görev vurgulu), Kararlar (konu filtresi), Kurul, Kalite (kontrol listeleri, kod sağlığı, düzeltme oranı, kritik akış testleri, bakım), Aktivite (14 günlük commit grafiği ve birleşik akış), Ürün ve teknik (PRD, MVP, stack, tasarım, önizleme bağlantıları, CHANGELOG), Limit ve maliyet.
+  - Açık ve koyu tema, 30 saniyede bir otomatik yenileme, klavyeyle sekme gezintisi.
+- **Stop hook'u:** Panoyu her Claude cevabından sonra yeniler (token harcamaz).
+- **`durum-oku.mjs`:** Yardımcı fonksiyonları dışa açar; görev listeleri ve son oturum bilgisini okur.
+
 ## [2.1.0] - 2026-10-11
 
 ### Eklendi

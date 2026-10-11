@@ -124,4 +124,5 @@ test('durum çubuğu ve pano: kurulum öncesi ve sonrası', () => {
   assert.equal(r.status, 0, r.stderr);
   const html = oku(path.join(p, 'DURUM.html'));
   assert.ok(html.includes('Next.js') && html.includes('step now'), 'pano kararı ve aktif aşamayı gösteriyor');
+  assert.ok(html.includes('Dikkat gerektirenler') && (html.match(/role="tab"/g) ?? []).length === 8, 'pano: dikkat alanı ve 8 sekme');
 });

@@ -61,6 +61,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/durum-panosu.mjs\" --sessiz",
+            "timeout": 20
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
