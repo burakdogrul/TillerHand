@@ -57,6 +57,22 @@ export function durumOku(kok) {
 
   const satirlar = (b) => (b ?? '').split('\n').map((s) => s.trim()).filter((s) => /^([-*]|\d+\.)\s+\S/.test(s)).map((s) => s.replace(/^([-*]|\d+\.)\s+/, ''));
 
+  // Kurul: docs/KURUL.md'deki etiketli satırlar, üye tablosu ve toplantı günlüğü
+  const kurulMetni = oku(d('docs/KURUL.md'));
+  const kurulAlan = {};
+  for (const [, k, v] of kurulMetni.matchAll(/^\*\*(.+?):\*\*\s*(.*)$/gm)) kurulAlan[k.trim()] = v.trim();
+  const tablo = (govde = '', enAz) => govde.split('\n')
+    .filter((s) => s.startsWith('|') && !/^\|\s*-/.test(s))
+    .map((s) => s.split('|').slice(1, -1).map((c) => c.trim()))
+    .filter((c) => c.length >= enAz && c.some(Boolean)).slice(1); // ilk satır başlık
+  const kb = bolumler(kurulMetni);
+  const kurul = {
+    durum: kurulAlan['Durum'] ?? 'kurulmadı',
+    commitDenetimi: kurulAlan['Commit denetimi'] ?? 'açık',
+    uyeler: tablo(kb['Üyeler'], 5).map(([uye, ajan, model]) => ({ uye, ajan, model })),
+    toplantilar: tablo(kb['Toplantı günlüğü'], 8).map(([no, tarih, tur, kapsam, katilan, sonuc, kritik, karar]) => ({ no, tarih, tur, kapsam, katilan, sonuc, kritik, karar })),
+  };
+
   return {
     proje: (oku(d('CLAUDE.md')).match(/^# (.+)$/m)?.[1] ?? 'Proje').trim(),
     kurulu: !!kit,
@@ -67,6 +83,8 @@ export function durumOku(kok) {
     siradaki: satirlar(ib['Sıradaki adım']),
     bekleyen: satirlar(ib['Bekleyen kararlar']),
     sorunlar: satirlar(ib['Açık sorunlar / bloklayıcılar']).map((s) => s.replace(/^\[[ x]\]\s*/i, '')),
+    kaldigiYer: satirlar(Object.entries(ib).find(([b]) => b.startsWith('Kaldığı yer'))?.[1]),
+    kurul,
     fazlar,
     gorev,
     kararlar,

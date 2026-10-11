@@ -25,8 +25,8 @@ const ORTAK_HARIC = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README
 // Kitin sahiplendiği dosyalar: güncellemede kullanıcı değiştirmediyse yenisiyle değişir.
 // Diğerleri projeye aittir (CLAUDE.md, PRD, STACK, settings.json...); güncelleme sadece eksikse ekler.
 const KIT_DOSYASI = [
-  /^\.claude\/(commands|agents|hooks)\//,
-  /^docs\/(GUVENLIK|CANLIYA-ALMA|BAKIM|YASAL-KVKK|KARAR-PROTOKOLU|SKILLER)\.md$/,
+  /^\.claude\/(commands|agents|hooks|kurul)\//,
+  /^docs\/(GUVENLIK|CANLIYA-ALMA|BAKIM|YASAL-KVKK|KARAR-PROTOKOLU|SKILLER|LIMIT-PLANI)\.md$/,
 ];
 const kitDosyasi = (rel) => KIT_DOSYASI.some((re) => re.test(rel));
 

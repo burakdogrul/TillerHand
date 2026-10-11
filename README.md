@@ -1,7 +1,13 @@
 # Vibe Coding Kit
 
 Claude Code ile bir projeyi fikirden canlıya ve bakıma kadar **soru sorarak** yürüten proje şablonu.
-AI hiçbir kararı kendi başına vermez. Her adımda seçenekleri, ne zaman hangisinin daha iyi olduğunu ve önerisini sunar; sen seçersin. Tasarım kararlarını görsel önizlemelerle sorar. Her işte uygun skill'i kullanır ve her cevabın sonunda nerede olduğunu raporlar.
+
+- **Kararları sen verirsin.** AI hiçbir kararı kendi başına vermez. Her adımda seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar.
+- **Tasarımı görerek seçersin.** Tasarım kararları görsel önizlemelerle sorulur.
+- **Uzman kurulu denetler.** Projeye özel uzman ajanlar planı, görevi, her commit'i ve fazı denetler.
+- **Limitini gözetir.** 5 saatlik ve haftalık kullanım limitini hesaba katar.
+- **Az token harcar.** Her oturumu düşük maliyetle açar.
+- **Durumu raporlar.** Her işte uygun skill'i kullanır ve her cevabın sonunda nerede olduğunu söyler.
 
 > Bu README kitin kendisini anlatır. `/baslat` kurulumu yaptığında yerini projenin README'si alır.
 
@@ -28,6 +34,20 @@ AI hiçbir kararı kendi başına vermez. Her adımda seçenekleri, ne zaman han
 /plugin install mattpocock-skills@mattpocock
 ```
 
+**Önerilen: Kod haritası** ([codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp), MIT). AI kodu dosya dosya okumak yerine sorgular; proje büyüdükçe oturum başına ciddi token tasarrufu sağlar. `/baslat` kurmak isteyip istemediğini sorar. Kurulum script'ini kendi terminalinde çalıştırırsın:
+
+```powershell
+# Windows (PowerShell)
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 -OutFile install.ps1
+Unblock-File .\install.ps1
+.\install.ps1
+```
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash
+```
+
 ## Yeni proje başlatmak
 
 1. GitHub'da bu repoda **Use this template → Create a new repository**.
@@ -41,19 +61,58 @@ claude
 
 3. `/baslat Serbest çalışanlar için fatura takip uygulaması`
 
-`/baslat` sihirbazı 8 adımda ilerler. Her adımda sorar, cevabını kaydeder, kaldığı yerden devam edebilir:
+`/baslat` sihirbazı 9 adımda ilerler. Her adımda sorar, cevabını kaydeder, kaldığı yerden devam edebilir:
 
 | Adım | Ne olur | Örnek sorular |
 |---|---|---|
-| 0 Hazırlık | Ortam ve skill kontrolü | "Impeccable kurulu değil. Kurup devam edelim mi?" |
+| 0 Hazırlık | Ortam, skill, limit ve kod haritası kontrolü | "Impeccable kurulu değil. Kurup devam edelim mi?" |
 | 1 Fikir → PRD | Fikir sorgulanır (grilling) | "İlk sürümde hangi özellikler olsun?" (çoklu seçim) |
 | 2 Proje tipi | Web/SaaS, mobil, backend; AI özelliği | "Web mi, mobil mi? Senin kullanıcın için şu daha iyi, çünkü…" |
 | 3 Kurulum | `kit/kit.mjs kur` tipi yerleştirir, `kit/`'i siler | - |
 | 4 Teknoloji | Tipin karar kataloğundan tek tek | "Backend dili: FastAPI (önerilen) / Node + Hono / Go?" |
 | 5 Mimari | Veri modeli, kimlik, roller, servisler ve maliyet | "Silinen kayıt çöp kutusuna mı gitsin, kalıcı mı silinsin?" |
-| 6 Tasarım | Görsel önizlemelerle stil, renk, yazı tipi, detaylar | "Bu üç açılış sayfasından hangisi? Premium / Minimal / Cesur" |
-| 7 Yol haritası | Görevler, öncelik, lansman hedefi | "Faz 1'de hangi özellikle başlayalım?" |
-| 8 Kapanış | Özet, durum panosu, ilk görev | - |
+| 6 Kurul | Tipe göre önerilen uzman kurulunu onaylarsın, model dağılımını seçersin | "Kurulda kimler olsun?" (çoklu seçim) |
+| 7 Tasarım | Görsel önizlemelerle stil, renk, yazı tipi, detaylar | "Bu üç açılış sayfasından hangisi? Premium / Minimal / Cesur" |
+| 8 Yol haritası | Görevler, öncelik, lansman hedefi | "Faz 1'de hangi özellikle başlayalım?" |
+| 9 Kapanış | Özet, durum panosu, ilk görev | - |
+
+## Uzman kurulu
+
+Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur: `.claude/agents/kurul-*.md`. Her ajan seçilen stack'e ve projeye göre özelleştirilir.
+
+| Tip | Önerilen kurul |
+|---|---|
+| Web / SaaS | Ürün, Mimar, Güvenlik, UX, Performans/SEO, KVKK, QA (+ DevOps, + AI) |
+| Mobil | Ürün, Mimar, Güvenlik, UX, Mobil Platform, KVKK, QA (+ DevOps, + AI) |
+| Backend | Ürün, Mimar, Güvenlik, API, DevOps, QA (+ KVKK, + AI) |
+
+- **Toplantılar:**
+  - Plan onayından önce ve görev bitince ilgili üyeler toplanır.
+  - Her commit'te hafif denetim yapılır: en fazla 2 üye, hızlı model, sadece değişen satırlar. Hook bunu zorunlu kılar.
+  - Faz sonunda ve canlıya almadan önce tüm kurul toplanır.
+- **Yetki:** Kurul danışmandır. Kritik bulguda (güvenlik açığı, veri kaybı, yasal ihlal) iş bitmez ve sana sorulur.
+- **Model:** Önerilen karma: Mimar ve Güvenlik `sonnet`, diğer üyeler `haiku`.
+- **Komutlar:** `/kurul` durumu gösterir, `/kurul kur` kurulu değiştirir, `/kurul topla faz-sonu` toplantı yapar. Kararlar `docs/KURUL.md`'deki toplantı günlüğüne yazılır.
+
+## Limit farkındalığı
+
+- **Limit okuma:**
+  - Masaüstü uygulamasında `get_usage` aracıyla okunur.
+  - Terminalde ve IDE'de Claude Code'un durum çubuğuna gönderdiği `rate_limits` bilgisiyle okunur (`node .claude/hooks/limit.mjs`).
+  - Alt durum çubuğunda her zaman `5s %34 · hf %5` biçiminde görünür.
+- **Seviyeler:** Yeşil, sarı (5 saatlikte %60 üstü) ve kırmızı (5 saatlikte %85 üstü). Sarı veya kırmızı seviyede iş başlamadan önce tahmini maliyet söylenir ve şu seçenekler sunulur:
+  - Limite sığanı yap, kalanını sıraya koy
+  - Hepsini başlat; limit dolunca kaydet, yenilenince devam et (masaüstünde zamanlanmış görevle otomatik)
+  - Ucuz modele geçerek devam et
+  - Kurulu hafiflet
+- **Güvenli durma:** 5 saatlik %90'da iş yarım bırakılmaz. Mevcut adım tamamlanır, "Kaldığı yer" kaydedilir ve durulur.
+- **Kalibrasyon:** Görev maliyetleri `docs/MALIYET-GUNLUGU.md`'ye yazılır; tahminler zamanla gerçek verilere oturur.
+
+## Az token
+
+- Oturum açılışında sadece `CLAUDE.md` (özet kurallar) ve `docs/ILERLEME.md` yüklenir, toplam yaklaşık 1.700 token. Önceki sürümde bu yaklaşık 8.000 token'dı.
+- Diğer dokümanlar sadece gerektiğinde okunur.
+- Kod haritası bağlıysa kod, dosyalar okunmadan sorgulanır.
 
 ## Proje boyunca
 
@@ -65,7 +124,8 @@ claude
 | `/incele` | Bağımsız inceleme ve güvenlik ajanları + ponytail-review |
 | `/hata-ayikla [belirti]` | Kök neden, kırmızı test, düzeltme |
 | `/oturum-sonu` | İlerleme, kararlar ve durum panosunu günceller |
-| `/durum` | Ayrıntılı rapor + `DURUM.html` panosu |
+| `/durum` | Ayrıntılı rapor + `DURUM.html` panosu (limit ve kurul dahil) |
+| `/kurul [kur\|topla <tür>]` | Uzman kurulunu kurar, değiştirir, toplar |
 | `/soru [kapat\|ac] [konu]` | Soru modu: "tasarımda sorma", "tekrar sor" |
 | `/canliya-al [ilk]` | Güvenlik, kalite, KVKK ve lansman kontrolleri |
 | `/bakim [haftalik\|aylik\|ceyreklik]` | Düzenli bakım |
@@ -96,14 +156,16 @@ Tam tablo: [`docs/SKILLER.md`](docs/SKILLER.md).
 CLAUDE.md                      AI'nın anayasası (protokol, skill, stack, ilerleme içe aktarılır)
 docs/
   KARAR-PROTOKOLU.md           nasıl sorulur, soru modu, görsel önizleme, durum bloğu
+  KURUL.md  LIMIT-PLANI.md  MALIYET-GUNLUGU.md
   SKILLER.md                   hangi işte hangi skill
   PRD MIMARI YOL-HARITASI ILERLEME KARARLAR SOZLUK TEST-PLANI
   GUVENLIK YASAL-KVKK CANLIYA-ALMA LANSMAN BAKIM RETRO
   STACK.md                     kurulumda tipin dosyasıyla değişir
 .claude/
   commands/                    14 komut
-  agents/                      inceleyici, guvenlik-denetcisi
-  hooks/                       sır engeli, oturum notu, durum çubuğu, durum panosu
+  agents/                      inceleyici, guvenlik-denetcisi (+ kurulumda kurul-*)
+  kurul/                       kurul rol şablonları (10 uzman) + KURALLAR.md
+  hooks/                       sır engeli, commit kapısı, oturum notu, durum çubuğu, limit, durum panosu
   settings.json                izinler, hook'lar, durum çubuğu, skill plugin'leri
 kit/                           kurulumdan sonra silinir
   kit.mjs                      kur / guncelle

@@ -8,7 +8,8 @@ Mod: $ARGUMENTS (boş veya `surum` = sadece A bölümü; `ilk` = A + B bölümle
 Kaynak listeler: `docs/CANLIYA-ALMA.md`, `docs/STACK.md` → "Canlıya alma", `docs/GUVENLIK.md` (ilk lansmanda tamamı), varsa `docs/AI.md` → "Canlıya alma" ve `docs/LANSMAN.md`.
 
 1. **Otomatik kontrol edebildiklerini çalıştır:**
-   - `ilk` modunda paralel başlat: `guvenlik-denetcisi` alt ajanı (tüm kod tabanı), `security-review` skill'i, `ponytail:ponytail-audit` (kalite, yük altında kırılacak yerler); arayüz varsa `impeccable:impeccable` → `audit` (erişilebilirlik, performans, responsive)
+   - `ilk` modunda önce limiti oku; tam denetim pahalıdır (`docs/LIMIT-PLANI.md`). Kurul kurulduysa **canlıya alma kurul toplantısı** (tüm kurul, `.claude/kurul/KURALLAR.md`) yap.
+   - `ilk` modunda paralel başlat: `guvenlik-denetcisi` alt ajanı (tüm kod tabanı; kurul toplantısına zaten katılıyorsa tekrar çalıştırma), `security-review` skill'i, `ponytail:ponytail-audit` (kalite, yük altında kırılacak yerler); arayüz varsa `impeccable:impeccable` → `audit` (erişilebilirlik, performans, responsive)
    - Son CI çalışmasının durumu (`gh run list --branch main --limit 1`, gh kuruluysa)
    - Lint, tip kontrolü, testler, build (`CLAUDE.md` → Komutlar)
    - Bağımlılık açık taraması

@@ -72,13 +72,15 @@ Kısa ve sıkıştırılmış dille (caveman), en fazla 4 satır:
 
 ```
 ── Durum ─────────────────────────────
-Aşama: 2 Geliştirme · Görev: G-012 (7/23) · Soru modu: açık
-Yapıldı: kayıt formu + doğrulama, test yeşil
+Aşama: Faz 1 · Görev: G-012 (7/23) · Soru modu: açık · Limit: 5s %34 hf %5
+Yapıldı: kayıt formu + doğrulama, test yeşil · Kurul: ONAY (ux, qa)
 Otomatik kararlar: yok
 Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi
 ```
 
 - Aşama ve görev `docs/ILERLEME.md`'den; görev sayısı `docs/YOL-HARITASI.md`'deki işaretli/toplam.
+- Limit: masaüstünde `get_usage`, terminalde `node .claude/hooks/limit.mjs` (okunamıyorsa "bilinmiyor").
+- Kurul: bu turda toplantı yapıldıysa sonucu ve katılanlar.
 - "Sıradaki" her zaman somut olsun; bir karar bekleniyorsa onu söyle.
 - Sadece soru sorduğun turda (cevap beklerken) durum bloğunu soru öncesine tek satır olarak koy.
 

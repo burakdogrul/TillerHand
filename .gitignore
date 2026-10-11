@@ -26,3 +26,5 @@ logs/
 # Kit tarafından üretilen çıktılar
 DURUM.html
 .onizleme/
+.claude/.limitler.json
+.claude/.kurul-onay

@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · GitHub template · v2.0</p>
+  <p class="eyebrow">Claude Code · GitHub template · v2.1</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -168,6 +168,8 @@ html { scroll-behavior: smooth; }
     <a href="#sihirbaz">/baslat sihirbazı</a>
     <a href="#tasarim">Tasarım akışı</a>
     <a href="#asamalar">Aşamalar</a>
+    <a href="#kurul">Uzman kurulu</a>
+    <a href="#limit">Limit</a>
     <a href="#rapor">Raporlama</a>
     <a href="#skiller">Skill'ler</a>
     <a href="#kontroller">Otomatik kontroller</a>
@@ -239,22 +241,23 @@ claude
 <section id="sihirbaz">
   <div class="section-head">
     <p class="eyebrow">.claude/commands/baslat.md</p>
-    <h2>/baslat: sekiz adımlı sihirbaz</h2>
+    <h2>/baslat: dokuz adımlı sihirbaz</h2>
     <p class="lede">Uygulama kodu yazmadan projenin tüm temel kararlarını alır. Yarıda kalırsa kaldığı adımdan devam eder.</p>
   </div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Adım</th><th>Ne olur</th><th>Örnek soru</th><th>Skill</th></tr></thead>
       <tbody>
-        <tr><td class="f">0 Hazırlık</td><td>Node, git, kit ve skill kontrolü</td><td>"Impeccable kurulu değil. Kurup mu devam edelim, onsuz mu?"</td><td>caveman</td></tr>
+        <tr><td class="f">0 Hazırlık</td><td>Node, git, kit, skill, limit ve kod haritası kontrolü</td><td>"Impeccable kurulu değil. Kurup mu devam edelim, onsuz mu?"</td><td>caveman</td></tr>
         <tr><td class="f">1 Fikir</td><td>Fikir turlar halinde sorgulanır → PRD</td><td>"İlk sürümde hangi özellikler olsun?" (çoklu seçim; seçilmeyenler kapsam dışı)</td><td>grilling</td></tr>
         <tr><td class="f">2 Tip</td><td>Web/SaaS, mobil, backend; AI özelliği var mı</td><td>"Web mi, mobil mi? Kullanıcın masa başında çalışıyor, bu yüzden web öneriyorum."</td><td>-</td></tr>
         <tr><td class="f">3 Kurulum</td><td><code>node kit/kit.mjs kur</code> tipi yerleştirir, <code>kit/</code> silinir</td><td>-</td><td>-</td></tr>
         <tr><td class="f">4 Teknoloji</td><td>Tipin karar kataloğundaki 10-12 karar tek tek</td><td>"Veritabanı ve kimlik: Supabase / Neon + Better Auth / Firebase?"</td><td>research</td></tr>
         <tr><td class="f">5 Mimari</td><td>Veri modeli, giriş yöntemleri, roller, servisler ve maliyet, sözlük</td><td>"Silinen fatura çöp kutusuna mı gitsin, kalıcı mı silinsin?"</td><td>domain-modeling, codebase-design</td></tr>
-        <tr><td class="f">6 Tasarım</td><td><code>/tasarim genel</code>: görsel önizlemelerle stil, renk, yazı, detaylar</td><td>"Bu üç açılış sayfasından hangisi?"</td><td>taste, impeccable, ui-ux-pro-max</td></tr>
-        <tr><td class="f">7 Yol haritası</td><td>Görevler, ilk özellik, lansman hedefi</td><td>"Faz 1'de önce hangi özellikle başlayalım?"</td><td>-</td></tr>
-        <tr><td class="f">8 Kapanış</td><td>Özet, <code>DURUM.html</code>, ilk görev</td><td>-</td><td>-</td></tr>
+        <tr><td class="f">6 Kurul</td><td>Tipe göre önerilen uzman kurulu, model dağılımı, ajanlar projede üretilir</td><td>"Kurulda kimler olsun?" (çoklu seçim)</td><td>-</td></tr>
+        <tr><td class="f">7 Tasarım</td><td><code>/tasarim genel</code>: görsel önizlemelerle stil, renk, yazı, detaylar</td><td>"Bu üç açılış sayfasından hangisi?"</td><td>taste, impeccable, ui-ux-pro-max</td></tr>
+        <tr><td class="f">8 Yol haritası</td><td>Görevler, ilk özellik, lansman hedefi</td><td>"Faz 1'de önce hangi özellikle başlayalım?"</td><td>-</td></tr>
+        <tr><td class="f">9 Kapanış</td><td>Özet, <code>DURUM.html</code>, ilk görev</td><td>-</td><td>-</td></tr>
       </tbody>
     </table>
   </div>
@@ -347,6 +350,64 @@ claude
   </div>
 </section>
 
+<section id="kurul">
+  <div class="section-head">
+    <p class="eyebrow">.claude/agents/kurul-* · docs/KURUL.md</p>
+    <h2>Uzman kurulu</h2>
+    <p class="lede">Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur ve seçilen stack'e göre özelleştirilir. İşleri sürekli denetler, karar önerir ve seni bilgilendirir. Danışmandırlar; sadece kritik bulguda işi durdururlar. Karar her zaman sende.</p>
+  </div>
+  <div class="types">
+    <article class="type"><h3>Web / SaaS</h3><p class="stack">urun · mimar · guvenlik · ux · performans · kvkk · qa</p><ul><li>+ devops, + ai (AI eki varsa)</li></ul></article>
+    <article class="type"><h3>Mobil</h3><p class="stack">urun · mimar · guvenlik · ux · mobil · kvkk · qa</p><ul><li>+ devops, + ai</li></ul></article>
+    <article class="type"><h3>Backend</h3><p class="stack">urun · mimar · guvenlik · api · devops · qa</p><ul><li>+ kvkk (kişisel veri varsa), + ai</li></ul></article>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Toplantı</th><th>Ne zaman</th><th>Kim</th><th>Model</th></tr></thead>
+      <tbody>
+        <tr><td>Plan</td><td>/planla sonunda, onaydan önce</td><td>Ürün + Mimar + ilgili üyeler (en fazla 4)</td><td>üyenin modeli</td></tr>
+        <tr><td>Görev sonu</td><td>/gelistir sonunda</td><td>İlgili üyeler (en fazla 3)</td><td>üyenin modeli</td></tr>
+        <tr><td>Commit (hafif)</td><td>Her commit öncesi; hook zorunlu kılar</td><td>İlgili en fazla 2 üye, sadece diff</td><td>haiku</td></tr>
+        <tr><td>Faz sonu · canlıya alma</td><td>/kurul topla, /canliya-al ilk</td><td>Tüm kurul</td><td>üyenin modeli</td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre class="term">ÜYE: Güvenlik · KARAR: RET
+BULGULAR:
+[KRİTİK] app/api/invoice/[id]/route.ts:14 — fatura sahibi kontrol edilmiyor; başka kullanıcının id'siyle fatura okunur — sorguya user_id koşulu ekle
+KULLANICIYA SORULMALI: yok</pre>
+  <p class="note">RET geldiğinde görev bitmiş sayılmaz. Sana üç seçenek sunulur: düzelt (önerilen), riski kabul et ve gerekçeyi kaydet, ya da görevi geri al. Üyeler arasında görüş ayrılığı varsa iki görüş yan yana konur ve karar sana sorulur.</p>
+</section>
+
+<section id="limit">
+  <div class="section-head">
+    <p class="eyebrow">docs/LIMIT-PLANI.md</p>
+    <h2>Limit farkındalığı</h2>
+    <p class="lede">İş başlamadan 5 saatlik ve haftalık limit okunur. Masaüstünde <code>get_usage</code> aracıyla, terminal ve IDE'de Claude Code'un durum çubuğuna gönderdiği <code>rate_limits</code> bilgisiyle. İşin tahmini maliyeti kalan payı aşıyorsa sana sorulur.</p>
+  </div>
+  <div class="two">
+    <div class="ask" aria-label="Örnek limit sorusu">
+      <p class="ctx">5 saatlik limit %78 (sıfırlanma 21:40). G-014 ödeme entegrasyonu tahmini %15 + kurul toplantıları %5.</p>
+      <p class="qt">Limit bu işin tamamına yetmeyebilir. Nasıl ilerleyelim?</p>
+      <div class="opt rec"><b>Limite sığanı yap, kalanı sıraya koy (Önerilen)</b><span>Önce webhook ve imza doğrulaması; arayüz kısmı yenilenmeden sonraya.</span></div>
+      <div class="opt"><b>Hepsini başlat, dolunca kaydet, 21:40'ta otomatik devam</b><span>%90'da güvenli noktada durur, kaldığı yeri yazar, zamanlanmış görevle devam eder.</span></div>
+      <div class="opt"><b>Ucuz modele geçerek devam</b><span>Uygulama işi hızlı modelli alt ajana gider; güvenlik ve mimari kararlar güçlü modelde kalır.</span></div>
+      <div class="opt"><b>Kurulu hafiflet</b><span>Toplantılara sadece Güvenlik ve Mimar katılır.</span></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Seviye</th><th>5 saatlik</th><th>Haftalık</th><th>Davranış</th></tr></thead>
+        <tbody>
+          <tr><td>yeşil</td><td>&lt; %60</td><td>&lt; %70</td><td>Normal çalışır, limit durum bloğunda görünür</td></tr>
+          <tr><td>sarı</td><td>%60–84</td><td>%70–89</td><td>Tahmini maliyeti söyler, kurul yarıya iner</td></tr>
+          <tr><td>kırmızı</td><td>≥ %85</td><td>≥ %90</td><td>Yeni işten önce seçenekleri sorar</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="note">Görev maliyetleri <code>docs/MALIYET-GUNLUGU.md</code>'ye yazılır; tahminler zamanla gerçek verilere oturur. Az token için oturum açılışında sadece özet kurallar ve <code>ILERLEME.md</code> yüklenir; bu yaklaşık 1.700 token'dır (önceki sürümde yaklaşık 8.000). Kod haritası (codebase-memory-mcp) bağlıysa kod, dosyalar okunmadan sorgulanır.</p>
+</section>
+
 <section id="rapor">
   <div class="section-head">
     <p class="eyebrow">Her an neredeyiz</p>
@@ -356,14 +417,14 @@ claude
     <div class="kv">
       <span class="k">Her cevabın sonunda: durum bloğu</span>
 <pre class="term">── Durum ─────────────────────────────
-Aşama: 2 Geliştirme · Görev: G-012 (7/23) · Soru modu: açık
-Yapıldı: kayıt formu + doğrulama, test yeşil
+Aşama: Faz 1 · Görev: G-012 (7/23) · Soru modu: açık · Limit: 5s %34 hf %5
+Yapıldı: kayıt formu + doğrulama, test yeşil · Kurul: ONAY (ux, qa)
 Otomatik kararlar: yok
 Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     </div>
     <div class="kv">
       <span class="k">Her zaman: Claude Code alt durum çubuğu</span>
-<pre class="term">▶ Faz 1 · G-012 · görev 7/23 · soru: açık (kapalı: tasarim)</pre>
+<pre class="term">▶ Faz 1 · G-012 · görev 7/23 · soru: açık (kapalı: tasarim) · 5s %34 · hf %5</pre>
       <span class="k">İstediğinde</span>
       <ul class="plain">
         <li><code>/durum</code>: Biten ve kalan işler, bekleyen kararlar, riskler, son kararlar, kontrol listeleri</li>
@@ -437,6 +498,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
         <tr><td class="f">/oturum-sonu</td><td>İlerleme, kararlar, CHANGELOG ve DURUM.html</td></tr>
         <tr><td class="f">/durum</td><td>Ayrıntılı rapor ve pano</td></tr>
         <tr><td class="f">/soru [kapat|ac] [konu]</td><td>Soru modu</td></tr>
+        <tr><td class="f">/kurul [kur|topla]</td><td>Uzman kurulunu kurar, değiştirir, toplar</td></tr>
         <tr><td class="f">/canliya-al [ilk]</td><td>Denetimler, otomatik kontroller, sana sorulan panel maddeleri</td></tr>
         <tr><td class="f">/bakim [periyot]</td><td>Haftalık, aylık, çeyreklik bakım</td></tr>
         <tr><td class="f">/retro</td><td>Dersler projeye; kit önerileri kit reposunda bir dala</td></tr>
@@ -492,7 +554,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 2.0.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 2.1.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

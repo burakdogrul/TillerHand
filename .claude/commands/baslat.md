@@ -5,9 +5,9 @@ argument-hint: [proje fikri, 1-3 cümle]
 
 Fikir: $ARGUMENTS
 
-Bu bir **sihirbaz**. Kullanıcı hiçbir şeyi bilmiyormuş gibi davran: Her kararı `docs/KARAR-PROTOKOLU.md`'ye göre sor (AskUserQuestion, önerilen seçenek ilk sırada, her seçeneğin ne zaman daha iyi olduğu açıklamalı). Kendi kafana göre karar verme. Bu oturumda uygulama kodu yazma.
+Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gibi davran: Her kararı `docs/KARAR-PROTOKOLU.md`'ye göre sor (AskUserQuestion, önerilen seçenek ilk sırada, her seçeneğin ne zaman daha iyi olduğu açıklamalı). Kendi kafana göre karar verme. Bu oturumda uygulama kodu yazma.
 
-**Devam etme:** `docs/ILERLEME.md` → `**Başlangıç adımı:**` 0'dan büyükse kaldığın adımdan devam et ve bunu kullanıcıya söyle. Her adım bitince bu satırı (`N/8`) ve `**Son güncelleme:**` satırını güncelle; sonra durum bloğunu yaz.
+**Devam etme:** `docs/ILERLEME.md` → `**Başlangıç adımı:**` 0'dan büyükse kaldığın adımdan devam et ve bunu kullanıcıya söyle. Her adım bitince bu satırı (`N/9`) ve `**Son güncelleme:**` satırını güncelle; sonra durum bloğunu yaz.
 
 ---
 
@@ -16,7 +16,14 @@ Bu bir **sihirbaz**. Kullanıcı hiçbir şeyi bilmiyormuş gibi davran: Her kar
 1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version`, kökte `kit/kit.mjs` var mı, `.kit.json` yok mu.
 2. `docs/SKILLER.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. Eksik varsa kullanıcıya hangi plugin'in eksik olduğunu ve kurulum komutunu (`/plugin install x@y`) söyle. Sonra sor: "Kurup devam edelim mi, eksik skill olmadan mı devam edelim?"
 3. `caveman:caveman` skill'ini yükle (rapor dili).
-4. Fikir boşsa sor: "Ne yapmak istiyorsun? 1-3 cümleyle anlat."
+4. **Limit:** Limiti oku (`docs/LIMIT-PLANI.md` §1) ve raporla. Sihirbazın tamamı Pro planda 5 saatlik limitin büyük kısmını kullanabilir; adımlar arasında durup sonra devam edilebileceğini söyle. Seviye sarı veya kırmızıysa §3'teki seçenekleri sor.
+5. **Kod haritası:** Oturumda codebase-memory-mcp araçları (`index_repository`, `search_graph` vb.) var mı bak. Yoksa sor: "Kod haritası kurulsun mu? AI, kodu dosya dosya okumak yerine sorgular; proje büyüdükçe oturum başına ciddi token tasarrufu sağlar."
+   - **Kur (Önerilen):** Kurulumu kullanıcı kendi terminalinde yapar; uzaktan indirilen script'i sen çalıştırma. Resmi komutları ver:
+     - Windows (PowerShell): `Invoke-WebRequest -Uri https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 -OutFile install.ps1; Unblock-File .\install.ps1; .\install.ps1`
+     - macOS/Linux: `curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`
+     - Installer Claude Code'a kendisini kullanıcı düzeyinde tanıtır (MCP, hook, skill). Sonra Claude Code yeniden başlatılır ve `/mcp` ile kontrol edilir. Otomatik indeks için: `codebase-memory-mcp config set auto_index true`. Kaynak: github.com/DeusData/codebase-memory-mcp
+   - **Şimdilik kurma:** Küçük proje için yeterli; sonra kurulabilir.
+6. Fikir boşsa sor: "Ne yapmak istiyorsun? 1-3 cümleyle anlat."
 
 ## Adım 1: Fikri netleştir → `docs/PRD.md`
 
@@ -77,21 +84,31 @@ Bütün kararlar bitince:
 
 AI eki kurulduysa `docs/AI.md` → model envanterini doldur: Hangi özellik hangi model? Bunu maliyet tahminiyle karar olarak sor.
 
-## Adım 6: Tasarım yönü (arayüz varsa)
+## Adım 6: Uzman kurulu → `.claude/agents/`, `docs/KURUL.md`
+
+`.claude/kurul/KURALLAR.md` §5'i uygula:
+1. Tipe, PRD'ye ve seçilen stack'e göre kurul öner. Kurulun ne olduğunu kısaca anlat: Uzman ajanlar planı, görevi, her commit'i ve fazı denetler. Danışmandır; kritik bulguda durdurur; karar her zaman kullanıcıda.
+2. Üyeleri **çoklu seçimle** onaylat; yeni uzman eklenebileceğini söyle.
+3. Model dağılımını onaylat (önerilen karma: Mimar + Güvenlik `sonnet`, diğerleri `haiku`). Pro planda tam kurul toplantısının tahmini maliyetini söyle (`docs/LIMIT-PLANI.md`).
+4. Commit denetimi açık mı kalsın? Varsayılan açık ve hafif: en fazla 2 üye, `haiku`, sadece diff.
+5. Ajan dosyalarını üret ve "Bu proje" bölümlerini doldur. `docs/KURUL.md`'yi doldur.
+6. Yeni ajanların bir sonraki oturumda yükleneceğini söyle.
+
+## Adım 7: Tasarım yönü (arayüz varsa)
 
 `/tasarim genel` akışını çalıştır. Görsel önizlemelerle stil yönü, renk, yazı tipi ve detay kararları alınır; sonunda `PRODUCT.md`, `DESIGN.md` ve `docs/TASARIM.md` hazır olur. Backend tipinde bu adımı atla.
 
-## Adım 7: Yol haritası → `docs/YOL-HARITASI.md`
+## Adım 8: Yol haritası → `docs/YOL-HARITASI.md`
 
 1. MVP özelliklerini tek oturumluk görevlere böl; Faz 0'daki kurulum görevlerini koru.
 2. Sor: "Faz 1'de önce hangi özellikle başlayalım?" (öneri: en riskli veya en değerli olan).
 3. Sor: "Lansman hedefi ne?" (tarih / özellik tamamlanınca / sadece kişisel kullanım). Kişisel kullanımsa `docs/LANSMAN.md`'yi silmeyi öner.
 4. Yol haritasını özetle ve onay al.
 
-## Adım 8: Kapanış
+## Adım 9: Kapanış
 
-1. `docs/ILERLEME.md`: Aktif faz `Faz 0`, aktif görev `G-001`, başlangıç adımı `8/8`, sıradaki adım, bekleyen kararlar.
+1. `docs/ILERLEME.md`: Aktif faz `Faz 0`, aktif görev `G-001`, başlangıç adımı `9/9`, sıradaki adım, bekleyen kararlar.
 2. `node .claude/hooks/durum-panosu.mjs` çalıştır.
-3. Kullanıcıya özet ver: alınan karar sayısı, seçilen stack, tasarım yönü, MVP özellikleri, ilk görev.
+3. Kullanıcıya özet ver: alınan karar sayısı, seçilen stack, kurul üyeleri, tasarım yönü, MVP özellikleri, ilk görev, kalan limit.
 4. Commit öner: `docs: proje planı`.
 5. Son satır: "Devam: `/gelistir G-001`".

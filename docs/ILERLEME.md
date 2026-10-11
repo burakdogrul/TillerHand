@@ -7,7 +7,7 @@
 **Son güncelleme:** -
 **Aktif faz:** Başlangıç
 **Aktif görev:** /baslat
-**Başlangıç adımı:** 0/8
+**Başlangıç adımı:** 0/9
 **Soru modu:** açık · kapalı konular: yok
 
 ## Şu anki durum
@@ -23,6 +23,10 @@ Proje henüz başlamadı. `/baslat [fikir]` ile başla.
 1. `/baslat [proje fikrin, 1-3 cümle]`
 
 ## Bekleyen kararlar
+
+- 
+
+## Kaldığı yer (limit veya yarıda kalma nedeniyle durulduysa)
 
 - 
 

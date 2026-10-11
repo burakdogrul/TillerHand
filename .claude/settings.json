@@ -8,7 +8,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(node .claude/hooks/durum-panosu.mjs)",
-      "Bash(node kit/kit.mjs kur:*)"
+      "Bash(node kit/kit.mjs kur:*)",
+      "Bash(node .claude/hooks/limit.mjs:*)",
+      "Bash(node .claude/hooks/commit-kapisi.mjs --onayla:*)"
     ],
     "ask": [
       "Bash(git push:*)"
@@ -47,6 +49,15 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-secrets.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-kapisi.mjs\""
           }
         ]
       }

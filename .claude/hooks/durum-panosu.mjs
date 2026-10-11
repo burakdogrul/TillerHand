@@ -4,9 +4,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { durumOku } from './durum-oku.mjs';
+import { limitOku, ozet, seviye } from './limit.mjs';
 
 const kok = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
 const d = durumOku(kok);
+const limit = limitOku(kok);
 const e = (s = '') => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const kod = (s) => e(s).replace(/`([^`]+)`/g, '<code>$1</code>');
 const yuzde = (b, t) => (t ? Math.round((b / t) * 100) : 0);
@@ -72,6 +74,13 @@ ${asamalar.map((f, i) => `<div class="step${i === aktifNo ? ' now' : ''}"><b>${e
   <section class="card"><h2>Sıradaki adım</h2>${liste(d.siradaki, 'Belirtilmemiş.')}</section>
   <section class="card${d.bekleyen.length ? ' warn' : ''}"><h2>Bekleyen kararlar</h2>${liste(d.bekleyen, 'Bekleyen karar yok.')}</section>
   <section class="card${d.sorunlar.length ? ' warn' : ''}"><h2>Açık sorunlar</h2>${liste(d.sorunlar, 'Açık sorun yok.')}</section>
+  ${d.kaldigiYer.length ? `<section class="card warn"><h2>Kaldığı yer</h2>${liste(d.kaldigiYer, '')}</section>` : ''}
+  <section class="card${['sarı', 'kırmızı'].includes(seviye(limit)) ? ' warn' : ''}"><h2>Kullanım limiti · ${e(seviye(limit))}</h2><div class="lists">
+  ${limit ? [['5 saatlik', limit.five_hour], ['Haftalık', limit.seven_day]].filter(([, p]) => p).map(([ad, p]) => `<div><div class="lbl">${ad}</div><div class="row">${cubuk(Math.round(p.yuzde), 100)}</div></div>`).join('') : ''}
+  <p class="muted">${e(ozet(limit))}</p></div></section>
+  <section class="card"><h2>Uzman kurulu · ${e(d.kurul.durum)}</h2>
+  ${d.kurul.uyeler.length ? `<ul>${d.kurul.uyeler.map((u) => `<li>${e(u.uye)} <span class="muted">· ${e(u.model)}</span></li>`).join('')}</ul>` : '<p class="muted">Kurul kurulmadı (/kurul kur).</p>'}
+  <p class="muted" style="margin-top:8px">Commit denetimi: ${e(d.kurul.commitDenetimi)}</p></section>
   <section class="card"><h2>Kontrol listeleri</h2><div class="lists">
   ${d.listeler.map((l) => `<div><div class="lbl">${e(l.ad)}</div><div class="row">${cubuk(l.bitti, l.toplam)}</div></div>`).join('\n')}
   </div></section>
@@ -82,6 +91,10 @@ ${kararlar.length ? `<div class="tw"><table><thead><tr><th>#</th><th>Tarih</th><
 ${kararlar.map((k) => `<tr><td class="num">${e(k.no)}</td><td class="num">${e(k.tarih)}</td><td>${e(k.konu)}</td><td>${kod(k.soru)}</td><td><b>${kod(k.secilen)}</b></td><td><span class="who${/otomatik/i.test(k.veren) ? ' auto' : ''}">${e(k.veren)}</span></td></tr>`).join('\n')}
 </tbody></table></div>` : '<p class="muted">Henüz karar verilmedi.</p>'}
 </section>
+
+${d.kurul.toplantilar.length ? `<section class="card"><h2>Kurul toplantıları · son 10</h2><div class="tw"><table><thead><tr><th>#</th><th>Tarih</th><th>Tür</th><th>Kapsam</th><th>Katılan</th><th>Sonuç</th><th>Kritik</th><th>Kullanıcı kararı</th></tr></thead><tbody>
+${[...d.kurul.toplantilar].reverse().slice(0, 10).map((t) => `<tr><td class="num">${e(t.no)}</td><td class="num">${e(t.tarih)}</td><td>${e(t.tur)}</td><td>${kod(t.kapsam)}</td><td>${e(t.katilan)}</td><td><span class="who${/RET/.test(t.sonuc) ? ' auto' : ''}">${e(t.sonuc)}</span></td><td>${kod(t.kritik)}</td><td>${kod(t.karar)}</td></tr>`).join('\n')}
+</tbody></table></div></section>` : ''}
 
 <footer>Son güncelleme: ${e(a['Son güncelleme'] ?? '-')} · Pano üretildi: ${new Date().toLocaleString('tr-TR')} · Kaynak: docs/ILERLEME.md, YOL-HARITASI.md, KARARLAR.md</footer>
 </div></body></html>

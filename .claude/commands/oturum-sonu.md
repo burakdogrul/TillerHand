@@ -19,6 +19,7 @@ Bu oturumu kapatıyoruz. Bir sonraki oturum (veya `/clear` sonrası) sıfır ba�
 6. Yapı değiştiyse (yeni tablo, servis, klasör) `docs/MIMARI.md`'yi güncelle.
 7. `node .claude/hooks/durum-panosu.mjs` ile `DURUM.html`'i yenile.
 8. Commit edilmemiş iş varsa commit mesajı öner. Commit'i onayımla at.
-9. Faz bittiyse `/retro` öner.
+9. Faz bittiyse sırayla öner: `/kurul topla faz-sonu` (tam kurul, tahmini maliyetiyle birlikte), sonra `/retro`.
+10. Limiti oku. Kalan 5 saatlik payı ve sıfırlanma saatini sıradaki adımla birlikte söyle.
 
 Bitince durum bloğu ve tek satır: "Sonraki oturum: [sıradaki adım]".

@@ -2,32 +2,39 @@
 
 > [Tek cümle: Bu proje kimin için, hangi problemi çözüyor?]
 
-Bu dosya her oturumda otomatik okunur. Ayrıntılar `docs/` altında.
+**Kurulum durumu:** Kökte `kit/` klasörü varsa ve `.kit.json` yoksa proje henüz kurulmamıştır. Kullanıcıya `/baslat [fikir]` öner; kurulum bitmeden kod yazma.
 
-**Kurulum durumu:** Kökte `kit/` klasörü varsa ve `.kit.json` yoksa proje henüz kurulmamıştır. Kullanıcıya `/baslat [fikir]` ile başlamasını öner; kurulum bitmeden kod yazma.
-
-## Her oturumda bağlam
-
-@docs/KARAR-PROTOKOLU.md
-@docs/SKILLER.md
-@docs/STACK.md
 @docs/ILERLEME.md
 
-Gerektiğinde oku (her seferinde değil):
+## Temel kurallar (her zaman geçerli)
+
+1. **Kararı kullanıcı verir.** Ürün, teknik, tasarım, içerik, veri, güvenlik ve maliyet kararlarında AskUserQuestion ile sor. 2-4 seçenek sun; önerin ilk sırada ve "(Önerilen)" etiketli olsun. Her seçenekte ne zaman daha iyi olduğunu ve bedelini yaz. Tasarım kararları görsel önizlemeyle sorulur. Soru modunda kapalı konularda önerileni seç ve "otomatik" diye kaydet. **İlk karar sorusundan önce `docs/KARAR-PROTOKOLU.md`'yi oku.** Daha önce verilmiş kararlar `docs/KARARLAR.md`'de; onları tekrar sorma.
+2. **Doğru skill'i kullan.** Kod: `ponytail:ponytail`. Kritik akış: `mattpocock-skills:tdd`. Arayüz: seçilen stil skill'i + `impeccable:impeccable`. Metin: `humanizer:humanizer`. Rapor dili: `caveman:caveman`. Tam tablo (ilk ihtiyaçta oku): `docs/SKILLER.md`.
+3. **Uzman kurulu denetler** (`docs/KURUL.md`, kurallar `.claude/kurul/KURALLAR.md`). Plan onayından önce, görev bitince, her commit'te (hafif) ve faz sonunda ilgili üyeler toplanır. Kurul danışmandır; RET (kritik bulgu) varsa iş bitmez, kullanıcıya sorulur.
+4. **Limiti gözet** (`docs/LIMIT-PLANI.md`). İş başlamadan limiti oku: masaüstünde `get_usage` aracı, terminalde `node .claude/hooks/limit.mjs`. Sarı/kırmızı seviyede tahmini maliyeti söyle ve seçenekleri sor. %90'da güvenli dur ve "Kaldığı yer"i yaz.
+5. **Az token harca.** Kod haritası (codebase-memory-mcp) bağlıysa kodu keşfederken önce onu sorgula (`get_architecture`, `search_graph`, `trace_path`, `get_code_snippet`). Dosyaları toptan okuma. Dokümanları sadece gerektiğinde oku (tablo aşağıda).
+6. **Önce plan, sonra kod.** 2'den fazla dosyaya dokunan iş `/planla`'dan geçer. Tek seferde tek görev. Kapsamı genişletme.
+7. **Kök neden, kanıt, test.** Hata düzeltirken önce yeniden üret. "Bitti" demeden çalıştığını göster. Aynı hatada 2 denemede çözemezsen dur ve yön iste.
+8. **Her cevabın sonunda durum bloğu** (kısa, caveman). Biçim:
+
+```
+── Durum ──────────────────────
+Aşama: … · Görev: … (x/y) · Soru modu: … · Limit: 5s %… hf %…
+Yapıldı: … · Kurul: … · Otomatik kararlar: …
+Sıradaki: … · bekleyen karar: …
+```
+
+## Gerektiğinde oku
 
 | Dosya | Ne zaman |
 |---|---|
-| `docs/PRD.md` | Özelliğin kapsamı veya kabul kriteri belirsizse |
-| `docs/MIMARI.md` | Yeni dosya, tablo, servis veya klasör eklerken |
-| `docs/YOL-HARITASI.md` | Sıradaki görevi seçerken, görev bitince işaretlerken |
-| `docs/KARARLAR.md` | Bir karar sormadan önce: daha önce sorulmuş mu? |
-| `docs/SOZLUK.md` | Yeni bir kavrama isim verirken |
-| `docs/TASARIM.md`, `DESIGN.md`, `PRODUCT.md` | Arayüz yazarken veya değiştirirken |
-| `docs/TEST-PLANI.md` | Kritik akışa dokunurken |
-| `docs/GUVENLIK.md` | Auth, veri, dosya yükleme, dış API, ödeme koduna dokunurken |
-| `docs/AI.md` (varsa) | Prompt, model çağrısı veya AI özelliğine dokunurken |
-
-Otomatik koruma: `.claude/hooks/` sır yazımını engeller ve dosyaları biçimlendirir. Bir hook işini engellerse mesajı oku ve nedeni düzelt; hook'u atlatmaya çalışma.
+| `docs/STACK.md` | Kod yazarken: komutlar, kurallar, doğrulama yöntemi |
+| `docs/PRD.md` | Kapsam veya kabul kriteri belirsizse |
+| `docs/MIMARI.md`, `docs/SOZLUK.md` | Yeni dosya/tablo/servis/kavram eklerken |
+| `docs/YOL-HARITASI.md` | Görev seçerken ve işaretlerken |
+| `docs/TASARIM.md`, `DESIGN.md`, `PRODUCT.md` | Arayüz işinde |
+| `docs/TEST-PLANI.md`, `docs/GUVENLIK.md` | Kritik akış, auth, veri, ödeme koduna dokunurken |
+| `docs/AI.md` (varsa) | Prompt veya model çağrısı işinde |
 
 ## Komutlar
 
@@ -40,43 +47,22 @@ tip kontrol: [ ]
 build:       [ ]
 ```
 
-## Çalışma kuralları
-
-1. **Karar senin değil.** Her karar noktasında `docs/KARAR-PROTOKOLU.md`'ye göre sor. Soru modu kapalı konular hariç.
-2. **Önce plan, sonra kod.** 2'den fazla dosyaya dokunan her iş için önce kısa plan yaz ve onay bekle.
-3. **Tek seferde tek görev.** Görev dışı bir sorun görürsen düzeltme, `docs/ILERLEME.md` → "Açık sorunlar"a yaz ve raporla.
-4. **Kapsamı genişletme.** PRD'de olmayan özellik, ayar veya soyutlama ekleme; gerekli görüyorsan karar noktası olarak sor.
-5. **Doğru skill'i kullan** (`docs/SKILLER.md`). Kod yazarken her zaman `ponytail:ponytail`.
-6. **Mevcut kalıbı kullan.** Yeni bir şey yazmadan önce projede benzeri var mı bak.
-7. **Hata düzeltirken kök nedeni bul.** Önce yeniden üret, sonra düzelt, sonra regresyon testi ekle.
-8. **Aynı hatada 2 deneme kuralı.** İki denemede çözemezsen dur; ne denediğini ve olası nedenleri yaz, yön iste.
-9. **Her cevabın sonunda durum bloğu** (`docs/KARAR-PROTOKOLU.md` §6).
-10. **Oturum sonunda `/oturum-sonu`.** ILERLEME güncellenir, durum panosu yenilenir.
-
 ## "Bitti" tanımı
 
-Bir görev ancak şunların hepsi doğruysa bitmiştir:
-
-- [ ] Kabul kriterleri karşılandı
-- [ ] Görev sırasında çıkan tüm kararlar soruldu ve `docs/KARARLAR.md`'ye yazıldı
-- [ ] Lint ve tip kontrolü temiz; testler geçiyor; kritik akışa dokunulduysa test eklendi
-- [ ] Hata, boş ve yükleniyor durumları ele alındı
-- [ ] Çalıştığına dair kanıt gösterildi (`docs/STACK.md` → "Doğrulama")
-- [ ] Arayüz varsa: `DESIGN.md`'ye uygun; `impeccable` critique yapıldı; metinler humanizer'dan geçti
-- [ ] Kodda sır yok; yeni ortam değişkeni `.env.example`'da
-- [ ] `docs/YOL-HARITASI.md`'de görev işaretlendi
+- [ ] Kabul kriterleri karşılandı; görevde çıkan kararlar soruldu ve kaydedildi
+- [ ] Lint, tip, testler temiz; kritik akışa dokunulduysa test eklendi
+- [ ] Hata, boş ve yükleniyor durumları ele alındı; çalıştığına dair kanıt gösterildi
+- [ ] Arayüz varsa: `DESIGN.md`'ye uygun, Impeccable critique yapıldı, metinler humanizer'dan geçti
+- [ ] Görev sonu kurul toplantısında RET yok
+- [ ] Kodda sır yok; yeni ortam değişkeni `.env.example`'da; `docs/YOL-HARITASI.md` işaretli
 
 ## Asla
 
-- `.env` dosyalarını okuma, yazma, içeriğini ekrana basma.
-- Sırrı koda, loga, commit mesajına veya istemci tarafına (tarayıcı/mobil paket) koyma.
-- Onay almadan (soru modundan bağımsız): veritabanı silme/sıfırlama, `git push --force`, `git reset --hard`, toplu dosya silme, prod ortamına deploy, para harcatan işlem.
-- Testi geçirmek için testi silme veya zayıflatma.
-- Var olmayan bir API'yi, paketi veya fonksiyonu varmış gibi kullanma; emin değilsen dokümana bak.
-- Kullanıcı adına karar verip "şöyle yaptım" diye sonradan bildirme (soru modu kapalı konular hariç).
+- `.env` dosyalarını okuma, yazma, içeriğini ekrana basma. Sırrı koda, loga veya istemci tarafına koyma.
+- Onay almadan (soru modundan bağımsız): veri silme/sıfırlama, `git push --force`, `git reset --hard`, toplu dosya silme, prod deploy, para harcatan işlem.
+- Testi geçirmek için testi silme veya zayıflatma. Var olmayan API veya paket uydurma.
+- Hook'ları (sır engeli, commit kapısı) atlatmaya çalışma. Kullanıcı adına karar verip sonradan bildirme.
 
 ## Git
 
-- Küçük ve sık commit. Her çalışan adım bir kayıt noktasıdır.
-- Mesaj biçimi: `tür: kısa açıklama` (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`).
-- `main` her zaman çalışır durumda olmalı. Riskli iş için dal aç.
+Küçük ve sık commit. Mesaj biçimi: `tür: açıklama` (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `wip`). `main` her zaman çalışır olmalı.

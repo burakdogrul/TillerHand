@@ -5,6 +5,32 @@ Kit sürümü `kit/SURUM` dosyasında. Bir projeyi güncellemek: projede `/kit-g
 
 ## [Yayınlanmamış]
 
+## [2.1.0] - 2026-10-11
+
+### Eklendi
+- **Uzman kurulu:**
+  - 10 rol şablonu (`.claude/kurul/`): Ürün, Mimar, UX, Performans/SEO, KVKK, QA, DevOps, Mobil, API ve AI. Güvenlik üyesi olarak `guvenlik-denetcisi` kullanılır.
+  - `/baslat` Adım 6'da tipe göre kurul önerilir, onaylanır ve projeye özel ajanlar `.claude/agents/kurul-*.md` olarak üretilir.
+  - Toplantılar: plan, görev sonu, commit (hafif) ve faz sonu/canlıya alma.
+  - Kurul danışmandır; kritik bulguda durdurur.
+  - `/kurul` komutu ve `docs/KURUL.md` toplantı günlüğü.
+- **Commit kapısı hook'u** (`commit-kapisi.mjs`): AI'nın commit'i hafif kurul denetimi olmadan geçmez. Sadece doküman değiştiyse muaf; `docs/KURUL.md` üzerinden kapatılabilir.
+- **Limit farkındalığı:**
+  - `limit.mjs` ve durum çubuğu Claude Code'un `rate_limits` bilgisini okur ve önbelleğe alır. Masaüstünde `get_usage` aracı kullanılır.
+  - `docs/LIMIT-PLANI.md`: eşikler, maliyet tahmini, sarı/kırmızı seviyede seçenekler, güvenli durma.
+  - Görev maliyetleri `docs/MALIYET-GUNLUGU.md`'ye kaydedilir.
+  - `docs/ILERLEME.md`'ye "Kaldığı yer" bölümü eklendi.
+- **Kod haritası:** `/baslat`, codebase-memory-mcp kurulumunu önerir; CLAUDE.md onu öncelikli keşif aracı yapar.
+- **Durum panosu ve oturum notu:** Limit, kurul ve "kaldığı yer" bilgisi eklendi.
+
+### Değişti
+- **Açılış yükü yaklaşık 8.000 token'dan 1.700 token'a indi:**
+  - `CLAUDE.md` artık sadece `docs/ILERLEME.md`'yi içe aktarıyor.
+  - Protokol, skill ve stack kuralları CLAUDE.md'de özet olarak duruyor; ayrıntılı dokümanlar gerektiğinde okunuyor. *(Elle uyarla: CLAUDE.md)*
+- **`/baslat` 9 adım oldu** (yeni adım: Kurul). *(Elle uyarla: ILERLEME.md'deki `Başlangıç adımı` satırının paydası 9 oldu)*
+- **`guvenlik-denetcisi`:** `model: sonnet` ve kurul çıktı formatı eklendi.
+- **Komutlar güncellendi:** `/planla`, `/gelistir`, `/incele`, `/oturum-sonu`, `/canliya-al` ve `/durum` artık kurul toplantılarını ve limit kontrolünü içeriyor.
+
 ## [2.0.0] - 2026-10-11
 
 Soru odaklı akış ve GitHub template yapısı. **Kırıcı değişiklik:** 1.x projeleri otomatik güncellenemez (`.kit.json` biçimi ve dosya düzeni değişti).
