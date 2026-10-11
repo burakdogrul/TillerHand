@@ -1,84 +1,132 @@
-# Vibe Coding Başlangıç Kiti
+# Vibe Coding Kit
 
-Claude Code ile her projeye aynı yapıyla başlamak ve projeyi canlıda tutmak için şablonlar, talimatlar, komutlar ve otomatik kontroller.
-Görsel rehber: `REHBER.html` (tarayıcıda aç). Sürüm: `SURUM`, değişiklikler: `CHANGELOG.md`.
+Claude Code ile bir projeyi fikirden canlıya ve bakıma kadar **soru sorarak** yürüten proje şablonu.
+AI hiçbir kararı kendi başına vermez. Her adımda seçenekleri, ne zaman hangisinin daha iyi olduğunu ve önerisini sunar; sen seçersin. Tasarım kararlarını görsel önizlemelerle sorar. Her işte uygun skill'i kullanır ve her cevabın sonunda nerede olduğunu raporlar.
 
-**Gereksinimler:** Claude Code, Git, Node.js 18+ (hook'lar için; backend projelerinde de gerekir), PowerShell.
+> Bu README kitin kendisini anlatır. `/baslat` kurulumu yaptığında yerini projenin README'si alır.
 
-## Hızlı başlangıç
+## Gereksinimler
 
-```powershell
-.\kit.ps1 yeni -Hedef "D:\Projeler\benim-uygulamam" -Tip web-saas            # web-saas | mobil | backend
-.\kit.ps1 yeni -Hedef "D:\Projeler\asistan" -Tip backend -Ekler ai           # AI/LLM özelliği olan proje
-cd "D:\Projeler\benim-uygulamam"
+- [Claude Code](https://claude.com/claude-code)
+- Git, Node.js 18+ (kurulum aracı ve hook'lar için)
+- Skill plugin'leri: Proje açıldığında Claude Code bunları kurmayı önerir (`.claude/settings.json`). Elle kurmak için:
+
+```
+/plugin marketplace add juliusbrussee/caveman
+/plugin marketplace add pbakaus/impeccable
+/plugin marketplace add Leonxlnx/taste-skill
+/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill
+/plugin marketplace add blader/humanizer
+/plugin marketplace add DietrichGebert/ponytail
+/plugin marketplace add mattpocock/skills
+/plugin install caveman@caveman
+/plugin install impeccable@impeccable
+/plugin install taste-skill@taste-skill
+/plugin install ui-ux-pro-max@ui-ux-pro-max-skill
+/plugin install humanizer@humanizer
+/plugin install ponytail@ponytail
+/plugin install mattpocock-skills@mattpocock
+```
+
+## Yeni proje başlatmak
+
+1. GitHub'da bu repoda **Use this template → Create a new repository**.
+2. Yeni repoyu klonla ve Claude Code'u aç:
+
+```bash
+git clone https://github.com/<kullanici>/<yeni-proje>.git
+cd <yeni-proje>
 claude
 ```
 
-Claude Code içinde: `/baslat [proje fikrin 1-3 cümle]`
+3. `/baslat Serbest çalışanlar için fatura takip uygulaması`
 
-PowerShell script çalıştırmayı engellerse: `powershell -ExecutionPolicy Bypass -File .\kit.ps1 yeni ...`
+`/baslat` sihirbazı 8 adımda ilerler. Her adımda sorar, cevabını kaydeder, kaldığı yerden devam edebilir:
 
-## Eski projeyi güncellemek
+| Adım | Ne olur | Örnek sorular |
+|---|---|---|
+| 0 Hazırlık | Ortam ve skill kontrolü | "Impeccable kurulu değil. Kurup devam edelim mi?" |
+| 1 Fikir → PRD | Fikir sorgulanır (grilling) | "İlk sürümde hangi özellikler olsun?" (çoklu seçim) |
+| 2 Proje tipi | Web/SaaS, mobil, backend; AI özelliği | "Web mi, mobil mi? Senin kullanıcın için şu daha iyi, çünkü…" |
+| 3 Kurulum | `kit/kit.mjs kur` tipi yerleştirir, `kit/`'i siler | - |
+| 4 Teknoloji | Tipin karar kataloğundan tek tek | "Backend dili: FastAPI (önerilen) / Node + Hono / Go?" |
+| 5 Mimari | Veri modeli, kimlik, roller, servisler ve maliyet | "Silinen kayıt çöp kutusuna mı gitsin, kalıcı mı silinsin?" |
+| 6 Tasarım | Görsel önizlemelerle stil, renk, yazı tipi, detaylar | "Bu üç açılış sayfasından hangisi? Premium / Minimal / Cesur" |
+| 7 Yol haritası | Görevler, öncelik, lansman hedefi | "Faz 1'de hangi özellikle başlayalım?" |
+| 8 Kapanış | Özet, durum panosu, ilk görev | - |
 
-```powershell
-.\kit.ps1 guncelle -Proje "D:\Projeler\benim-uygulamam"
-.\kit.ps1 guncelle -Proje "D:\Projeler\benim-uygulamam" -Ekler ai   # sonradan AI eki eklemek
-```
+## Proje boyunca
 
-- **Kitin dosyaları** (komutlar, ajanlar, hook'lar, GUVENLIK / CANLIYA-ALMA / BAKIM / YASAL-KVKK): Sen değiştirmediysen yeni sürümle değiştirilir. Değiştirdiysen dosyan korunur, yeni sürüm yanına `.yeni` olarak konur.
-- **Projenin dosyaları** (CLAUDE.md, PRD, STACK, settings.json...): Hiç dokunulmaz. Kitte yeni eklenen dosyalar projede yoksa eklenir.
-- Takip `.kit.json` dosyasıyla yapılır. Bu dosyayı commit et.
+| Komut | Ne yapar |
+|---|---|
+| `/planla [görev]` | Görevin karar noktalarını sorar, plan çıkarır, onay alır |
+| `/gelistir [görev]` | Uygular; yeni karar çıkarsa durup sorar; çalıştığını kanıtlar |
+| `/tasarim [kapsam]` | Tasarım kararlarını görsel önizlemelerle aldırır ve uygular |
+| `/incele` | Bağımsız inceleme ve güvenlik ajanları + ponytail-review |
+| `/hata-ayikla [belirti]` | Kök neden, kırmızı test, düzeltme |
+| `/oturum-sonu` | İlerleme, kararlar ve durum panosunu günceller |
+| `/durum` | Ayrıntılı rapor + `DURUM.html` panosu |
+| `/soru [kapat\|ac] [konu]` | Soru modu: "tasarımda sorma", "tekrar sor" |
+| `/canliya-al [ilk]` | Güvenlik, kalite, KVKK ve lansman kontrolleri |
+| `/bakim [haftalik\|aylik\|ceyreklik]` | Düzenli bakım |
+| `/retro` | Dersleri projeye ve kite geri yazar |
+| `/kit-guncelle` | Projeyi kitin son sürümüne çeker |
+
+**Soru modu:** Konular `urun`, `teknik`, `tasarim`, `icerik`, `veri`, `guvenlik` ve `maliyet`. "Tasarımda sorma" dersen sadece o konu kapanır; AI önerilen seçeneği seçer ve kararı "otomatik" diye raporlar. "Tekrar sor" ile açılır. Veri silme, prod deploy ve para harcatan işlemler her zaman onay ister.
+
+**Raporlama:** Her cevabın sonunda durum bloğu, Claude Code'un alt durum çubuğunda aşama/görev/soru modu, `/durum` ile ayrıntılı rapor ve `DURUM.html` panosu.
+
+## Skill'ler nerede kullanılır
+
+Tam tablo: [`docs/SKILLER.md`](docs/SKILLER.md).
+
+| Alan | Skill |
+|---|---|
+| Rapor dili | Caveman (sorular ve dokümanlar tam cümle) |
+| Fikir sorgulama, alan modeli, mimari, araştırma, TDD, hata ayıklama | Matt Pocock skills |
+| Kod: en küçük tam çözüm, inceleme, denetim | Ponytail |
+| Stil yönü: Premium/Apple, minimal, cesur, brutalist | Taste Skill (yöne göre) |
+| Ürün bağlamı, tasarım sistemi, critique/audit/polish | Impeccable |
+| Renk, yazı tipi, belirteçler, marka, banner | UI UX Pro Max |
+| Kullanıcıya görünen metinler | Humanizer |
 
 ## Yapı
 
 ```
-kit.ps1  SURUM  CHANGELOG.md  REHBER.html  testler/
-sablon/
-  ortak/                      # her projeye
-    CLAUDE.md                 # AI'nın anayasası
-    docs/                     # PRD, MIMARI, YOL-HARITASI, ILERLEME, KARARLAR, SOZLUK,
-                              # TEST-PLANI, GUVENLIK, YASAL-KVKK, CANLIYA-ALMA, LANSMAN, BAKIM, RETRO
-    .claude/commands/         # 9 slash komutu
-    .claude/agents/           # inceleyici, guvenlik-denetcisi
-    .claude/hooks/            # guard-secrets, session-start
-  web-saas/ | mobil/ | backend/
-    docs/STACK.md             # teknoloji, kurallar, doğrulama, otomatik kontroller, tipe özel listeler
-    docs/TASARIM.md           # (web, mobil) tasarım belirteçleri ve bileşen kuralları
-    .claude/settings.json     # izinler + hook bağlantıları
-    .claude/hooks/format.mjs  # Prettier / Ruff
-    .github/                  # CI + Dependabot
-    .husky/ .lintstagedrc.json | .pre-commit-config.yaml
-    .mcp.json  .gitignore  .env.example
-  ekler/ai/                   # docs/AI.md, evals/, prompts/, .env.example parçası
+CLAUDE.md                      AI'nın anayasası (protokol, skill, stack, ilerleme içe aktarılır)
+docs/
+  KARAR-PROTOKOLU.md           nasıl sorulur, soru modu, görsel önizleme, durum bloğu
+  SKILLER.md                   hangi işte hangi skill
+  PRD MIMARI YOL-HARITASI ILERLEME KARARLAR SOZLUK TEST-PLANI
+  GUVENLIK YASAL-KVKK CANLIYA-ALMA LANSMAN BAKIM RETRO
+  STACK.md                     kurulumda tipin dosyasıyla değişir
+.claude/
+  commands/                    14 komut
+  agents/                      inceleyici, guvenlik-denetcisi
+  hooks/                       sır engeli, oturum notu, durum çubuğu, durum panosu
+  settings.json                izinler, hook'lar, durum çubuğu, skill plugin'leri
+kit/                           kurulumdan sonra silinir
+  kit.mjs                      kur / guncelle
+  sablon/web-saas|mobil|backend   STACK (karar kataloğu dahil), TASARIM, CI, Dependabot, MCP, pre-commit…
+  sablon/ekler/ai              AI.md, evals/, prompts/
+  proje/README.md              projenin README şablonu
+  CHANGELOG.md  SURUM  KAYNAK  REHBER.html  testler/
 ```
-
-## Akış ve komutlar
-
-| Aşama | Komut | Ana dosyalar |
-|---|---|---|
-| 0. Fikir | `/baslat` | PRD, MIMARI, SOZLUK, YOL-HARITASI, KARARLAR |
-| 1. Kurulum | `/gelistir G-001` ... `G-007` | Faz 0: iskelet, CI, ilk deploy, TASARIM |
-| 2. Geliştirme | `/planla` → `/gelistir` → `/incele` → commit → `/oturum-sonu` | ILERLEME, YOL-HARITASI |
-| Hata | `/hata-ayikla` | TEST-PLANI |
-| Faz sonu | `/retro` | RETRO; kite geri bildirim |
-| 3. Canlıya alma | `/canliya-al ilk` · `/canliya-al` | CANLIYA-ALMA, GUVENLIK, YASAL-KVKK, LANSMAN, AI |
-| 4. Bakım | `/bakim haftalik\|aylik\|ceyreklik` | BAKIM |
 
 ## Kiti geliştirmek
 
-- Dersler `/retro` ile gelir. Onaylanan değişiklikler `sablon/`'a yazılır ve `CHANGELOG.md` → "[Yayınlanmamış]" bölümüne eklenir.
+- Testler: `node --test "kit/testler/*.test.mjs"`
+- Dersler projelerden `/retro` ile gelir. `/retro` bu repoda bir dal açar ve onayınla push eder.
 - Sürüm çıkarmak için:
-  1. `SURUM` dosyasındaki numarayı artır.
-  2. CHANGELOG'da "[Yayınlanmamış]" bölümünü sürüm numarasıyla adlandır.
+  1. `kit/SURUM` dosyasındaki numarayı artır.
+  2. `kit/CHANGELOG.md`'de "[Yayınlanmamış]" bölümünü sürüm numarasıyla adlandır.
   3. Testleri çalıştır.
-  4. Commit at ve `git tag v1.x.0` ile etiketle.
-- Testler:
-  - `powershell -ExecutionPolicy Bypass -File testler\kit.test.ps1`
-  - `node --test testler/guard-secrets.test.mjs`
-- Yeni proje tipi eklemek:
-  1. `sablon/<tip>/` klasörünü aç; içine `docs/STACK.md`, `.claude/settings.json`, `.claude/hooks/format.mjs`, `.gitignore`, `.env.example` koy.
-  2. `kit.ps1` içindeki `ValidateSet`'e ekle.
-- Yeni ek eklemek:
-  1. `sablon/ekler/<ad>/` klasörünü aç.
-  2. Var olan bir dosyanın sonuna eklenecek içerik için `dosya.ekle` adını kullan.
-  3. `kit.ps1` içindeki `ValidateSet`'e ekle.
+  4. Commit at, `git tag vX.Y.Z` ile etiketle ve push et.
+- Projeler `/kit-guncelle` ile yeni sürümü alır. Senin değiştirdiğin dosyalar ezilmez, yeni hali yanına `.yeni` olarak gelir.
+- Yeni tip eklemek için `kit/sablon/<tip>/` klasörü aç. Gerekli dosyalar:
+  - `docs/STACK.md` ("Karar noktaları" bölümü dahil)
+  - `.claude/settings.birlestir.json`
+  - `.claude/hooks/format.mjs`
+  - `.gitignore.ekle`
+  - `.env.example`
+- Yeni ek eklemek için `kit/sablon/ekler/<ad>/` klasörü aç. Mevcut bir dosyanın sonuna eklenecek içerik için `x.ekle`, JSON birleştirmek için `x.birlestir.json` adını kullan.

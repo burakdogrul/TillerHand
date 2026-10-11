@@ -1,0 +1,28 @@
+# Sırlar
+.env
+.env.local
+.env.*.local
+.env.production
+secrets/
+
+# İşletim sistemi / editör
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code kişisel ayarları (ortak .claude/ commit edilir)
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Kit güncellemesinden gelen, birleştirilmeyi bekleyen dosyalar
+*.yeni
+
+# Loglar
+*.log
+logs/
+
+# Kit tarafından üretilen çıktılar
+DURUM.html
+.onizleme/

@@ -1,0 +1,22 @@
+# Node / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+coverage/
+*.tsbuildinfo
+expo-env.d.ts
+
+# Native (Expo prebuild ile üretilir; bare workflow'da bu iki satırı kaldır)
+/ios
+/android
+
+# İmzalama
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+google-services.json
+GoogleService-Info.plist
