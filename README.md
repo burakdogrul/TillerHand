@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.3.2-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.4.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -118,7 +118,7 @@ flowchart LR
 
 | Adım | Ne olur | Örnek soru |
 |---|---|---|
-| 0 Hazırlık | Ortam, skill, limit, kod haritası | "Impeccable kurulu değil. Kurup devam edelim mi?" |
+| 0 Hazırlık | Profil, ortam, skill, limit, kod haritası | "Profil: Hafif (Pro için önerilen) / Standart / Tam?" |
 | 1 Fikir | Fikir sorgulanır → PRD | "İlk sürümde hangi özellikler olsun?" (çoklu seçim) |
 | 2 Tip | Web/SaaS, mobil veya backend; AI özelliği var mı | "Kullanıcın masa başında çalışıyor; web öneriyorum. Uygun mu?" |
 | 3 Kurulum | Seçilen tip ve yapı haritası yerleşir, `kit/` silinir | - |
@@ -168,7 +168,16 @@ Seçilen ürün tipine göre senin projende özelleştirilmiş ajanlar (`.claude
 
 ### Konsey (üç aşama)
 
-Karpathy'nin [llm-council](https://github.com/karpathy/llm-council) yapısı kurula uyarlandı. Plan, faz sonu ve canlıya alma toplantıları, RET çıkan görevler ve tek yönlü kararlar (veritabanı, auth, ödeme, veri modeli) üç aşamadan geçer. Görev sonu ve commit toplantıları limit için tek aşamalı kalır.
+Karpathy'nin [llm-council](https://github.com/karpathy/llm-council) yapısı kurula uyarlandı. Hangi toplantı ve kararların üç aşamadan geçeceğini `/start`'ta seçilen **profil** belirler:
+
+| | **Hafif** (Pro için önerilen) | **Standart** | **Tam** |
+|---|---|---|---|
+| Eklentiler | Çekirdek: ponytail, caveman, mattpocock-skills, impeccable, humanizer, security-guidance (+ tipin LSP ve stack skill'leri). Diğerleri proje kapsamında kapatılır | Hepsi açık | Hepsi açık |
+| Commit denetimi (her commit'te haiku kurul) | Kapalı | Açık | Açık |
+| Toplantı konseyi (3 aşama) | Yok; toplantılar tek aşamalı | Faz sonu, canlıya alma | Plan, faz sonu, canlıya alma, RET |
+| Karar konseyi | Veritabanı ve auth kararı | Veritabanı ve auth kararı | Tüm tek yönlü kararlar |
+
+Ölçüm (2026-10-12): Bir konsey Pro'da 5 saatlik limitin yaklaşık %12'sini kullandı.
 
 ```mermaid
 flowchart LR

@@ -1,9 +1,34 @@
 # Kit Değişiklik Günlüğü
 
-Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-guncelle`.
+Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
 ## [Yayınlanmamış]
+
+## [3.4.0] - 2026-10-12
+
+İlk konsey değerlendirmesinin sonucu: Kit, gerçek projede denenmek üzere bu sürümle **donduruldu**. Bundan sonra kitte sadece engelleyici hatalar düzeltilecek.
+
+### Eklendi
+- **Profil** (`/start` Adım 0): Hafif, Standart ve Tam profillerinden biri seçilir. Pro planda Hafif önerilir. Profil şunları belirler:
+  - açık eklentiler
+  - commit denetimi
+  - hangi toplantıların ve kararların konseye gideceği
+
+  Hafif profilde çekirdek 6 eklenti açık kalır, commit denetimi kapalıdır ve toplantı konseyi yoktur. Profil `progress.md` → `**Profil:**` satırına yazılır ve panonun Şimdi kutusunda görünür.
+- Hook komutlarını `bash` ile gerçekten çalıştıran test eklendi. Önceki testler sadece komut metnine bakıyordu ve aşağıdaki bildirim hatasını kaçırmıştı.
+
+### Değişti
+- Karar konseyi artık sadece veritabanı ve auth kararlarında toplanıyor; Tam profilde ise tüm tek yönlü kararlarda. Diğer tek yönlü kararlarda mimarın görüşü alınıyor. Ölçüm: Bir konsey Pro planda 5 saatlik limitin yaklaşık %12'sini kullandı.
+
+### Düzeltildi
+- **Commit kapısı kurul yokken devreye giriyordu.** Şablonla gelen `board-chair.md` kurul üyesi sayılıyordu; bu yüzden `/start`'ın kurulum commit'i, henüz kurulmamış bir kurulu bekleyerek duruyordu. Hatayı bulan: konsey (opus danışmanı).
+- **Uzun iş bildirimi hiç çalışmıyordu.** Stop hook komutunda tırnak yanlış yerdeydi (`notify.mjs --stop` tek bir yol gibi okunuyordu) ve Node "modül bulunamadı" diye çöküyordu.
+- CHANGELOG başlığında eski komut adı (`/kit-guncelle`) duruyordu.
+
+### Bilinen, açık bırakılanlar (dondurma kararıyla)
+- Commit kapısındaki `--approve` izin listesinde duruyor; ajan kapıyı kendi açabilir. Hafif profilde commit denetimi zaten kapalı.
+- Konsey sayımında ABARTILI oyu itiraz sayılıyor ve 2 oylu 1-1 beraberlik "tartışmalı" çıkıyor. Bu kural gerçek kullanımda gözden geçirilecek.
 
 ## [3.3.2] - 2026-10-12
 

@@ -5,7 +5,7 @@ argument-hint: [proje fikri, 1-3 cümle]
 
 Fikir: $ARGUMENTS
 
-Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gibi davran: Her kararı `docs/workflow/decision-protocol.md`'ye göre sor (AskUserQuestion, önerilen seçenek ilk sırada, her seçeneğin ne zaman daha iyi olduğu açıklamalı). Kendi kafana göre karar verme. Bu oturumda uygulama kodu yazma. Her kararı tek yönlü / çift yönlü kapı olarak sınıfla (`docs/workflow/decision-protocol.md` §2a); veritabanı, auth, ödeme ve veri modeli gibi tek yönlü kararlarda önce kurul görüşü al.
+Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gibi davran: Her kararı `docs/workflow/decision-protocol.md`'ye göre sor (AskUserQuestion, önerilen seçenek ilk sırada, her seçeneğin ne zaman daha iyi olduğu açıklamalı). Kendi kafana göre karar verme. Bu oturumda uygulama kodu yazma. Her kararı tek yönlü / çift yönlü kapı olarak sınıfla (`docs/workflow/decision-protocol.md` §2a); veritabanı, auth, ödeme ve veri modeli gibi tek yönlü kararlarda önce kurul görüşü al (veritabanı ve auth'ta karar konseyi; profil kuralı `.claude/board/council.md`).
 
 **Devam etme:** `docs/workflow/progress.md` → `**Başlangıç adımı:**` 0'dan büyükse kaldığın adımdan devam et ve bunu kullanıcıya söyle. Her adım bitince bu satırı (`N/9`) ve `**Son güncelleme:**` satırını güncelle; sonra durum bloğunu yaz.
 
@@ -13,6 +13,10 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
 
 ## Adım 0: Hazırlık
 
+0. **Profil** (ilk soru): Hafif / Standart / Tam. Tabloyu `.claude/board/council.md` → "Ne zaman"den göster; Pro planda **Hafif** önerilen, Max planda Standart. Seçimi `docs/workflow/progress.md` → `**Profil:**` satırına yaz.
+   - **Hafif:** Şu eklentileri proje kapsamında kapat (her biri için `claude plugin disable <id> --scope project`): taste-skill@taste-skill, ui-ux-pro-max@ui-ux-pro-max-skill, differential-review@trailofbits, insecure-defaults@trailofbits, sharp-edges@trailofbits, static-analysis@trailofbits, supply-chain-risk-auditor@trailofbits, agentic-actions-auditor@trailofbits, fp-check@trailofbits, claude-security@claude-plugins-official, hookify@claude-plugins-official, claude-md-management@claude-plugins-official, session-report@claude-plugins-official. `docs/workflow/board.md` → `**Commit denetimi:** kapalı`.
+   - **Standart / Tam:** Eklentiler ve commit denetimi açık kalır.
+   - Profil sonradan değiştirilebilir; aynı adımları tersine uygula.
 1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version`, kökte `kit/kit.mjs` var mı, `.kit.json` yok mu.
 2. `docs/workflow/skills.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. LSP eklentisi dil sunucusu ister: web ve mobil için `npm i -g typescript-language-server typescript`, backend için `npm i -g pyright` (global kurulum; kullanıcı onayıyla). **Eklentiler:** Proje ayarı eklentileri açar ama indirmez; kurulmamış olanlar yükleme hatası verir ve skill'leri gelmez. Kullanıcıya listeyi göster ve sor: "Proje ayarındaki eklentiler kurulsun mu?" Önce `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele; onay gelirse `node .claude/hooks/plugins-sync.mjs --kur` çalıştır. Betik eksikleri proje kapsamında kurar, `false` olanları (Remotion) kurup kapatır. Sonra kullanıcıdan `/reload-plugins` çalıştırmasını iste. claude CLI yoksa eksik eklentilerin `/plugin install x@y` komutlarını ver ve "Kurup devam edelim mi, eksik skill olmadan mı?" diye sor.
 3. `caveman:caveman` skill'ini yükle (rapor dili).

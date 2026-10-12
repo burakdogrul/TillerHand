@@ -415,6 +415,7 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
     <div class="now-v">${e(a['Aktif faz'] ?? '-')} · ${md(a['Aktif görev'] ?? '-')}</div>
     <div class="now-grid">
       <div><div class="now-l">Soru modu</div><div>${e(a['Soru modu'] ?? '-')}</div></div>
+      <div><div class="now-l">Profil</div><div>${e(a['Profil'] ?? '-')}</div></div>
       <div><div class="now-l">Son güncelleme</div><div class="num">${e(a['Son güncelleme'] ?? '-')}</div></div>
       ${/başlangıç/i.test(a['Aktif faz'] ?? '') ? `<div><div class="now-l">Başlangıç adımı</div><div class="num">${e(a['Başlangıç adımı'] ?? '-')}</div></div>` : ''}
     </div>

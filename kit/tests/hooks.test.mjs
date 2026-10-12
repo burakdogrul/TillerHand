@@ -28,7 +28,9 @@ before(() => {
 });
 after(() => fs.rmSync(p, { recursive: true, force: true }));
 
-test('commit kapısı: kurul yoksa geçer', () => {
+test('commit kapısı: kurul yoksa geçer (şablonla gelen başkan ve danışman kurul sayılmaz)', () => {
+  yaz('.claude/agents/board-chair.md', '---\nname: board-chair\n---\n');
+  yaz('.claude/agents/council-advisor.md', '---\nname: council-advisor\n---\n');
   yaz('a.js', 'y');
   sh('git add a.js');
   assert.equal(kapi('git commit -m x').status, 0);

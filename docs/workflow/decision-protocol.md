@@ -40,7 +40,7 @@ Her kararı sormadan önce sınıfla ve soru metninde belirt:
 - **Çift yönlü kapı:** Sonradan kolay ve ucuz değiştirilir (buton metni, renk, bir kütüphanenin iç kullanımı). Normal sorulur.
 - **Tek yönlü kapı:** Geri dönüşü pahalı veya imkânsız (veritabanı, auth sağlayıcısı, veri modeli, ödeme sağlayıcısı, alan adı, kişisel veri işleme, mağaza paket adı, herkese açık API sözleşmesi). Ek kurallar:
   1. Soru metninde "Tek yönlü karar: sonradan değiştirmek [şu kadar] maliyetli" yazılır.
-  2. Sormadan önce **karar konseyi** toplanır (`.claude/board/council.md`): 3 danışman aynı soruyu farklı modellerle cevaplar, birbirini anonim sıralar, `board-chair` önerir. Önerilen seçenek konseyin önerisidir; her seçeneğin açıklamasına konsey oyu ve azınlık görüşü eklenir. Limit kırmızıysa konsey yerine `board-architect` (ve ilgiliyse `security-auditor`) görüşü alınır.
+  2. **Veritabanı ve auth kararlarında** (Tam profilde tüm tek yönlü kararlarda) sormadan önce **karar konseyi** toplanır (`.claude/board/council.md`); diğer tek yönlü kararlarda `board-architect` (ilgiliyse `security-auditor`) görüşü alınır. Konsey: 3 danışman aynı soruyu farklı modellerle cevaplar, birbirini anonim sıralar, `board-chair` önerir. Önerilen seçenek konseyin önerisidir; her seçeneğin açıklamasına konsey oyu ve azınlık görüşü eklenir. Limit kırmızıysa konsey yerine `board-architect` (ve ilgiliyse `security-auditor`) görüşü alınır.
   3. Cevaptan sonra ADR zorunludur: `docs/decisions/adr-NNNN-*.md` (şablon: `adr-template.md`).
   4. Kullanıcı acele etmiyorsa, büyük tek yönlü kararlar için "bir gün düşünüp sonra karar vermek" seçeneği de sunulur.
 

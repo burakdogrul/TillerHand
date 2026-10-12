@@ -104,7 +104,7 @@
           },
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/notify.mjs --stop\""
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/notify.mjs\" --stop"
           }
         ]
       }

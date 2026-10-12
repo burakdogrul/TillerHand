@@ -25,7 +25,8 @@ export const sadeceDokuman = (dosyalar) => dosyalar.every((f) => /\.(md|txt)$/i.
 
 function kurulVar() {
   const ajanlar = path.join(kok, '.claude', 'agents');
-  return fs.existsSync(ajanlar) && fs.readdirSync(ajanlar).some((f) => /^board-.+\.md$/.test(f));
+  // board-chair (konsey başkanı) şablonla gelir, kurul üyesi değildir; üye dosyaları /start Kurul adımında kopyalanır
+  return fs.existsSync(ajanlar) && fs.readdirSync(ajanlar).some((f) => /^board-.+\.md$/.test(f) && f !== 'board-chair.md');
 }
 
 function denetimKapali() {

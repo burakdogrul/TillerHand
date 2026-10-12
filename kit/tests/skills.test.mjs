@@ -47,7 +47,7 @@ test('bildirim: kısa işte ve KIT_NOTIFY=off iken bildirim yok, hata yok', () =
 
 test('ayarlar: bildirim hook\'ları, skill bütçesi, MCP sürümleri sabit', () => {
   const s = JSON.parse(fs.readFileSync(path.join(KOK, '.claude/settings.json'), 'utf8'));
-  assert.ok(s.hooks.Notification && s.hooks.Stop[0].hooks.some((h) => h.command.includes('notify.mjs --stop')));
+  assert.ok(s.hooks.Notification && s.hooks.Stop[0].hooks.some((h) => /notify\.mjs" --stop$/.test(h.command)));
   assert.equal(s.enabledPlugins['remotion@remotion'], false, 'Remotion varsayılan kapalı');
   const backend = JSON.parse(fs.readFileSync(path.join(KOK, 'kit/templates/backend/.claude/settings.merge.json'), 'utf8'));
   assert.equal(backend.enabledPlugins['impeccable@impeccable'], false, 'backend tasarım skill bütçesi');
@@ -99,4 +99,16 @@ test('eklenti eşitleme: yerelde kapatılan eklenti eksik sayılmaz, bilgi olara
   const baskaProje = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'proje-b'), enabled: false }];
   assert.deepEqual(kapalilar(acik, baskaProje, kok), [], 'başka projedeki kapalı kayıt bu projeyi ilgilendirmez');
   assert.deepEqual(eksikler({ 'fp-check@trailofbits': true }, baskaProje, kok), [{ id: 'fp-check@trailofbits', etkin: true }], 'burada kurulu değil: kurulacaklar listesinde');
+});
+
+test('ayarlar: her hook ve durum çubuğu komutu gerçekten çalışır (tırnak, yol, modül hatası yok)', () => {
+  const s = JSON.parse(fs.readFileSync(path.join(KOK, '.claude/settings.json'), 'utf8'));
+  const komutlar = Object.values(s.hooks).flat().flatMap((m) => m.hooks.map((h) => h.command)).concat(s.statusLine.command);
+  const env = { ...process.env, CLAUDE_PROJECT_DIR: KOK, KIT_NOTIFY: 'off' };
+  for (const k of komutlar) {
+    // Claude Code hook'ları bash ile çalıştırır (Windows'ta Git Bash); "$CLAUDE_PROJECT_DIR" açılımı ve tırnaklar dahil
+    const r = spawnSync('bash', ['-c', k], { cwd: KOK, input: '{}', env, encoding: 'utf8', timeout: 60000 });
+    assert.doesNotMatch(r.stderr ?? '', /Cannot find module|MODULE_NOT_FOUND|No such file/, k);
+    assert.equal(r.status, 0, `${k}\n${r.stderr}`);
+  }
 });

@@ -9,6 +9,7 @@
 **Aktif görev:** /start
 **Başlangıç adımı:** 0/9
 **Soru modu:** açık · kapalı konular: yok
+**Profil:** -
 
 ## Şu anki durum
 

@@ -22,7 +22,7 @@
 
 Sadece dokümantasyon değişikliği (`.md`, `docs/`) içeren commit'ler denetimden muaftır.
 
-**Konsey (üç aşama):** Plan, faz sonu ve canlıya alma toplantıları ile RET çıkan görev sonu toplantıları `.claude/board/council.md` protokolüyle yapılır. Önce ilk görüşler alınır, sonra üyeler birbirinin bulgularını anonim olarak oylar ve sıralar, en son `board-chair` karar verir. Görev sonu ve commit toplantıları tek aşamalıdır.
+**Konsey (üç aşama):** Hangi toplantıların konseyle yapılacağını proje profili belirler (`.claude/board/council.md` → "Ne zaman"). Tam profilde plan, faz sonu ve canlıya alma toplantıları ile RET çıkan görev sonu toplantıları `.claude/board/council.md` protokolüyle yapılır; Standart'ta sadece faz sonu ve canlıya alma; Hafif'te hiçbiri. Önce ilk görüşler alınır, sonra üyeler birbirinin bulgularını anonim olarak oylar ve sıralar, en son `board-chair` karar verir. Görev sonu ve commit toplantıları tek aşamalıdır.
 
 ## 3. Kim ilgili? (değişikliğe göre üye seçimi)
 

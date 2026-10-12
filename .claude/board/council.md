@@ -9,11 +9,22 @@
 
 ## Ne zaman
 
-| Durum | Konsey türü | Aşama 1 üyeleri | Başkan |
+Hangi toplantı ve kararın konseye gideceğini proje profili belirler (`docs/workflow/progress.md` → `**Profil:**`; `/start` Adım 0'da seçilir):
+
+| | **Hafif** (Pro için önerilen) | **Standart** | **Tam** |
+|---|---|---|---|
+| Eklentiler | Çekirdek: ponytail, caveman, mattpocock-skills, impeccable, humanizer, security-guidance (+ tipin LSP ve stack skill'leri). Diğerleri proje kapsamında kapatılır | Hepsi açık | Hepsi açık |
+| Commit denetimi (her commit'te haiku kurul) | Kapalı | Açık | Açık |
+| Toplantı konseyi (3 aşama) | Yok; toplantılar tek aşamalı | Faz sonu, canlıya alma | Plan, faz sonu, canlıya alma, RET |
+| Karar konseyi | Veritabanı ve auth kararı | Veritabanı ve auth kararı | Tüm tek yönlü kararlar |
+
+Ölçüm (2026-10-12): Bir konsey Pro'da 5 saatlik limitin yaklaşık %12'sini kullandı.
+
+| Durum (profil izin veriyorsa) | Konsey türü | Aşama 1 üyeleri | Başkan |
 |---|---|---|---|
 | Plan, faz sonu, canlıya alma toplantısı | **Toplantı konseyi** | rules.md §3'e göre seçilen kurul üyeleri (kendi modelleriyle) | `board-chair` |
 | Görev sonu toplantısında RET çıktı | Toplantı konseyi (sadece aşama 2 ve 3) | RET veren üye + o toplantının diğer üyeleri | `board-chair` |
-| Tek yönlü kapı kararı (`docs/workflow/decision-protocol.md` §2a) veya `/board council <soru>` | **Karar konseyi** | 3 × `council-advisor`: `haiku`, `sonnet`, `opus` (aynı soru, farklı model) | `board-chair` |
+| Tek yönlü kapı kararı (Hafif/Standart: sadece veritabanı ve auth; Tam: hepsi; `docs/workflow/decision-protocol.md` §2a) veya her profilde `/board council <soru>` | **Karar konseyi** | 3 × `council-advisor`: `haiku`, `sonnet`, `opus` (aynı soru, farklı model) | `board-chair` |
 
 - Görev sonu ve commit toplantıları tek aşamalı kalır (rules.md §4).
 - Limit sarıysa: karar konseyi 2 danışmanla (`sonnet`, `opus`) yapılır, toplantı konseyinde aşama 2'ye en fazla 3 üye katılır.
