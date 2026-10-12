@@ -22,6 +22,8 @@
 
 Sadece dokümantasyon değişikliği (`.md`, `docs/`) içeren commit'ler denetimden muaftır.
 
+**Konsey (üç aşama):** Plan, faz sonu ve canlıya alma toplantıları ile RET çıkan görev sonu toplantıları `.claude/board/council.md` protokolüyle yapılır. Önce ilk görüşler alınır, sonra üyeler birbirinin bulgularını anonim olarak oylar ve sıralar, en son `board-chair` karar verir. Görev sonu ve commit toplantıları tek aşamalıdır.
+
 ## 3. Kim ilgili? (değişikliğe göre üye seçimi)
 
 | Değişiklik | Üye |
@@ -43,7 +45,8 @@ Kurulda olmayan bir üyeyi çağırma; ilgili alan kurulda yoksa durum bloğunda
 
 1. **Limit kontrolü** (`docs/workflow/usage-limits.md`): Seviye sarıysa üye sayısını yarıya indir; kırmızıysa kullanıcıya sor (kurulu hafiflet seçeneği dahil).
 2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu ve kabul kriterleri. Commit toplantısında `model: "haiku"` ver.
-3. **Sentezle** (ana ajan):
+2b. **Konsey toplantısıysa** (§2) `.claude/board/council.md` aşama 1-4'ü uygula. Sentezi başkanın kararından kur; görüş ayrılığı satırına azınlık görüşünü yaz.
+3. **Sentezle** (ana ajan; konseyde başkanın kararına göre):
 
 ```
 ## Kurul: [tür] · [kapsam]

@@ -8,7 +8,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { durumOku, oku, bolumler, bolumBul, sayac, tabloSatirlari } from './status-read.mjs';
 import { limitOku, ozet, seviye, ESIKLER } from './usage.mjs';
-import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari, maliyetOzeti } from './dashboard-data.mjs';
+import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari, maliyetOzeti, konseyTutanaklari } from './dashboard-data.mjs';
 
 const argumanlar = process.argv.slice(2);
 const sessiz = argumanlar.includes('--sessiz');
@@ -69,6 +69,7 @@ const tasarimYonu = tabloSatirlari(bolumBul(bolumler(oku(dosya('docs/design/desi
   .filter(([, secim]) => secim && !secim.startsWith('[')).map(([alan, secim]) => ({ alan, secim }));
 
 const varlik = uretimVarliklari(kok);
+const konseyler = konseyTutanaklari(kok);
 let tokenMaliyet = null;
 try { const c = JSON.parse(fs.readFileSync(dosya('.claude/state/cost.json'), 'utf8')); tokenMaliyet = { ...maliyetOzeti(c.veri), okundu: c.okundu }; } catch { /* cost.mjs henüz çalışmadı */ }
 let onizlemeler = [];
@@ -205,6 +206,13 @@ const kurulBolumu = `
     <p class="muted small">Commit denetimi: ${e(d.kurul.commitDenetimi)}</p></section>
   <section class="card"><h3>Özet</h3><div class="kpis mini">${kutu('Toplantı', d.kurul.toplantilar.length)}${kutu('RET', retSayisi, retSayisi ? rozet('kritik', 'kritik bulgu') : '')}${kutu('Onay oranı', d.kurul.toplantilar.length ? `%${yuzde(d.kurul.toplantilar.filter((t) => /^ONAY/i.test(t.sonuc)).length, d.kurul.toplantilar.length)}` : '-')}</div></section>
 </div>
+<section class="card"><h3>Konsey · ilk görüş → anonim çapraz oy → başkan</h3>${konseyler.length ? (() => {
+  const son = konseyler[0];
+  const kararRozet = (k) => (!k ? rozet('bilgi', 'karar yok') : /KOŞULLU/i.test(k) ? rozet('uyari', k) : /RET/i.test(k) ? rozet('kritik', k) : rozet('iyi', k));
+  return `<h4>Son: ${md(son.konu)}</h4><div class="kpis mini">${kutu('Karar', kararRozet(son.karar))}${kutu('Uzlaşma', son.uzlasma == null ? '-' : `%${son.uzlasma}`, son.uzlasma != null && son.uzlasma < 60 ? rozet('uyari', 'düşük') : '')}${kutu('Tartışmalı', son.tartismali)}${kutu('Elenen', son.elenen, 'çapraz oyla')}</div>
+  ${son.siralama.length ? `<h4>Toplu sıralama</h4><div class="rows">${son.siralama.map((r, i) => `<div class="row"><span><b>${i + 1}.</b> Görüş ${e(r.gorus)}${r.kim ? ` <span class="muted small">${e(r.kim)}</span>` : ''}</span><span class="num muted">ort. ${e(r.ortalama)}</span></div>`).join('')}</div>` : ''}
+  <div class="tw"><table><thead><tr><th>Tarih</th><th>Tür</th><th>Konu</th><th>Karar</th><th>Uzlaşma</th><th>Tutanak</th></tr></thead><tbody>${konseyler.slice(0, 10).map((k) => `<tr><td class="num nw">${e(k.tarih)}</td><td>${e(k.tur)}</td><td>${md(k.konu)}</td><td>${kararRozet(k.karar)}</td><td class="num">${k.uzlasma == null ? '-' : `%${k.uzlasma}`}</td><td><a href="${k.dosya.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">aç</a></td></tr>`).join('')}</tbody></table></div>`;
+})() : bos('Henüz konsey toplanmadı. Plan, faz sonu, canlıya alma ve tek yönlü kararlarda otomatik toplanır.', '/board council <soru>')}</section>
 <section class="card"><h3>Toplantı günlüğü</h3>${d.kurul.toplantilar.length ? `<div class="tw"><table><thead><tr><th>#</th><th>Tarih</th><th>Tür</th><th>Kapsam</th><th>Katılan</th><th>Sonuç</th><th>Kritik</th><th>Kullanıcı kararı</th></tr></thead><tbody>
 ${[...d.kurul.toplantilar].reverse().map((t) => `<tr><td class="num">${e(t.no)}</td><td class="num nw">${e(t.tarih)}</td><td>${e(t.tur)}</td><td>${md(t.kapsam)}</td><td>${e(t.katilan)}</td><td>${/KOŞULLU/i.test(t.sonuc) ? rozet('uyari', t.sonuc) : /RET/i.test(t.sonuc) ? rozet('kritik', t.sonuc) : rozet('iyi', t.sonuc)}</td><td>${md(t.kritik)}</td><td>${md(t.karar)}</td></tr>`).join('')}
 </tbody></table></div>` : bos('Henüz toplantı yapılmadı.')}</section>`;

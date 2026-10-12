@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · GitHub template · v3.2</p>
+  <p class="eyebrow">Claude Code · GitHub template · v3.3</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -368,10 +368,11 @@ claude
     <table>
       <thead><tr><th>Toplantı</th><th>Ne zaman</th><th>Kim</th><th>Model</th></tr></thead>
       <tbody>
-        <tr><td>Plan</td><td>/plan-task sonunda, onaydan önce</td><td>Ürün + Mimar + ilgili üyeler (en fazla 4)</td><td>üyenin modeli</td></tr>
+        <tr><td>Plan · konsey</td><td>/plan-task sonunda, onaydan önce</td><td>Ürün + Mimar + ilgili üyeler (en fazla 4) + başkan</td><td>üyenin modeli · başkan opus</td></tr>
         <tr><td>Görev sonu</td><td>/build sonunda</td><td>İlgili üyeler (en fazla 3)</td><td>üyenin modeli</td></tr>
         <tr><td>Commit (hafif)</td><td>Her commit öncesi; hook zorunlu kılar</td><td>İlgili en fazla 2 üye, sadece diff</td><td>haiku</td></tr>
-        <tr><td>Faz sonu · canlıya alma</td><td>/board convene, /release ilk</td><td>Tüm kurul</td><td>üyenin modeli</td></tr>
+        <tr><td>Faz sonu · canlıya alma · konsey</td><td>/board convene, /release ilk</td><td>Tüm kurul + başkan</td><td>üyenin modeli · başkan opus</td></tr>
+        <tr><td>Karar konseyi</td><td>Tek yönlü kapı kararı, /board council</td><td>3 danışman aynı soruyu cevaplar + başkan</td><td>haiku · sonnet · opus · başkan opus</td></tr>
       </tbody>
     </table>
   </div>
@@ -379,6 +380,15 @@ claude
 BULGULAR:
 [KRİTİK] app/api/invoice/[id]/route.ts:14 — fatura sahibi kontrol edilmiyor; başka kullanıcının id'siyle fatura okunur — sorguya user_id koşulu ekle
 KULLANICIYA SORULMALI: yok</pre>
+  <h3>Konsey: üç aşama</h3>
+  <p>Karpathy'nin <a href="https://github.com/karpathy/llm-council">llm-council</a> yapısı kurula uyarlandı. Ağır toplantılar ve geri dönüşü pahalı kararlar üç aşamadan geçer:</p>
+  <div class="types">
+    <article class="type"><h3>1 · İlk görüşler</h3><p>Üyeler (veya farklı modellerdeki danışmanlar) birbirinden habersiz, paralel çalışır. Görüşler A, B, C diye etiketlenir; bulgular A1, A2…</p></article>
+    <article class="type"><h3>2 · Anonim çapraz oy</h3><p>Her üye diğerlerinin görüşünü kimin yazdığını bilmeden okur, her bulguya DOĞRU · ABARTILI · YANLIŞ oyu verir, eksik olanı yazar ve görüşleri sıralar.</p></article>
+    <article class="type"><h3>Sayım (kod)</h3><p>council.mjs ortalama sırayı, bulgu oylarını ve uzlaşma yüzdesini kodla hesaplar; model sayıyı değiştiremez.</p></article>
+    <article class="type"><h3>3 · Başkan</h3><p>board-chair (opus) tutanağı okur, kararı yazar, çürütülen bulguları gerekçesiyle eler, azınlık görüşünü korur. Tartışmalı kritik bulguyu eleyemez; sana sorar.</p></article>
+  </div>
+  <p>Karar konseyinde sana sorulan sorunun "(Önerilen)" seçeneği konseyden gelir; her seçeneğin altında konseyin oyu ve azınlık görüşü yazar. Tutanaklar <code>docs/workflow/council/</code>, özet panonun Kurul sekmesinde.</p>
   <p class="note">RET geldiğinde görev bitmiş sayılmaz. Sana üç seçenek sunulur: düzelt (önerilen), riski kabul et ve gerekçeyi kaydet, ya da görevi geri al. Üyeler arasında görüş ayrılığı varsa iki görüş yan yana konur ve karar sana sorulur.</p>
 </section>
 
@@ -647,7 +657,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.2.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.3.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

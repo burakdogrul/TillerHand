@@ -1,6 +1,6 @@
 ---
 description: Uzman kurulunu kurar, değiştirir, toplar veya durumunu gösterir.
-argument-hint: [boş | setup | convene <plan|task|phase-end|release|konu>]
+argument-hint: [boş | setup | convene <plan|task|phase-end|release|konu> | council <soru>]
 ---
 
 İstek: $ARGUMENTS
@@ -15,6 +15,8 @@ argument-hint: [boş | setup | convene <plan|task|phase-end|release|konu>]
   - `phase-end`: aktif fazın tüm değişiklikleri (faz başlangıcından bu yana `git log` ve diff özeti)
   - `release`: tüm kod tabanı
   - Diğer metinler: kullanıcının verdiği konu (örn. "ödeme akışı")
+
+- **`council <soru>`:** Karar konseyi (`.claude/board/council.md`). Soruyu ve seçenekleri netleştir, eksikse önce kullanıcıya seçenekleri onaylat. Bitince başkanın önerisiyle kararı AskUserQuestion ile sor.
 
 Toplantıdan önce limiti kontrol et (`node .claude/hooks/usage.mjs`). Tam kurul toplantısı pahalıdır. Seviye sarı veya kırmızıysa tahmini maliyeti söyle ve `docs/workflow/usage-limits.md` §3'teki seçenekleri sor.
 

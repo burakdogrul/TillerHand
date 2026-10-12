@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.2.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.3.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -164,6 +164,25 @@ Seçilen ürün tipine göre senin projende özelleştirilmiş ajanlar (`.claude
 | Commit | Her commit (hook zorunlu kılar) | ilgili en fazla 2 üye, sadece diff | haiku |
 | Faz sonu, canlıya alma | `/board convene`, `/release first` | tüm kurul | üyenin modeli |
 
+### Konsey (üç aşama)
+
+Karpathy'nin [llm-council](https://github.com/karpathy/llm-council) yapısı kurula uyarlandı. Plan, faz sonu ve canlıya alma toplantıları, RET çıkan görevler ve tek yönlü kararlar (veritabanı, auth, ödeme, veri modeli) üç aşamadan geçer. Görev sonu ve commit toplantıları limit için tek aşamalı kalır.
+
+```mermaid
+flowchart LR
+    Q["Soru / plan / diff"] --> S1["1 · İlk görüşler<br/>üyeler paralel, birbirinden habersiz"]
+    S1 --> S2["2 · Anonim çapraz oy<br/>DOĞRU · ABARTILI · YANLIŞ<br/>+ sıralama"]
+    S2 --> T["Sayım (council.mjs)<br/>ortalama sıra, uzlaşma"]
+    T --> C["3 · Başkan (opus)<br/>karar, elenen bulgular,<br/>azınlık görüşü"]
+    C --> U["Sen karar verirsin"]
+```
+
+- **Karar konseyi:** 3 danışman (haiku, sonnet, opus) aynı soruyu cevaplar ve birbirini sıralar. Sana sorulan sorudaki "(Önerilen)" seçenek konseyden gelir; her seçenekte konsey oyu ve azınlık görüşü yazar. Elle çağırmak için: `/board council <soru>`.
+- **Güvenceler:**
+  - Sayımı kod yapar, model sayıyı değiştiremez.
+  - Başkan tartışmalı bir kritik bulguyu kendi başına eleyemez, sana sorar.
+- **Nerede görünür:** Tutanaklar `docs/workflow/council/` klasörüne yazılır. Panonun Kurul sekmesinde uzlaşma, toplu sıralama ve karar görünür.
+
 ## 🔎 Bulgu raporları
 
 Projeyi bir uzman gözüyle tarar ve en önemli **en fazla 20 bulguyu** kanıtla, puanla ve nasıl düzeltileceğiyle `docs/findings/<tür>/` altına yazar. Her rapor bir öncekiyle karşılaştırılır (yeni / devam / kötüleşti / çözüldü) ve panoda eğilim olarak görünür.
@@ -277,7 +296,7 @@ flowchart TB
 | `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme |
 | `/freeze <klasör> \| off` | Düzenlemeyi tek klasöre kilitler |
 | `/findings-<tür>` | `tech` · `business` · `security` · `ux` · `perf` · `legal` · `all` |
-| `/board [setup\|convene]` | Uzman kurulunu kurar, değiştirir, toplar |
+| `/board [setup\|convene\|council]` | Uzman kurulunu kurar, toplar; `council <soru>` karar konseyi |
 | `/ask-mode [on\|off] [konu]` | Soru modunu yönetir |
 | `/dashboard` | Ayrıntılı rapor ve kontrol paneli |
 | `/wrap-up` | Oturumu kapatır, ilerlemeyi kaydeder |

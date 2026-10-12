@@ -182,6 +182,31 @@ export function uretimVarliklari(kok) {
   return { markaKlasor, marka, markaRehberi: fs.existsSync(path.join(kok, 'docs/design/brand.md')), videolar, arastirma };
 }
 
+// ---------- Konsey tutanakları (docs/workflow/council/*.md; council.mjs ve board-chair yazar) ----------
+export function konseyTutanaklari(kok) {
+  const klasor = path.join(kok, 'docs', 'workflow', 'council');
+  let dosyalar = [];
+  try { dosyalar = fs.readdirSync(klasor).filter((f) => f.endsWith('.md') && f !== 'README.md'); } catch { return []; }
+  return dosyalar.map((f) => {
+    const metin = oku(path.join(klasor, f));
+    const a = {};
+    for (const [, k, v] of metin.matchAll(/\*\*([^*:]+):\*\*\s*([^·\n]*)/g)) a[k.trim()] ??= v.trim();
+    const siralama = tabloSatirlari(bolumler(metin)['3. Toplu sıralama'], 3).filter(([g]) => /^[A-Z]$/.test(g));
+    const kimlik = Object.fromEntries([...(bolumler(metin)['Kimlikler'] ?? '').matchAll(/([A-Z])\s*=\s*([^·\n]+)/g)].map((m) => [m[1], m[2].trim()]));
+    return {
+      dosya: `docs/workflow/council/${f}`,
+      konu: metin.match(/^#\s+Konsey:\s*(.+)$/m)?.[1] ?? f.replace(/\.md$/, ''),
+      tarih: a['Tarih'] ?? f.slice(0, 10),
+      tur: a['Tür'] ?? '-',
+      karar: a['Karar'] || a['Öneri'] || null,
+      uzlasma: a['Uzlaşma']?.match(/\d+/) ? Number(a['Uzlaşma'].match(/\d+/)[0]) : null,
+      tartismali: Number(a['Tartışmalı'] ?? 0) || 0,
+      elenen: Number(a['Elenen'] ?? 0) || 0,
+      siralama: siralama.map(([g, ort]) => ({ gorus: g, kim: kimlik[g] ?? null, ortalama: ort })),
+    };
+  }).sort((x, y) => y.tarih.localeCompare(x.tarih) || y.dosya.localeCompare(x.dosya));
+}
+
 // ---------- Token ve maliyet (ccusage; cost.mjs yazar) ----------
 // Claude Code transcript klasör adı: proje yolundaki harf/rakam dışı her karakter "-" olur
 export const ccusageProjeAdi = (kok) => path.resolve(kok).replace(/[^a-zA-Z0-9]/g, '-');

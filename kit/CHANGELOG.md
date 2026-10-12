@@ -5,6 +5,21 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.3.0] - 2026-10-12
+
+### Eklendi
+- **Konsey (üç aşama):** Karpathy'nin llm-council yapısının kurula uyarlanması (`.claude/board/council.md`).
+  - **Toplantı konseyi:** Plan, faz sonu, canlıya alma ve RET çıkan görev sonu toplantılarında uygulanır. Üyeler önce bağımsız görüş verir. Sonra her üye diğerlerinin bulgularını kimin yazdığını bilmeden oylar (DOĞRU, ABARTILI veya YANLIŞ) ve görüşleri sıralar. En son başkan karar verir.
+  - **Karar konseyi:** Tek yönlü kapı kararlarında ve `/board council <soru>` ile çalışır. 3 `council-advisor` (haiku, sonnet, opus) aynı soruyu cevaplar ve birbirini anonim sıralar. `board-chair` önerir; AskUserQuestion'daki "(Önerilen)" seçenek konseyden gelir, her seçeneğe konsey oyu ve azınlık görüşü eklenir.
+  - `board-chair` (opus) ve `council-advisor` ajanları eklendi.
+  - Sayım için `council.mjs` eklendi (testli). Ortalama sırayı, bulgu oylarını, tartışmalı bulguları ve uzlaşmayı kodla hesaplar. Başkan tartışmalı KRİTİK bulguyu eleyemez.
+  - Tutanaklar `docs/workflow/council/` klasörüne yazılır. Panonun Kurul sekmesine yeni Konsey kartı eklendi: son karar, uzlaşma, tartışmalı ve elenen bulgu sayısı, kimlikleriyle toplu sıralama, son 10 tutanak.
+
+### Değişti
+- `docs/workflow/decision-protocol.md` §2a: Tek yönlü kararlarda önceki tek mimar görüşünün yerini karar konseyi aldı. Limit kırmızıysa eski yönteme dönülür.
+- `.claude/board/rules.md`: Konsey toplantıları ve §4'e 2b adımı eklendi. `/board` komutuna `council` eklendi.
+- Rehber, pano ve README 3.3 ile güncellendi.
+
 ## [3.2.0] - 2026-10-12
 
 Ekosistem araştırmasından (yıldız ve bakım durumu GitHub API'den, kurulum ayrıntıları birincil kaynaktan) seçilenler.
