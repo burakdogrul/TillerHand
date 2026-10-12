@@ -111,3 +111,19 @@ test('düzenleme kilidi: hook kilitliyken dışarıyı reddeder, kilit kalkınca
   calistir(['--off'], '');
   assert.equal(calistir([], yaz('src/lib/x.ts')).stdout, '');
 });
+
+test('düzenleme kilidi: izinli --set önekiyle kilit kaldırılamaz veya genişletilemez, daraltılabilir', async () => {
+  const fs = await import('node:fs');
+  const kok = fs.mkdtempSync(path.join(os.tmpdir(), 'kilit2-'));
+  const calistir = (...arg) => spawnSync('node', [path.join(HOOKS, 'freeze-guard.mjs'), ...arg], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: kok } });
+  const kilit = () => JSON.parse(fs.readFileSync(path.join(kok, '.claude/state/freeze.json'), 'utf8')).dir;
+  calistir('--set', 'src/features/auth');
+  calistir('--set', 'x', '--off');
+  assert.equal(kilit(), 'src/features/auth', '--off sonradan eklenince kilit kalkmaz');
+  assert.equal(calistir('--set', '.').status, 1, 'kilit bütün projeye genişletilemez');
+  assert.equal(calistir('--set', 'src').status, 1, 'üst klasöre genişletilemez');
+  assert.equal(calistir('--set', 'src/features/auth/login').status, 0, 'daraltma serbest');
+  assert.equal(kilit(), 'src/features/auth/login');
+  calistir('--off');
+  assert.equal(fs.existsSync(path.join(kok, '.claude/state/freeze.json')), false);
+});

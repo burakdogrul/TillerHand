@@ -49,13 +49,15 @@ export function geriDon(kok, hedef) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const arg = process.argv.slice(2);
-  const deger = (bayrak) => arg[arg.indexOf(bayrak) + 1];
+  // Modu SADECE ilk argüman belirler: izin listesi önekle eşleşir ("--list:*", "--save:*"),
+  // sonraya eklenen "--restore ... --evet" onaysız geri dönüşe yol açmasın.
+  const mod = arg[0];
   try {
-    if (arg.includes('--save')) {
-      console.log(`Çalışan nokta kaydedildi: ${kaydet(kok, deger('--save') ?? '')}`);
-    } else if (arg.includes('--restore')) {
-      const hedef = deger('--restore');
-      if (!hedef || !arg.includes('--evet')) {
+    if (mod === '--save') {
+      console.log(`Çalışan nokta kaydedildi: ${kaydet(kok, arg[1] ?? '')}`);
+    } else if (mod === '--restore') {
+      const hedef = arg[1];
+      if (!hedef || hedef.startsWith('--') || arg[2] !== '--evet') {
         console.error('Geri dönüş onay ister: node .claude/hooks/checkpoint.mjs --restore <etiket|commit> --evet');
         process.exit(1);
       }

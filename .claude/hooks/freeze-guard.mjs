@@ -27,14 +27,21 @@ function kilitOku() {
   try { return JSON.parse(fs.readFileSync(DURUM, 'utf8')).dir || null; } catch { return null; }
 }
 
+// Modu SADECE ilk argüman belirler (izin listesi önekle eşleşir: "--set:*" ve "--status" onaysız, "--off" onaylı).
+// Kilit ajanı sınırlar: açık kilit onaysız kaldırılamaz ve genişletilemez, sadece daraltılabilir.
 function ayarla() {
-  const i = process.argv.indexOf('--set');
-  if (process.argv.includes('--off')) {
+  const [mod, deger] = process.argv.slice(2);
+  if (mod === '--off') {
     fs.rmSync(DURUM, { force: true });
     console.log('Düzenleme kilidi kaldırıldı.');
-  } else if (i > -1 && process.argv[i + 1]) {
-    const dir = goreli(process.argv[i + 1], kok).replace(/\/+$/, '');
+  } else if (mod === '--set' && deger) {
+    const dir = goreli(deger, kok).replace(/\/+$/, '');
     if (!dir || dir.startsWith('..')) { console.error('Klasör proje içinde olmalı.'); process.exit(1); }
+    const mevcut = kilitOku();
+    if (mevcut && !izinli(`${dir}/x`, mevcut)) {
+      console.error(`Kilit açık (${mevcut}/). Sadece daraltılabilir; genişletmek için önce kullanıcı onayıyla /freeze off.`);
+      process.exit(1);
+    }
     fs.mkdirSync(path.dirname(DURUM), { recursive: true });
     fs.writeFileSync(DURUM, JSON.stringify({ dir, tarih: new Date().toISOString() }, null, 2));
     console.log(`Düzenleme kilidi: sadece ${dir}/ (kaldırmak için /freeze off)`);
@@ -57,5 +64,5 @@ function hook() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  process.argv.some((a) => a === '--set' || a === '--off' || a === '--status') ? ayarla() : hook();
+  ['--set', '--off', '--status'].includes(process.argv[2]) ? ayarla() : hook();
 }

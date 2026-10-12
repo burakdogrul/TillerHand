@@ -63,3 +63,20 @@ test('geri alma: kaydedilmemiş değişiklikle çalışan nokta konmaz; aynı ha
   assert.equal(git(kok, 'rev-parse', 'HEAD'), once);
   assert.throws(() => geriDon(kok, 'yok-boyle-bir-sey'));
 });
+
+test('geri alma: izin listesindeki --list/--save önekiyle geri dönüş tetiklenemez (ilk argüman modu belirler)', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const betik = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks', 'checkpoint.mjs');
+  const kok = depo();
+  yaz(kok, 'a.js', 'ilk');
+  commit(kok, 'ilk');
+  yaz(kok, 'a.js', 'ikinci');
+  commit(kok, 'ikinci');
+  const calistir = (...arg) => spawnSync('node', [betik, ...arg], { cwd: kok, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: kok } });
+  calistir('--list', '--restore', 'HEAD~1', '--evet');
+  calistir('--save', 'x', '--restore', 'HEAD~1', '--evet');
+  assert.equal(fs.readFileSync(path.join(kok, 'a.js'), 'utf8'), 'ikinci', 'izinli önekle geri dönüş olmamalı');
+  assert.equal(calistir('--restore', 'HEAD~1', '--evet').status, 0);
+  assert.equal(fs.readFileSync(path.join(kok, 'a.js'), 'utf8'), 'ilk');
+});

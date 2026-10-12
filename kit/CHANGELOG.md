@@ -5,6 +5,20 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.5.1] - 2026-10-12
+
+### Güvenlik
+- **İzin listesi önek açığı** (commit güvenlik incelemesi buldu). İzin kuralları komutun başıyla eşleşiyor, betikler ise argümanları herhangi bir sırada okuyordu. Sonuç:
+  - `checkpoint.mjs --list --restore X --evet` onaysız geri dönüş yapıyordu.
+  - `freeze-guard.mjs --set x --off` düzenleme kilidini onaysız kaldırıyordu.
+  - `freeze-guard.mjs --set .` kilidi bütün projeye genişletiyordu.
+- Düzeltme:
+  - İki betikte de ne yapılacağını artık sadece ilk argüman belirliyor.
+  - Açık kilit onaysız sadece daraltılabiliyor.
+  - İzin listesinde sadece `freeze-guard --set` ve `--status` var; `--off` onay istiyor.
+  - Her iki açık için test eklendi.
+- Bilinen: `commit-gate.mjs --approve` aynı türden bir öz-onay yolu olarak izin listesinde duruyor (3.4.0 notu). Hafif profilde commit denetimi kapalı.
+
 ## [3.5.0] - 2026-10-12
 
 Dondurmadan önce son eklemeler. Kit bu sürümle dondurulur.
