@@ -5,6 +5,18 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.3.1] - 2026-10-12
+
+### Düzeltildi
+- **Eklenti yükleme hatası** (`/reload-plugins`: "1 error during load"). Proje ayarı (`enabledPlugins`) eklentileri açıyor ama indirmiyordu.
+  - Trail of Bits'in 7 eklentisi ve Anthropic'in 5 eklentisi kurulum kaydında yoktu. Başsız oturumda "not cached" hatası verip yüklenmiyorlardı.
+  - Remotion için `false` değeri bile "enabled in project settings but isn't installed" hatası veriyordu.
+  - Bu repoda hepsi proje kapsamında kuruldu, Remotion kapalı bırakıldı. Debug kaydında yükleme hatası 0 oldu, yüklenen skill sayısı 78'den 90'a çıktı.
+
+### Eklendi
+- `plugins-sync.mjs` (testli): Proje ayarındaki eklentileri kurulum kaydıyla eşitler. Varsayılan olarak sadece listeler; `--kur` ile eksikleri proje kapsamında kurar, `false` olanları kurup kapatır. Kabuk kullanmaz (`execFileSync`).
+  - `/start` ortam adımında onayla çalışır, `/kit-update` yeni eklenti geldiğinde çalıştırır.
+
 ## [3.3.0] - 2026-10-12
 
 ### Eklendi

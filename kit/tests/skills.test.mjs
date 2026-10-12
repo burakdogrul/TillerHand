@@ -75,3 +75,15 @@ test('ayarlar 3.2: resmi eklentiler, kota ayarı, kilit hook\'u, tipe özel ekle
   }
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(KOK, 'kit/templates/mobile/.mcp.json'), 'utf8')).mcpServers.maestro, { command: 'maestro', args: ['mcp'] });
 });
+
+test('eklenti eşitleme: kurulu olmayanı ve kapalıyı bulur, başka projedeki kurulumu saymaz', async () => {
+  const { eksikler } = await import('../../.claude/hooks/plugins-sync.mjs');
+  const kok = path.resolve(os.tmpdir(), 'proje-a');
+  const kurulu = [
+    { id: 'caveman@caveman', scope: 'user' },
+    { id: 'hookify@claude-plugins-official', scope: 'project', projectPath: kok.toUpperCase() },
+    { id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'proje-b') },
+  ];
+  const acik = { 'caveman@caveman': true, 'hookify@claude-plugins-official': true, 'fp-check@trailofbits': true, 'remotion@remotion': false };
+  assert.deepEqual(eksikler(acik, kurulu, kok), [{ id: 'fp-check@trailofbits', etkin: true }, { id: 'remotion@remotion', etkin: false }]);
+});
