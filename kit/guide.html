@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · GitHub template · v3.4</p>
+  <p class="eyebrow">Claude Code · GitHub template · v3.5</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -195,6 +195,14 @@ cd yeni-proje
 claude
 <span class="c"># 3. Claude Code içinde</span>
 /start Serbest çalışanlar için fatura ve tahsilat takip uygulaması</pre>
+  <h3>Hiç bilmiyorsan</h3>
+  <ol>
+    <li><b>Hesap ve programlar (bir kez):</b> GitHub hesabı, Claude Pro veya Max, Claude masaüstü uygulaması, Node.js (LTS) ve Git. İstersen GitHub Desktop da kurabilirsin.</li>
+    <li><b>Proje:</b> Kitin GitHub sayfasında <b>Use this template → Create a new repository</b> (Private). GitHub Desktop'ta <b>Clone</b> ile bilgisayarına al.</li>
+    <li><b>Aç:</b> Claude masaüstü uygulamasında <b>Code</b> sekmesine geç, klasörü seç ve eklentileri kabul et.</li>
+    <li><b>Başlat:</b> <code>/start fikrin</code> yaz. Her sorunun ilk seçeneği önerilendir. Pro'daysan profil <b>Hafif</b>, anlatıcı mod <b>Evet</b>.</li>
+    <li><b>Her gün:</b> <code>/build</code> ile çalış, <code>/wrap-up</code> ile bırak. Bozulursa <code>/rollback</code>, merak edersen <code>/dashboard</code>.</li>
+  </ol>
   <p class="note">Proje ilk açıldığında Claude Code, <code>.claude/settings.json</code>'da tanımlı skill plugin'lerini kurmayı önerir: Caveman, Impeccable, Taste Skill, UI UX Pro Max, Humanizer, Ponytail ve Matt Pocock. <code>/start</code> onayınla eksikleri proje kapsamında kurar (<code>plugins-sync.mjs --kur</code>); kurulmamış eklenti yükleme hatası verir ve skill'leri gelmez.</p>
 </section>
 
@@ -521,6 +529,9 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <article class="type"><h3>Stack kuralları</h3><p class="stack">Vercel · Expo · Supabase · web-quality</p><ul><li>Proje tipine göre açılır, ihtiyaç olunca yüklenir</li><li>React, React Native, Postgres, Core Web Vitals</li></ul></article>
     <article class="type"><h3>Mobil test ve servisler</h3><p class="stack">Maestro · Expo MCP · servis kataloğu</p><ul><li>Kabul testleri cihazda/simülatörde</li><li>EAS build, TestFlight çökme kayıtları</li><li>GitHub, Stripe, Vercel, PostHog, Figma: servis seçilince</li></ul></article>
     <article class="type"><h3>Ölçüm ve maliyet</h3><p class="stack">Chrome DevTools MCP · ccusage · session-report</p><ul><li>Gerçek tarayıcıda performans izi</li><li>Proje başına token ve maliyet panoda</li><li>En pahalı istekler raporu</li></ul></article>
+    <article class="type"><h3>Geri alma</h3><p class="stack">/rollback · checkpoint.mjs</p><ul><li>Testler yeşilken çalışan nokta kaydedilir (/build, /wrap-up)</li><li>Geri dönüş yeni bir commit'tir, geçmiş silinmez</li><li>Yarım iş saklanır, .env'e dokunulmaz</li></ul></article>
+    <article class="type"><h3>Anlatıcı mod</h3><p class="stack">output style: anlatici</p><ul><li>Her adımdan sonra: ne yaptım, neden, nasıl görürsün</li><li>Hatalar sade dille, yeni kavramlar tek cümleyle</li><li>/start sorar; kişisel ayar</li></ul></article>
+    <article class="type"><h3>Harcama alarmı</h3><p class="stack">spend-alarms.md · pano</p><ul><li>Sağlayıcı tavanı ve %50/%80 uyarısı</li><li>Kodda kullanıcı kotası, günlük bütçe, otomatik kapatma</li><li>/release ve /maintain kontrol eder</li></ul></article>
     <article class="type"><h3>Öğrenen kurallar</h3><p class="stack">hookify · claude-md-management</p><ul><li>Tekrarlayan düzeltme hook kuralı olur</li><li>CLAUDE.md güncel tutulur</li><li>/retro ve /wrap-up önerir</li></ul></article>
     <article class="type"><h3>Bildirim</h3><p class="stack">notify.mjs</p><ul><li>Soru veya onay beklerken</li><li>Uzun iş bitince</li><li>Windows, macOS, Linux</li></ul></article>
   </div>
@@ -606,6 +617,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
         <tr><td class="f">/review-changes [aralık]</td><td>code-reviewer + security-auditor + ponytail-review; düzeltilecekleri çoklu seçimle sorar</td></tr>
         <tr><td class="f">/fix-bug [belirti]</td><td>diagnosing-bugs döngüsü: yeniden üret, kanıtla, kırmızı test, düzelt</td></tr>
         <tr><td class="f">/freeze &lt;klasör&gt; | off</td><td>Düzenlemeyi tek klasöre kilitler; iş başka dosyalara yayılmaz</td></tr>
+        <tr><td class="f">/rollback [nokta]</td><td>Son çalışan hale güvenle döner: yarım iş saklanır, geçmiş silinmez, geri dönüş de geri alınabilir</td></tr>
         <tr><td class="f">/wrap-up</td><td>İlerleme, kararlar, CHANGELOG ve dashboard.html</td></tr>
         <tr><td class="f">/dashboard</td><td>Ayrıntılı rapor ve pano</td></tr>
         <tr><td class="f">/ask-mode [kapat|ac] [konu]</td><td>Soru modu</td></tr>
@@ -667,7 +679,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.4.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.5.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

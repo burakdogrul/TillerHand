@@ -8,7 +8,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { durumOku, oku, bolumler, bolumBul, sayac, tabloSatirlari } from './status-read.mjs';
 import { limitOku, ozet, seviye, ESIKLER } from './usage.mjs';
-import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari, maliyetOzeti, konseyTutanaklari } from './dashboard-data.mjs';
+import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari, maliyetOzeti, konseyTutanaklari, harcamaAlarmlari } from './dashboard-data.mjs';
 
 const argumanlar = process.argv.slice(2);
 const sessiz = argumanlar.includes('--sessiz');
@@ -83,6 +83,7 @@ try {
 const kabul = kabulDurumu(kok);
 const hesapListesi = hesaplar(oku(dosya('docs/operations/accounts.md')));
 const bayrakListesi = bayraklar(oku(dosya('docs/operations/feature-flags.md')));
+const alarmListesi = harcamaAlarmlari(oku(dosya('docs/operations/spend-alarms.md')));
 const ekonomi = birimEkonomisi(oku(dosya('docs/product/unit-economics.md')));
 const gb = geriBildirim(oku(dosya('docs/product/feedback.md')));
 const metrikKayitlari = metrikler(oku(dosya('docs/quality/metrics.md')));
@@ -117,6 +118,7 @@ for (const h of hesapListesi) for (const t of h.tarihler) {
   else if (t.kalan <= 30) ekle('uyari', `${h.servis}: ${t.tur} ${t.kalan} gün sonra (${t.tarih}).`, 'Yenile veya otomatik yenilemeyi aç');
 }
 for (const h of hesapListesi.filter((x) => x.ikiFaYok)) ekle('uyari', `${h.servis} hesabında 2FA yok.`, 'docs/operations/accounts.md');
+for (const al of alarmListesi.filter((x) => x.ayarsiz)) ekle('uyari', `${al.servis}: harcama tavanı veya uyarısı ayarlanmadı.`, 'docs/operations/spend-alarms.md');
 if (ekonomi && ekonomi.katki < 0) ekle('kritik', `Birim ekonomisi negatif: her ödeyen kullanıcı ${Math.abs(ekonomi.katki).toFixed(1)} ${ekonomi.paraBirimi} zarar ettiriyor.`, 'Fiyat veya maliyet kararı (/plan-task)');
 for (const k of kabul.uyumsuz.slice(0, 3)) ekle('uyari', `${k.id} PRD'de tamam işaretli ama kabul testi ${k.sonuc === 'kaldi' ? 'kırmızı' : k.test ? 'sonuçsuz' : 'yok'}.`, 'Testi çalıştır veya işareti kaldır');
 const geciken = bayrakListesi.filter((b) => b.gecikti);
@@ -289,6 +291,7 @@ const limitBolumu = `
 const gunRozet = (t) => (t.kalan < 0 ? rozet('kritik', `${-t.kalan} gün geçti`) : t.kalan <= 30 ? rozet('uyari', `${t.kalan} gün`) : rozet('iyi', `${t.kalan} gün`));
 const operasyon = `
 <section class="card"><h3>Hesaplar ve son tarihler</h3>${hesapListesi.length ? `<div class="tw"><table><thead><tr><th>Servis</th><th>Amaç</th><th>Sahip</th><th>2FA</th><th>Plan</th><th>Tarihler</th></tr></thead><tbody>${hesapListesi.map((h) => `<tr><td><b>${e(h.servis)}</b></td><td>${e(h.amac)}</td><td>${e(h.sahip)}</td><td>${h.ikiFaYok ? rozet('uyari', 'yok') : e(h.ikiFa)}</td><td>${e(h.plan)}</td><td>${h.tarihler.map((t) => `<div class="nw">${e(t.tur)}: ${e(t.tarih)} ${gunRozet(t)}</div>`).join('') || '<span class="muted">-</span>'}</td></tr>`).join('')}</tbody></table></div>` : bos('Hesap envanteri boş.', 'docs/operations/accounts.md')}</section>
+<section class="card"><h3>Harcama alarmları</h3>${alarmListesi.length ? `<div class="tw"><table><thead><tr><th>Servis</th><th>Tür</th><th>Tutar</th><th>Uyarı eşikleri</th><th>Son kontrol</th></tr></thead><tbody>${alarmListesi.map((al) => `<tr><td><b>${e(al.servis)}</b></td><td>${e(al.tur)}</td><td>${al.ayarsiz ? rozet('uyari', 'ayarlanmadı') : e(al.tutar)}</td><td>${e(al.esikler)}</td><td class="nw">${e(al.kontrol || '-')} ${al.eski ? rozet('bilgi', 'kontrol et') : ''}</td></tr>`).join('')}</tbody></table></div>` : bos('Ücretli servis için alarm kaydı yok.', 'docs/operations/spend-alarms.md')}</section>
 <section class="card"><h3>Özellik bayrakları</h3>${bayrakListesi.length ? `<div class="tw"><table><thead><tr><th>Bayrak</th><th>Amaç</th><th>Durum</th><th>Kaldırma</th><th>Acil kapatma</th></tr></thead><tbody>${bayrakListesi.map((b) => `<tr><td><code>${e(b.ad)}</code></td><td>${md(b.amac)}</td><td>${e(b.durum)}</td><td class="nw">${e(b.kaldirma)} ${b.gecikti ? rozet('uyari', 'gecikti') : ''}</td><td>${b.testsiz ? rozet('uyari', 'denenmedi') : rozet('iyi', 'denendi')}</td></tr>`).join('')}</tbody></table></div>` : bos('Bayrak yok.', 'docs/operations/feature-flags.md')}</section>
 <section class="card"><h3>GitHub</h3>${github ? `
   ${github.canliIzleme?.length ? `<p>${rozet('kritik', 'Canlı izleme bozuk')} ${github.canliIzleme.map((i) => `<a href="${e(i.url)}" target="_blank" rel="noopener">#${e(i.number)} ${e(i.title)}</a>`).join(', ')}</p>` : ''}

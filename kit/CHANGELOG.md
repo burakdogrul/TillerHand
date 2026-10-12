@@ -5,6 +5,28 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.5.0] - 2026-10-12
+
+Dondurmadan önce son eklemeler. Kit bu sürümle dondurulur.
+
+### Eklendi
+- **`/rollback` (son çalışan hale dön):** `checkpoint.mjs` betiği eklendi (testli).
+  - `/build` ve `/wrap-up`, testler yeşilken çalışan nokta olarak `calisan/...` etiketi koyar.
+  - Geri dönüşte yarım iş önce saklanır (stash), dosyalar hedef hale getirilir ve yeni bir commit atılır. Böylece geçmiş silinmez ve geri dönüş de geri alınabilir.
+  - `.gitignore`'daki dosyalara (`.env`) dokunulmaz. `reset --hard` kullanılmaz.
+  - Geri dönüş komutu izin listesinde değildir; her seferinde onay ister.
+- **Anlatıcı mod** (`.claude/output-styles/anlatici.md`): Her adımdan sonra "Ne oldu?" bloğu (ne yaptım, neden, sen nasıl görürsün, yeni kavram) ve hataların sade dille açıklaması. `/start` Adım 0b'de sorulur; `.claude/settings.local.json` → `outputStyle: anlatici`.
+- **Harcama alarmı** (`docs/operations/spend-alarms.md`):
+  - Ücretli servis başına tavan ve uyarı tablosu.
+  - Sağlayıcı ayarları (Anthropic, OpenAI, Vercel, Supabase, Google Cloud; 2026-10-12'de doğrulandı).
+  - Uygulama içi koruma: kullanıcı kotası, genel günlük bütçe, %100'de bayrağın otomatik kapanması.
+  - Panonun Operasyon sekmesinde kart; ayarlanmamış alarm "Dikkat" listesine düşer (testli).
+  - `/start` Adım 5 tabloyu doldurur; `/release` ve `/maintain` kontrol eder.
+- README'ye **"Hiç bilmiyorsan: adım adım"** bölümü eklendi: hesaplar, programlar, proje oluşturma, ilk sorular, günlük kullanım. Rehbere de kısa hali eklendi.
+
+### Düzeltildi
+- `kit-tests.yml`: İş seviyesindeki `if: hashFiles(...)` koşulu GitHub'da desteklenmiyor ve her push'ta "No jobs were run" hatası veriyordu. Koşul kaldırıldı; `kit.mjs install` bu dosyayı zaten projeye taşımıyor.
+
 ## [3.4.0] - 2026-10-12
 
 İlk konsey değerlendirmesinin sonucu: Kit, gerçek projede denenmek üzere bu sürümle **donduruldu**. Bundan sonra kitte sadece engelleyici hatalar düzeltilecek.

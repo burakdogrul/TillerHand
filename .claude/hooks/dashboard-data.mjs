@@ -182,6 +182,16 @@ export function uretimVarliklari(kok) {
   return { markaKlasor, marka, markaRehberi: fs.existsSync(path.join(kok, 'docs/design/brand.md')), videolar, arastirma };
 }
 
+// ---------- Harcama alarmları (docs/operations/spend-alarms.md) ----------
+export function harcamaAlarmlari(metin, simdi = Date.now()) {
+  return tabloSatirlari(bolumler(metin)['Alarmlar'], 6).filter(([servis]) => servis)
+    .map(([servis, tur, tutar, esikler, nereden, kontrol]) => ({
+      servis, tur, tutar, esikler, nereden, kontrol,
+      ayarsiz: !/\d/.test(tutar ?? ''),
+      eski: tarihMi(kontrol) ? kalanGun(kontrol, simdi) < -35 : true,
+    }));
+}
+
 // ---------- Konsey tutanakları (docs/workflow/council/*.md; council.mjs ve board-chair yazar) ----------
 export function konseyTutanaklari(kok) {
   const klasor = path.join(kok, 'docs', 'workflow', 'council');

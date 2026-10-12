@@ -9,7 +9,7 @@
 
 - [ ] Hata takibi: yeni veya artan hata var mı? Varsa `docs/product/roadmap.md`'ye görev olarak ekle.
 - [ ] Uptime: kesinti oldu mu?
-- [ ] Maliyet: hosting, DB, AI API harcaması beklenen aralıkta mı?
+- [ ] Maliyet: hosting, DB, AI API harcaması beklenen aralıkta mı? Harcama alarmı tetiklendi mi (`docs/operations/spend-alarms.md`)?
 - [ ] Kullanıcı geri bildirimi / destek kutusu tarandı.
 - [ ] Yedekler son 7 günde başarıyla alındı mı?
 

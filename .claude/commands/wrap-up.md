@@ -19,7 +19,7 @@ Bu oturumu kapatıyoruz. Bir sonraki oturum (veya `/clear` sonrası) sıfır ba�
 6. Yapı değiştiyse (yeni tablo, servis, klasör) `docs/architecture/overview.md`'yi güncelle.
 7. `node .claude/hooks/cost.mjs` ve `node .claude/hooks/dashboard.mjs` ile `dashboard.html`'i yenile.
 7b. Bu oturumda AI'nın bilmediği için hata yaptığı proje bilgisi çıktıysa `/revise-claude-md` ile CLAUDE.md'ye eklemeyi öner (onayla). Aynı düzeltmeyi kullanıcı iki kez yaptıysa `/hookify <kural>` ile kalıcı kural öner.
-8. Commit edilmemiş iş varsa commit mesajı öner. Commit'i onayımla at.
+8. Commit edilmemiş iş varsa commit mesajı öner. Commit'i onayımla at. Testler yeşilse çalışan nokta kaydet: `node .claude/hooks/checkpoint.mjs --save "oturum sonu: <kısa özet>"`.
 9. Faz bittiyse sırayla öner: `/findings-tech` (teknik borç taraması), `/board convene phase-end` (tam kurul, tahmini maliyetiyle birlikte), sonra `/retro`.
 10. Limiti ve bağlamı oku. Kalan 5 saatlik payı, sıfırlanma saatini ve bağlam %50'yi geçtiyse `/clear` önerisini sıradaki adımla birlikte söyle.
 

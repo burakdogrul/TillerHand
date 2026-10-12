@@ -38,5 +38,5 @@ Boşsa `docs/workflow/progress.md` → "Sıradaki adım" veya `docs/product/road
    - Benim nasıl test edeceğim (adım adım)
    - Önerilen commit mesajı
    - Kontrol edemediğin veya şüpheli olduğun yerler
-   - Sonra ne yapalım? AskUserQuestion ile sor: `/review-changes` ve commit (Önerilen) / sıradaki göreve geç / bu görevde değişiklik iste. Commit'te hafif kurul denetimi otomatik istenir (commit kapısı hook'u).
+   - Sonra ne yapalım? AskUserQuestion ile sor: `/review-changes` ve commit (Önerilen) / sıradaki göreve geç / bu görevde değişiklik iste. Commit'te hafif kurul denetimi otomatik istenir (commit kapısı hook'u). Commit atıldıktan ve testler yeşilken çalışan nokta kaydet: `node .claude/hooks/checkpoint.mjs --save "<görev kodu> bitti, testler yeşil"` (`/rollback` buraya döner).
    - Durum bloğu

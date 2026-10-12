@@ -8,7 +8,8 @@ on:
 
 jobs:
   test:
-    if: hashFiles('kit/kit.mjs') != ''
+    # İş seviyesinde if: hashFiles() kullanılamaz (GitHub "No jobs were run" verir); koşula gerek yok,
+    # kit.mjs install bu dosyayı projeye taşımaz.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

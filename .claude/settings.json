@@ -10,6 +10,8 @@
       "Bash(node .claude/hooks/dashboard.mjs)",
       "Bash(node .claude/hooks/cost.mjs)",
       "Bash(node .claude/hooks/freeze-guard.mjs:*)",
+      "Bash(node .claude/hooks/checkpoint.mjs --list:*)",
+      "Bash(node .claude/hooks/checkpoint.mjs --save:*)",
       "Bash(node kit/kit.mjs install:*)",
       "Bash(node .claude/hooks/usage.mjs:*)",
       "Bash(node .claude/hooks/commit-gate.mjs --approve:*)",

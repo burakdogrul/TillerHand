@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.4.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.5.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="#-hiç-bilmiyorsan-adım-adım">Hiç bilmiyorsan</a> ·
   <a href="#-hızlı-başlangıç">Hızlı başlangıç</a> ·
   <a href="#-nasıl-çalışır">Nasıl çalışır</a> ·
   <a href="#-bulgu-raporları">Bulgular</a> ·
@@ -34,8 +35,55 @@
 | ⏱️ **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur; işler limite göre planlanır, gerekirse güvenli durulur. |
 | 🌐 **Doğru kaynak** | Değişebilen bilgi birincil kaynaktan doğrulanır (kaynak ve tarihle); kütüphane dokümanı Context7'den güncel gelir. |
 | 🎨 **Logo ve video** | SVG logo ve marka paketi; kod ile üretilen, 120 BPM ritimli tanıtım videosu. |
+| ↩️ **Geri alma** | `/rollback`: Son çalışan hale güvenle döner. Geçmiş silinmez, yarım iş saklanır. |
+| 🗣️ **Anlatıcı mod** | Her değişikliği ve hatayı yazılım bilmeyen birine anlatır gibi sade Türkçe açıklar. |
+| 💸 **Harcama alarmı** | Canlıdaki ürünün ücretli servislerine tavan ve uyarı; uygulama içinde kullanıcı kotası ve günlük bütçe. |
 | 🔔 **Bildirim** | Claude soru sorduğunda veya uzun işi bitirdiğinde masaüstü bildirimi. |
 | 🪶 **Az token** | Açılışta yaklaşık 1.900 token; dokümanlar gerektiğinde okunur; kod haritası desteği. |
+
+## 🐣 Hiç bilmiyorsan: adım adım
+
+Kod yazmayı bilmen gerekmez. Teknik işleri (git, terminal komutları, kurulumlar) Claude yapar ve önemli her adımda sana sorar. Sen ne istediğini anlatır ve seçim yaparsın.
+
+**1. Hesaplar (bir kez)**
+- [GitHub](https://github.com) hesabı (ücretsiz). Projen burada saklanır.
+- Claude **Pro** veya **Max** aboneliği.
+
+**2. Programlar (bir kez)**
+- [Claude masaüstü uygulaması](https://claude.com/download). Projeyi içindeki **Code** sekmesinde açacaksın.
+- [Node.js](https://nodejs.org): "LTS" yazan sürümü indir, varsayılan ayarlarla kur.
+- [Git](https://git-scm.com/downloads): Windows'ta "Git for Windows"u varsayılan ayarlarla kur.
+- [GitHub Desktop](https://desktop.github.com) (isteğe bağlı): Projeyi bilgisayarına almanın en kolay yolu.
+
+**3. Kendi projeni oluştur**
+1. Bu kitin GitHub sayfasında yeşil **Use this template** düğmesine bas, sonra **Create a new repository**'yi seç.
+2. Projene bir ad ver (örn. `fatura-takip`), **Private** seç ve **Create repository**'ye bas.
+3. Projeyi bilgisayarına al. GitHub Desktop'ta **File → Clone repository** ile projeni seç. Ya da Claude'a "şu repoyu Belgeler klasörüne klonla: <adres>" yaz.
+
+**4. Claude'da aç ve başlat**
+1. Claude masaüstü uygulamasında **Code** sekmesine geç ve proje klasörünü seç.
+2. Eklentileri kurmayı önerirse kabul et.
+3. Fikrini yaz:
+   ```
+   /start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
+   ```
+4. Claude sırayla soru sorar. **Her sorunun ilk seçeneği önerilendir**; emin değilsen onu seç. İlk iki soru için öneri:
+   - **Profil:** Pro aboneliğin varsa **Hafif**.
+   - **Anlatıcı mod:** **Evet**. Claude her değişikliği ve hatayı sade Türkçe anlatır.
+
+**5. Her gün**
+
+| Ne zaman | Ne yazarsın |
+|---|---|
+| Çalışmaya başlarken | `/build` (sıradaki görevi yapar, test eder) |
+| Durum merak edersen | `ne durumdayız?` veya `/dashboard` |
+| Bir şey bozulursa | `/rollback` (son çalışan hale güvenle döner) |
+| Bırakırken | `/wrap-up` (her şeyi kaydeder, yarın kaldığın yerden devam edilir) |
+
+**Bilmen gereken üç şey**
+- **Limit:** Pro'da 5 saatlik ve haftalık kullanım limiti vardır. Claude dolmaya yaklaşınca uyarır ve yarım iş bırakmadan güvenli şekilde durur. Limit yenilenince `/build` ile devam edersin.
+- **Kararlar sende:** Claude veritabanı, tasarım, maliyet gibi kararları sormadan vermez. Ödeme, veri silme ve canlıya alma gibi geri dönüşü zor işlerden önce mutlaka onay ister.
+- **Canlıya çıkınca:** Ürünün ücretli servislerine harcama tavanı koy (`docs/operations/spend-alarms.md`). `/release` bunu kontrol eder.
 
 ## 🚀 Hızlı başlangıç
 
@@ -306,6 +354,7 @@ flowchart TB
 | `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |
 | `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme |
 | `/freeze <klasör> \| off` | Düzenlemeyi tek klasöre kilitler |
+| `/rollback [nokta]` | Son çalışan hale (veya seçilen noktaya) güvenle döner |
 | `/findings-<tür>` | `tech` · `business` · `security` · `ux` · `perf` · `legal` · `all` |
 | `/board [setup\|convene\|council]` | Uzman kurulunu kurar, toplar; `council <soru>` karar konseyi |
 | `/ask-mode [on\|off] [konu]` | Soru modunu yönetir |
@@ -337,6 +386,9 @@ flowchart TB
 | **Güvenlik derinliği** | Trail of Bits: differential-review, insecure-defaults, sharp-edges, static-analysis, supply-chain-risk-auditor, agentic-actions-auditor, fp-check | `/findings-security` ve `security-auditor` kullanır |
 | **Gerçek tarayıcı ölçümü** | **Chrome DevTools** MCP (web) | `/findings-perf`, `/findings-ux` |
 | **Bildirim** | `notify.mjs`: soru veya onay beklerken ve 90 sn'den uzun iş bitince | Kapatmak: `KIT_NOTIFY=off` |
+| **Anlatıcı mod** | `.claude/output-styles/anlatici.md`: Her adımdan sonra "Ne yaptım / Neden / Sen nasıl görürsün / Yeni kavram" bloğu, hatalar sade dille | `/start` sorar; `.claude/settings.local.json` → `outputStyle` |
+| **Geri alma** | `checkpoint.mjs`: `/build` ve `/wrap-up` testler yeşilken çalışan nokta kaydeder; `/rollback` geçmişi silmeden döner | `reset --hard` kullanılmaz |
+| **Harcama alarmı** | `docs/operations/spend-alarms.md`: sağlayıcı tavanları (Anthropic, OpenAI, Vercel, Supabase, Google Cloud), uygulama içi kota ve bütçe, panoda kart | `/release` ve `/maintain` kontrol eder |
 | **Skill bütçesi** | Proje tipine göre gereksiz plugin'ler kapalı (örn. backend'de tasarım skill'leri) | Daha az token, daha doğru skill seçimi |
 
 **Bilerek eklenmeyenler:**

@@ -119,6 +119,8 @@ Kurulu her plugin'in skill açıklamaları her oturumda bağlama yüklenir ve to
 |---|---|
 | Her kod değişikliği (en küçük tam çözüm, gereksiz soyutlama yok) | `ponytail:ponytail` |
 | Kritik akış (auth, ödeme, veri yazma; `docs/quality/test-plan.md` K1-K5) | `mattpocock-skills:tdd` |
+| Bozulan projeyi son çalışan hale döndürmek | `/rollback` (`checkpoint.mjs`) |
+| Yeni başlayan kullanıcıya her adımı anlatmak | Anlatıcı mod: `.claude/output-styles/anlatici.md` (`outputStyle: anlatici`) |
 | Hata ayıklama (`/fix-bug`) | `mattpocock-skills:diagnosing-bugs` + `/freeze <klasör>` |
 | Değişiklik incelemesi (`/review-changes`) | `ponytail:ponytail-review` + `code-reviewer` ajanı (+ `security-auditor`) |
 | Görev/spec'e uygunluk incelemesi (dal veya PR) | `mattpocock-skills:code-review` |

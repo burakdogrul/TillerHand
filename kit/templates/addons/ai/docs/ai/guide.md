@@ -35,7 +35,8 @@ Prompt veya model değiştiğinde "bence daha iyi oldu" yetmez.
 
 - [ ] Her çağrıda `max_tokens` sınırı var.
 - [ ] Kullanıcı başına günlük/aylık istek veya token sınırı var; aşınca anlaşılır mesaj.
-- [ ] Sağlayıcı panelinde aylık harcama limiti ve %50/%80 alarmı.
+- [ ] Sağlayıcı panelinde aylık harcama limiti ve %50/%80 alarmı; `docs/operations/spend-alarms.md` tablosunda kayıtlı.
+- [ ] Genel günlük bütçe: %80'de uyarı, %100'de AI özelliğinin bayrağı otomatik kapanır (`docs/operations/spend-alarms.md` → Uygulama içi koruma).
 - [ ] Tekrarlanan uzun bağlam (sistem promptu, dokümanlar) için prompt önbellekleme (prompt caching) kullanılıyor.
 - [ ] Her çağrı loglanıyor: özellik, model, girdi/çıktı token, süre, tahmini maliyet, kullanıcı id (içerik değil).
 

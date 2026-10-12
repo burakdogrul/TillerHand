@@ -105,3 +105,14 @@ test('maliyet: ccusage proje adı ve günlük özet (date/period alanları)', as
   assert.equal(maliyetOzeti({ daily: [{ period: '2026-10-01', totalTokens: 5, totalCost: 0 }] }).gunler[0].tarih, '2026-10-01');
   assert.deepEqual(maliyetOzeti(null), { gunler: [], toplam: { token: 0, maliyet: 0 } });
 });
+
+test('harcama alarmları: tutarsız satır ayarlanmadı, eski kontrol işaretlenir', async () => {
+  const { harcamaAlarmlari } = await import('../../.claude/hooks/dashboard-data.mjs');
+  const simdi = Date.parse('2026-10-12T12:00:00');
+  const a = harcamaAlarmlari(`## Alarmlar\n\n| Servis | Tür | Tutar | Uyarı eşikleri | Nereden ayarlandı | Son kontrol |\n|---|---|---|---|---|---|\n| Anthropic | tavan | 50 USD | %50, %80 | Console | 2026-10-10 |\n| Vercel | uyarı | - | | | 2026-08-01 |\n`, simdi);
+  assert.equal(a.length, 2);
+  assert.equal(a[0].ayarsiz, false);
+  assert.equal(a[0].eski, false);
+  assert.equal(a[1].ayarsiz, true);
+  assert.equal(a[1].eski, true);
+});
