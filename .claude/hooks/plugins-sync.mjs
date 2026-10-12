@@ -15,11 +15,22 @@ import { pathToFileURL } from 'node:url';
 const norm = (p) => (process.platform === 'win32' ? path.resolve(p).toLowerCase() : path.resolve(p));
 const ayni = (a, b) => norm(a) === norm(b);
 
-// Kurulu sayılır: kullanıcı kapsamında veya bu projenin kapsamında kayıtlı
+// Bu projede kurulu sayılan kayıt: kullanıcı kapsamında veya bu projenin kapsamında (başka projeninki sayılmaz)
+const buradaKurulu = (p, id, kok) => p.id === id && (p.scope === 'user' || (p.scope === 'project' && p.projectPath && ayni(p.projectPath, kok)));
+
 export function eksikler(acik, kurulu, kok) {
   return Object.entries(acik ?? {})
-    .filter(([id]) => !kurulu.some((p) => p.id === id && (p.scope === 'user' || (p.scope === 'project' && p.projectPath && ayni(p.projectPath, kok)))))
+    .filter(([id]) => !kurulu.some((p) => buradaKurulu(p, id, kok)))
     .map(([id, etkin]) => ({ id, etkin: etkin !== false }));
+}
+
+// Proje ayarında açık, kurulu ama bu makinede kapalı (settings.local.json veya /plugin ile kişisel tercih).
+// Hata değildir, Claude Code bilerek yüklemez; betik kişisel tercihi ezmez, sadece söyler.
+// `enabled` alanı CLI'ın çalıştığı klasöre göre hesaplanır; betik proje kökünde çalıştırır.
+export function kapalilar(acik, kurulu, kok) {
+  return Object.entries(acik ?? {})
+    .filter(([id, etkin]) => etkin !== false && kurulu.some((p) => buradaKurulu(p, id, kok) && p.enabled === false))
+    .map(([id]) => id);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -37,6 +48,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.error(`claude CLI çalışmadı (${neden(h)}). Eklentileri /plugin ile elle kur.`);
     process.exit(1);
   }
+  const kapali = kapalilar(acik, kurulu, kok);
+  if (kapali.length) console.log(`Bilgi: kurulu ama bu makinede kapalı (kişisel tercih, değiştirilmedi): ${kapali.join(', ')}. Açmak için /plugin → Installed.`);
   const liste = eksikler(acik, kurulu, kok);
   if (!liste.length) { console.log('Eklentiler eşit: proje ayarındaki her eklenti kurulu.'); process.exit(0); }
   if (!process.argv.includes('--kur')) {

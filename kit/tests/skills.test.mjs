@@ -87,3 +87,16 @@ test('eklenti eşitleme: kurulu olmayanı ve kapalıyı bulur, başka projedeki 
   const acik = { 'caveman@caveman': true, 'hookify@claude-plugins-official': true, 'fp-check@trailofbits': true, 'remotion@remotion': false };
   assert.deepEqual(eksikler(acik, kurulu, kok), [{ id: 'fp-check@trailofbits', etkin: true }, { id: 'remotion@remotion', etkin: false }]);
 });
+
+test('eklenti eşitleme: yerelde kapatılan eklenti eksik sayılmaz, bilgi olarak bildirilir', async () => {
+  const { eksikler, kapalilar } = await import('../../.claude/hooks/plugins-sync.mjs');
+  const kok = path.resolve(os.tmpdir(), 'proje-a');
+  const kurulu = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: kok, enabled: false }];
+  const acik = { 'fp-check@trailofbits': true, 'remotion@remotion': false };
+  assert.deepEqual(eksikler({ 'fp-check@trailofbits': true }, kurulu, kok), [], 'kurulu: yeniden kurulmaz, tercih ezilmez');
+  assert.deepEqual(kapalilar(acik, kurulu, kok), ['fp-check@trailofbits']);
+  assert.deepEqual(kapalilar({ 'fp-check@trailofbits': false }, kurulu, kok), [], 'ayarda zaten kapalıysa bilgi yok');
+  const baskaProje = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'proje-b'), enabled: false }];
+  assert.deepEqual(kapalilar(acik, baskaProje, kok), [], 'başka projedeki kapalı kayıt bu projeyi ilgilendirmez');
+  assert.deepEqual(eksikler({ 'fp-check@trailofbits': true }, baskaProje, kok), [{ id: 'fp-check@trailofbits', etkin: true }], 'burada kurulu değil: kurulacaklar listesinde');
+});

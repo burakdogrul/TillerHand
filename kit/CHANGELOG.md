@@ -5,6 +5,13 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.3.2] - 2026-10-12
+
+### Değişti
+- `plugins-sync.mjs`: Kurulu olduğu halde bu makinede kişisel tercihle kapatılmış eklentiler (settings.local.json veya /plugin) artık bilgi satırıyla bildiriliyor. Betik bu tercihi değiştirmiyor.
+  - Denemeyle doğrulandı: Bu durum yükleme hatası değildir, Claude Code eklentiyi bilerek kaydetmez.
+  - `claude plugin list --json` çıktısındaki `enabled` alanı, CLI'ın çalıştığı klasöre göre hesaplanır; `projectEnabled` ise proje ayarını gösterir.
+
 ## [3.3.1] - 2026-10-12
 
 ### Düzeltildi
