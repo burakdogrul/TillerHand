@@ -36,3 +36,5 @@ sandbox/
 # Tanıtım videosu kareleri ve çıktıları (motion-video)
 marketing/**/frames/
 marketing/**/out/
+# claude-security tarama çıktısı (açık ayrıntısı içerir; özet docs/findings/security'de)
+CLAUDE-SECURITY-*/

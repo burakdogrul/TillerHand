@@ -182,6 +182,18 @@ export function uretimVarliklari(kok) {
   return { markaKlasor, marka, markaRehberi: fs.existsSync(path.join(kok, 'docs/design/brand.md')), videolar, arastirma };
 }
 
+// ---------- Token ve maliyet (ccusage; cost.mjs yazar) ----------
+// Claude Code transcript klasör adı: proje yolundaki harf/rakam dışı her karakter "-" olur
+export const ccusageProjeAdi = (kok) => path.resolve(kok).replace(/[^a-zA-Z0-9]/g, '-');
+export function maliyetOzeti(veri) {
+  const gunler = Object.values(veri?.projects ?? {}).flat().concat(veri?.daily ?? [])
+    .map((g) => ({ tarih: g.date ?? g.period, token: g.totalTokens ?? 0, maliyet: g.totalCost ?? 0, cikti: g.outputTokens ?? 0 }))
+    .filter((g) => g.tarih)
+    .sort((a, b) => a.tarih.localeCompare(b.tarih));
+  const toplam = gunler.reduce((t, g) => ({ token: t.token + g.token, maliyet: t.maliyet + g.maliyet }), { token: 0, maliyet: 0 });
+  return { gunler, toplam };
+}
+
 // ---------- GitHub (gh varsa, 5 dk önbellek) ----------
 export function ghDurumu(kok, simdi = Date.now()) {
   const dosya = path.join(kok, '.claude', 'state', 'github-cache.json');

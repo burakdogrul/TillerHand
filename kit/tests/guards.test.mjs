@@ -88,3 +88,26 @@ test('yapı koruyucu: harita, sandbox, dağınıklık kalıpları', async () => 
   assert.equal(denetle(['src', 'lib', 'db.ts'].join(String.fromCharCode(92)), harita), null, 'Windows ayırıcısı');
   assert.equal(denetle('herhangi.txt', null), null, 'harita yoksa serbest');
 });
+
+test('düzenleme kilidi: klasör içi serbest, dışı ve benzer adlı klasör engellenir', async () => {
+  const { izinli } = await import('../../.claude/hooks/freeze-guard.mjs');
+  const kok = path.resolve(os.tmpdir(), 'kilit-kok');
+  assert.equal(izinli('src/features/auth/login.ts', 'src/features/auth', kok), true);
+  assert.equal(izinli(path.join(kok, 'src/features/auth/x.ts'), 'src/features/auth/', kok), true, 'mutlak yol ve sondaki /');
+  assert.equal(izinli('src/features/authz/x.ts', 'src/features/auth', kok), false, 'önek benzerliği yetmez');
+  assert.equal(izinli('src/lib/db.ts', 'src/features/auth', kok), false);
+  assert.equal(izinli('docs/workflow/progress.md', 'src/features/auth', kok), true, 'ilerleme notu serbest');
+});
+
+test('düzenleme kilidi: hook kilitliyken dışarıyı reddeder, kilit kalkınca serbest', async () => {
+  const fs = await import('node:fs');
+  const kok = fs.mkdtempSync(path.join(os.tmpdir(), 'kilit-'));
+  const calistir = (arg, girdi) => spawnSync('node', [path.join(HOOKS, 'freeze-guard.mjs'), ...arg], { input: girdi, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: kok } });
+  const yaz = (f) => JSON.stringify({ tool_input: { file_path: path.join(kok, f) } });
+  assert.equal(calistir([], yaz('src/lib/x.ts')).stdout, '', 'kilit yokken sessiz');
+  assert.match(calistir(['--set', 'src/features/auth'], '').stdout, /src\/features\/auth/);
+  assert.match(calistir([], yaz('src/lib/x.ts')).stdout, /"permissionDecision":"deny"/);
+  assert.equal(calistir([], yaz('src/features/auth/a.ts')).stdout, '');
+  calistir(['--off'], '');
+  assert.equal(calistir([], yaz('src/lib/x.ts')).stdout, '');
+});

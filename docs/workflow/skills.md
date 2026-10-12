@@ -14,6 +14,14 @@
 | humanizer | humanizer | `humanizer:` |
 | ponytail | ponytail | `ponytail:` |
 | mattpocock-skills | mattpocock | `mattpocock-skills:` |
+| security-guidance, claude-security, hookify, claude-md-management, session-report | claude-plugins-official (Anthropic) | otomatik hook / `/claude-security`, `/hookify`, `/revise-claude-md`, `/session-report` |
+| typescript-lsp (web, mobil) · pyright-lsp (backend) | claude-plugins-official | Dil sunucusu: tip hatası ve tanıma gitme. `npm i -g typescript-language-server typescript` veya `npm i -g pyright` gerekir |
+| supabase, postgres-best-practices | supabase-agent-skills | `supabase:`, `postgres-best-practices:` (web, mobil; backend'de sadece postgres) |
+| web-quality-skills | addy-web-quality-skills | Core Web Vitals, erişilebilirlik, SEO (web) |
+| expo | expo-plugins | Expo build, yükseltme, dağıtım + Expo MCP (mobil) |
+
+**Vercel skill'leri** (`react-best-practices`, `composition-patterns` web'de; `react-native-guidelines` mobilde) plugin değildir. `/start` stack kararından sonra projeye kopyalar:
+`npx -y skills@1.7.2 add vercel-labs/agent-skills --skill react-best-practices --skill composition-patterns -a claude-code -y --copy`
 
 ## Kitin kendi skill'leri (`.claude/skills/`)
 
@@ -33,12 +41,16 @@
 | **Playwright** | Arayüz kanıtı, ekran görüntüsü | Web'de |
 | **Sentry**, **Supabase** | Hata kayıtları, veritabanı uyarıları (salt-okunur) | `/maintain` |
 | **Firecrawl** | Site tarama | İsteğe bağlı, API anahtarı gerekir; `source-research` §5 |
+| **Maestro**, **Expo** | Mobil E2E testi, EAS build, çökme kayıtları | Mobilde |
+| GitHub, Stripe, Vercel, PostHog, Figma… | Servis seçilince | Katalog: `docs/workflow/mcp-catalog.md` |
 
 ## Skill bütçesi
 
 Kurulu her plugin'in skill açıklamaları her oturumda bağlama yüklenir ve token harcar. Gereksiz plugin yanlış skill seçimine de yol açar. Bu yüzden:
 - Backend projelerinde arayüz tasarım plugin'leri kapalı gelir (`.claude/settings.json` → `enabledPlugins`).
 - Remotion kapalı gelir; `motion-video` gerektiğinde açmayı sorar.
+- Stack'e özel skill'ler (Supabase, Expo, web kalitesi, LSP) sadece ilgili proje tipinde açılır.
+- security-guidance'ın tur sonu incelemesi kapalı gelir (`ENABLE_STOP_REVIEW=0`, kota). Düzenleme anındaki kalıp taraması (ücretsiz) ve commit incelemesi açıktır. Kota rahatsa `.claude/settings.json` → `env`'den açılabilir.
 - Yeni bir plugin eklemek `teknik` karardır: aynı işi yapan bir skill zaten var mı, kaynak güvenilir mi, bağlam maliyeti nedir? Üçüncü taraf skill'ler bir saldırı yüzeyidir: kurmadan önce SKILL.md içeriğini oku.
 
 ## İletişim
@@ -95,8 +107,9 @@ Kurulu her plugin'in skill açıklamaları her oturumda bağlama yüklenir ve to
 | Durum | Skill / dosya |
 |---|---|
 | `/findings-<tür>` (tech, business, security, ux, perf, legal, all) | Yöntem `.claude/findings/protocol.md`, bakış açısı `.claude/findings/lenses/<tür>.md` |
+| Derin güvenlik taraması (`/findings-security`) | `/claude-security` (Anthropic, çok ajanlı, bulgular doğrulanmış) |
 | Güvenlik derinliği | Trail of Bits: `differential-review`, `insecure-defaults`, `sharp-edges`, `static-analysis`, `supply-chain-risk-auditor`, `agentic-actions-auditor`, `fp-check` |
-| Business ve legal araştırması | `mattpocock-skills:research` + web araması |
+| Business ve legal araştırması | `source-research` + web araması |
 | Teknik ve performans taraması | `ponytail:ponytail-audit` |
 | UX taraması | `impeccable:impeccable` → `audit`, `critique` |
 
@@ -106,10 +119,15 @@ Kurulu her plugin'in skill açıklamaları her oturumda bağlama yüklenir ve to
 |---|---|
 | Her kod değişikliği (en küçük tam çözüm, gereksiz soyutlama yok) | `ponytail:ponytail` |
 | Kritik akış (auth, ödeme, veri yazma; `docs/quality/test-plan.md` K1-K5) | `mattpocock-skills:tdd` |
-| Hata ayıklama | `mattpocock-skills:diagnosing-bugs` |
+| Hata ayıklama (`/fix-bug`) | `mattpocock-skills:diagnosing-bugs` + `/freeze <klasör>` |
 | Değişiklik incelemesi (`/review-changes`) | `ponytail:ponytail-review` + `code-reviewer` ajanı (+ `security-auditor`) |
 | Görev/spec'e uygunluk incelemesi (dal veya PR) | `mattpocock-skills:code-review` |
 | Tüm kod tabanı kalite denetimi (`/release ilk`, `/maintain quarterly`) | `ponytail:ponytail-audit` |
 | Ertelenen kısa yolların listesi (`/maintain monthly`) | `ponytail:ponytail-debt` |
 | PR açıklaması | `mattpocock-skills:pr` |
 | CLAUDE.md, komut veya skill düzenlemek (`/retro`) | `mattpocock-skills:writing-for-agents` |
+| CLAUDE.md denetimi, oturum dersleri (`/retro`, `/wrap-up`) | `claude-md-management`: `claude-md-improver`, `/revise-claude-md` |
+| "Bunu bir daha yapma" → kalıcı kural | `/hookify <kural>` (`.claude/hookify.*.local.md`) |
+| React/Next performans (web) · React Native (mobil) | `react-best-practices`, `composition-patterns` · `react-native-guidelines` (Vercel) |
+| Veritabanı şeması, sorgu, indeks | `postgres-best-practices:*`, `supabase:*` |
+| Token ve maliyet ayrıntısı | `/session-report` (HTML), pano için `node .claude/hooks/cost.mjs` |

@@ -5,6 +5,30 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.2.0] - 2026-10-12
+
+Ekosistem araştırmasından (yıldız ve bakım durumu GitHub API'den, kurulum ayrıntıları birincil kaynaktan) seçilenler.
+
+### Eklendi
+- **Anthropic resmi eklentileri** (`claude-plugins-official`, her tipte): `security-guidance` (yazarken kalıp uyarısı + commit incelemesi; tur sonu incelemesi kota için `ENABLE_STOP_REVIEW=0` ile kapalı), `claude-security` (`/findings-security` derin tarama), `hookify`, `claude-md-management`, `session-report`.
+- **LSP:** `typescript-lsp` (web, mobil), `pyright-lsp` (backend). Dil sunucusu kurulumu `/start`'ta.
+- **Stack skill'leri:** Supabase `supabase` + `postgres-best-practices` (web, mobil; backend'de postgres), `web-quality-skills` (web), Expo resmi `expo` eklentisi (mobil, Expo MCP dahil), Vercel `react-best-practices` / `composition-patterns` / `react-native-guidelines` (`/start` `npx skills` ile kopyalar).
+- **Maestro MCP** mobil `.mcp.json`'da; servis MCP kataloğu `docs/workflow/mcp-catalog.md` (GitHub, Stripe, Vercel, PostHog, Figma, Firebase, Linear).
+- **Düzenleme kilidi:** `/freeze <klasör> | off`, `freeze-guard.mjs` hook'u (testli).
+- **Token ve maliyet:** `cost.mjs` (ccusage, proje başına son 30 gün) → panonun Limit ve maliyet sekmesinde yeni kart (testli).
+- Güvenlik kuralları `.claude/claude-security-guidance.md` ve `.claude/security-patterns.json` (service_role istemcide, public env'de sır, kişisel veri logu).
+
+### Değişti
+- `CLAUDE.md` kural 7'ye Karpathy'nin dört ilkesi; "Bitti" tanımında doğrulama komutu bu turda çalıştırılıp çıktısı gösterilir.
+- `/fix-bug`: tek değişken, çürütme kanıtı, kök neden bulununca `/freeze` önerisi.
+- Kurul: Ürün üyesi plan toplantısında kapsam modu sorar (genişlet / koru / küçült).
+- `/retro` ve `/wrap-up`: `claude-md-improver`, `/revise-claude-md`, `/hookify` önerileri. `/dashboard` ve `/wrap-up` maliyet verisini yeniler.
+- `/findings-security`: `claude-security` taraması; çıktı klasörü `CLAUDE-SECURITY-*/` git dışı ve yapı haritasında izinli.
+- Rehber, pano ve README 3.2 ile güncellendi.
+
+### Elle uyarla (mevcut projeler)
+- Dil sunucusunu kur: `npm i -g typescript-language-server typescript` veya `npm i -g pyright`. Mobilde Maestro CLI.
+
 ## [3.1.1] - 2026-10-12
 
 ### Değişti

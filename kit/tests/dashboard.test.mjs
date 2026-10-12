@@ -94,3 +94,14 @@ test('üretim varlıkları: marka paketi, video çıktısı, araştırma başlı
   assert.deepEqual(v.videolar, [{ ad: 'demo', mp4: 'marketing/motion/demo/out/demo.mp4' }, { ad: 'taslak', mp4: null }]);
   assert.deepEqual(v.arastirma.map((r) => r.baslik), ['2026-10-05-kvkk', 'Ödeme sağlayıcıları']);
 });
+
+test('maliyet: ccusage proje adı ve günlük özet (date/period alanları)', async () => {
+  const { ccusageProjeAdi, maliyetOzeti } = await import('../../.claude/hooks/dashboard-data.mjs');
+  if (process.platform === 'win32') assert.equal(ccusageProjeAdi(String.raw`D:\Claude Projeler\Vibe_Kit`), 'D--Claude-Projeler-Vibe-Kit');
+  else assert.equal(ccusageProjeAdi('/home/a/my.app'), '-home-a-my-app');
+  const o = maliyetOzeti({ projects: { x: [{ date: '2026-10-11', totalTokens: 2e6, totalCost: 3 }, { date: '2026-10-09', totalTokens: 1e6, totalCost: 1.5 }] }, totals: {} });
+  assert.deepEqual(o.gunler.map((g) => g.tarih), ['2026-10-09', '2026-10-11']);
+  assert.deepEqual(o.toplam, { token: 3e6, maliyet: 4.5 });
+  assert.equal(maliyetOzeti({ daily: [{ period: '2026-10-01', totalTokens: 5, totalCost: 0 }] }).gunler[0].tarih, '2026-10-01');
+  assert.deepEqual(maliyetOzeti(null), { gunler: [], toplam: { token: 0, maliyet: 0 } });
+});

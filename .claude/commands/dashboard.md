@@ -2,7 +2,7 @@
 description: Projenin ayrıntılı durum raporunu verir ve dashboard.html panosunu yeniler.
 ---
 
-1. `node .claude/hooks/dashboard.mjs` çalıştır. Bu komut `dashboard.html` kontrol panelini üretir (her Claude cevabından sonra Stop hook'u da otomatik üretir; sayfa açıkken 30 sn'de bir yenilenir). Sekmeler: Genel, Yol haritası, Kararlar, Kurul, Kalite, Aktivite, Ürün ve teknik, Limit ve maliyet.
+1. `node .claude/hooks/cost.mjs` (son 30 günün token ve maliyeti, ccusage) ve `node .claude/hooks/dashboard.mjs` çalıştır. Bu komut `dashboard.html` kontrol panelini üretir (her Claude cevabından sonra Stop hook'u da otomatik üretir; sayfa açıkken 30 sn'de bir yenilenir). Sekmeler: Genel, Yol haritası, Kararlar, Kurul, Bulgular, Kalite, Aktivite, Ürün ve teknik, Operasyon, Limit ve maliyet. Token ayrıntısı (en pahalı istekler, önbellek) için `/session-report`.
 2. Limiti oku (`docs/workflow/usage-limits.md` §1). `docs/workflow/progress.md`, `docs/product/roadmap.md`, `docs/decisions/log.md` ve `docs/workflow/board.md`'yi oku ve şu raporu ver:
 
 ```

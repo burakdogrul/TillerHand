@@ -15,7 +15,7 @@
 5. **Doğru kaynak.** Sürüm, fiyat, kota, mevzuat, API gibi değişebilen bilgiyi hafızadan kullanma: `source-research` skill'i (önce birincil kaynak, her iddiaya kaynak ve tarih). Kütüphane kullanırken önce **Context7** MCP ile güncel dokümanı getir.
 5b. **Az token harca.** Kod haritası (codebase-memory-mcp) bağlıysa kodu keşfederken önce onu sorgula (`get_architecture`, `search_graph`, `trace_path`, `get_code_snippet`). Dosyaları toptan okuma. Dokümanları sadece gerektiğinde oku (tablo aşağıda).
 6. **Yapıya uy (zorunlu).** Yeni dosyayı `.claude/structure.json` haritasındaki yerine yaz (özellik bazlı: `features/<özellik>/`); açıklaması `docs/architecture/structure.md`. Harita dışı yazım sorulur, dağınıklık dosyaları (`*.bak`, `*-old.*`, kopya) engellenir. Geçici ve deneme işleri `sandbox/`, artık geçerli olmayan dokümanlar `docs/archive/`. Haritayı değiştirmek teknik bir karardır.
-7. **Önce plan, sonra kod.** 2'den fazla dosyaya dokunan iş `/plan-task`'dan geçer. Tek seferde tek görev. Kapsamı genişletme.
+7. **Önce plan, sonra kod.** 2'den fazla dosyaya dokunan iş `/plan-task`'dan geçer. Tek seferde tek görev. Kapsamı genişletme. Dört ilke: (1) varsayımını söyle, belirsizse sor; (2) en sade çözüm, istenmeyen esneklik yok; (3) sadece görevin gerektirdiği satırlara dokun; (4) işe başlarken doğrulanabilir başarı ölçütünü yaz.
 8. **Kök neden, kanıt, test.** Kabul testleri (kriter kimliği test adında, `Ö-01.1`) ve saldırgan testleri koddan önce yazılır ve önce kırmızı olur. Riskli özellik bayrak arkasında yayınlanır (`docs/operations/feature-flags.md`). Hata düzeltirken önce yeniden üret. "Bitti" demeden çalıştığını göster. Aynı hatada 2 denemede çözemezsen dur ve yön iste.
 9. **Her cevabın sonunda durum bloğu** (kısa, caveman). Biçim:
 
@@ -57,7 +57,7 @@ build:       [ ]
 
 - [ ] Kabul kriterleri karşılandı; görevde çıkan kararlar soruldu ve kaydedildi
 - [ ] Lint, tip, testler temiz; kritik akışa dokunulduysa test eklendi
-- [ ] Hata, boş ve yükleniyor durumları ele alındı; çalıştığına dair kanıt gösterildi
+- [ ] Hata, boş ve yükleniyor durumları ele alındı; çalıştığına dair kanıt gösterildi (doğrulama komutu bu turda çalıştırıldı ve çıktısı gösterildi; "çalışmalı" kanıt değildir)
 - [ ] Arayüz varsa: `DESIGN.md`'ye uygun, Impeccable critique yapıldı, metinler humanizer'dan geçti
 - [ ] Görev sonu kurul toplantısında RET yok
 - [ ] Kodda sır yok; yeni ortam değişkeni `.env.example`'da; `docs/product/roadmap.md` işaretli

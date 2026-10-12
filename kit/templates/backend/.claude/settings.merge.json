@@ -26,6 +26,16 @@
   "enabledPlugins": {
     "impeccable@impeccable": false,
     "taste-skill@taste-skill": false,
-    "ui-ux-pro-max@ui-ux-pro-max-skill": false
+    "ui-ux-pro-max@ui-ux-pro-max-skill": false,
+    "pyright-lsp@claude-plugins-official": true,
+    "postgres-best-practices@supabase-agent-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "supabase-agent-skills": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/supabase/agent-skills.git"
+      }
+    }
   }
 }

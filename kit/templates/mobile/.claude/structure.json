@@ -58,7 +58,8 @@
     "assets/**",
     ".maestro/**",
     "tests/**",
-    "supabase/**"
+    "supabase/**",
+    "CLAUDE-SECURITY-*/**"
   ],
   "deny": [
     "**/*.bak",

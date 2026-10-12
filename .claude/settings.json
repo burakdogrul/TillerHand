@@ -8,6 +8,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(node .claude/hooks/dashboard.mjs)",
+      "Bash(node .claude/hooks/cost.mjs)",
+      "Bash(node .claude/hooks/freeze-guard.mjs:*)",
       "Bash(node kit/kit.mjs install:*)",
       "Bash(node .claude/hooks/usage.mjs:*)",
       "Bash(node .claude/hooks/commit-gate.mjs --approve:*)",
@@ -36,6 +38,9 @@
       "Bash(rm -rf:*)"
     ]
   },
+  "env": {
+    "ENABLE_STOP_REVIEW": "0"
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -54,6 +59,10 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-secrets.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/freeze-guard.mjs\""
           }
         ]
       },
@@ -127,6 +136,12 @@
     "padding": 0
   },
   "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
     "caveman": {
       "source": {
         "source": "git",
@@ -197,6 +212,11 @@
     "supply-chain-risk-auditor@trailofbits": true,
     "agentic-actions-auditor@trailofbits": true,
     "fp-check@trailofbits": true,
+    "security-guidance@claude-plugins-official": true,
+    "claude-security@claude-plugins-official": true,
+    "hookify@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "session-report@claude-plugins-official": true,
     "remotion@remotion": false
   }
 }

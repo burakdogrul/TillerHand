@@ -11,6 +11,12 @@
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp"
+    },
+    "maestro": {
+      "command": "maestro",
+      "args": [
+        "mcp"
+      ]
     }
   }
 }

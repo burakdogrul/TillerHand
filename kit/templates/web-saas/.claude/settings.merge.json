@@ -24,5 +24,25 @@
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "supabase-agent-skills": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/supabase/agent-skills.git"
+      }
+    },
+    "addy-web-quality-skills": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/addyosmani/web-quality-skills.git"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "supabase@supabase-agent-skills": true,
+    "postgres-best-practices@supabase-agent-skills": true,
+    "web-quality-skills@addy-web-quality-skills": true
   }
 }

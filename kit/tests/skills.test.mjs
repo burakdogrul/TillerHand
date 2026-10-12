@@ -57,3 +57,21 @@ test('ayarlar: bildirim hook\'ları, skill bütçesi, MCP sürümleri sabit', ()
     assert.ok(!m.includes('@latest'), `${t}: @latest yok`);
   }
 });
+
+test('ayarlar 3.2: resmi eklentiler, kota ayarı, kilit hook\'u, tipe özel eklentiler', () => {
+  const s = JSON.parse(fs.readFileSync(path.join(KOK, '.claude/settings.json'), 'utf8'));
+  for (const e of ['security-guidance', 'claude-security', 'hookify', 'claude-md-management', 'session-report']) assert.equal(s.enabledPlugins[`${e}@claude-plugins-official`], true, e);
+  assert.equal(s.env.ENABLE_STOP_REVIEW, '0', 'tur sonu güvenlik incelemesi kotadan yer, kapalı gelir');
+  assert.ok(s.hooks.PreToolUse.some((m) => m.matcher === 'Write|Edit|MultiEdit' && m.hooks.some((h) => h.command.includes('freeze-guard.mjs'))));
+  JSON.parse(fs.readFileSync(path.join(KOK, '.claude/security-patterns.json'), 'utf8')).patterns.forEach((p) => new RegExp(p.regex));
+  const beklenen = { 'web-saas': 'typescript-lsp', mobile: 'typescript-lsp', backend: 'pyright-lsp' };
+  for (const [t, lsp] of Object.entries(beklenen)) {
+    const m = JSON.parse(fs.readFileSync(path.join(KOK, `kit/templates/${t}/.claude/settings.merge.json`), 'utf8'));
+    assert.equal(m.enabledPlugins[`${lsp}@claude-plugins-official`], true, `${t}: ${lsp}`);
+    for (const e of Object.keys(m.enabledPlugins)) {
+      const pazar = e.split('@')[1];
+      assert.ok(pazar === 'claude-plugins-official' || s.extraKnownMarketplaces[pazar] || m.extraKnownMarketplaces?.[pazar], `${t}: ${pazar} pazarı tanımlı`);
+    }
+  }
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(KOK, 'kit/templates/mobile/.mcp.json'), 'utf8')).mcpServers.maestro, { command: 'maestro', args: ['mcp'] });
+});

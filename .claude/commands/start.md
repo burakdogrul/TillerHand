@@ -14,7 +14,7 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
 ## Adım 0: Hazırlık
 
 1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version`, kökte `kit/kit.mjs` var mı, `.kit.json` yok mu.
-2. `docs/workflow/skills.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. Eksik varsa kullanıcıya hangi plugin'in eksik olduğunu ve kurulum komutunu (`/plugin install x@y`) söyle. Sonra sor: "Kurup devam edelim mi, eksik skill olmadan mı devam edelim?"
+2. `docs/workflow/skills.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. LSP eklentisi dil sunucusu ister: web ve mobil için `npm i -g typescript-language-server typescript`, backend için `npm i -g pyright` (global kurulum; kullanıcı onayıyla). Eksik varsa kullanıcıya hangi plugin'in eksik olduğunu ve kurulum komutunu (`/plugin install x@y`) söyle. Sonra sor: "Kurup devam edelim mi, eksik skill olmadan mı devam edelim?"
 3. `caveman:caveman` skill'ini yükle (rapor dili).
 4. **Limit:** Limiti oku (`docs/workflow/usage-limits.md` §1) ve raporla. Sihirbazın tamamı Pro planda 5 saatlik limitin büyük kısmını kullanabilir; adımlar arasında durup sonra devam edilebileceğini söyle. Seviye sarı veya kırmızıysa §3'teki seçenekleri sor.
 5. **Kod haritası:** Oturumda codebase-memory-mcp araçları (`index_repository`, `search_graph` vb.) var mı bak. Yoksa sor: "Kod haritası kurulsun mu? AI, kodu dosya dosya okumak yerine sorgular; proje büyüdükçe oturum başına ciddi token tasarrufu sağlar."
@@ -72,6 +72,7 @@ Bütün kararlar bitince:
 1. docs/architecture/stack.md → "Seçilen teknolojiler" tablosunu doldur.
 2. Seçim önerilenden farklıysa docs/architecture/stack.md'nin Komutlar, Klasör yapısı, Kodlama kuralları, AI hataları ve Doğrulama bölümlerini seçime göre yeniden yaz. Bunlara bağlı `.github/workflows/ci.yml`, `.claude/settings.json` izinleri, `.env.example`, pre-commit ayarları ve `.mcp.json` dosyalarını da uyarla. Farkları raporla.
 3. `CLAUDE.md` → Komutlar bölümünü doldur.
+3b. **Stack skill'leri:** Web'de (React/Next) `npx -y skills@1.7.2 add vercel-labs/agent-skills --skill react-best-practices --skill composition-patterns -a claude-code -y --copy`, mobilde `--skill react-native-guidelines` ile çalıştır. Gelen SKILL.md dosyalarını kurmadan önce oku (üçüncü taraf içerik). Mobilde Maestro CLI kurulu değilse kurulumunu söyle (`docs/workflow/mcp-catalog.md`).
 4. `docs/decisions/log.md`: Her kararı günlüğe ekle, teknoloji yığınını `docs/decisions/adr-0001-tech-stack.md` olarak kaydet (şablon: `adr-template.md`).
 
 ## Adım 5: Mimari → `docs/architecture/overview.md`, `docs/product/glossary.md`
@@ -79,7 +80,7 @@ Bütün kararlar bitince:
 `mattpocock-skills:domain-modeling` ve `mattpocock-skills:codebase-design` ile:
 1. **Veri modeli:** Tablo/varlık taslağını göster. Belirsiz noktaları karar olarak sor: ilişki türü, silme davranışı (kalıcı / çöp kutusu), kişisel veri alanları, saklama süresi.
 2. **Kimlik ve yetki:** Giriş yöntemleri (e-posta + şifre, magic link, Google, Apple) ve roller. Çoklu seçimle sor.
-3. **Dış servisler:** Aylık maliyet tahminiyle tablo; ücretli olan her servis için onay al. Her servisi `docs/operations/accounts.md`'ye ekle (sahip, 2FA, bitiş tarihi; şifre yazma).
+3. **Dış servisler:** Aylık maliyet tahminiyle tablo; ücretli olan her servis için onay al. Seçilen servisin `docs/workflow/mcp-catalog.md`'de bağlantısı varsa (GitHub, Stripe, Vercel, PostHog, Figma, Firebase, Linear) kurulmasını öner; kimliği kullanıcı kendisi bağlar (OAuth veya ortam değişkeni). Her servisi `docs/operations/accounts.md`'ye ekle (sahip, 2FA, bitiş tarihi; şifre yazma).
 3b. **Birim ekonomisi** (ücretli ürünse): `docs/product/unit-economics.md` girdilerini fiyat, komisyon, sabit ve kullanıcı başı maliyet tahminleriyle doldur. Katkı payı negatif veya değişken maliyet fiyatın %30'unu geçiyorsa bunu `maliyet` kararı olarak sor (fiyat / kullanım limiti / model seçimi).
 4. **Ortamlar:** Lokal / önizleme / prod ayrımı.
 5. `docs/product/glossary.md`: Ana kavramlar, arayüz adları ve durum geçişleri. Arayüzde "sen" mi "siz" mi kullanılacağını sor.

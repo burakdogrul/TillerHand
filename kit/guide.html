@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · GitHub template · v3.1</p>
+  <p class="eyebrow">Claude Code · GitHub template · v3.2</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -433,6 +433,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
         <li><b>Üstte:</b> Şimdi (aşama, görev, sıradaki adım), Dikkat gerektirenler (önem sırasıyla), sağlık rozeti ve özet kutucuklar</li>
         <li><b>10 sekme:</b> Genel · Yol haritası · Kararlar · Kurul · Bulgular · Kalite · Aktivite · Ürün ve teknik · Operasyon · Limit ve maliyet</li>
         <li><b>Ürün ve teknik:</b> PRD, MVP ve kabul testleri, birim ekonomisi, geri bildirim, stack, tasarım, marka paketi, tanıtım videoları, araştırma notları</li>
+        <li><b>Limit ve maliyet:</b> 5 saatlik ve haftalık limit, bağlam, son 30 günün token ve API karşılığı maliyeti (ccusage), görev başı limit maliyeti</li>
         <li>Açıkken 30 saniyede bir yenilenir; ek token harcamaz</li>
       </ul>
       <span class="k">Masaüstü bildirimi</span>
@@ -464,8 +465,15 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
         <tr><td>Elle yapılacak kurulum (DNS, panel, mağaza)</td><td class="f">mattpocock-skills:wizard</td></tr>
         <tr><td>Her kod değişikliği</td><td class="f">ponytail:ponytail</td></tr>
         <tr><td>Kritik akış (auth, ödeme, veri)</td><td class="f">mattpocock-skills:tdd</td></tr>
-        <tr><td>Hata ayıklama</td><td class="f">mattpocock-skills:diagnosing-bugs</td></tr>
+        <tr><td>Hata ayıklama</td><td class="f">mattpocock-skills:diagnosing-bugs · /freeze &lt;klasör&gt;</td></tr>
+        <tr><td>React/Next performansı · React Native</td><td class="f">react-best-practices · composition-patterns · react-native-guidelines (Vercel)</td></tr>
+        <tr><td>Veritabanı şeması, sorgu, indeks</td><td class="f">postgres-best-practices · supabase</td></tr>
+        <tr><td>Expo build, yükseltme, mağaza</td><td class="f">expo (Expo resmi)</td></tr>
+        <tr><td>Core Web Vitals, erişilebilirlik, SEO</td><td class="f">web-quality-skills</td></tr>
+        <tr><td>CLAUDE.md denetimi · oturum dersleri</td><td class="f">claude-md-improver · /revise-claude-md</td></tr>
+        <tr><td>"Bunu bir daha yapma" → kalıcı kural</td><td class="f">/hookify</td></tr>
         <tr><td>İnceleme · denetim · borç listesi</td><td class="f">ponytail-review · ponytail-audit · ponytail-debt</td></tr>
+        <tr><td>Derin güvenlik taraması</td><td class="f">/claude-security (Anthropic)</td></tr>
         <tr><td>Güvenlik derinliği</td><td class="f">Trail of Bits: differential-review · insecure-defaults · sharp-edges · static-analysis · supply-chain-risk-auditor · agentic-actions-auditor · fp-check</td></tr>
         <tr><td>Stil yönüne göre arayüz</td><td class="f">taste-skill:* (yukarıdaki eşleme)</td></tr>
         <tr><td>Ürün bağlamı, tasarım sistemi, critique/audit/polish</td><td class="f">impeccable:impeccable</td></tr>
@@ -488,7 +496,12 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <article class="type"><h3>Logo</h3><p class="stack">logo-design · SVG</p><ul><li>Marka soruları → 4-6 konsept görsel önizlemeyle</li><li>16 px okunurluk, tek renk hal, koyu zemin</li><li>Favicon, uygulama ikonları, PNG boyutları, kullanım kuralları</li></ul></article>
     <article class="type"><h3>Tanıtım videosu</h3><p class="stack">motion-video · renderAt(t) · Playwright · ffmpeg</p><ul><li>Tek kesintisiz dönüşüm, gerçek imleç, 120 BPM</li><li>Kapalı formlu yaylar (testle doğrulandı)</li><li>Önce vuruş haritası ve 4 kare onayı, sonra MP4</li></ul></article>
     <article class="type"><h3>Arayüz hareketi</h3><p class="stack">ui-motion · Motion · Reanimated</p><ul><li>Süre belirteçleri, yaylar, sadece transform/opacity</li><li>Hareket azaltma tercihi zorunlu</li><li>Impeccable animate ile denetim</li></ul></article>
-    <article class="type"><h3>Güvenlik ve ölçüm</h3><p class="stack">Trail of Bits · Chrome DevTools MCP</p><ul><li>7 güvenlik skill'i /findings-security'de</li><li>Gerçek tarayıcıda performans izi, ağ, konsol</li></ul></article>
+    <article class="type"><h3>Güvenlik</h3><p class="stack">security-guidance · claude-security · Trail of Bits</p><ul><li>Yazarken: riskli kalıp uyarısı (ücretsiz)</li><li>Commit'te: ayrı modelle derin inceleme; tur sonu incelemesi kota için kapalı</li><li>/findings-security: çok ajanlı, doğrulanmış tarama</li></ul></article>
+    <article class="type"><h3>Kod zekâsı</h3><p class="stack">typescript-lsp · pyright-lsp</p><ul><li>Her düzenlemeden sonra tip hatası</li><li>Tanıma git, referans bul</li><li>Uydurma API'yi derlemeden yakalar</li></ul></article>
+    <article class="type"><h3>Stack kuralları</h3><p class="stack">Vercel · Expo · Supabase · web-quality</p><ul><li>Proje tipine göre açılır, ihtiyaç olunca yüklenir</li><li>React, React Native, Postgres, Core Web Vitals</li></ul></article>
+    <article class="type"><h3>Mobil test ve servisler</h3><p class="stack">Maestro · Expo MCP · servis kataloğu</p><ul><li>Kabul testleri cihazda/simülatörde</li><li>EAS build, TestFlight çökme kayıtları</li><li>GitHub, Stripe, Vercel, PostHog, Figma: servis seçilince</li></ul></article>
+    <article class="type"><h3>Ölçüm ve maliyet</h3><p class="stack">Chrome DevTools MCP · ccusage · session-report</p><ul><li>Gerçek tarayıcıda performans izi</li><li>Proje başına token ve maliyet panoda</li><li>En pahalı istekler raporu</li></ul></article>
+    <article class="type"><h3>Öğrenen kurallar</h3><p class="stack">hookify · claude-md-management</p><ul><li>Tekrarlayan düzeltme hook kuralı olur</li><li>CLAUDE.md güncel tutulur</li><li>/retro ve /wrap-up önerir</li></ul></article>
     <article class="type"><h3>Bildirim</h3><p class="stack">notify.mjs</p><ul><li>Soru veya onay beklerken</li><li>Uzun iş bitince</li><li>Windows, macOS, Linux</li></ul></article>
   </div>
 </section>
@@ -503,9 +516,9 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <table>
       <thead><tr><th>Ne zaman</th><th>Katman</th><th>Ne yakalar</th></tr></thead>
       <tbody>
-        <tr><td>AI dosya yazarken</td><td>Sır engeli · yapı koruyucu · yapılandırma onayı</td><td>Koda yazılan API anahtarı engellenir; harita dışı yeni dosya sorulur, dağınıklık (*.bak, *-old.*, kopya) engellenir; CLAUDE.md, .claude/, .mcp.json, iş akışı değişikliği sorulur</td></tr>
+        <tr><td>AI dosya yazarken</td><td>Sır engeli · yapı koruyucu · yapılandırma onayı · düzenleme kilidi · güvenlik kalıpları</td><td>Koda yazılan API anahtarı engellenir; /freeze açıkken kilitli klasör dışına yazılmaz; riskli kalıpta (service_role istemcide, kişisel veri logu, innerHTML) uyarı; harita dışı yeni dosya sorulur, dağınıklık (*.bak, *-old.*, kopya) engellenir; CLAUDE.md, .claude/, .mcp.json, iş akışı değişikliği sorulur</td></tr>
         <tr><td>AI komut çalıştırırken</td><td>Yıkıcı komut kalkanı · paket kapısı · commit kapısı</td><td>DROP, TRUNCATE, koşulsuz DELETE, db reset engellenir; prod deploy sorulur; uydurma, çok yeni veya az kullanılan paket engellenir veya sorulur; kurul denetimi olmadan commit yok</td></tr>
-        <tr><td>Commit anında</td><td>Pre-commit</td><td>Sahnelenmiş değişikliklerde sır, lint, format</td></tr>
+        <tr><td>Commit anında</td><td>Pre-commit · security-guidance</td><td>Sahnelenmiş değişikliklerde sır, lint, format; ayrı bir model değişikliği çevresiyle birlikte güvenlik açısından inceler</td></tr>
         <tr><td>Push ve PR</td><td>GitHub Actions</td><td>Lint, tip, test, build, Semgrep, kopya kod, klasör yapısı, bağımlılık açıkları, tüm geçmişte sır taraması</td></tr>
         <tr><td>Canlıda</td><td>Canlı izleme · bulut ajanları (isteğe bağlı)</td><td>Saatlik kritik akış testi; kırmızı CI'a düzeltme önerisi; haftalık bakım raporu</td></tr>
         <tr><td>Her hafta</td><td>Dependabot</td><td>Eskiyen bağımlılıklar; majörler planlı</td></tr>
@@ -572,6 +585,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
         <tr><td class="f">/design [kapsam]</td><td>Görsel önizlemeli tasarım kararları ve uygulama</td></tr>
         <tr><td class="f">/review-changes [aralık]</td><td>code-reviewer + security-auditor + ponytail-review; düzeltilecekleri çoklu seçimle sorar</td></tr>
         <tr><td class="f">/fix-bug [belirti]</td><td>diagnosing-bugs döngüsü: yeniden üret, kanıtla, kırmızı test, düzelt</td></tr>
+        <tr><td class="f">/freeze &lt;klasör&gt; | off</td><td>Düzenlemeyi tek klasöre kilitler; iş başka dosyalara yayılmaz</td></tr>
         <tr><td class="f">/wrap-up</td><td>İlerleme, kararlar, CHANGELOG ve dashboard.html</td></tr>
         <tr><td class="f">/dashboard</td><td>Ayrıntılı rapor ve pano</td></tr>
         <tr><td class="f">/ask-mode [kapat|ac] [konu]</td><td>Soru modu</td></tr>
@@ -633,7 +647,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.1.1 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.2.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

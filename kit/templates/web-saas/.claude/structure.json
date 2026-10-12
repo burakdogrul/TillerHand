@@ -63,7 +63,8 @@
     "src/types/**",
     "public/**",
     "tests/**",
-    "supabase/**"
+    "supabase/**",
+    "CLAUDE-SECURITY-*/**"
   ],
   "deny": [
     "**/*.bak",

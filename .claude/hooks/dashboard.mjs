@@ -8,7 +8,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { durumOku, oku, bolumler, bolumBul, sayac, tabloSatirlari } from './status-read.mjs';
 import { limitOku, ozet, seviye, ESIKLER } from './usage.mjs';
-import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari } from './dashboard-data.mjs';
+import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari, maliyetOzeti } from './dashboard-data.mjs';
 
 const argumanlar = process.argv.slice(2);
 const sessiz = argumanlar.includes('--sessiz');
@@ -69,6 +69,8 @@ const tasarimYonu = tabloSatirlari(bolumBul(bolumler(oku(dosya('docs/design/desi
   .filter(([, secim]) => secim && !secim.startsWith('[')).map(([alan, secim]) => ({ alan, secim }));
 
 const varlik = uretimVarliklari(kok);
+let tokenMaliyet = null;
+try { const c = JSON.parse(fs.readFileSync(dosya('.claude/state/cost.json'), 'utf8')); tokenMaliyet = { ...maliyetOzeti(c.veri), okundu: c.okundu }; } catch { /* cost.mjs henüz çalışmadı */ }
 let onizlemeler = [];
 try {
   onizlemeler = fs.readdirSync(dosya('.previews'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => {
@@ -266,6 +268,13 @@ const limitBolumu = `
 <section class="card"><h3>Kullanım limiti</h3><div class="grid2 tight">${limitKart('5 saatlik', 'five_hour')}${limitKart('Haftalık', 'seven_day')}</div>
 <p class="muted small">${e(ozet(limit))}</p>
 <h4>Bağlam penceresi</h4>${baglam ? `<div class="lim"><div class="lim-h"><b>Son oturum</b>${rozet(baglam.yuzde >= 70 ? 'kritik' : baglam.yuzde >= 50 ? 'uyari' : 'iyi', `%${baglam.yuzde}`)}</div><div class="bar big ${baglam.yuzde >= 70 ? 'kritik' : baglam.yuzde >= 50 ? 'uyari' : 'iyi'}"><span style="width:${Math.min(100, baglam.yuzde)}%"></span><i style="left:50%"></i><i style="left:70%"></i></div><div class="muted small">%50'de /wrap-up + /clear önerilir · ${new Date(baglam.okundu).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla</div></div>` : bos('Bağlam bilgisi yok (durum çubuğu yazar).')}</section>
+<section class="card"><h3>Token ve maliyet · son 30 gün</h3>${tokenMaliyet?.gunler.length ? (() => {
+  const son = tokenMaliyet.gunler.slice(-14);
+  const enCok = Math.max(...son.map((g) => g.token));
+  return `<div class="kpis mini">${kutu('Toplam token', `${(tokenMaliyet.toplam.token / 1e6).toFixed(1)}M`)}${kutu('API karşılığı', `$${tokenMaliyet.toplam.maliyet.toFixed(2)}`, 'abonelikte fatura değildir')}${kutu('Günlük ortalama', `$${(tokenMaliyet.toplam.maliyet / tokenMaliyet.gunler.length).toFixed(2)}`, `${tokenMaliyet.gunler.length} aktif gün`)}</div>
+  <div class="rows">${son.map((g) => `<div class="row"><span class="num nw">${e(g.tarih.slice(5))}</span>${cubuk(g.token, enCok)}<span class="num muted">${(g.token / 1e6).toFixed(1)}M · $${g.maliyet.toFixed(2)}</span></div>`).join('')}</div>
+  <p class="muted small">ccusage · ${tarihYaz(tokenMaliyet.okundu)} itibarıyla · ayrıntı için <code>/session-report</code></p>`;
+})() : bos('Veri yok.', 'node .claude/hooks/cost.mjs')}</section>
 <section class="card"><h3>Maliyet günlüğü</h3>${ortalamaMaliyet.length ? `<div class="kpis mini">${ortalamaMaliyet.map((m) => kutu(`Ortalama · ${m.boyut}`, `%${m.ort.toFixed(1)}`, `${m.n} kayıt`)).join('')}</div>
 <div class="tw"><table><thead><tr><th>Tarih</th><th>İş</th><th>Boyut</th><th>5s kullanım</th></tr></thead><tbody>${[...maliyet].reverse().slice(0, 15).map((m) => `<tr><td class="num nw">${e(m.tarih)}</td><td>${md(m.is)}</td><td>${e(m.boyut)}</td><td class="num">${Number.isNaN(m.fark) ? '-' : `%${m.fark}`}</td></tr>`).join('')}</tbody></table></div>` : bos('Henüz kayıt yok. `/build` her görevin limit maliyetini buraya yazar.')}</section>`;
 

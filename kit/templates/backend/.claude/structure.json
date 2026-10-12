@@ -47,7 +47,8 @@
     "app/features/*/exceptions.py",
     "app/features/*/constants.py",
     "alembic/**",
-    "tests/**"
+    "tests/**",
+    "CLAUDE-SECURITY-*/**"
   ],
   "deny": [
     "**/*.bak",

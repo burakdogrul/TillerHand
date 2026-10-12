@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.1.1-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.2.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -29,7 +29,7 @@
 | 🏛️ **Uzman kurulu** | Ürün, Mimar, Güvenlik, UX, KVKK, QA ve diğer üyeler planı, görevi, her commit'i ve fazı denetler. |
 | 🔎 **Bulgu raporları** | `/findings-tech`, `-business`, `-security`, `-ux`, `-perf`, `-legal`: En önemli 20 bulgu, puanlı ve düzeltme yöntemli. |
 | 🗂️ **Korunan yapı** | Özellik bazlı klasör haritası; harita dışı yazım sorulur, dağınıklık engellenir, CI denetler. |
-| 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, commit kapısı. |
+| 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, düzenleme kilidi, commit kapısı, yazarken güvenlik incelemesi. |
 | 📊 **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit. |
 | ⏱️ **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur; işler limite göre planlanır, gerekirse güvenli durulur. |
 | 🌐 **Doğru kaynak** | Değişebilen bilgi birincil kaynaktan doğrulanır (kaynak ve tarihle); kütüphane dokümanı Context7'den güncel gelir. |
@@ -235,7 +235,7 @@ Yapı dört yerde korunur: yazım anında hook, her PR'da CI (`structure` işi),
 ```mermaid
 flowchart TB
     T["Claude bir araç çağırıyor"] --> W{"Dosya yazma mı?"}
-    W -->|evet| SG["Sır engeli<br/>Yapı koruyucu<br/>Yapılandırma onayı"]
+    W -->|evet| SG["Sır engeli<br/>Yapı koruyucu<br/>Yapılandırma onayı<br/>Düzenleme kilidi"]
     W -->|hayır| B{"Komut mu?"}
     B -->|evet| BG["Yıkıcı komut kalkanı<br/>Paket kapısı<br/>Commit kapısı (kurul)"]
     SG --> P["Claude Code izin katmanı<br/>izin ver · sor · engelle"]
@@ -251,6 +251,8 @@ flowchart TB
 | Yapı koruyucu | Harita dışı yeni dosya sorulur, dağınıklık dosyaları engellenir |
 | Yapılandırma onayı | `CLAUDE.md`, `.claude/`, `.mcp.json` ve iş akışı dosyaları onayın olmadan değişmez |
 | Commit kapısı | Kurul denetimi olmadan commit atılmaz |
+| Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazabilir |
+| Güvenlik incelemesi | `security-guidance` (Anthropic): yazarken riskli kalıp uyarısı, commit'te ayrı modelle inceleme. Tur sonu incelemesi kota için kapalı gelir |
 
 ## 📊 Kontrol paneli ve raporlama
 
@@ -273,6 +275,7 @@ flowchart TB
 | `/design [kapsam]` | Görsel önizlemeli tasarım kararları |
 | `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |
 | `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme |
+| `/freeze <klasör> \| off` | Düzenlemeyi tek klasöre kilitler |
 | `/findings-<tür>` | `tech` · `business` · `security` · `ux` · `perf` · `legal` · `all` |
 | `/board [setup\|convene]` | Uzman kurulunu kurar, değiştirir, toplar |
 | `/ask-mode [on\|off] [konu]` | Soru modunu yönetir |
@@ -294,10 +297,23 @@ flowchart TB
 | **Logo** | `logo-design`: marka soruları, 4-6 SVG konsept görsel önizlemeyle, seçim, iyileştirme, favicon/ikon/PNG paketi ve kullanım kuralları | API gerekmez |
 | **Tanıtım videosu** | `motion-video`: tek kesintisiz dönüşüm, gerçek imleç, kapalı formlu yaylar, 120 BPM; `renderAt(t)` + Playwright + ffmpeg ile MP4 | Remotion seçeneği (resmi plugin, varsayılan kapalı) |
 | **Uygulama içi hareket** | `ui-motion`: süre belirteçleri, yaylar, hareket azaltma, performans; Motion / Reanimated | Impeccable `animate` ile denetlenir |
+| **Kod zekâsı** | `typescript-lsp` (web, mobil), `pyright-lsp` (backend): her düzenlemeden sonra tip hatası, tanıma gitme | Dil sunucusu global kurulur |
+| **Stack kuralları** | Vercel `react-best-practices` + `composition-patterns` (web), `react-native-guidelines` + Expo resmi skill'leri (mobil), Supabase `postgres-best-practices`, `web-quality-skills` (Core Web Vitals, erişilebilirlik, SEO) | Proje tipine göre açılır |
+| **Mobil test** | **Maestro** MCP (kabul testleri cihazda) + **Expo** MCP (EAS build, TestFlight çökme kayıtları) | Maestro CLI ve Expo hesabı gerekir |
+| **Servis bağlantıları** | GitHub, Stripe, Vercel, PostHog, Figma, Firebase, Linear: `docs/workflow/mcp-catalog.md` | Servis seçilince `/start` önerir |
+| **Yazarken güvenlik** | `security-guidance`: kalıp uyarısı + commit incelemesi; `/claude-security`: `/findings-security` için çok ajanlı derin tarama | Model incelemeleri kotadan yer |
+| **Öğrenen kurallar** | `/hookify` (tekrarlayan düzeltme hook kuralı olur), `claude-md-management` (CLAUDE.md denetimi, oturum dersleri) | `/retro`, `/wrap-up` önerir |
+| **Token ve maliyet** | `ccusage` ile proje başına son 30 gün panoda; `/session-report` ile en pahalı istekler | Yerel çalışır |
 | **Güvenlik derinliği** | Trail of Bits: differential-review, insecure-defaults, sharp-edges, static-analysis, supply-chain-risk-auditor, agentic-actions-auditor, fp-check | `/findings-security` ve `security-auditor` kullanır |
 | **Gerçek tarayıcı ölçümü** | **Chrome DevTools** MCP (web) | `/findings-perf`, `/findings-ux` |
 | **Bildirim** | `notify.mjs`: soru veya onay beklerken ve 90 sn'den uzun iş bitince | Kapatmak: `KIT_NOTIFY=off` |
 | **Skill bütçesi** | Proje tipine göre gereksiz plugin'ler kapalı (örn. backend'de tasarım skill'leri) | Daha az token, daha doğru skill seçimi |
+
+**Bilerek eklenmeyenler:**
+- superpowers, gstack, spec-kit, BMAD, GSD, OpenSpec: Kitin soru, plan ve kurul akışının yerine geçerler. Karpathy ilkeleri, "bitti demeden doğrula" ve CEO bakışı gibi fikirler kitin kendi kurallarına işlendi.
+- claude-mem: Kitin ilerleme dosyası ve bellek düzeniyle aynı işi yapar.
+- Serena: codebase-memory-mcp ile aynı işi yapar.
+- frontend-design, ralph-loop: Biri tasarım skill'lerini tekrarlar, diğeri limiti yakar.
 
 ## 🧩 Skill'ler
 
