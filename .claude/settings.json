@@ -16,7 +16,8 @@
       "Bash(node kit/kit.mjs install:*)",
       "Bash(node .claude/hooks/usage.mjs:*)",
       "Bash(node .claude/hooks/commit-gate.mjs --approve:*)",
-      "Bash(node .claude/hooks/structure-guard.mjs --check)"
+      "Bash(node .claude/hooks/structure-guard.mjs --check)",
+      "Bash(node .claude/hooks/tools.mjs:*)"
     ],
     "ask": [
       "Bash(git push:*)",
@@ -201,28 +202,42 @@
         "source": "git",
         "url": "https://github.com/remotion-dev/claude-code-plugin.git"
       }
+    },
+    "gsap-skills": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/greensock/gsap-skills.git"
+      }
+    },
+    "understand-anything": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/Egonex-AI/Understand-Anything.git"
+      }
     }
   },
   "enabledPlugins": {
     "caveman@caveman": true,
     "impeccable@impeccable": true,
-    "taste-skill@taste-skill": true,
-    "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "humanizer@humanizer": true,
     "ponytail@ponytail": true,
     "mattpocock-skills@mattpocock": true,
-    "differential-review@trailofbits": true,
-    "insecure-defaults@trailofbits": true,
-    "sharp-edges@trailofbits": true,
-    "static-analysis@trailofbits": true,
-    "supply-chain-risk-auditor@trailofbits": true,
-    "agentic-actions-auditor@trailofbits": true,
-    "fp-check@trailofbits": true,
     "security-guidance@claude-plugins-official": true,
-    "claude-security@claude-plugins-official": true,
     "hookify@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
-    "session-report@claude-plugins-official": true,
+    "taste-skill@taste-skill": false,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": false,
+    "gsap-skills@gsap-skills": false,
+    "differential-review@trailofbits": false,
+    "insecure-defaults@trailofbits": false,
+    "sharp-edges@trailofbits": false,
+    "static-analysis@trailofbits": false,
+    "supply-chain-risk-auditor@trailofbits": false,
+    "agentic-actions-auditor@trailofbits": false,
+    "fp-check@trailofbits": false,
+    "claude-security@claude-plugins-official": false,
+    "understand-anything@understand-anything": false,
+    "session-report@claude-plugins-official": false,
     "remotion@remotion": false
   }
 }

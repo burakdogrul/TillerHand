@@ -60,7 +60,8 @@ test('ayarlar: bildirim hook\'ları, skill bütçesi, MCP sürümleri sabit', ()
 
 test('ayarlar 3.2: resmi eklentiler, kota ayarı, kilit hook\'u, tipe özel eklentiler', () => {
   const s = JSON.parse(fs.readFileSync(path.join(KOK, '.claude/settings.json'), 'utf8'));
-  for (const e of ['security-guidance', 'claude-security', 'hookify', 'claude-md-management', 'session-report']) assert.equal(s.enabledPlugins[`${e}@claude-plugins-official`], true, e);
+  for (const e of ['security-guidance', 'hookify', 'claude-md-management']) assert.equal(s.enabledPlugins[`${e}@claude-plugins-official`], true, e);
+  for (const e of ['claude-security', 'session-report']) assert.equal(s.enabledPlugins[`${e}@claude-plugins-official`], false, `${e} pakette, varsayılan kapalı`);
   assert.equal(s.env.ENABLE_STOP_REVIEW, '0', 'tur sonu güvenlik incelemesi kotadan yer, kapalı gelir');
   assert.ok(s.hooks.PreToolUse.some((m) => m.matcher === 'Write|Edit|MultiEdit' && m.hooks.some((h) => h.command.includes('freeze-guard.mjs'))));
   JSON.parse(fs.readFileSync(path.join(KOK, '.claude/security-patterns.json'), 'utf8')).patterns.forEach((p) => new RegExp(p.regex));

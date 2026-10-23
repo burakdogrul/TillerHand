@@ -8,6 +8,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { durumOku, oku, bolumler, bolumBul, sayac, tabloSatirlari } from './status-read.mjs';
 import { limitOku, ozet, seviye, ESIKLER } from './usage.mjs';
+import { paketDurumu } from './tools.mjs';
 import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari, maliyetOzeti, konseyTutanaklari, harcamaAlarmlari } from './dashboard-data.mjs';
 
 const argumanlar = process.argv.slice(2);
@@ -125,6 +126,8 @@ for (const k of kabul.uyumsuz.slice(0, 3)) ekle('uyari', `${k.id} PRD'de tamam i
 const geciken = bayrakListesi.filter((b) => b.gecikti);
 if (geciken.length) ekle('bilgi', `Kaldırma tarihi geçen ${geciken.length} bayrak: ${geciken.map((b) => b.ad).join(', ')}.`, 'Bayrağı ve eski kod yolunu kaldır');
 if (gb.yeni) ekle('bilgi', `${gb.yeni} işlenmemiş kullanıcı geri bildirimi var.`, '/user-feedback');
+const acikPaketler = (() => { try { return paketDurumu(kok).filter((p) => p.acik).map((p) => p.ad); } catch { return []; } })();
+if (acikPaketler.length) ekle('bilgi', `Açık bağlam paketleri: ${acikPaketler.join(', ')}. Her oturumda skill listesine yük ekler.`, 'Kullanmıyorsan /tools kapat <paket>');
 if (baglam?.yuzde >= 70 && Date.now() - baglam.okundu < 3600e3) ekle('uyari', `Bağlam %${baglam.yuzde} dolu; yanıt kalitesi düşebilir.`, '/wrap-up ve /clear');
 for (const r of Object.values(bulgu.son)) if (r.kritik > 0) ekle('uyari', `${BULGU_TURLERI[r.tur] ?? r.tur} bulgu raporunda ${r.kritik} kritik bulgu var (sağlık ${r.saglik}/100).`, `docs/findings/${r.tur}/latest.md`);
 // Önem sırası: kritik > uyarı > bilgi (aynı önemde eklenme sırası korunur)

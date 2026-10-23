@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · Codex · Antigravity · v3.9</p>
+  <p class="eyebrow">Claude Code · Codex · Antigravity · v3.10</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -208,7 +208,7 @@ claude
     <li><b>Başlat:</b> <code>/start fikrin</code> yaz. Her sorunun ilk seçeneği önerilendir. Pro'daysan profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
     <li><b>Her gün:</b> <code>/build</code> ile çalış (görev kodu gerekmez), <code>/wrap-up</code> ve <code>/clear</code> ile bırak; temiz ekranda sıradaki komut yazar. Bozulursa <code>/rollback</code>, merak edersen <code>/dashboard</code>.</li>
   </ol>
-  <p class="note">Proje ilk açıldığında Claude Code, <code>.claude/settings.json</code>'da tanımlı skill plugin'lerini kurmayı önerir: Caveman, Impeccable, Taste Skill, UI UX Pro Max, Humanizer, Ponytail ve Matt Pocock. <code>/start</code> onayınla eksikleri proje kapsamında kurar (<code>plugins-sync.mjs --kur</code>); kurulmamış eklenti yükleme hatası verir ve skill'leri gelmez.</p>
+  <p class="note">Proje ilk açıldığında Claude Code, <code>.claude/settings.json</code>'da tanımlı skill plugin'lerini kurmayı önerir: Caveman, Impeccable, Taste Skill, UI UX Pro Max, Humanizer, Ponytail ve Matt Pocock. <code>/start</code> onayınla eksikleri proje kapsamında kurar (<code>plugins-sync.mjs --kur</code>); kurulmamış eklenti yükleme hatası verir ve skill'leri gelmez. Tasarım, güvenlik, yayın ve video paketleri kurulur ama kapalı kalır; ilgili komut gerektiğinde açmayı sorar.</p>
 </section>
 
 <section id="protokol">
@@ -405,7 +405,7 @@ KULLANICIYA SORULMALI: yok</pre>
   <div class="table-wrap"><table>
     <thead><tr><th></th><th>Hafif (Pro için önerilen)</th><th>Standart</th><th>Tam</th></tr></thead>
     <tbody>
-      <tr><td>Eklentiler</td><td>Çekirdek 6 + tipin LSP ve stack skill'leri</td><td>Hepsi</td><td>Hepsi</td></tr>
+      <tr><td>Eklentiler</td><td>Çekirdek 6 + tipin LSP ve stack skill'leri</td><td>Çekirdek 8 + stack; paketler gerekince</td><td>Çekirdek 8 + stack; paketler gerekince</td></tr>
       <tr><td>Commit denetimi</td><td>Kapalı</td><td>Açık</td><td>Açık</td></tr>
       <tr><td>Toplantı konseyi</td><td>Yok</td><td>Faz sonu, canlıya alma</td><td>Plan, faz sonu, canlıya alma, RET</td></tr>
       <tr><td>Karar konseyi</td><td>Veritabanı, auth</td><td>Veritabanı, auth</td><td>Tüm tek yönlü kararlar</td></tr>
@@ -518,7 +518,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
       </tbody>
     </table>
   </div>
-  <p class="note">Skill bütçesi: Her plugin her oturumda bağlama yük ekler. Backend projelerinde arayüz tasarım plugin'leri, her tipte Remotion kapalı gelir. Yeni plugin eklemek teknik bir karardır; üçüncü taraf skill'ler kurulmadan önce okunur.</p>
+  <p class="note">Bağlam paketleri: Skill listesi bağlamın %1'iyle sınırlı, taşınca skill'ler kaçırılır. Çekirdek eklentiler hep açık; tasarım, güvenlik, yayın ve video paketleri kapalı gelir ve ilgili komut gerektiğinde açmayı sorar (<code>/tools</code>). Backend projelerinde arayüz tasarım plugin'leri de kapalıdır. Yeni plugin eklemek teknik bir karardır; üçüncü taraf skill'ler kurulmadan önce okunur.</p>
 </section>
 
 <section id="yetenekler">
@@ -638,6 +638,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
         <tr><td class="f">/user-feedback</td><td>Kullanıcı geri bildirimini temalara ayırır, yol haritasına aldırır</td></tr>
         <tr><td class="f">/research [konu]</td><td>Makaleler, GitHub'daki benzer projeler ve rakip ürünler; benzer/farklı yön tablosu; seçilen özellikler PRD'ye ve yol haritasına</td></tr>
         <tr><td class="f">/handoff [devral]</td><td>Projeyi başka kişiye veya hesaba devreder (devir notu) ya da devralır (ortamı kurar, sıradaki görevi söyler)</td></tr>
+        <tr><td class="f">/tools [ac|kapat|olc]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer</td></tr>
         <tr><td class="f">/kit-update</td><td>Projeyi kitin son sürümüne çeker; çakışmaları sorar; <code>--tool</code> ile araç ekler</td></tr>
       </tbody>
     </table>
@@ -718,7 +719,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.9.3 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.10.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

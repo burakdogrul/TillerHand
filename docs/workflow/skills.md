@@ -1,7 +1,7 @@
 # Skill Yönlendirme
 
 > Hangi işte hangi skill kullanılır? Skill'i Skill aracıyla yükle, talimatlarını uygula.
-> Bu proje `.claude/settings.json` içinde aşağıdaki plugin'leri tanımlar; Claude Code projeyi açınca kurmayı önerir.
+> Bu proje `.claude/settings.json` içinde aşağıdaki plugin'leri tanımlar; Claude Code projeyi açınca kurmayı önerir. Çekirdek dışındakiler paket olarak kapalı gelir (aşağıda "Bağlam paketleri").
 > Bir skill yüklü değilse işi skill'siz yap, durum bloğunda "skill eksik: X" yaz ve kullanıcıya kurulum komutunu ver:
 > `/plugin install <plugin>@<marketplace>` (örn. `/plugin install impeccable@impeccable`).
 
@@ -14,6 +14,8 @@
 | humanizer | humanizer | `humanizer:` |
 | ponytail | ponytail | `ponytail:` |
 | mattpocock-skills | mattpocock | `mattpocock-skills:` |
+| gsap-skills (GreenSock, resmi) | gsap-skills | `gsap-skills:` (`tasarim` paketi) |
+| understand-anything | understand-anything | `/understand`, `/understand-dashboard` (`yayin` paketi; `--auto-update` kullanılmaz) |
 | security-guidance, claude-security, hookify, claude-md-management, session-report | claude-plugins-official (Anthropic) | otomatik hook / `/claude-security`, `/hookify`, `/revise-claude-md`, `/session-report` |
 | typescript-lsp (web, mobil) · pyright-lsp (backend) | claude-plugins-official | Dil sunucusu: tip hatası ve tanıma gitme. `npm i -g typescript-language-server typescript` veya `npm i -g pyright` gerekir |
 | supabase, postgres-best-practices | supabase-agent-skills | `supabase:`, `postgres-best-practices:` (web, mobil; backend'de sadece postgres) |
@@ -44,11 +46,25 @@
 | **Maestro**, **Expo** | Mobil E2E testi, EAS build, çökme kayıtları | Mobilde |
 | GitHub, Stripe, Vercel, PostHog, Figma… | Servis seçilince | Katalog: `docs/workflow/mcp-catalog.md` |
 
+## Bağlam paketleri
+
+Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skill listesi bağlamın %1'iyle sınırlıdır; taşınca az kullanılan skill'lerin açıklaması düşer ve Claude onları tanımaz. Plugin içindeki skill'ler tek tek kapatılamaz. Bu yüzden eklentiler **çekirdek** ve **paket** olarak ayrılır. Paketler `.claude/settings.json`'da kapalı gelir; ilgili komut ilk adımda `node .claude/hooks/tools.mjs --gerekli <paket>` ile bakar, kapalıysa maliyetiyle birlikte açmayı sorar. Açma sadece bu makineyi etkiler (`.claude/settings.local.json`). Yönetim: `/tools`. Tanımlar: `.claude/hooks/tools.mjs` → `PAKETLER`.
+
+| Paket | Eklentiler | Açan komut |
+|---|---|---|
+| Çekirdek (hep açık) | caveman, ponytail, mattpocock-skills, impeccable, humanizer, security-guidance, hookify, claude-md-management + stack eklentileri | - |
+| `tasarim` | taste-skill, ui-ux-pro-max, gsap-skills | `/design` |
+| `guvenlik` | Trail of Bits (7), claude-security | `/findings-security`, `/findings-all`, `/release first` |
+| `yayin` | understand-anything, session-report | `/release`, `/handoff`, `/adopt` |
+| `video` | remotion | `motion-video` |
+
+- Paketi oturum ortasında açmak prompt önbelleğini bozar ve bütün bağlam yeniden okunur. En ucuzu faz sınırında, `/clear` ile birlikte açmaktır.
+- Kesin ölçüm: `/context` (Skills satırı), `/doctor`; kullanılmayan skill'ler: `/skill-doctor`. Kaba ölçüm: `/tools olc`. `/maintain monthly` bunu kontrol eder.
+- Bir eklentiyi çekirdeğe almak veya paketten çıkarmak `teknik` karardır.
+
 ## Skill bütçesi
 
-Kurulu her plugin'in skill açıklamaları her oturumda bağlama yüklenir ve token harcar. Gereksiz plugin yanlış skill seçimine de yol açar. Bu yüzden:
-- Backend projelerinde arayüz tasarım plugin'leri kapalı gelir (`.claude/settings.json` → `enabledPlugins`).
-- Remotion kapalı gelir; `motion-video` gerektiğinde açmayı sorar.
+- Backend projelerinde arayüz tasarım plugin'leri (impeccable dahil) kapalı gelir (`kit/templates/backend/.claude/settings.merge.json`).
 - Stack'e özel skill'ler (Supabase, Expo, web kalitesi, LSP) sadece ilgili proje tipinde açılır.
 - security-guidance'ın tur sonu incelemesi kapalı gelir (`ENABLE_STOP_REVIEW=0`, kota). Düzenleme anındaki kalıp taraması (ücretsiz) ve commit incelemesi açıktır. Kota rahatsa `.claude/settings.json` → `env`'den açılabilir.
 - Yeni bir plugin eklemek `teknik` karardır: aynı işi yapan bir skill zaten var mı, kaynak güvenilir mi, bağlam maliyeti nedir? Üçüncü taraf skill'ler bir saldırı yüzeyidir: kurmadan önce SKILL.md içeriğini oku.

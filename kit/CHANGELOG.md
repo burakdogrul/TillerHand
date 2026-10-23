@@ -5,6 +5,22 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.10.0] - 2026-10-23
+
+### Eklendi
+- **Bağlam paketleri ve `/tools`.** Eklentiler çekirdek (hep açık) ve paket olarak ayrıldı. `tasarim` (taste-skill, ui-ux-pro-max, gsap-skills), `guvenlik` (Trail of Bits 7'li, claude-security), `yayin` (understand-anything, session-report) ve `video` (remotion) kapalı gelir. `/design`, `/findings-security`, `/findings-all`, `/release first` ilk adımda `tools.mjs --gerekli <paket>` ile bakar, kapalıysa maliyetiyle açmayı sorar. Açma sadece bu makineyi etkiler (`.claude/settings.local.json`). Neden: skill listesi bağlamın %1'iyle sınırlı; taşınca açıklamalar düşer ve skill kaçırılır.
+- `node .claude/hooks/tools.mjs --olc`: kurulu eklentilerin skill ve ajan açıklama yükünü ölçer. `/maintain monthly` bağlam bütçesini kontrol eder.
+- Yeni pazarlar: `gsap-skills` (GreenSock, resmi) ve `understand-anything` (kapalı; kullanımı sonraki sürümde komutlara bağlanacak).
+
+### Değişti
+- `motion-video` Remotion'ı `tools.mjs --ac video` ile açar.
+- `/start` Hafif profil artık sadece hookify ve claude-md-management'ı kapatır; paket eklentileri her profilde zaten kapalı.
+- Pano, açık kalan paketleri "Dikkat" listesinde gösterir.
+
+### Elle uyarla
+- `.claude/settings.json` projeye aittir ve güncellemede değişmez. Paketleri kullanmak için `enabledPlugins` içinde şunları `false` yap: `taste-skill@taste-skill`, `ui-ux-pro-max@ui-ux-pro-max-skill`, Trail of Bits'in 7 eklentisi, `claude-security@claude-plugins-official`, `session-report@claude-plugins-official`. `extraKnownMarketplaces`'e `gsap-skills` ve `understand-anything` pazarlarını, `permissions.allow`'a `Bash(node .claude/hooks/tools.mjs:*)` ekle. Örnek: kitin `.claude/settings.json` dosyası.
+- `CLAUDE.md`: "Doğru skill'i kullan" maddesinin sonuna paket cümlesi (kitin `CLAUDE.md`'si).
+
 ## [3.9.3] - 2026-10-23
 
 ### Düzeltildi

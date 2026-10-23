@@ -43,7 +43,7 @@ Projenin durumu sohbette değil dosyalarda ve git'te yaşar. Devir, bu dosyalar�
 1. `docs/workflow/handoff.md`'yi oku ve özetle: nerede kalındı, bekleyen kararlar, dikkat edilecekler.
 2. Ortamı kur, her adımı tek satırla raporla:
    - `node --version`, `git --version`; README'deki çalışma ortamı sürümüyle (`.nvmrc` / `.python-version`) uyuşuyor mu?
-   - Eklentiler: `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele, onayla `--kur`, sonra `/reload-plugins`.
+   - Eklentiler: `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele, onayla `--kur`, sonra `/reload-plugins`. Paket tercihleri kişiseldir ve devirle gelmez: gerekenleri `/tools` ile göster.
    - Bağımlılıklar: README → Kurulum'daki kurulum komutu (kilit dosyasından).
    - Ortam değişkenleri: `.env.example`'daki adları listele. `.env` dosyasını sen oluşturma ve okuma; kullanıcı değerleri kendi girer (nereden alınacağı devir notunda).
    - Hesaplar: devir notundaki erişimleri liste halinde göster; davet bekleyenleri işaretle.

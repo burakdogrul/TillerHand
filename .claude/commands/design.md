@@ -9,6 +9,7 @@ Her tasarım kararı **görsel önizlemeyle** sorulur (`docs/workflow/decision-p
 
 ## Hazırlık
 
+0. **Paket:** `node .claude/hooks/tools.mjs --gerekli tasarim`. Kapalıysa (çıkış 2) betiğin yazdığı maliyetle kullanıcıya açmayı sor; reddederse stil yönü skill'leri olmadan, `impeccable:impeccable` ile devam et.
 1. Oku: `docs/product/prd.md`, `docs/design/design-guide.md` (karar günlüğü), varsa `PRODUCT.md` ve `DESIGN.md`, `docs/product/glossary.md` (hitap, terimler).
 2. `PRODUCT.md` yoksa `impeccable:impeccable` → `init` çalıştır. PRD'deki bilgiyi kullan, sadece eksikleri sor.
 

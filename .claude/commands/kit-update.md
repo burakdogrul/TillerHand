@@ -18,5 +18,5 @@ node "<geçici klasör>/vibe-kit/kit/kit.mjs" update --project . $ARGUMENTS
    - **Güncellenen / eklenen** dosyalar.
    - **Çakışmalar (`.kit-new`):** Her biri için senin değişikliğinle kitin yeni hali arasındaki farkı özetle. Nasıl birleştirileceğini **karar olarak sor**: kitinkini al / benimkini koru / birleştir. Sonra `.kit-new` dosyasını sil.
    - Klondaki `kit/CHANGELOG.md`'den mevcut sürümden yeni sürüme kadar olan notları özetle. **"Elle uyarla"** maddelerini (AGENTS.md, CLAUDE.md, docs/architecture/stack.md, settings.json gibi projeye ait dosyalar) tek tek göster ve her biri için uygulanıp uygulanmayacağını sor.
-4b. Yeni sürüm yeni eklenti açtıysa `node .claude/hooks/plugins-sync.mjs` ile listele, kullanıcı onaylarsa `--kur` ile kur, sonra `/reload-plugins` öner.
+4b. Yeni sürüm yeni eklenti açtıysa `node .claude/hooks/plugins-sync.mjs` ile listele, kullanıcı onaylarsa `--kur` ile kur, sonra `/reload-plugins` öner. Paket tanımı değiştiyse (`.claude/hooks/tools.mjs` → `PAKETLER`) `node .claude/hooks/tools.mjs` ile durumu göster.
 5. Geçici klasörü sil. Commit öner: `chore: kit <eski> → <yeni>`.

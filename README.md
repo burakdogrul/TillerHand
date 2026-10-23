@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.9.3-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.10.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -393,6 +393,7 @@ flowchart TB
 | `/retro` | Dersleri projeye ve kite geri yazar |
 | `/research [konu]` | Makaleler, GitHub'daki benzer projeler, rakip ürünler; fark tablosu; seçilen özellikler PRD'ye |
 | `/handoff [devral]` | Projeyi başka kişiye/hesaba devreder veya devralır; aynı yerden devam |
+| `/tools [ac\|kapat <paket>\|olc]` | Bağlam paketlerini gösterir, açar/kapatır, skill yükünü ölçer |
 | `/kit-update` | Projeyi kitin son sürümüne çeker (`--tool codex` ile araç eklenir) |
 
 ## 🔀 Codex ve Antigravity
@@ -440,7 +441,7 @@ Kit Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve
 | **Anlatıcı mod** | `.claude/output-styles/anlatici.md`: Her adımdan sonra "Ne yaptım / Neden / Sen nasıl görürsün / Yeni kavram" bloğu, hatalar sade dille | `/start` sorar; `.claude/settings.local.json` → `outputStyle` |
 | **Geri alma** | `checkpoint.mjs`: `/build` ve `/wrap-up` testler yeşilken çalışan nokta kaydeder; `/rollback` geçmişi silmeden döner | `reset --hard` kullanılmaz |
 | **Harcama alarmı** | `docs/operations/spend-alarms.md`: sağlayıcı tavanları (Anthropic, OpenAI, Vercel, Supabase, Google Cloud), uygulama içi kota ve bütçe, panoda kart | `/release` ve `/maintain` kontrol eder |
-| **Skill bütçesi** | Proje tipine göre gereksiz plugin'ler kapalı (örn. backend'de tasarım skill'leri) | Daha az token, daha doğru skill seçimi |
+| **Bağlam paketleri** | Çekirdek eklentiler hep açık; tasarım, güvenlik, yayın ve video paketleri kapalı gelir. `/design`, `/findings-security`, `/release` gerektiğinde açmayı sorar; `/tools` durumu gösterir ve ölçer | Skill listesi bağlamın %1'iyle sınırlı: taşınca skill'ler kaçırılır. Açma sadece senin makineni etkiler |
 
 **Bilerek eklenmeyenler:**
 - superpowers, gstack, spec-kit, BMAD, GSD, OpenSpec: Kitin soru, plan ve kurul akışının yerine geçerler. Karpathy ilkeleri, "bitti demeden doğrula" ve CEO bakışı gibi fikirler kitin kendi kurallarına işlendi.
