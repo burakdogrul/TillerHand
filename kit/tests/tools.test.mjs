@@ -108,5 +108,8 @@ test('ayarlar: paket eklentileri varsayılan kapalı, çekirdek açık, pazarlar
     assert.equal(s.enabledPlugins[id], true, `${id} çekirdekte`);
     assert.ok(!paketli.has(id), `${id} pakette değil`);
   }
-  assert.ok(s.permissions.allow.includes('Bash(node .claude/hooks/tools.mjs:*)'));
+  assert.ok(s.permissions.allow.includes('Bash(node .claude/hooks/tools.mjs --gerekli:*)'));
+  // Paket açmak eklenti hook'larını kullanıcının yetkisiyle çalıştırır: her zaman sorulur
+  assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --ac:*)'));
+  assert.ok(!s.permissions.allow.some((r) => r.startsWith('Bash(node .claude/hooks/tools.mjs') && (r.includes(':*)') && !/--(gerekli|kapat):\*\)$/.test(r))), 'geniş izin yok');
 });

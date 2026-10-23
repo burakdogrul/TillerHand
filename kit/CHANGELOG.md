@@ -5,6 +5,14 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.10.1] - 2026-10-23
+
+### Güvenlik
+- `tools.mjs` izni daraltıldı (commit sonrası güvenlik incelemesi): durum, `--gerekli`, `--olc` ve `--kapat` izinli; `--ac` her zaman sorulur. Paket açmak eklenti hook'larını kullanıcının yetkisiyle çalıştırır.
+
+### Elle uyarla
+- 3.10.0'ı uyguladıysan `.claude/settings.json` → `permissions.allow`'daki `Bash(node .claude/hooks/tools.mjs:*)` satırını kitin dört dar satırıyla değiştir, `permissions.ask`'e `Bash(node .claude/hooks/tools.mjs --ac:*)` ekle.
+
 ## [3.10.0] - 2026-10-23
 
 ### Eklendi
@@ -18,7 +26,7 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 - Pano, açık kalan paketleri "Dikkat" listesinde gösterir.
 
 ### Elle uyarla
-- `.claude/settings.json` projeye aittir ve güncellemede değişmez. Paketleri kullanmak için `enabledPlugins` içinde şunları `false` yap: `taste-skill@taste-skill`, `ui-ux-pro-max@ui-ux-pro-max-skill`, Trail of Bits'in 7 eklentisi, `claude-security@claude-plugins-official`, `session-report@claude-plugins-official`. `extraKnownMarketplaces`'e `gsap-skills` ve `understand-anything` pazarlarını, `permissions.allow`'a `Bash(node .claude/hooks/tools.mjs:*)` ekle. Örnek: kitin `.claude/settings.json` dosyası.
+- `.claude/settings.json` projeye aittir ve güncellemede değişmez. Paketleri kullanmak için `enabledPlugins` içinde şunları `false` yap: `taste-skill@taste-skill`, `ui-ux-pro-max@ui-ux-pro-max-skill`, Trail of Bits'in 7 eklentisi, `claude-security@claude-plugins-official`, `session-report@claude-plugins-official`. `extraKnownMarketplaces`'e `gsap-skills` ve `understand-anything` pazarlarını ekle; izinler için yukarıdaki güvenlik maddesine bak. Örnek: kitin `.claude/settings.json` dosyası.
 - `CLAUDE.md`: "Doğru skill'i kullan" maddesinin sonuna paket cümlesi (kitin `CLAUDE.md`'si).
 
 ## [3.9.3] - 2026-10-23
