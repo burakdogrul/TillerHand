@@ -1,14 +1,5 @@
 {
   "mcpServers": {
-    "playwright": {
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@playwright/mcp@0.0.83"
-      ]
-    },
     "supabase": {
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=PROJE_REF&read_only=true"
@@ -20,15 +11,6 @@
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp"
-    },
-    "chrome-devtools": {
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "chrome-devtools-mcp@1.10.1"
-      ]
     }
   }
 }

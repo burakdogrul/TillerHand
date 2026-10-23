@@ -77,6 +77,21 @@ test('ayarlar 3.2: resmi eklentiler, kota ayarı, kilit hook\'u, tipe özel ekle
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(KOK, 'kit/templates/mobile/.mcp.json'), 'utf8')).mcpServers.maestro, { command: 'maestro', args: ['mcp'] });
 });
 
+test('ayarlar 3.11: tarayıcı MCP\'leri katalogda, ajan Playwright CLI kullanır, sürümler sabit', () => {
+  const web = JSON.parse(fs.readFileSync(path.join(KOK, 'kit/templates/web-saas/.mcp.json'), 'utf8')).mcpServers;
+  assert.ok(!web.playwright && !web['chrome-devtools'], 'web .mcp.json\'da varsayılan tarayıcı MCP\'si yok');
+  const katalog = fs.readFileSync(path.join(KOK, 'docs/workflow/mcp-catalog.md'), 'utf8');
+  for (const s of ['@playwright/mcp@0.0.83', 'chrome-devtools-mcp@1.10.1', '--scope local', 'figma-remote-mcp', 'supabase-dev']) assert.ok(katalog.includes(s), `katalog: ${s}`);
+  assert.ok(!/@latest\b/.test(katalog), 'katalogda @latest yok');
+  const izin = JSON.parse(fs.readFileSync(path.join(KOK, 'kit/templates/web-saas/.claude/settings.merge.json'), 'utf8')).permissions.allow;
+  assert.ok(izin.includes('Bash(npx -y @playwright/cli@0.1.22:*)'), 'Playwright CLI sabit sürümle izinli');
+  for (const t of ['web-saas', 'mobile']) {
+    const stack = fs.readFileSync(path.join(KOK, `kit/templates/${t}/docs/architecture/stack.md`), 'utf8');
+    assert.match(stack, /supabase(@[\d.]+)? migration new/, `${t}: şema değişikliği migration ile`);
+  }
+  assert.match(fs.readFileSync(path.join(KOK, '.claude/commands/release.md'), 'utf8'), /vercel@63\.1\.1 deploy/, '/release önizleme deploy\'u');
+});
+
 test('eklenti eşitleme: kurulu olmayanı ve kapalıyı bulur, başka projedeki kurulumu saymaz', async () => {
   const { eksikler } = await import('../../.claude/hooks/plugins-sync.mjs');
   const kok = path.resolve(os.tmpdir(), 'proje-a');

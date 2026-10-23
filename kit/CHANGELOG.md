@@ -5,6 +5,24 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.11.0] - 2026-10-23
+
+### Eklendi
+- **Playwright CLI** (`npx -y @playwright/cli@0.1.22`): ajanın sayfaya bakması, konsol, ağ ve ekran görüntüsü. Sayfa verisini bağlama zorlamadığı için MCP'den az token harcar. Kabul testleri yine `npx playwright test`.
+- **Vercel CLI akışı** (`/release`): önizleme deploy'u → önizleme URL'sinde kanıt → onayla `promote` veya `deploy --prod`. Git entegrasyonu açıksa CLI ile ayrıca deploy edilmez.
+- **Supabase dev MCP** (katalog, `supabase-dev`): yazma yetkili, sadece geliştirme projesi veya branch'i. Prod MCP salt-okunur kalır; şema değişikliği her zaman migration dosyasıyla (mobil şablona da eklendi).
+- `/design`: tasarım Figma'daysa Figma MCP'yi bu makineye eklemeyi önerir.
+- Katalogda "Gerektiğinde eklenenler" bölümü: Playwright MCP, Chrome DevTools MCP, Figma, Supabase dev; `--scope local`, sürüm sabit.
+
+### Değişti
+- Web şablonunun `.mcp.json`'ından Playwright ve Chrome DevTools MCP çıkarıldı; `/findings-perf` ve `/findings-ux` gerekirse sorup ekler.
+- Kalkan: `vercel promote` ve `vercel rollback` de sorulur (prod ortamını değiştirir).
+
+### Elle uyarla
+- Web projesinde `.mcp.json`: `playwright` ve `chrome-devtools` girdilerini kaldırmak isteğe bağlı (bağlam tasarrufu; gerekince katalogdan eklenir).
+- Web projesinde `.claude/settings.json` → `permissions.allow`'a `Bash(npx -y @playwright/cli@0.1.22:*)` ekle.
+- `docs/architecture/stack.md`: "Doğrulama" bölümünde Playwright MCP yerine Playwright CLI; "MCP" satırı ve şema kuralı kitin şablonundaki gibi (web ve mobil).
+
 ## [3.10.1] - 2026-10-23
 
 ### Güvenlik

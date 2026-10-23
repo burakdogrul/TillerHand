@@ -34,4 +34,8 @@ Kaynak listeler: `docs/operations/release-checklist.md`, `docs/architecture/stac
 
 4. Son satır: **Yayına hazır** veya **Engelleyenler: [❌ maddeleri]**.
 
-Deploy'u kendin başlatma. ❌ maddelerinden hangilerini şimdi düzelteceğimizi **çoklu seçimle** sor. `docs/workflow/progress.md`'yi güncelle ve durum bloğunu yaz.
+**Vercel'e deploy (web, ❌ yoksa):** Vercel'in git entegrasyonu açıksa main'e birleştirme zaten deploy eder; CLI ile ayrıca deploy etme. Değilse:
+1. Önizleme: `npx -y vercel@63.1.1 deploy` (sürüm sabit; `docs/workflow/mcp-catalog.md`). Çıkan önizleme URL'sinde kanıt üret: Playwright CLI ile ana akış, `console` (hata yok), masaüstü ve mobil ekran görüntüsü.
+2. Kullanıcıya sor: "Önizleme hazır, prod'a alınsın mı?" Onay gelirse `npx -y vercel@63.1.1 promote <önizleme-url>` veya `deploy --prod` (kalkan ayrıca sorar). Geri alma yolu: `vercel rollback`.
+
+Prod deploy'u onaysız başlatma. ❌ maddelerinden hangilerini şimdi düzelteceğimizi **çoklu seçimle** sor. `docs/workflow/progress.md`'yi güncelle ve durum bloğunu yaz.

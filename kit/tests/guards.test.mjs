@@ -53,6 +53,10 @@ test('kalkan: yıkıcı komutlar engellenir, normal komutlar geçer', () => {
   assert.equal(k('docker compose down -v'), 'deny');
   assert.equal(k('git clean -fdx'), 'deny');
   assert.equal(k('vercel --prod'), 'ask');
+  assert.equal(k('npx -y vercel@63.1.1 deploy --prod'), 'ask', 'sabit sürümlü npx ile prod deploy');
+  assert.equal(k('npx vercel@63.1.1 promote https://app-abc.vercel.app'), 'ask', 'önizlemeyi prod\'a almak');
+  assert.equal(k('vercel rollback'), 'ask', 'prod geri alma');
+  assert.equal(k('npx -y vercel@63.1.1 deploy'), 'serbest', 'önizleme deploy\'u');
   assert.equal(k('git push origin main'), 'ask');
   assert.equal(k('psql postgres://u:p@db.ornek-prod.com:5432/app -c "select 1"'), 'ask', 'uzak veritabanı');
   assert.equal(k('psql postgres://u:p@localhost:5432/app -c "select 1"'), 'serbest');

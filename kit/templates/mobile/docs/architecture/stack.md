@@ -88,6 +88,7 @@ app.config.ts  eas.json
 - **Uygulama paketindeki her şey herkese açıktır.** Sır, servis anahtarı, admin anahtarı uygulamaya konmaz; gizli işlemler sunucuda.
 - `EXPO_PUBLIC_` ön ekli değişkenler pakete gömülür; sadece herkese açık değerler.
 - Paket eklerken `npx expo install` kullan.
+- Supabase seçildiyse DB şema değişikliği sadece migration dosyasıyla: `npx -y supabase@2.120.0 migration new [ad]` (`supabase/migrations/`). Panelden veya MCP'den elle DDL yok.
 - Her ekranda: yükleniyor, boş, hata, **çevrimdışı** durumu.
 - İzin istemeden önce neden gerektiğini kullanıcıya göster; izin metinleri (`infoPlist`) Türkçe ve açıklayıcı.
 - Klavye ekranı kapatmasın (`KeyboardAvoidingView`), güvenli alan (`SafeAreaView`) kullan.
@@ -109,7 +110,7 @@ app.config.ts  eas.json
 | Pre-commit | lint-staged (ESLint + Prettier) + sır taraması | `npm i -D husky lint-staged prettier` → `npm pkg set scripts.prepare="husky"` → `npx husky` |
 | CI (+ Semgrep, kopya kod) | Lint, tip, test, expo-doctor, açık taraması, gitleaks | `.github/workflows/ci.yml` hazır |
 | Dependabot | Haftalık küçük güncellemeler (Expo SDK paketleri hariç) | `.github/dependabot.yml` hazır |
-| MCP | Supabase (salt-okunur), Sentry | `.mcp.json`: `PROJE_REF`'i doldur. Supabase MCP'yi sadece **geliştirme** projesine bağla |
+| MCP | Supabase (salt-okunur), Sentry · gerektiğinde: Supabase dev (`docs/workflow/mcp-catalog.md`) | `.mcp.json`: `PROJE_REF`'i doldur (salt-okunur, prod olabilir). Yazma yetkili Supabase MCP sadece **geliştirme** projesine (`supabase-dev`) |
 
 ## Kabul testleri ve özellik bayrakları
 

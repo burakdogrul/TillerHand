@@ -94,7 +94,7 @@ supabase/migrations/            # veritabanı değişiklikleri SADECE burada
 - Veri yazma: Server Action veya route handler. Her birinde: Zod doğrulama → oturum kontrolü → yetki kontrolü → işlem.
 - `NEXT_PUBLIC_` ön ekli değişkenler tarayıcıya gider. Sır asla `NEXT_PUBLIC_` olmaz.
 - Supabase `service_role` anahtarı sadece sunucuda ve sadece gerçekten gerekiyorsa (RLS'i atlar).
-- DB şema değişikliği sadece migration dosyasıyla. Panelden elle değişiklik yok.
+- DB şema değişikliği sadece migration dosyasıyla (`npx supabase migration new [ad]`). Panelden veya MCP'den elle DDL yok; `supabase-dev` MCP'si dev'de veri denemek içindir.
 - Her yeni tabloda RLS açık ve politikası yazılı.
 - Her sayfada `loading.tsx` / boş durum / `error.tsx` düşün.
 - Görseller `next/image`, linkler `next/link`.
@@ -103,7 +103,7 @@ supabase/migrations/            # veritabanı değişiklikleri SADECE burada
 
 ## Doğrulama (görev bitmeden kanıt)
 
-- Arayüz: `npm run dev` açıkken Playwright MCP (veya Claude'un tarayıcısı) ile sayfayı aç, ana senaryoyu ve bir hata senaryosunu dene, masaüstü + mobil genişlikte ekran görüntüsü al.
+- Arayüz: `npm run dev` açıkken Playwright CLI (`npx -y @playwright/cli@0.1.22 open http://localhost:3000`, sonra `snapshot`, `console`, `screenshot`) veya Claude'un tarayıcısı ile sayfayı aç, ana senaryoyu ve bir hata senaryosunu dene, masaüstü + mobil genişlikte ekran görüntüsü al.
 - Yetki: ikinci bir test kullanıcısıyla birinci kullanıcının kaydına erişmeyi dene; erişememeli.
 - Konsolda hata/uyarı yok.
 
@@ -115,7 +115,7 @@ supabase/migrations/            # veritabanı değişiklikleri SADECE burada
 | Pre-commit | lint-staged (ESLint + Prettier) + sır taraması | `npm i -D husky lint-staged prettier` → `npm pkg set scripts.prepare="husky"` → `npx husky` |
 | CI (+ Semgrep, kopya kod) | Lint, tip, test, build, açık taraması, gitleaks | `.github/workflows/ci.yml` hazır. GitHub > Settings > Variables'a `NEXT_PUBLIC_*` değerlerini ekle |
 | Dependabot | Haftalık küçük güncellemeler tek PR'da | `.github/dependabot.yml` hazır |
-| MCP | Playwright (tarayıcı), Supabase (salt-okunur), Sentry | `.mcp.json`: `PROJE_REF`'i doldur. Supabase MCP'yi sadece **geliştirme** projesine bağla |
+| MCP | Supabase (salt-okunur), Sentry, Context7 · gerektiğinde: Playwright, Chrome DevTools, Supabase dev (`docs/workflow/mcp-catalog.md`) | `.mcp.json`: `PROJE_REF`'i doldur (salt-okunur, prod olabilir). Yazma yetkili Supabase MCP sadece **geliştirme** projesine (`supabase-dev`) |
 
 ## Kabul testleri ve özellik bayrakları
 

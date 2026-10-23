@@ -39,8 +39,9 @@
 | Araç | Ne için | Not |
 |---|---|---|
 | **Context7** | Kütüphanelerin güncel ve sürüme özel dokümanı | Her tipte açık, ücretsiz |
-| **Chrome DevTools** | Gerçek tarayıcıda performans izi, ağ, konsol | Web'de; `/findings-perf`, `/findings-ux` |
-| **Playwright** | Arayüz kanıtı, ekran görüntüsü | Web'de |
+| **Playwright CLI** | Arayüz kanıtı, konsol, ağ, ekran görüntüsü (`npx -y @playwright/cli@0.1.22`) | Web'de; MCP'den az token. Kabul testleri yine `npx playwright test` |
+| **Chrome DevTools**, **Playwright** MCP | Performans izi; keşif amaçlı uzun tarayıcı akışı | Varsayılan kapalı; komut sorup ekler (katalog) |
+| **Vercel CLI** | Önizleme ve prod deploy (`npx -y vercel@63.1.1`) | `/release`; `--prod`, `promote`, `rollback` sorulur |
 | **Sentry**, **Supabase** | Hata kayıtları, veritabanı uyarıları (salt-okunur) | `/maintain` |
 | **Firecrawl** | Site tarama | İsteğe bağlı, API anahtarı gerekir; `source-research` §5 |
 | **Maestro**, **Expo** | Mobil E2E testi, EAS build, çökme kayıtları | Mobilde |

@@ -59,7 +59,7 @@ Sıra A → B → C+D; her biri ayrı commit ve sürüm (3.10.0, 3.11.0, 3.12.0)
 5. `maintain.md` (aylık: `/context`, `/doctor`, `/skill-doctor`, `tools.mjs --olc`), `skills.md` paket bölümü, `CLAUDE.md` tek satır `/tools`, `start.md` / `kit-update.md` / `handoff.md` paket notu.
 6. Testler yeşil, `--olc` ile K1 kanıtı (çekirdek açıklama yükü bugünden ≥%40 düşük).
 
-**B — Mevcut araçlar (3.11.0):** Playwright CLI (sürüm sabit) + web `.mcp.json`'dan Playwright/DevTools çıkar → katalog; DevTools `/findings-perf`/`ux`, Figma `/design`; Supabase migration kuralı (stack.md, build.md) + dev MCP tanımı (katalog); Vercel CLI akışı `/release` + destructive-guard `vercel … --prod` sor (test).
+**B — Mevcut araçlar (3.11.0, yayında):** `tarayici` paketi yerine katalogdaki "Gerektiğinde eklenenler" bölümü kullanıldı: MCP'ler `--scope local` ile eklenir, çünkü `disabledMcpjsonServers` yerel ayarla geri açılamaz. Sürümler (14 günden eski en yeni): @playwright/cli 0.1.22, vercel 63.1.1, supabase 2.120.0. Planın ilk hali: Playwright CLI (sürüm sabit) + web `.mcp.json`'dan Playwright/DevTools çıkar → katalog; DevTools `/findings-perf`/`ux`, Figma `/design`; Supabase migration kuralı (stack.md, build.md) + dev MCP tanımı (katalog); Vercel CLI akışı `/release` + destructive-guard `vercel … --prod` sor (test).
 
 **C — Yeni araçlar ve dokümanlar (3.12.0):** rea (`/research`, `/adopt`, hukuki uyarı, sabit sürüm npx); Understand-Anything (`/release`, `/handoff`, `/adopt`; `--auto-update` yok, token uyarısı); awesome-design-md (`/design`, tek dosya sabit commit, Impeccable ile damıt, marka taklidi yok); README, `kit/guide.html` (+artifact), `dashboard.html`, CHANGELOG, VERSION.
 

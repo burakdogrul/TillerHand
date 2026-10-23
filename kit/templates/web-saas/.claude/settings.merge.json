@@ -7,6 +7,7 @@
       "Bash(npm run test:*)",
       "Bash(npx tsc --noEmit)",
       "Bash(npx playwright test:*)",
+      "Bash(npx -y @playwright/cli@0.1.22:*)",
       "Bash(npm outdated)",
       "Bash(npm audit)"
     ]

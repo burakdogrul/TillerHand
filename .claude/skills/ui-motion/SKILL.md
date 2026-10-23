@@ -41,4 +41,4 @@ Yeni bir animasyon kütüphanesi eklemek `teknik` karardır; sor.
 Değişiklikten sonra `impeccable:impeccable` → `animate` ve `audit` ile değerlendir. Kanıt olarak:
 - Hareketin başı, ortası ve sonundan birer ekran görüntüsü
 - Hareket azaltma açıkken davranış
-- Gerekirse performans izi (Chrome DevTools MCP)
+- Gerekirse performans izi (Chrome DevTools MCP; `docs/workflow/mcp-catalog.md`)
