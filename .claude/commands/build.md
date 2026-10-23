@@ -22,6 +22,7 @@ Boşsa `docs/workflow/progress.md` → "Sıradaki adım" veya `docs/product/road
    - Hata, boş ve yükleniyor durumlarını unutma.
    - Kritik akışa dokunuyorsan (`docs/quality/test-plan.md`) test ekle.
    - Yeni ortam değişkeni → `.env.example`.
+   - Yeni paket → kilit dosyası commit'e girer. Yeni sistem bağımlılığı (veritabanı, ffmpeg vb.) veya kurulum adımı → `README.md` → Gereksinimler / Kurulum.
 4. Doğrula: lint, tip kontrolü, ilgili testler. Kırmızı varsa düzelt. Aynı hatada 2 denemede çözemezsen dur ve bana durumu anlat.
 5. **Kanıt üret.** "Çalışıyor olmalı" yetmez; çalıştığını göster. Yöntem `docs/architecture/stack.md` → "Doğrulama" bölümünde:
    - Arayüz değişikliği → uygulamayı çalıştır, ilgili ekranı aç, ana senaryoyu ve bir hata senaryosunu dene, ekran görüntüsü al.

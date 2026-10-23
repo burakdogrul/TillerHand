@@ -112,6 +112,24 @@ test('guncelle: sonradan AI eki', () => {
   assert.deepEqual(kayit(p).addons, ['ai']);
 });
 
+test('oturum başı: sıradaki komut kullanıcıya gösterilir (/clear sonrası)', () => {
+  const oturum = (p) => JSON.parse(spawnSync(process.execPath, [path.join(p, '.claude/hooks/session-start.mjs')], {
+    encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p },
+  }).stdout);
+  const p = klonla('oturum');
+  assert.match(oturum(p).systemMessage, /\/start/);
+  assert.equal(kur(p, '--type', 'backend').status, 0);
+  const ilerleme = path.join(p, 'docs/workflow/progress.md');
+  yaz(ilerleme, oku(ilerleme).replace(/^\*\*Başlangıç adımı:\*\* .*$/m, '**Başlangıç adımı:** 4/9'));
+  assert.match(oturum(p).systemMessage, /Devam: \/start \(adım 4\/9\)/);
+  yaz(ilerleme, oku(ilerleme).replace(/^\*\*Aktif faz:\*\* .*$/m, '**Aktif faz:** Faz 0'));
+  const yol = path.join(p, 'docs/product/roadmap.md');
+  yaz(yol, oku(yol).replace('- [ ] G-001', '- [x] G-001'));
+  const o = oturum(p);
+  assert.match(o.systemMessage, /Sıradaki: \/build G-002 · Proje iskeleti kuruldu/);
+  assert.match(o.hookSpecificOutput.additionalContext, /\/build G-002/);
+});
+
 test('durum çubuğu ve pano: kurulum öncesi ve sonrası', () => {
   const durumCubugu = (p) => spawnSync(process.execPath, [path.join(p, '.claude/hooks/statusline.mjs')], {
     input: JSON.stringify({ workspace: { project_dir: p } }), encoding: 'utf8',

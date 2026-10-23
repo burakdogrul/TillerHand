@@ -5,6 +5,23 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.6.0] - 2026-10-23
+
+Dondurma bitti. Bu sürüm, kitin ilk gerçek projede (3.5.1) denenmesinden gelen geri bildirimlerden çıktı.
+
+### Eklendi
+- **Planlama derinliği** (`/start` Adım 0a): Profilden ayrı ikinci soru. Seçenekler: Hızlı (~%25-35), Standart (~%50-70), Ayrıntılı (~%80-100). Sebep: Hafif profilde bile 9 adım 5 saatlik limitin tamamını harcadı ve koda hiç başlanamadı.
+- **Pahalı adımlarda maliyet kapısı:** Adım 4'teki konseyden, Adım 6 kurulundan ve Adım 7 tasarımından önce tahmini maliyet söylenir, sonra "Yap / Hafif yap / Sonraya bırak" diye sorulur. Bu adımlar kaldırılmadı. Sonraya bırakılanlar Faz 0'a görev olarak girer. Maliyet tablosu: `docs/workflow/usage-limits.md`.
+- **Pano en başta** (`/start` Adım 0 madde 6b): Pano oluşturulur ve tarayıcıda açılması önerilir. Kararlar verildiği anda günlüğe yazılır, yani pano onları adım adım gösterir.
+- **`/clear` sonrası sıradaki komut ekranda:** Oturum başı hook'u sıradaki komutu artık kullanıcıya da gösteriyor (`systemMessage`). Örnek: `Sıradaki: /build G-004 · ...`, `Devam: /start (adım 4/9)` (testli). `/wrap-up` son satırda tam komutu verir.
+- **Başka bilgisayarda kurulabilirlik:** `/start` Adım 4, sürüm dosyasını (`.nvmrc` / `.python-version`) ve README'nin Gereksinimler/Kurulum bölümünü doldurur. `/build` yeni bağımlılıkta README'yi günceller. `/release` ve aylık `/maintain` temiz klasöre klonlayıp kurulum testi yapar.
+
+### Düzeltildi
+- **`/kit-update` çalışmıyordu:** Komut `kit.mjs guncelle` çağırıyordu, ama komutun adı `update`.
+
+### Elle uyarla
+- `README.md` (projenin): Gereksinimler bölümüne "Sistem bağımlılıkları" satırını ve kilit dosyası notunu ekle (şablon: `kit/project/README.md`).
+
 ## [3.5.1] - 2026-10-12
 
 ### Güvenlik

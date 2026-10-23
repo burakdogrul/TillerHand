@@ -23,4 +23,4 @@ Bu oturumu kapatıyoruz. Bir sonraki oturum (veya `/clear` sonrası) sıfır ba�
 9. Faz bittiyse sırayla öner: `/findings-tech` (teknik borç taraması), `/board convene phase-end` (tam kurul, tahmini maliyetiyle birlikte), sonra `/retro`.
 10. Limiti ve bağlamı oku. Kalan 5 saatlik payı, sıfırlanma saatini ve bağlam %50'yi geçtiyse `/clear` önerisini sıradaki adımla birlikte söyle.
 
-Bitince durum bloğu ve tek satır: "Sonraki oturum: [sıradaki adım]".
+Bitince durum bloğu ve tek satır, tam komutla: "Sonraki oturum: `/clear`, sonra `/build G-NNN` ([görev adı])". `/clear` sonrası da bu satır ekranda görünür (oturum başı hook'u); `/build` boş yazılırsa sıradaki görevi kendisi alır.

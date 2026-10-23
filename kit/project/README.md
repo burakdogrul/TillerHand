@@ -6,8 +6,11 @@
 
 ## Gereksinimler
 
-- [Örn: Node.js 22+ / Python 3.12+ / Expo CLI]
+- [Çalışma ortamı ve sürümü: Node.js 22 (`.nvmrc`) / Python 3.12 (`.python-version`) / Expo CLI]
+- [Sistem bağımlılıkları: PostgreSQL 16, ffmpeg, ... (paket yöneticisinin kurmadıkları)]
 - [Hesaplar: Supabase, Vercel, ...]
+
+Paket sürümleri kilit dosyasında sabittir (`package-lock.json` / `uv.lock`); kurulumu bu dosyadan yap.
 
 ## Kurulum
 

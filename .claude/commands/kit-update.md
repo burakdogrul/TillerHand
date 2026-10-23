@@ -11,7 +11,7 @@ Ek argüman: $ARGUMENTS
 
 ```bash
 git clone --depth 1 <kaynak> "<geçici klasör>/vibe-kit"
-node "<geçici klasör>/vibe-kit/kit/kit.mjs" guncelle --project . $ARGUMENTS
+node "<geçici klasör>/vibe-kit/kit/kit.mjs" update --project . $ARGUMENTS
 ```
 
 4. Çıktıyı raporla:

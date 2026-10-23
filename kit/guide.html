@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · GitHub template · v3.5</p>
+  <p class="eyebrow">Claude Code · GitHub template · v3.6</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -200,8 +200,8 @@ claude
     <li><b>Hesap ve programlar (bir kez):</b> GitHub hesabı, Claude Pro veya Max, Claude masaüstü uygulaması, Node.js (LTS) ve Git. İstersen GitHub Desktop da kurabilirsin.</li>
     <li><b>Proje:</b> Kitin GitHub sayfasında <b>Use this template → Create a new repository</b> (Private). GitHub Desktop'ta <b>Clone</b> ile bilgisayarına al.</li>
     <li><b>Aç:</b> Claude masaüstü uygulamasında <b>Code</b> sekmesine geç, klasörü seç ve eklentileri kabul et.</li>
-    <li><b>Başlat:</b> <code>/start fikrin</code> yaz. Her sorunun ilk seçeneği önerilendir. Pro'daysan profil <b>Hafif</b>, anlatıcı mod <b>Evet</b>.</li>
-    <li><b>Her gün:</b> <code>/build</code> ile çalış, <code>/wrap-up</code> ile bırak. Bozulursa <code>/rollback</code>, merak edersen <code>/dashboard</code>.</li>
+    <li><b>Başlat:</b> <code>/start fikrin</code> yaz. Her sorunun ilk seçeneği önerilendir. Pro'daysan profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
+    <li><b>Her gün:</b> <code>/build</code> ile çalış (görev kodu gerekmez), <code>/wrap-up</code> ve <code>/clear</code> ile bırak; temiz ekranda sıradaki komut yazar. Bozulursa <code>/rollback</code>, merak edersen <code>/dashboard</code>.</li>
   </ol>
   <p class="note">Proje ilk açıldığında Claude Code, <code>.claude/settings.json</code>'da tanımlı skill plugin'lerini kurmayı önerir: Caveman, Impeccable, Taste Skill, UI UX Pro Max, Humanizer, Ponytail ve Matt Pocock. <code>/start</code> onayınla eksikleri proje kapsamında kurar (<code>plugins-sync.mjs --kur</code>); kurulmamış eklenti yükleme hatası verir ve skill'leri gelmez.</p>
 </section>
@@ -259,16 +259,16 @@ claude
     <table>
       <thead><tr><th>Adım</th><th>Ne olur</th><th>Örnek soru</th><th>Skill</th></tr></thead>
       <tbody>
-        <tr><td class="f">0 Hazırlık</td><td>Profil (Hafif / Standart / Tam), node, git, kit, skill, limit ve kod haritası kontrolü</td><td>"Impeccable kurulu değil. Kurup mu devam edelim, onsuz mu?"</td><td>caveman</td></tr>
+        <tr><td class="f">0 Hazırlık</td><td>Profil (Hafif / Standart / Tam), planlama derinliği (Hızlı / Standart / Ayrıntılı, maliyetiyle), pano tarayıcıda açılır, node, git, kit, skill, limit ve kod haritası kontrolü</td><td>"Planlama derinliği: Hızlı (~%25-35) / Standart (~%50-70) / Ayrıntılı (~%80-100)?"</td><td>caveman</td></tr>
         <tr><td class="f">1 Fikir</td><td>Fikir turlar halinde sorgulanır → PRD</td><td>"İlk sürümde hangi özellikler olsun?" (çoklu seçim; seçilmeyenler kapsam dışı)</td><td>grilling</td></tr>
         <tr><td class="f">2 Tip</td><td>Web/SaaS, mobil, backend; AI özelliği var mı</td><td>"Web mi, mobil mi? Kullanıcın masa başında çalışıyor, bu yüzden web öneriyorum."</td><td>-</td></tr>
         <tr><td class="f">3 Kurulum</td><td><code>node kit/kit.mjs install</code> tipi yerleştirir, <code>kit/</code> silinir</td><td>-</td><td>-</td></tr>
         <tr><td class="f">4 Teknoloji</td><td>Tipin karar kataloğundaki 10-12 karar tek tek</td><td>"Veritabanı ve kimlik: Supabase / Neon + Better Auth / Firebase?"</td><td>research</td></tr>
         <tr><td class="f">5 Mimari</td><td>Veri modeli, giriş yöntemleri, roller, servisler ve maliyet, sözlük</td><td>"Silinen fatura çöp kutusuna mı gitsin, kalıcı mı silinsin?"</td><td>domain-modeling, codebase-design</td></tr>
-        <tr><td class="f">6 Kurul</td><td>Tipe göre önerilen uzman kurulu, model dağılımı, ajanlar projede üretilir</td><td>"Kurulda kimler olsun?" (çoklu seçim)</td><td>-</td></tr>
-        <tr><td class="f">7 Tasarım</td><td><code>/design genel</code>: görsel önizlemelerle stil, renk, yazı, detaylar</td><td>"Bu üç açılış sayfasından hangisi?"</td><td>taste, impeccable, ui-ux-pro-max</td></tr>
+        <tr><td class="f">6 Kurul</td><td>Tipe göre önerilen uzman kurulu, model dağılımı, ajanlar projede üretilir. Pahalı adım: önce maliyet, sonra "Yap / Hafif yap / Sonraya bırak"</td><td>"Kurulda kimler olsun?" (çoklu seçim)</td><td>-</td></tr>
+        <tr><td class="f">7 Tasarım</td><td><code>/design genel</code>: görsel önizlemelerle stil, renk, yazı, detaylar. Pahalı adım: önce maliyet sorulur</td><td>"Bu üç açılış sayfasından hangisi?"</td><td>taste, impeccable, ui-ux-pro-max</td></tr>
         <tr><td class="f">8 Yol haritası</td><td>Görevler, ilk özellik, lansman hedefi</td><td>"Faz 1'de önce hangi özellikle başlayalım?"</td><td>-</td></tr>
-        <tr><td class="f">9 Kapanış</td><td>Özet, <code>dashboard.html</code>, ilk görev</td><td>-</td><td>-</td></tr>
+        <tr><td class="f">9 Kapanış</td><td>Özet, sonraya bırakılan adımlar, ilk görev</td><td>-</td><td>-</td></tr>
       </tbody>
     </table>
   </div>
@@ -679,7 +679,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.5.1 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.6.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

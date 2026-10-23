@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.5.1-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.6.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -67,18 +67,20 @@ Kod yazmayı bilmen gerekmez. Teknik işleri (git, terminal komutları, kuruluml
    ```
    /start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
    ```
-4. Claude sırayla soru sorar. **Her sorunun ilk seçeneği önerilendir**; emin değilsen onu seç. İlk iki soru için öneri:
+4. Claude sırayla soru sorar. **Her sorunun ilk seçeneği önerilendir**; emin değilsen onu seç. İlk sorular için öneri:
    - **Profil:** Pro aboneliğin varsa **Hafif**.
+   - **Planlama derinliği:** Fikrin netse **Hızlı** (5 saatlik limitin yaklaşık %25-35'i). **Ayrıntılı** seçersen tüm adımlar tam yapılır ama Pro'da bir pencerenin tamamı gidebilir. Kurul ve tasarım gibi pahalı adımlardan önce maliyet söylenir; istersen sonraya bırakırsın.
+   - **Pano:** **Evet**. `dashboard.html` tarayıcıda açılır; kararları ve adım ilerlemesini baştan canlı izlersin.
    - **Anlatıcı mod:** **Evet**. Claude her değişikliği ve hatayı sade Türkçe anlatır.
 
 **5. Her gün**
 
 | Ne zaman | Ne yazarsın |
 |---|---|
-| Çalışmaya başlarken | `/build` (sıradaki görevi yapar, test eder) |
+| Çalışmaya başlarken | `/build` (görev kodu yazmana gerek yok; sıradaki görevi kendisi alır, test eder) |
 | Durum merak edersen | `ne durumdayız?` veya `/dashboard` |
 | Bir şey bozulursa | `/rollback` (son çalışan hale güvenle döner) |
-| Bırakırken | `/wrap-up` (her şeyi kaydeder, yarın kaldığın yerden devam edilir) |
+| Bırakırken | `/wrap-up` (her şeyi kaydeder), sonra `/clear`. Temiz ekranın üstünde sıradaki komut yazar: `Sıradaki: /build G-004 · ...` |
 
 **Bilmen gereken üç şey**
 - **Limit:** Pro'da 5 saatlik ve haftalık kullanım limiti vardır. Claude dolmaya yaklaşınca uyarır ve yarım iş bırakmadan güvenli şekilde durur. Limit yenilenince `/build` ile devam edersin.
@@ -166,16 +168,18 @@ flowchart LR
 
 | Adım | Ne olur | Örnek soru |
 |---|---|---|
-| 0 Hazırlık | Profil, ortam, skill, limit, kod haritası | "Profil: Hafif (Pro için önerilen) / Standart / Tam?" |
+| 0 Hazırlık | Profil, planlama derinliği, pano, ortam, skill, limit, kod haritası | "Planlama derinliği: Hızlı (~%25-35) / Standart / Ayrıntılı?" |
 | 1 Fikir | Fikir sorgulanır → PRD | "İlk sürümde hangi özellikler olsun?" (çoklu seçim) |
 | 2 Tip | Web/SaaS, mobil veya backend; AI özelliği var mı | "Kullanıcın masa başında çalışıyor; web öneriyorum. Uygun mu?" |
 | 3 Kurulum | Seçilen tip ve yapı haritası yerleşir, `kit/` silinir | - |
 | 4 Teknoloji | Tipin karar kataloğu (10-12 karar) | "Veritabanı: Supabase / Neon + Better Auth / Firebase?" |
 | 5 Mimari | Veri modeli, roller, servisler, hesaplar, birim ekonomisi | "Silinen fatura çöp kutusuna mı gitsin?" |
-| 6 Kurul | Uzman kurulu ve model dağılımı | "Kurulda kimler olsun?" |
-| 7 Tasarım | Görsel önizlemelerle stil, renk, yazı tipi | "Bu üç açılış sayfasından hangisi?" |
+| 6 Kurul | Uzman kurulu ve model dağılımı (pahalı adım: önce maliyet sorulur) | "Kurul kurulumu ~%5-10. Yap / Hafif yap / Sonraya bırak?" |
+| 7 Tasarım | Görsel önizlemelerle stil, renk, yazı tipi (pahalı adım) | "Bu üç açılış sayfasından hangisi?" |
 | 8 Yol haritası | Kabul testi önce gelen görevler, öncelik | "Faz 1'de hangi özellikle başlayalım?" |
-| 9 Kapanış | Özet, pano, ilk görev | - |
+| 9 Kapanış | Özet, ilk görev | - |
+
+Kararlar verildiği anda günlüğe yazılır; pano Adım 0'dan itibaren onları ve adım ilerlemesini gösterir. Stack seçilince README'nin Gereksinimler/Kurulum bölümü ve sürüm dosyası (`.nvmrc` / `.python-version`) doldurulur; proje başka bilgisayarda aynı şekilde kurulabilir. `/release` ve aylık `/maintain` bunu temiz bir klasörde kurarak sınar.
 
 ### Karar protokolü
 

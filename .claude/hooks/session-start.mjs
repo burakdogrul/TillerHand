@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// SessionStart hook'u: stdout'a yazılanlar oturum bağlamına eklenir.
+// SessionStart hook'u (açılış, /clear, devam): notlar oturum bağlamına (additionalContext) eklenir,
+// sıradaki komut kullanıcıya da gösterilir (systemMessage): /clear sonrası ekran boşken nereden devam edileceği görünsün.
 // Kurulum, aşama, soru modu, kurul, limit, kaldığı yer ve git durumunu kısa notlarla bildirir.
 // Kısa tutulur: her oturumda yüklenir, token harcar.
 import { execSync } from 'node:child_process';
@@ -7,18 +8,26 @@ import { durumOku } from './status-read.mjs';
 import { limitOku, ozet } from './usage.mjs';
 
 const notlar = [];
+let siradaki = '';
 const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 try {
   const d = durumOku(kok);
   if (d.kitBekliyor) {
     notlar.push('Proje henüz kurulmadı. Kullanıcıya "/start [proje fikri]" ile başlamasını öner; kurulum bitmeden kod yazma.');
+    siradaki = 'Başlamak için: /start [proje fikrin]';
   } else {
     const a = d.alanlar;
     notlar.push(`Aşama: ${a['Aktif faz'] ?? '-'} · Görev: ${a['Aktif görev'] ?? '-'} · Soru modu: ${a['Soru modu'] ?? 'açık'} · Kurul: ${d.kurul.durum}`);
     if (/başlangıç/i.test(a['Aktif faz'] ?? '') && d.kurulu) {
       notlar.push(`/start yarım kaldı (adım ${a['Başlangıç adımı']}). Kullanıcıya /start ile kaldığı yerden devam etmeyi öner.`);
+      siradaki = `Devam: /start (adım ${a['Başlangıç adımı']})`;
+    } else {
+      const g = d.fazlar.flatMap((f) => f.gorevler).find((x) => !x.bitti);
+      const kod = g?.metin.match(/^(G-\d+)/)?.[1];
+      if (kod) siradaki = `Sıradaki: /build ${kod} · ${g.metin.replace(/^G-\d+:\s*/, '').split(' — ')[0].replace(/\*\*/g, '').slice(0, 70)}`;
     }
+    if (siradaki) notlar.push(siradaki);
     if (d.kaldigiYer.length) notlar.push(`Kaldığı yer: ${d.kaldigiYer.join(' | ')}. Kullanıcıya buradan devam etmeyi öner.`);
     if (d.bekleyen.length) notlar.push(`Bekleyen kararlar: ${d.bekleyen.join(' | ')}. Önce bunları sor.`);
   }
@@ -44,4 +53,6 @@ try {
   // git deposu değil veya ilk commit öncesi
 }
 
-if (notlar.length) console.log('[Kit] ' + notlar.join('\n[Kit] '));
+const cikti = { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: '[Kit] ' + notlar.join('\n[Kit] ') } };
+if (siradaki) cikti.systemMessage = `[Kit] ${siradaki}`;
+if (notlar.length) console.log(JSON.stringify(cikti));

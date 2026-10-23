@@ -9,6 +9,12 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
 
 **Devam etme:** `docs/workflow/progress.md` → `**Başlangıç adımı:**` 0'dan büyükse kaldığın adımdan devam et ve bunu kullanıcıya söyle. Her adım bitince bu satırı (`N/9`) ve `**Son güncelleme:**` satırını güncelle; sonra durum bloğunu yaz.
 
+**Kararlar anında kaydedilir:** Her kararı verildiği anda `docs/decisions/log.md` → Karar günlüğüne yaz (adım sonunu bekleme). Pano kararları ve adım ilerlemesini oradan canlı gösterir.
+
+**Pahalı adımlar** (Adım 4'teki karar konseyi, Adım 6 kurul, Adım 7 tasarım): Başlamadan tahmini maliyeti (`docs/workflow/usage-limits.md` tablosu) ve kalan limiti tek satırla söyle. Adım kaldırılmaz; seçim kullanıcıdadır. Ayrıntılı derinlikte bildir ve yap. Hızlı ve Standart'ta sor: **Yap** / **Hafif yap** / **Sonraya bırak**. Önerilen: Hızlı'da "Sonraya bırak", Standart'ta "Hafif yap".
+- Hafif yap: Adım 4'te konsey yerine tek danışman görüşü; Adım 6'da önerilen 3 üye tek onayla, hepsi `haiku`; Adım 7'de tek önizleme turu (stil yönü), renk ve yazı tipi o yönün önerilen setinden.
+- Sonraya bırak: Adım 4'te tek yönlü kararı yine kullanıcı verir (önerilen + gerekçe ile). Adım 6 ve 7 için Faz 0'a görev eklenir (`/board setup`, `/design genel`).
+
 ---
 
 ## Adım 0: Hazırlık
@@ -17,13 +23,17 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
    - **Hafif:** Şu eklentileri proje kapsamında kapat (her biri için `claude plugin disable <id> --scope project`): taste-skill@taste-skill, ui-ux-pro-max@ui-ux-pro-max-skill, differential-review@trailofbits, insecure-defaults@trailofbits, sharp-edges@trailofbits, static-analysis@trailofbits, supply-chain-risk-auditor@trailofbits, agentic-actions-auditor@trailofbits, fp-check@trailofbits, claude-security@claude-plugins-official, hookify@claude-plugins-official, claude-md-management@claude-plugins-official, session-report@claude-plugins-official. `docs/workflow/board.md` → `**Commit denetimi:** kapalı`.
    - **Standart / Tam:** Eklentiler ve commit denetimi açık kalır.
    - Profil sonradan değiştirilebilir; aynı adımları tersine uygula.
+0a. **Planlama derinliği** (ikinci soru, profilden ayrı: profil sürekli maliyeti, derinlik sadece bu sihirbazı belirler). Seçenekleri `docs/workflow/usage-limits.md` tablosundaki tahmini maliyetle göster. Fikir netse ve Pro plandaysa **Hızlı**, fikir belirsizse veya üründe ödeme/kişisel veri varsa **Standart** önerilen. Seçimi `**Profil:**` satırına ekle (örn. `Hafif · derinlik: Hızlı`).
+   - **Hızlı:** Adım 1 tek tur (problem, kitle, MVP çoklu seçim); kabul kriterleri taslak olarak tek onayla. Adım 4'te önerilen stack tek ekranda onaylanır. Adım 5 sadece veri modeli ve giriş yöntemi; dış servis ve birim ekonomisi ilgili göreve kalır.
+   - **Standart:** Bütün adımlar; pahalı adımlar başlamadan sorulur.
+   - **Ayrıntılı:** Bütün adımlar tam haliyle.
 0b. **Anlatıcı mod:** Sor: "Yazılımı yeni öğreniyorsan, Anlatıcı mod her değişikliği ve hatayı sade Türkçe anlatır. Cevaplar biraz uzar, bu da biraz daha fazla token demek. Açılsın mı?" Seçenekler: "Evet" ve "Hayır, kısa cevaplar". Kullanıcının bilgi seviyesi düşükse "Evet" önerilen olsun.
     - Evet ise `.claude/settings.local.json` dosyasına `"outputStyle": "anlatici"` ekle (dosya varsa birleştir; bu dosya git'e girmez, kişisel ayardır).
     - Mod bir sonraki mesajdan itibaren geçerli olur. Terminalde `/output-style anlatici` komutu da aynı işi yapar. Kapatmak için değeri sil.
 1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version`, kökte `kit/kit.mjs` var mı, `.kit.json` yok mu.
 2. `docs/workflow/skills.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. LSP eklentisi dil sunucusu ister: web ve mobil için `npm i -g typescript-language-server typescript`, backend için `npm i -g pyright` (global kurulum; kullanıcı onayıyla). **Eklentiler:** Proje ayarı eklentileri açar ama indirmez; kurulmamış olanlar yükleme hatası verir ve skill'leri gelmez. Kullanıcıya listeyi göster ve sor: "Proje ayarındaki eklentiler kurulsun mu?" Önce `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele; onay gelirse `node .claude/hooks/plugins-sync.mjs --kur` çalıştır. Betik eksikleri proje kapsamında kurar, `false` olanları (Remotion) kurup kapatır. Sonra kullanıcıdan `/reload-plugins` çalıştırmasını iste. claude CLI yoksa eksik eklentilerin `/plugin install x@y` komutlarını ver ve "Kurup devam edelim mi, eksik skill olmadan mı?" diye sor.
 3. `caveman:caveman` skill'ini yükle (rapor dili).
-4. **Limit:** Limiti oku (`docs/workflow/usage-limits.md` §1) ve raporla. Sihirbazın tamamı Pro planda 5 saatlik limitin büyük kısmını kullanabilir; adımlar arasında durup sonra devam edilebileceğini söyle. Seviye sarı veya kırmızıysa §3'teki seçenekleri sor.
+4. **Limit:** Limiti oku (`docs/workflow/usage-limits.md` §1) ve raporla. Seçilen derinliğin tahmini maliyetini kalan limitle karşılaştır; adımlar arasında durup sonra devam edilebileceğini söyle. Seviye sarı veya kırmızıysa §3'teki seçenekleri sor.
 5. **Kod haritası:** Oturumda codebase-memory-mcp araçları (`index_repository`, `search_graph` vb.) var mı bak. Yoksa sor: "Kod haritası kurulsun mu? AI, kodu dosya dosya okumak yerine sorgular; proje büyüdükçe oturum başına ciddi token tasarrufu sağlar."
    - **Kur (Önerilen):** Kurulumu kullanıcı kendi terminalinde yapar; uzaktan indirilen script'i sen çalıştırma. Resmi komutları ver:
      - Windows (PowerShell): `Invoke-WebRequest -Uri https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 -OutFile install.ps1; Unblock-File .\install.ps1; .\install.ps1`
@@ -31,6 +41,7 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
      - Installer Claude Code'a kendisini kullanıcı düzeyinde tanıtır (MCP, hook, skill). Sonra Claude Code yeniden başlatılır ve `/mcp` ile kontrol edilir. Otomatik indeks için: `codebase-memory-mcp config set auto_index true`. Kaynak: github.com/DeusData/codebase-memory-mcp
    - **Şimdilik kurma:** Küçük proje için yeterli; sonra kurulabilir.
 6. **Bildirimler:** Claude soru sorduğunda veya uzun bir işi bitirdiğinde masaüstü bildirimi gelir (`.claude/hooks/notify.mjs`). Kapatmak için `KIT_NOTIFY=off`.
+6b. **Pano:** `node .claude/hooks/dashboard.mjs` çalıştır. Sor: "Pano kararları ve adım ilerlemesini canlı gösterir, her cevaptan sonra kendini yeniler. Tarayıcıda açayım mı?" Evet ise aç: Windows `start dashboard.html`, macOS `open dashboard.html`, Linux `xdg-open dashboard.html`.
 7. Fikir boşsa sor: "Ne yapmak istiyorsun? 1-3 cümleyle anlat."
 
 ## Adım 1: Fikri netleştir → `docs/product/prd.md`
@@ -79,8 +90,9 @@ Bütün kararlar bitince:
 1. docs/architecture/stack.md → "Seçilen teknolojiler" tablosunu doldur.
 2. Seçim önerilenden farklıysa docs/architecture/stack.md'nin Komutlar, Klasör yapısı, Kodlama kuralları, AI hataları ve Doğrulama bölümlerini seçime göre yeniden yaz. Bunlara bağlı `.github/workflows/ci.yml`, `.claude/settings.json` izinleri, `.env.example`, pre-commit ayarları ve `.mcp.json` dosyalarını da uyarla. Farkları raporla.
 3. `CLAUDE.md` → Komutlar bölümünü doldur.
+3a. **Başka bilgisayarda kurulabilirlik:** Çalışma ortamı sürümünü sabitle: Node için `.nvmrc`, Python için `.python-version` (sürüm stack.md'deki). `README.md` → Gereksinimler (çalışma ortamı ve sürümü, sistem bağımlılıkları: veritabanı, ffmpeg vb., hesaplar) ve Kurulum bölümlerini doldur; komutlar `CLAUDE.md` → Komutlar ile aynı olsun. Kilit dosyası (`package-lock.json`, `uv.lock` vb.) ilk paket kurulumunda oluşur ve commit'e girer.
 3b. **Stack skill'leri:** Web'de (React/Next) `npx -y skills@1.7.2 add vercel-labs/agent-skills --skill react-best-practices --skill composition-patterns -a claude-code -y --copy`, mobilde `--skill react-native-guidelines` ile çalıştır. Gelen SKILL.md dosyalarını kurmadan önce oku (üçüncü taraf içerik). Mobilde Maestro CLI kurulu değilse kurulumunu söyle (`docs/workflow/mcp-catalog.md`).
-4. `docs/decisions/log.md`: Her kararı günlüğe ekle, teknoloji yığınını `docs/decisions/adr-0001-tech-stack.md` olarak kaydet (şablon: `adr-template.md`).
+4. `docs/decisions/log.md`: Günlükte eksik karar kalmadığını kontrol et, teknoloji yığınını `docs/decisions/adr-0001-tech-stack.md` olarak kaydet (şablon: `adr-template.md`).
 
 ## Adım 5: Mimari → `docs/architecture/overview.md`, `docs/product/glossary.md`
 
@@ -96,6 +108,8 @@ AI eki kurulduysa `docs/ai/guide.md` → model envanterini doldur: Hangi özelli
 
 ## Adım 6: Uzman kurulu → `.claude/agents/`, `docs/workflow/board.md`
 
+Pahalı adım: önce maliyeti söyle ve derinliğe göre sor (yukarıdaki "Pahalı adımlar").
+
 `.claude/board/rules.md` §5'i uygula:
 1. Tipe, PRD'ye ve seçilen stack'e göre kurul öner. Kurulun ne olduğunu kısaca anlat: Uzman ajanlar planı, görevi, her commit'i ve fazı denetler. Danışmandır; kritik bulguda durdurur; karar her zaman kullanıcıda.
 2. Üyeleri **çoklu seçimle** onaylat; yeni uzman eklenebileceğini söyle.
@@ -106,7 +120,7 @@ AI eki kurulduysa `docs/ai/guide.md` → model envanterini doldur: Hangi özelli
 
 ## Adım 7: Tasarım yönü (arayüz varsa)
 
-`/design genel` akışını çalıştır. Görsel önizlemelerle stil yönü, renk, yazı tipi ve detay kararları alınır; sonunda `PRODUCT.md`, `DESIGN.md` ve `docs/design/design-guide.md` hazır olur. Backend tipinde bu adımı atla.
+Pahalı adım: önce maliyeti söyle ve derinliğe göre sor (yukarıdaki "Pahalı adımlar"). `/design genel` akışını çalıştır. Görsel önizlemelerle stil yönü, renk, yazı tipi ve detay kararları alınır; sonunda `PRODUCT.md`, `DESIGN.md` ve `docs/design/design-guide.md` hazır olur. Backend tipinde bu adımı atla.
 
 ## Adım 8: Yol haritası → `docs/product/roadmap.md`
 
@@ -119,6 +133,6 @@ AI eki kurulduysa `docs/ai/guide.md` → model envanterini doldur: Hangi özelli
 
 1. `docs/workflow/progress.md`: Aktif faz `Faz 0`, aktif görev `G-001`, başlangıç adımı `9/9`, sıradaki adım, bekleyen kararlar.
 2. `node .claude/hooks/dashboard.mjs` çalıştır.
-3. Kullanıcıya özet ver: alınan karar sayısı, seçilen stack, kurul üyeleri, tasarım yönü, MVP özellikleri, ilk görev, kalan limit.
+3. Kullanıcıya özet ver: alınan karar sayısı, seçilen stack, kurul üyeleri, tasarım yönü, MVP özellikleri, sonraya bırakılan adımlar, ilk görev, kalan limit.
 4. Commit öner: `docs: proje planı`.
 5. Son satır: "Devam: `/build G-001`".

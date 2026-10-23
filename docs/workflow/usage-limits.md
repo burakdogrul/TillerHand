@@ -34,6 +34,12 @@ Eşikler `.claude/hooks/usage.mjs` → `ESIKLER` içinde; değiştirirsen ikisin
 | Commit denetimi (hafif) | %1 |
 | Tam kurul toplantısı (faz sonu, canlıya alma) | %8–15 |
 | `/design` görsel önizleme turu | %5–10 |
+| `/start` Hızlı derinlik (kurul ve tasarım sonraya) | %25–35 |
+| `/start` Standart derinlik | %50–70 |
+| `/start` Ayrıntılı derinlik (tam akış) | %80–100 (Pro'da bir pencerenin tamamı) |
+| Karar konseyi (`/start` Adım 4, tek yönlü karar) | ~%12 (ölçüm: 3 danışman + başkan) |
+| Kurul kurulumu (`/start` Adım 6) | %5–10 |
+| Tasarım yönü (`/start` Adım 7, `/design genel`) | %15–30 |
 
 Max planda yüzdeler daha düşüktür. Günlük doldukça tahmin kendini düzeltir.
 

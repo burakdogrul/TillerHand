@@ -20,6 +20,7 @@ Kaynak listeler: `docs/operations/release-checklist.md`, `docs/architecture/stac
    - Sır taraması (`docs/security/checklist.md` §9)
    - Kodda kalan `console.log` / `print` / `debugger` / `TODO` / test verisi
    - `.env.example` ile koddaki ortam değişkeni kullanımları uyumlu mu?
+   - **Temiz kurulum testi:** `git clone . "<geçici klasör>/temiz"` (sadece commit'li dosyalar). Orada `README.md` → Kurulum'daki bağımlılık kurulumunu, build'i ve testleri sırayla çalıştır (`.env` oluşturma; ortam değişkeni isteyen adımları 👤 say). Kilit dosyası, sürüm dosyası (`.nvmrc` / `.python-version`) veya README adımı eksikse ❌. Geçici klasörü sil.
    - Commit edilmemiş değişiklik var mı?
    - `CHANGELOG.md` güncel mi?
    - Bekleyen DB migration var mı?
