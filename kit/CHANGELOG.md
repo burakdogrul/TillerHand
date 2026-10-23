@@ -5,6 +5,16 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.11.1] - 2026-10-23
+
+### Güvenlik
+Commit sonrası güvenlik incelemesinin bulguları.
+- Kalkan: `vercel` alt komutu bayraklardan sonra gelse de (`vercel --scope ekip promote …`) `promote` ve `rollback` sorulur. `--target production` / `--target=production` de prod deploy sayılır.
+- Web şablonunda Playwright CLI izni sadece `open`, `snapshot`, `console`, `requests`, `screenshot` alt komutlarına daraltıldı. Sayfada kod çalıştıran `eval` ve `run-code` sorulur.
+
+### Elle uyarla
+- 3.11.0'ı uyguladıysan web projesinde `.claude/settings.json` → `permissions.allow`'daki `Bash(npx -y @playwright/cli@0.1.22:*)` satırını kitin web şablonundaki beş dar satırla değiştir.
+
 ## [3.11.0] - 2026-10-23
 
 ### Eklendi
@@ -20,7 +30,7 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ### Elle uyarla
 - Web projesinde `.mcp.json`: `playwright` ve `chrome-devtools` girdilerini kaldırmak isteğe bağlı (bağlam tasarrufu; gerekince katalogdan eklenir).
-- Web projesinde `.claude/settings.json` → `permissions.allow`'a `Bash(npx -y @playwright/cli@0.1.22:*)` ekle.
+- Web projesinde `.claude/settings.json` → `permissions.allow`'a `Bash(npx -y @playwright/cli@0.1.22 open:*)` ve `snapshot`, `console`, `requests`, `screenshot` için aynı biçimde birer satır ekle (3.11.1).
 - `docs/architecture/stack.md`: "Doğrulama" bölümünde Playwright MCP yerine Playwright CLI; "MCP" satırı ve şema kuralı kitin şablonundaki gibi (web ve mobil).
 
 ## [3.10.1] - 2026-10-23

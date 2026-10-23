@@ -25,8 +25,9 @@ const PROD_DB = /\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis|rediss):\/\/[^\s'"
 const PROD_ISARET = /\b(--prod(uction)?\b|NODE_ENV=production|ENV=production|DATABASE_URL_PROD|PROD_DATABASE_URL)\b/;
 
 const ONAYLI = [
-  [/\bvercel\b[^;]*--prod\b|\bvercel\s+deploy\b[^;]*--prod/i, 'Prod ortamına deploy'],
-  [/\bvercel(@[\w.-]+)?\s+(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
+  [/\bvercel\b[^;&|]*(--prod\b|--target[= ]?prod(uction)?\b)/i, 'Prod ortamına deploy'],
+  // Alt komut bayraklardan sonra da gelebilir: vercel --scope ekip promote <url>
+  [/\bvercel(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
   [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify\s+deploy\b[^;]*--prod/i, 'Sunucuya deploy'],
   [/\beas\s+(submit|update\b[^;]*--branch\s+production)/i, 'Mağazaya gönderim veya prod OTA güncellemesi'],
   [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'Ana dala doğrudan push'],

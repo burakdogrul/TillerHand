@@ -84,7 +84,9 @@ test('ayarlar 3.11: tarayıcı MCP\'leri katalogda, ajan Playwright CLI kullanı
   for (const s of ['@playwright/mcp@0.0.83', 'chrome-devtools-mcp@1.10.1', '--scope local', 'figma-remote-mcp', 'supabase-dev']) assert.ok(katalog.includes(s), `katalog: ${s}`);
   assert.ok(!/@latest\b/.test(katalog), 'katalogda @latest yok');
   const izin = JSON.parse(fs.readFileSync(path.join(KOK, 'kit/templates/web-saas/.claude/settings.merge.json'), 'utf8')).permissions.allow;
-  assert.ok(izin.includes('Bash(npx -y @playwright/cli@0.1.22:*)'), 'Playwright CLI sabit sürümle izinli');
+  for (const alt of ['open', 'snapshot', 'console', 'requests', 'screenshot']) assert.ok(izin.includes(`Bash(npx -y @playwright/cli@0.1.22 ${alt}:*)`), `Playwright CLI ${alt} izinli`);
+  // Sayfada kod çalıştıran alt komutlar (eval, run-code) izinli değil, sorulur
+  assert.ok(!izin.some((r) => /@playwright\/cli@[\d.]+(:\*|\s+(eval|run-code))/.test(r)), 'geniş veya kod çalıştıran Playwright CLI izni yok');
   for (const t of ['web-saas', 'mobile']) {
     const stack = fs.readFileSync(path.join(KOK, `kit/templates/${t}/docs/architecture/stack.md`), 'utf8');
     assert.match(stack, /supabase(@[\d.]+)? migration new/, `${t}: şema değişikliği migration ile`);
