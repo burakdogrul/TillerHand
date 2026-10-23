@@ -19,7 +19,7 @@
   "kit-okuma-korumasi": {
     "PreToolUse": [
       {
-        "matcher": "view_file|grep_search|list_dir|find_by_name",
+        "matcher": "*",
         "hooks": [
           { "type": "command", "command": "node .claude/hooks/freeze-guard.mjs" }
         ]

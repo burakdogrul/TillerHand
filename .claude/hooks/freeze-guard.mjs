@@ -20,7 +20,7 @@ const SERBEST = ['docs/workflow/progress.md', '.claude/state/'];
 
 // .claude/settings.json → permissions karşılığı (deny: .env ve secrets/, ask: kural ve koruma dosyaları)
 const KORUMALI = [
-  ['deny', /^(\.env(\.local|\.production|\.[^/]+\.local)?|secrets\/.*)$/i, 'Ortam ve sır dosyaları AI tarafından okunmaz ve yazılmaz.'],
+  ['deny', /^(\.env(\.local|\.production|\.[^/]+\.local)?|secrets(\/.*)?)$/i, 'Ortam ve sır dosyaları AI tarafından okunmaz ve yazılmaz.'],
   ['ask', /^(CLAUDE\.md|AGENTS\.md|\.mcp\.json|\.claude\/.*|\.codex\/.*|\.agents\/hooks\.json|\.github\/workflows\/.*)$/i, 'Kural, koruma ve iş akışı dosyaları kullanıcı onayıyla değişir.'],
 ];
 export const korumali = (rel) => KORUMALI.find(([, re]) => re.test(rel)) ?? null;

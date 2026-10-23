@@ -5,6 +5,17 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.9.2] - 2026-10-23
+
+### Düzeltildi
+- Antigravity okuma koruması, bütün araçlarda (`matcher: "*"`) ve argümanlardaki her metinde `.env` ve `secrets/` yolunu arar. Böylece bilinmeyen bir okuma aracı da kapsanır. `secrets` klasörünün kendisi de engellenir.
+
+### Bilinen sınır
+- Proje kökünde içerik araması (`grep_search`, kabukta `grep -r`), `.env` içeriğine ulaşabilir. Hook arama sonucunu süzemez. `.env` dosyası olan projede kök aramayı engellemek aramayı kullanılmaz hale getirirdi.
+
+### Elle uyarla
+- Projede `.agents/hooks.json`'ı değiştirdiysen, `kit-okuma-korumasi` → `matcher` değerini `"*"` yap.
+
 ## [3.9.1] - 2026-10-23
 
 Yayın sonrası otomatik güvenlik incelemesinin bulguları (sadece Codex ve Antigravity'yi etkiler).

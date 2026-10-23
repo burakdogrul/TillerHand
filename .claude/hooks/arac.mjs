@@ -50,7 +50,8 @@ export function cozumle(g) {
     if (name === 'run_command') sonuc.komut = metinMi(args.CommandLine) ? args.CommandLine : JSON.stringify(args);
     // İçerik alanı adından bağımsız: tüm argümanlar taranır
     if (AG_YAZMA.includes(name)) sonuc.dosyalar.push({ yol: metinMi(args.TargetFile) ? args.TargetFile : '', metin: JSON.stringify(args) });
-    for (const a of ['AbsolutePath', 'SearchPath', 'DirectoryPath', 'SearchDirectory']) if (metinMi(args[a])) sonuc.okunan.push(args[a]);
+    // Okuma: araç adından bağımsız, argümanlardaki her metin olası yol sayılır (bilinmeyen okuma aracı da kapsanır)
+    sonuc.okunan = Object.values(args).filter(metinMi);
     return sonuc;
   }
   const t = g.tool_input ?? {};
