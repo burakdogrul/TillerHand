@@ -5,6 +5,21 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.9.1] - 2026-10-23
+
+Yayın sonrası otomatik güvenlik incelemesinin bulguları (sadece Codex ve Antigravity'yi etkiler).
+
+### Düzeltildi
+- Kabukla koruma dosyası değiştirme kuralı, yolu eğik çizgisiz yazılan komutları da yakalar (`rm -r .claude`). `git checkout` ve `git restore` ile geri döndürme de sorulur.
+- Kalkanın iki listesi aynı komutta farklı karar verirse sıkı olan kazanır: `git push --force origin main` artık "sor" yerine engellenir.
+- Antigravity'de `.env` ve `secrets/` okuma araçlarıyla (`view_file`, `grep_search`, `list_dir`, `find_by_name`) okunamaz. Claude Code'daki `Read(./.env)` engelinin karşılığı. `.agents/hooks.json`'a `kit-okuma-korumasi` eklendi.
+
+### Bilinen sınır
+- Codex'te hook betiği Unix'te `git rev-parse --show-toplevel` ile bulunur. Git yoksa veya klasör depo değilse hook çalışmaz ve koruma devreye girmez. `init` git deposu açtığı için normal kurulumda bu olmaz.
+
+### Elle uyarla
+- Projede `.agents/hooks.json`'ı değiştirdiysen, `/kit-update` yeni hali `.kit-new` olarak getirir; `kit-okuma-korumasi` bölümünü elle ekle.
+
 ## [3.9.0] - 2026-10-23
 
 Kit artık OpenAI Codex ve Google Antigravity'de de çalışıyor: kurallar, komutlar ve korumalar. Kurul ajanları, soru arayüzü ve durum çubuğu Claude Code'a özel kalıyor. Dayanak: iki aracın resmi hook ve skill dokümanları (`kit/research/2026-10-23-codex-antigravity.md`).

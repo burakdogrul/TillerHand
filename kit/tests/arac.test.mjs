@@ -241,6 +241,13 @@ test('saldırgan: Claude izin listesindeki yasak komutlar Codex ve Antigravity\'
     assert.equal(calistir('destructive-guard.mjs', 'antigravity', kok, komut('antigravity', kok, k)), 'ask', `antigravity kabuk: ${k}`);
   }
   assert.equal(calistir('destructive-guard.mjs', 'codex', kok, komut('codex', kok, 'node .claude/hooks/usage.mjs 2>&1')), null, 'kit betiğini çalıştırmak serbest');
+  for (const k of ['rm -r .claude', 'git checkout -- .claude/hooks/arac.mjs', 'git restore AGENTS.md']) {
+    assert.equal(calistir('destructive-guard.mjs', 'antigravity', kok, komut('antigravity', kok, k)), 'ask', `antigravity kabuk: ${k}`);
+  }
+  assert.equal(calistir('destructive-guard.mjs', 'antigravity', kok, komut('antigravity', kok, 'git push --force origin main')), 'deny', 'sıkı karar kazanır (ask değil deny)');
+  const oku = (p) => ({ toolCall: { name: 'view_file', args: { AbsolutePath: path.join(kok, p) } }, workspacePaths: [kok] });
+  assert.equal(calistir('freeze-guard.mjs', 'antigravity', kok, oku('.env')), 'deny', 'Antigravity .env okuyamaz');
+  assert.equal(calistir('freeze-guard.mjs', 'antigravity', kok, oku('.claude/hooks/arac.mjs')), null, 'kural dosyası okunabilir');
   const kilit = 'node .claude/hooks/freeze-guard.mjs --off';
   assert.equal(calistir('destructive-guard.mjs', 'codex', kok, komut('codex', kok, kilit)), 'deny');
   assert.equal(calistir('destructive-guard.mjs', 'antigravity', kok, komut('antigravity', kok, kilit)), 'ask');

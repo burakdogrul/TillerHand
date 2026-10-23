@@ -71,6 +71,12 @@ function hook() {
       const k = korumali(goreli(yol, g.kok));
       if (k) kararVer(g.arac, k[0], `${goreli(yol, g.kok)}: ${k[2]}`);
     }
+    // Okuma (view_file vb.): sadece .env ve secrets/ engellenir (Claude'daki Read(./.env) karşılığı)
+    for (const yol of g.okunan) {
+      const rel = goreli(path.resolve(g.dizin, yol), g.kok);
+      const k = korumali(rel);
+      if (k?.[0] === 'deny') kararVer(g.arac, 'deny', `${rel}: ${k[2]}`);
+    }
   }
   const kilit = kilitOku(g.kok);
   if (!kilit) process.exit(0);

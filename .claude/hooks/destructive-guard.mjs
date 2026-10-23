@@ -43,7 +43,7 @@ const IZIN_KARSILIGI = [
   ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, '.env veya secrets/ dosyasına erişiliyor (AI okumaz, yazmaz)'],
   ['ask', /freeze-guard\.mjs\s+--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
   // Dosya araçlarındaki KORUMALI kuralının kabuk karşılığı: kural veya koruma dosyasını anan ve yazan/silen komut sorulur
-  ['ask', /(?=.*(\.claude[/\\]|\.codex[/\\]|\.agents[/\\]hooks\.json|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
+  ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
 ];
 
 export function izinKarsiligi(komut) {
@@ -71,7 +71,9 @@ export function degerlendir(komut) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const g = girdiOku();
-  const s = g && (degerlendir(g.komut) ?? (g.arac !== 'claude' ? izinKarsiligi(g.komut) : null));
+  // İki listeden sıkı olan kazanır (deny > ask)
+  const sonuclar = g ? [degerlendir(g.komut), g.arac !== 'claude' ? izinKarsiligi(g.komut) : null].filter(Boolean) : [];
+  const s = sonuclar.find((x) => x.karar === 'deny') ?? sonuclar[0];
   if (s) kararVer(g.arac, s.karar, `Kalkan: ${s.neden}`);
   process.exit(0);
 }

@@ -39,17 +39,18 @@ export function yamaDosyalari(yama) {
   return dosyalar.length || !yama.trim() ? dosyalar : [{ yol: '', metin: yama }];
 }
 
-// Döndürür: { arac, kok, dizin, komut, dosyalar: [{ yol, metin, yeni? }] }. yeni bilinmiyorsa tanımsız (betik diske bakar).
+// Döndürür: { arac, kok, dizin, komut, dosyalar: [{ yol, metin, yeni? }], okunan: [yol] }. okunan: Antigravity okuma araçları. yeni bilinmiyorsa tanımsız (betik diske bakar).
 // dizin: göreli yolların çözüleceği klasör (Codex yamasında oturumun cwd'si).
 export function cozumle(g) {
   const arac = aracBul(g);
   const kok = kokBul();
-  const sonuc = { arac, kok, dizin: metinMi(g.cwd) ? g.cwd : kok, komut: '', dosyalar: [] };
+  const sonuc = { arac, kok, dizin: metinMi(g.cwd) ? g.cwd : kok, komut: '', dosyalar: [], okunan: [] };
   if (arac === 'antigravity') {
     const { name, args = {} } = g.toolCall ?? {};
     if (name === 'run_command') sonuc.komut = metinMi(args.CommandLine) ? args.CommandLine : JSON.stringify(args);
     // İçerik alanı adından bağımsız: tüm argümanlar taranır
     if (AG_YAZMA.includes(name)) sonuc.dosyalar.push({ yol: metinMi(args.TargetFile) ? args.TargetFile : '', metin: JSON.stringify(args) });
+    for (const a of ['AbsolutePath', 'SearchPath', 'DirectoryPath', 'SearchDirectory']) if (metinMi(args[a])) sonuc.okunan.push(args[a]);
     return sonuc;
   }
   const t = g.tool_input ?? {};
