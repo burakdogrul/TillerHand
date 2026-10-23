@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Sır (API anahtarı, özel anahtar) yazılmasını engeller.
 // İki kullanım:
-//   1) Claude Code PreToolUse hook'u: stdin'den araç girdisini okur, sır varsa çıkış kodu 2 ile engeller.
+//   1) PreToolUse hook'u (Claude Code, Codex, Antigravity): stdin'den araç girdisini okur, sır varsa engeller (deny).
 //   2) Git pre-commit: `node .claude/hooks/guard-secrets.mjs --staged` sahnelenmiş değişiklikleri tarar.
 // Sadece yüksek güvenilirlikli kalıplar var; yanlış alarm vermemesi için genel "password=" araması yok.
-import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { girdiOku, kararVer } from './arac.mjs';
 
 export const KALIPLAR = [
   ['Anthropic/OpenAI anahtarı', /\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}/],
@@ -22,29 +22,20 @@ export function bul(metin) {
   return KALIPLAR.filter(([, re]) => re.test(metin)).map(([ad]) => ad);
 }
 
-function aracMetni(girdi) {
-  const t = girdi.tool_input ?? {};
-  if (typeof t.content === 'string') return t.content;
-  if (typeof t.new_string === 'string') return t.new_string;
-  if (Array.isArray(t.edits)) return t.edits.map((e) => e.new_string ?? '').join('\n');
-  return '';
-}
-
 function hookModu() {
-  let girdi;
-  try {
-    girdi = JSON.parse(readFileSync(0, 'utf8'));
-  } catch {
-    process.exit(0); // girdi okunamadıysa işi engelleme
+  const g = girdiOku();
+  if (!g) process.exit(0); // girdi okunamadıysa işi engelleme
+  // Codex ve Antigravity'de kabuk komutu da taranır (heredoc, echo > dosya); Claude Code'da sadece dosya araçları
+  if (g.arac !== 'claude' && bul(g.komut).length) {
+    kararVer(g.arac, 'deny', `ENGELLENDİ: komut sır içeriyor (${bul(g.komut).join(', ')}). Sırrı komuta veya dosyaya yazma; ortam değişkeninden oku.`);
   }
-  const bulunan = bul(aracMetni(girdi));
-  if (bulunan.length) {
-    const dosya = girdi.tool_input?.file_path ?? '';
-    process.stderr.write(
-      `ENGELLENDİ: ${dosya} dosyasına sır yazılıyor (${bulunan.join(', ')}). ` +
-        'Sırrı koda yazma; ortam değişkeninden oku ve değişken adını .env.example dosyasına boş değerle ekle.\n'
-    );
-    process.exit(2);
+  for (const { yol, metin } of g.dosyalar) {
+    const bulunan = bul(metin);
+    if (bulunan.length) {
+      kararVer(g.arac, 'deny',
+        `ENGELLENDİ: ${yol} dosyasına sır yazılıyor (${bulunan.join(', ')}). ` +
+          'Sırrı koda yazma; ortam değişkeninden oku ve değişken adını .env.example dosyasına boş değerle ekle.');
+    }
   }
 }
 

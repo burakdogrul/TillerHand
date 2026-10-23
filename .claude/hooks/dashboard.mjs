@@ -407,7 +407,7 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
   <div><h1>${e(d.proje)}</h1></div>
   <div class="meta">
     ${rozet(saglik, saglik === 'iyi' ? 'Yolunda' : saglik === 'uyari' ? 'Dikkat gerekiyor' : 'Engel var').replace('class="badge', 'class="badge health')}
-    ${d.kit?.type ? `<span class="pill">${e(d.kit.type)}${d.kit.addons?.length ? ' + ' + e(d.kit.addons.join(', ')) : ''}</span><span class="pill">kit ${e(d.kit.version)}</span>` : '<span class="pill">kit kurulmadı</span>'}
+    ${d.kit?.type ? `<span class="pill">${e(d.kit.type)}${d.kit.addons?.length ? ' + ' + e(d.kit.addons.join(', ')) : ''}</span><span class="pill">kit ${e(d.kit.version)}</span>${d.kit.tool?.some((t) => t !== 'claude') ? `<span class="pill">${e(d.kit.tool.join(' + '))}</span>` : ''}` : '<span class="pill">kit kurulmadı</span>'}
     ${git?.dal ? `<span class="pill">⎇ ${e(git.dal)}</span>` : ''}
     <label class="refresh"><input type="checkbox" id="oto" checked> 30 sn'de yenile</label>
   </div>

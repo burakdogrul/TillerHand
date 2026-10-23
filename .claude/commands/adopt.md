@@ -18,7 +18,7 @@ Bu bir **9 adımlı uyum sihirbazı** (0-9). `/start`'ın var olan kod için ola
 ## Adım 0: Hazırlık
 
 1. `docs/workflow/progress.md` → `**Aktif faz:** Başlangıç (uyum)`, `**Başlangıç adımı:** 0/9`.
-2. `/start` Adım 0'daki şu maddeleri aynen uygula: Profil (0), anlatıcı mod (0b), ortam kontrolü (1), eklentiler (2), caveman (3), kod haritası (5), bildirimler (6), pano (6b). Var olan projede kod haritası daha da faydalıdır; önerilen seçenek "Kur" olsun.
+2. `/start` Adım 0'daki şu maddeleri aynen uygula: Profil (0), anlatıcı mod (0b), araç (0c), ortam kontrolü (1), eklentiler (2), caveman (3), kod haritası (5), bildirimler (6), pano (6b). Var olan projede kod haritası daha da faydalıdır; önerilen seçenek "Kur" olsun.
 3. **Tarama derinliği:** Limiti oku ve sor. Tahmini maliyetleri göster:
    - **Hızlı tarama (Önerilen, Pro'da):** Yapı, stack, testler, git geçmişi, belgeler. 5 saatlik limitin yaklaşık %10-20'si.
    - **Derin tarama:** Hızlı taramaya ek olarak seçilen bulgu raporları (`/findings-tech`, `-security`, `-ux` vb.). Rapor başına yaklaşık %8-15 daha. Hangi raporların çalışacağını çoklu seçimle sor.
@@ -33,15 +33,15 @@ Dosyaları toptan okuma: kod haritası bağlıysa önce onu kullan, yoksa paket 
 4. **Testler:** Test altyapısı var mı? Testleri çalıştır, sonucu göster: kaç test, kaçı kırmızı, kapsanan alanlar. Doğrulama satırı olmayan ya da her şeyi taklitle (mock) geçen testleri ayrıca işaretle.
 5. **Kurulabilirlik:** README'de kurulum adımı, `.env.example`, sistem bağımlılıkları.
 6. **Git geçmişi:** Son 30 commit'in özeti, aktif dallar, en çok değişen dosyalar (riskli bölgeler).
-7. **Mevcut belgeler:** README, eski `CLAUDE.md` (artık `CLAUDE.md`'de duruyor; kitinki `CLAUDE.md.kit-new`), varsa docs klasörü.
+7. **Mevcut belgeler:** README, eski `CLAUDE.md` ve `AGENTS.md` (yerinde duruyorlar; kitinkiler `.kit-new` uzantılı), varsa docs klasörü.
 
 Bulguları kısa bir tablo halinde göster. Hızlı taramada kodun içine dalma: sadece yapı ve özet.
 
 ## Adım 2: Tip ve kurulum
 
 1. Taramaya göre tipi öner ve onaylat (web-saas / mobile / backend; AI özelliği var mı).
-2. Kur: `node <kit klasörü>/kit/kit.mjs install --type <tip> [--addons ai] --project .` (kit klasörü `.kit.json` → `kit` alanında).
-3. **`.kit-new` dosyaları:** Her biri için (CLAUDE.md hariç, o Adım 4'te) farkı özetle ve karar olarak sor: kitinkini al / projeninkini koru / birleştir. Örnekler: `.env.example` genelde birleştirilir; `ci.yml` için mevcut CI'ın yaptıklarını kitinkiyle karşılaştır. Sonra `.kit-new` dosyasını sil.
+2. Kur: `node <kit klasörü>/kit/kit.mjs install --type <tip> [--addons ai] --project .` (kit klasörü `.kit.json` → `kit` alanında). Araç `init`'te seçilmediyse Adım 0'daki seçimi `--tool <liste>` olarak ekle.
+3. **`.kit-new` dosyaları:** Her biri için (`CLAUDE.md` ve `AGENTS.md` hariç, onlar Adım 4'te) farkı özetle ve karar olarak sor: kitinkini al / projeninkini koru / birleştir. Örnekler: `.env.example` genelde birleştirilir; `ci.yml` için mevcut CI'ın yaptıklarını kitinkiyle karşılaştır. Sonra `.kit-new` dosyasını sil.
 
 ## Adım 3: Belgeleri koddan çıkar
 
@@ -52,12 +52,14 @@ Kodun söylediğini taslak olarak yaz, koddan anlaşılmayanı sor (AskUserQuest
 3b. **Araştırma (pahalı adım, isteğe bağlı):** Benzer projeler ve rakiplerle karşılaştırma için `/research` öner (hızlı: limitin yaklaşık %10-15'i). Yap / Sonraya bırak. Seçilen özellikler Adım 8'de Faz 3'e girer.
 4. **README:** Gereksinimler ve Kurulum bölümleri (`/start` Adım 4 madde 3a). Eksik kilit dosyası veya sürüm dosyası Adım 8'de ilk görevlerden biri olur.
 
-## Adım 4: CLAUDE.md'yi yeniden yaz
+## Adım 4: AGENTS.md ve CLAUDE.md'yi yeniden yaz
 
-1. Kitin `CLAUDE.md.kit-new` dosyasını temel al; proje adı, tek cümle tanım ve Komutlar bölümünü doldur.
-2. Eski `CLAUDE.md`'yi oku ve içindeki projeye özel kuralları listele (kod stili, yasak komutlar, paket yöneticisi, ortam notları, dikkat edilecek yerler). Kitin kurallarıyla aynı olanları ayıkla.
-3. Kalanları **çoklu seçimle** sor: "Eski CLAUDE.md'deki şu kurallardan hangileri yeni CLAUDE.md'ye girsin?" Kitin kuralıyla çelişen varsa ayrıca belirt.
-4. Seçilenleri yeni `CLAUDE.md`'ye `## Proje kuralları` bölümü olarak ekle ("Temel kurallar"dan sonra). Eskiyi `docs/archive/claude-md-eski.md` olarak sakla, `CLAUDE.md.kit-new`'i sil.
+Ortak kurallar `AGENTS.md`'de (Claude Code, Codex, Antigravity okur); `CLAUDE.md` onu `@AGENTS.md` ile içe alır ve sadece Claude Code'a özel ekleri tutar.
+
+1. Kitin `AGENTS.md` (veya `AGENTS.md.kit-new`) dosyasını temel al; proje adı, tek cümle tanım ve Komutlar bölümünü doldur. `CLAUDE.md` kitin `CLAUDE.md.kit-new` haline geçer. `init` projenin `AGENTS.md`'si yüzünden `CLAUDE.md`'ye `@AGENTS.md.kit-new` yazdıysa bu satırı `@AGENTS.md` yap.
+2. Eski `CLAUDE.md`'yi (ve varsa eski `AGENTS.md`'yi) oku ve içindeki projeye özel kuralları listele (kod stili, yasak komutlar, paket yöneticisi, ortam notları, dikkat edilecek yerler). Kitin kurallarıyla aynı olanları ayıkla.
+3. Kalanları **çoklu seçimle** sor: "Eski kurallardan hangileri yeni AGENTS.md'ye girsin?" Kitin kuralıyla çelişen varsa ayrıca belirt.
+4. Seçilenleri `AGENTS.md`'ye `## Proje kuralları` bölümü olarak ekle ("Temel kurallar"dan sonra; sadece Claude Code'a özel olanlar `CLAUDE.md`'ye). Eskileri `docs/archive/claude-md-eski.md` (ve `agents-md-eski.md`) olarak sakla, `.kit-new` dosyalarını sil.
 
 ## Adım 5: Testler ve kritik akışlar
 
@@ -93,6 +95,6 @@ Sor: "Faz 2'de önce hangisiyle başlayalım?" Yol haritasını özetle ve onay 
 
 1. `docs/workflow/progress.md`: Aktif faz `Faz 0`, aktif görev `G-001`, başlangıç adımı `9/9`, sıradaki adım, bekleyen kararlar.
 2. `node .claude/hooks/dashboard.mjs` çalıştır.
-3. Özet ver: tip ve stack, mevcut test durumu, kritik akışlar, CLAUDE.md'ye taşınan kurallar, yapı farkı, en önemli 3 bulgu, ilk görev, kalan limit.
+3. Özet ver: tip ve stack, mevcut test durumu, kritik akışlar, AGENTS.md'ye taşınan kurallar, yapı farkı, en önemli 3 bulgu, ilk görev, kalan limit.
 4. Commit öner: `docs: kit uyumu (adopt)`.
 5. Son satır: "Devam: `/build G-001`".

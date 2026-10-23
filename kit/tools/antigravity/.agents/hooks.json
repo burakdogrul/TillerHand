@@ -1,0 +1,31 @@
+{
+  "kit-oturum": {
+    "SessionStart": [
+      { "type": "command", "command": "node .claude/hooks/session-start.mjs" }
+    ]
+  },
+  "kit-dosya-korumalari": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/guard-secrets.mjs" },
+          { "type": "command", "command": "node .claude/hooks/freeze-guard.mjs" },
+          { "type": "command", "command": "node .claude/hooks/structure-guard.mjs" }
+        ]
+      }
+    ]
+  },
+  "kit-komut-korumalari": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/guard-secrets.mjs" },
+          { "type": "command", "command": "node .claude/hooks/destructive-guard.mjs" },
+          { "type": "command", "command": "node .claude/hooks/package-gate.mjs", "timeout": 30 }
+        ]
+      }
+    ]
+  }
+}

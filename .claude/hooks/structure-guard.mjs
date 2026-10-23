@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { girdiOku, kararVer } from './arac.mjs';
 
 const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
@@ -53,14 +54,17 @@ export function denetle(rel, harita) {
 }
 
 function hook() {
-  let girdi = {};
-  try { girdi = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { process.exit(0); }
-  const yol = girdi.tool_input?.file_path;
-  if (!yol || fs.existsSync(yol)) process.exit(0); // sadece yeni dosyalar
-  const rel = path.relative(kok, path.resolve(kok, yol));
-  if (rel.startsWith('..') || path.isAbsolute(rel)) process.exit(0); // proje dışı
-  const s = denetle(rel, haritaOku());
-  if (s) console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: s.karar, permissionDecisionReason: `Yapı: ${s.neden}` } }));
+  const g = girdiOku();
+  if (!g) process.exit(0);
+  const harita = haritaOku(g.kok);
+  for (const { yol, yeni } of g.dosyalar) {
+    const tam = path.resolve(g.dizin, yol);
+    if (yeni === false || (yeni === undefined && fs.existsSync(tam))) continue; // sadece yeni dosyalar
+    const rel = path.relative(g.kok, tam);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) continue; // proje dışı
+    const s = denetle(rel, harita);
+    if (s) kararVer(g.arac, s.karar, `Yapı: ${s.neden}`);
+  }
   process.exit(0);
 }
 

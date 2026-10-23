@@ -2,8 +2,9 @@
 // Vibe Coding Kit: kurulum ve güncelleme.
 //   node kit/kit.mjs install --type web-saas [--addons ai] [--keep-kit]
 //       Template'ten açılmış projede tipi ve ekleri yerleştirir, sonra kit/ klasörünü siler. /start çalıştırır.
-//   node <kit-klonu>/kit/kit.mjs init [--project <yol>]
+//   node <kit-klonu>/kit/kit.mjs init [--project <yol>] [--tool claude,codex,antigravity]
 //       Kiti ayrı duran bir klasörden projeye kurar (varsayılan: bulunulan klasör). Kit klasörüne dokunmaz.
+//       --tool verilmezse terminalde sorar (varsayılan claude).
 //       Dolu klasörde mevcut dosyanın üzerine yazmaz: kitin hali yanına .kit-new olarak konur (/adopt birleştirir).
 //   node <kit-klonu>/kit/kit.mjs install --type web-saas --project <yol>
 //       init ile kurulmuş projeye tipi yerleştirir. /start ve /adopt çalıştırır.
@@ -12,6 +13,8 @@
 //
 // Katmanlar: repo kökü (ortak) -> kit/templates/<type> -> kit/templates/addons/<addon>; sonraki öncekini ezer.
 // Özel dosyalar: "x.append" -> projedeki x'in sonuna eklenir; "x.merge.json" -> x.json ile birleştirilir.
+// Araçlar (--tool): Claude Code dosyaları her zaman kurulur. codex ve antigravity için kit/tools/<araç>/ (hook ayarı)
+// kopyalanır ve .claude/commands + .claude/skills'ten .agents/skills/<ad>/SKILL.md üretilir (kaynak tek: .claude/).
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -25,6 +28,7 @@ const SURUM = fs.readFileSync(path.join(KIT, 'VERSION'), 'utf8').trim();
 const KAYNAK = fs.readFileSync(path.join(KIT, 'SOURCE'), 'utf8').trim();
 const TIPLER = fs.readdirSync(SABLON).filter((d) => d !== 'addons');
 const EKLER = fs.readdirSync(path.join(SABLON, 'addons'));
+const ARACLAR = ['claude', 'codex', 'antigravity'];
 // Ortak katmana dahil olmayan kök girdileri (kitin kendisi, üretilen ve geçici dosyalar)
 const ORTAK_HARIC = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox']);
 // Sadece kit reposunda anlamlı, projeye taşınmayan dosyalar
@@ -134,6 +138,66 @@ function kayitYaz(proje, veri) {
   fs.writeFileSync(path.join(proje, '.kit.json'), JSON.stringify(veri, null, 2) + '\n');
 }
 
+function aracDogrula(araclar) {
+  for (const a of araclar) if (!ARACLAR.includes(a)) throw new Error(`Geçersiz araç: ${a}. Seçenekler: ${ARACLAR.join(', ')}`);
+  return araclar.length ? araclar : ['claude'];
+}
+
+// Komut -> skill: Codex ve Antigravity komutları skill olarak çağırır ($start, /start).
+export function komuttanSkill(ad, md) {
+  const m = md.replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  const alan = (k) => m?.[1].match(new RegExp(`^${k}:\\s*(.*)$`, 'm'))?.[1].trim() ?? '';
+  const ipucu = alan('argument-hint');
+  return `---\nname: ${ad}\ndescription: ${JSON.stringify(alan('description') || ad)}\n---\n\n` +
+    `<!-- Kit üretir (kit.mjs): düzenleme .claude/commands/${ad}.md dosyasında yapılır, bu kopya güncellemede yenilenir. -->\n` +
+    `$ARGUMENTS = kullanıcının bu skill'i çağırırken yazdığı metin (yoksa boş)${ipucu ? `. Beklenen: ${ipucu}` : ''}.\n\n` +
+    (m ? m[2] : md);
+}
+
+// Seçilen araçların dosyaları. Skill kopyaları ve hooks.json güncellemedeki kitDosyasi kuralıyla aynı: kullanıcı
+// değiştirmediyse yenilenir, değiştirdiyse (veya projenin kendi dosyasıysa) .kit-new; kullanıcı sildiyse hook ayarı geri gelmez.
+function aracKur(proje, araclar, files, cakisan) {
+  const digerleri = araclar.filter((a) => a !== 'claude');
+  if (!digerleri.length) return;
+  const skiller = new Map(); // .agents/skills/... -> içerik
+  const komutlar = path.join(proje, '.claude', 'commands');
+  for (const f of fs.existsSync(komutlar) ? fs.readdirSync(komutlar).filter((f) => f.endsWith('.md')) : []) {
+    skiller.set(`.agents/skills/${f.slice(0, -3)}/SKILL.md`, komuttanSkill(f.slice(0, -3), oku(path.join(komutlar, f))));
+  }
+  const kitSkill = path.join(proje, '.claude', 'skills');
+  if (fs.existsSync(kitSkill)) for (const rel of dosyalar(kitSkill)) skiller.set(`.agents/skills/${rel}`, oku(path.join(kitSkill, rel)));
+  for (const [rel, icerik] of skiller) {
+    const yol = path.join(proje, rel);
+    const var_ = fs.existsSync(yol);
+    if (var_ && oku(yol).replace(/\r\n/g, '\n') === icerik.replace(/\r\n/g, '\n')) { files[rel] = hash(yol); continue; }
+    if (var_ && files[rel] !== hash(yol)) { // projenin kendi skill'i veya kullanıcı değiştirmiş
+      fs.writeFileSync(yol + '.kit-new', icerik);
+      cakisan.push(rel);
+      continue;
+    }
+    fs.mkdirSync(path.dirname(yol), { recursive: true });
+    fs.writeFileSync(yol, icerik);
+    files[rel] = hash(yol);
+  }
+  for (const arac of digerleri) {
+    const kok = path.join(KIT, 'tools', arac);
+    for (const rel of dosyalar(kok)) {
+      const kaynak = path.join(kok, rel);
+      const yol = path.join(proje, rel);
+      if (!fs.existsSync(yol)) {
+        if (rel in files) continue;
+        kopyala(kaynak, yol);
+      } else if (files[rel] === hash(yol)) kopyala(kaynak, yol);
+      else if (files[rel] === hash(kaynak)) continue;
+      else {
+        guvenliKopyala(proje, rel, kaynak, cakisan);
+        if (cakisan.includes(rel)) continue;
+      }
+      files[rel] = hash(yol);
+    }
+  }
+}
+
 function dogrula(tip, ekler) {
   if (!TIPLER.includes(tip)) throw new Error(`Geçersiz tip: ${tip}. Seçenekler: ${TIPLER.join(', ')}`);
   for (const e of ekler) if (!EKLER.includes(e)) throw new Error(`Geçersiz ek: ${e}. Seçenekler: ${EKLER.join(', ')}`);
@@ -142,7 +206,8 @@ function dogrula(tip, ekler) {
 const cakismaRaporu = (cakisan) => cakisan.length && console.log(
   `Mevcut dosyaya dokunulmadı, kitin hali yanına .kit-new olarak kondu (${cakisan.length}):\n  ${cakisan.join('\n  ')}`);
 
-function init({ project }) {
+function init({ project, tool }) {
+  const araclar = aracDogrula(tool); // seçilmediyse dosyalar Claude Code'a göre kurulur, tool boş kalır (/start sorar)
   const proje = path.resolve(project ?? process.cwd());
   if (proje === KOK) throw new Error('Hedef kitin kendi klasörü. Proje klasöründen çalıştır: node <kit>/kit/kit.mjs init');
   if (fs.existsSync(path.join(proje, '.kit.json'))) throw new Error('Kit bu projede zaten kurulu (.kit.json var).');
@@ -161,21 +226,28 @@ function init({ project }) {
     git = spawnSync('git', ['init', '-q'], { cwd: proje }).status === 0 ? 'açıldı' : 'açılamadı (git kurulu mu?)';
   }
 
+  // Projenin kendi AGENTS.md'si varsa kitin kuralları /adopt Adım 4'e kadar .kit-new'den içe alınır
+  if (cakisan.includes('AGENTS.md') && !cakisan.includes('CLAUDE.md')) {
+    const c = path.join(proje, 'CLAUDE.md');
+    fs.writeFileSync(c, oku(c).replace(/^@AGENTS\.md$/m, '@AGENTS.md.kit-new'));
+  }
   const files = {};
   for (const rel of kopyalar.keys()) if (!cakisan.includes(rel)) files[rel] = hash(path.join(proje, rel));
+  aracKur(proje, araclar, files, cakisan);
   const bugun = new Date().toISOString().slice(0, 10);
   // type: null = kit kuruldu, tip henüz seçilmedi (/start Adım 3 veya /adopt)
-  kayitYaz(proje, { version: SURUM, source: KAYNAK, kit: iceride ? kitRel : KOK, type: null, addons: [], created: bugun, updated: bugun, files });
+  kayitYaz(proje, { version: SURUM, source: KAYNAK, kit: iceride ? kitRel : KOK, type: null, addons: [], tool: tool.length ? araclar : null, created: bugun, updated: bugun, files });
 
-  console.log(`Kit ${SURUM} kuruldu: ${proje}`);
+  console.log(`Kit ${SURUM} kuruldu: ${proje} · araç: ${tool.length ? araclar.join(', ') : 'seçilmedi (Claude Code dosyaları kuruldu; /start ve /adopt sorar, Codex/Antigravity için --tool)'}`);
   console.log(`Kit klasörü: ${iceride ? `${kitRel} (.gitignore'a eklendi)` : KOK} · git deposu: ${git}`);
   cakismaRaporu(cakisan);
-  console.log('Sonraki adım: Claude Code\'da bu klasörü yeni oturumla aç (komutlar ve hook\'lar yüklensin). Yeni projede /start [fikir], var olan projede /adopt.');
+  console.log('Sonraki adım: Bu klasörü aracında yeni oturumla aç (komutlar ve hook\'lar yüklensin). Yeni projede /start [fikir], var olan projede /adopt.');
+  sonrakiAdimlar(araclar);
 }
 
 // init ile kurulmuş projeye tip katmanı. init'in koyduğu ve kullanıcının değiştirmediği dosyalar ezilir,
 // projenin kendi dosyaları ezilmez (.kit-new).
-function installProje(proje, type, addons) {
+function installProje(proje, type, addons, tool) {
   const kayitYolu = path.join(proje, '.kit.json');
   if (!fs.existsSync(kayitYolu)) throw new Error(`.kit.json yok: önce init çalıştır (node ${path.join(KIT, 'kit.mjs')} init).`);
   const j = JSON.parse(oku(kayitYolu));
@@ -190,14 +262,17 @@ function installProje(proje, type, addons) {
     if (!cakisan.includes(rel)) files[rel] = hash(hedef);
   }
   for (const p of parcalar) parcaUygula(proje, p);
-  kayitYaz(proje, { ...j, version: SURUM, type, addons, updated: new Date().toISOString().slice(0, 10), files });
+  const araclar = tool.length ? aracDogrula(tool) : (j.tool ?? ['claude']);
+  aracKur(proje, araclar, files, cakisan);
+  kayitYaz(proje, { ...j, version: SURUM, type, addons, tool: tool.length ? araclar : (j.tool ?? null), updated: new Date().toISOString().slice(0, 10), files });
   console.log(`Kuruldu: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${SURUM}) · ${proje}`);
   cakismaRaporu(cakisan);
 }
 
-function install({ type, addons, keepKit, project }) {
+function install({ type, addons, keepKit, project, tool }) {
   dogrula(type, addons);
-  if (project && path.resolve(project) !== KOK) return installProje(path.resolve(project), type, addons);
+  if (project && path.resolve(project) !== KOK) return installProje(path.resolve(project), type, addons, tool);
+  const araclar = aracDogrula(tool);
   if (fs.existsSync(path.join(KOK, '.kit.json'))) throw new Error('Kit bu projede zaten kurulu (.kit.json var).');
 
   const { kopyalar, parcalar } = katmanlar(null, [type, ...addons.map((e) => `addons/${e}`)]);
@@ -209,18 +284,20 @@ function install({ type, addons, keepKit, project }) {
   const izlenen = new Set([...dosyalar(KOK, ORTAK_HARIC), ...kopyalar.keys()]);
   const files = {};
   for (const rel of [...izlenen].sort()) if (fs.existsSync(path.join(KOK, rel))) files[rel] = hash(path.join(KOK, rel));
+  aracKur(KOK, araclar, files, []);
   const bugun = new Date().toISOString().slice(0, 10);
-  kayitYaz(KOK, { version: SURUM, source: KAYNAK, type, addons, created: bugun, updated: bugun, files });
+  kayitYaz(KOK, { version: SURUM, source: KAYNAK, type, addons, tool: tool.length ? araclar : null, created: bugun, updated: bugun, files });
 
-  console.log(`Kuruldu: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${SURUM})`);
+  console.log(`Kuruldu: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${SURUM}) · araç: ${araclar.join(', ')}`);
   console.log(`Eklenen/değişen dosya: ${kopyalar.size + parcalar.length + 1}`);
+  sonrakiAdimlar(araclar);
   if (!keepKit) {
     fs.rmSync(KIT, { recursive: true, force: true });
     console.log('kit/ klasörü kaldırıldı. Güncellemeler için: /kit-update');
   }
 }
 
-function update({ project, addons: yeniEkler }) {
+function update({ project, addons: yeniEkler, tool }) {
   project = path.resolve(project);
   const kayitYolu = path.join(project, '.kit.json');
   if (!fs.existsSync(kayitYolu)) throw new Error(`.kit.json yok: ${project} kit ile kurulmamış.`);
@@ -253,8 +330,10 @@ function update({ project, addons: yeniEkler }) {
   const eklenenEkler = yeniEkler.filter((e) => !eskiEkler.includes(e)).map((e) => `addons/${e}`);
   for (const p of parcalar) if (eklenenEkler.includes(p.katman)) parcaUygula(project, p);
   for (const rel of Object.keys(kayit)) if (!kopyalar.has(rel) && kitDosyasi(rel)) rapor.kaldirilan.push(rel);
+  const araclar = tool.length ? aracDogrula(tool) : (j.tool ?? ['claude']);
+  aracKur(project, araclar, kayit, rapor.cakisan);
 
-  kayitYaz(project, { ...j, version: SURUM, addons: tumEkler, updated: new Date().toISOString().slice(0, 10), files: kayit });
+  kayitYaz(project, { ...j, version: SURUM, addons: tumEkler, tool: tool.length ? araclar : (j.tool ?? null), updated: new Date().toISOString().slice(0, 10), files: kayit });
 
   console.log(`Kit ${j.version} -> ${SURUM}`);
   const yaz = (baslik, liste) => liste.length && console.log(`${baslik} (${liste.length}):\n  ${liste.join('\n  ')}`);
@@ -267,23 +346,39 @@ function update({ project, addons: yeniEkler }) {
 }
 
 function argumanlar(argv) {
-  const a = { addons: [] };
+  const a = { addons: [], tool: [] };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--type') a.type = argv[++i];
     else if (k === '--project') a.project = argv[++i];
     else if (k === '--addons') a.addons = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
+    else if (k === '--tool') a.tool = argv[++i].split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
     else if (k === '--keep-kit') a.keepKit = true;
     else throw new Error(`Bilinmeyen argüman: ${k}`);
   }
   return a;
 }
 
+function sonrakiAdimlar(araclar) {
+  if (araclar.includes('codex')) console.log('Codex: komutlar skill olarak çağrılır ($start, $build ya da /skills). Hook\'lar için proje klasörüne güven ve /hooks ile kitin hook\'larını onayla.');
+  if (araclar.includes('antigravity')) console.log('Antigravity: komutlar skill olarak /start, /build... ile çağrılır. Hook\'lar .agents/hooks.json\'dan yüklenir.');
+}
+
+// Terminalde --tool verilmediyse sorar; etkileşimsiz çalışmada (test, CI) Claude Code varsayılır.
+async function aracSor() {
+  if (!process.stdin.isTTY) return [];
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const c = await rl.question('Hangi araçla çalışacaksın? 1) Claude Code  2) Codex  3) Antigravity (birden fazlaysa virgülle, örn. 1,2) [1]: ');
+  rl.close();
+  return c.split(',').map((s) => ARACLAR[Number(s.trim()) - 1] ?? s.trim().toLowerCase()).filter(Boolean);
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [islem, ...geri] = process.argv.slice(2);
   try {
     const a = argumanlar(geri);
-    if (islem === 'init') init(a);
+    if (islem === 'init') init({ ...a, tool: a.tool.length ? a.tool : await aracSor() });
     else if (islem === 'install') {
       if (!a.type) throw new Error(`--type gerekli: ${TIPLER.join(' | ')}`);
       install(a);
@@ -291,7 +386,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       if (!a.project) throw new Error('--project gerekli');
       update(a);
     } else {
-      console.log('Kullanım:\n  node kit/kit.mjs install --type <type> [--addons ai] [--keep-kit] [--project <yol>]\n  node <kit>/kit/kit.mjs init [--project <yol>]\n  node kit/kit.mjs update --project <yol> [--addons ai]');
+      console.log('Kullanım:\n  node kit/kit.mjs install --type <type> [--addons ai] [--keep-kit] [--project <yol>] [--tool claude,codex,antigravity]\n  node <kit>/kit/kit.mjs init [--project <yol>] [--tool claude,codex,antigravity]\n  node kit/kit.mjs update --project <yol> [--addons ai] [--tool ...]');
       process.exit(islem ? 1 : 0);
     }
   } catch (e) {

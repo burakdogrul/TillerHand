@@ -15,7 +15,9 @@ try { girdi = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { /* girdi yok */ 
 if (process.env.KIT_NOTIFY === 'off') process.exit(0);
 
 let proje = path.basename(kok);
-try { proje = fs.readFileSync(path.join(kok, 'CLAUDE.md'), 'utf8').match(/^# (.+)$/m)?.[1]?.replace(/^\[|\]$/g, '') || proje; } catch { /* */ }
+for (const f of ['AGENTS.md', 'CLAUDE.md']) { // 3.9.0 öncesi projelerde ad CLAUDE.md'de
+  try { const ad = fs.readFileSync(path.join(kok, f), 'utf8').match(/^# (.+)$/m)?.[1]; if (ad && ad !== '[PROJE ADI]') { proje = ad; break; } } catch { /* */ }
+}
 
 let mesaj;
 if (process.argv.includes('--stop')) {

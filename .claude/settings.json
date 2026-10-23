@@ -21,6 +21,9 @@
     "ask": [
       "Bash(git push:*)",
       "Edit(./CLAUDE.md)",
+      "Edit(./AGENTS.md)",
+      "Edit(./.codex/**)",
+      "Edit(./.agents/hooks.json)",
       "Edit(./.claude/**)",
       "Edit(./.mcp.json)",
       "Edit(./.github/workflows/**)"

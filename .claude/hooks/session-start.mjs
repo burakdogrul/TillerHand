@@ -3,13 +3,18 @@
 // sıradaki komut kullanıcıya da gösterilir (systemMessage): /clear sonrası ekran boşken nereden devam edileceği görünsün.
 // Kurulum, aşama, soru modu, kurul, limit, kaldığı yer ve git durumunu kısa notlarla bildirir.
 // Kısa tutulur: her oturumda yüklenir, token harcar.
+import fs from 'node:fs';
 import { execSync } from 'node:child_process';
 import { durumOku } from './status-read.mjs';
 import { limitOku, ozet } from './usage.mjs';
+import { aracBul, kokBul, oturumNotu } from './arac.mjs';
 
 const notlar = [];
 let siradaki = '';
-const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+let girdi = {};
+try { girdi = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { /* girdi yok */ }
+const arac = aracBul(girdi); // Claude Code, Codex veya Antigravity
+const kok = kokBul();
 
 try {
   const d = durumOku(kok);
@@ -36,9 +41,11 @@ try {
     if (d.kaldigiYer.length) notlar.push(`Kaldığı yer: ${d.kaldigiYer.join(' | ')}. Kullanıcıya buradan devam etmeyi öner.`);
     if (d.bekleyen.length) notlar.push(`Bekleyen kararlar: ${d.bekleyen.join(' | ')}. Önce bunları sor.`);
   }
-  const l = limitOku(kok);
-  notlar.push(l ? `Limit (son bilinen): ${ozet(l)}` : 'Limit: bilinmiyor. İş planlamadan önce oku (get_usage veya node .claude/hooks/usage.mjs).');
-  notlar.push('Rapor dili için caveman:caveman skill\'ini yükle (yüklü değilse atla).');
+  if (arac === 'claude') { // limit verisi ve caveman eklentisi Claude Code'a özel
+    const l = limitOku(kok);
+    notlar.push(l ? `Limit (son bilinen): ${ozet(l)}` : 'Limit: bilinmiyor. İş planlamadan önce oku (get_usage veya node .claude/hooks/usage.mjs).');
+    notlar.push('Rapor dili için caveman:caveman skill\'ini yükle (yüklü değilse atla).');
+  }
 } catch {
   // dokümanlar okunamadıysa sadece git bilgisi ver
 }
@@ -58,6 +65,4 @@ try {
   // git deposu değil veya ilk commit öncesi
 }
 
-const cikti = { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: '[Kit] ' + notlar.join('\n[Kit] ') } };
-if (siradaki) cikti.systemMessage = `[Kit] ${siradaki}`;
-if (notlar.length) console.log(JSON.stringify(cikti));
+if (notlar.length) console.log(oturumNotu(arac, '[Kit] ' + notlar.join('\n[Kit] '), siradaki && `[Kit] ${siradaki}`));

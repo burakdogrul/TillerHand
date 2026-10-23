@@ -63,7 +63,7 @@ Durum `docs/workflow/progress.md` → `**Soru modu:**` satırında tutulur. Vars
 
 **Kapalı konuda:** "(Önerilen)" seçeneği seç, uygula. Günlüğe `karar veren: otomatik` yaz. Durum bloğunda "Otomatik kararlar" satırında listele. Tasarım konusu kapalı olsa bile önizlemeleri `.previews/` altına üret ki kullanıcı sonradan bakabilsin.
 
-**Soru modundan bağımsız, her zaman onay iste:** veri silme, prod'a deploy, ödeme veya para harcatan işlem, geri dönülemez her komut, `CLAUDE.md` → "Asla" listesi.
+**Soru modundan bağımsız, her zaman onay iste:** veri silme, prod'a deploy, ödeme veya para harcatan işlem, geri dönülemez her komut, `AGENTS.md` → "Asla" listesi.
 
 ## 5. Tasarım kararlarında görsel önizleme
 

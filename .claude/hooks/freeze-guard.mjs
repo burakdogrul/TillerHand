@@ -2,17 +2,28 @@
 // Düzenleme kilidi (/freeze): Kilit açıkken AI sadece seçilen klasöre yazabilir; hata ayıklarken veya
 // riskli bir özellikte işin başka dosyalara yayılmasını önler. Durum: .claude/state/freeze.json → { "dir": "src/features/auth" }
 //   PreToolUse (Write|Edit|MultiEdit) hook'u: kilit varken klasör dışına yazmayı engeller (deny).
+//   Codex ve Antigravity'de ayrıca Claude Code izin listesinin dosya karşılığını uygular (KORUMALI): bu araçlarda
+//   settings.json yok; olmazsa AI kilidi, hook'ları ve kuralları kendisi değiştirebilir.
 //   node .claude/hooks/freeze-guard.mjs --set <klasör>   kilitle
 //   node .claude/hooks/freeze-guard.mjs --off            kilidi kaldır
 //   node .claude/hooks/freeze-guard.mjs --status         durumu yaz
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { girdiOku, kararVer } from './arac.mjs';
 
 const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const DURUM = path.join(kok, '.claude', 'state', 'freeze.json');
+const durumYolu = (dizin = kok) => path.join(dizin, '.claude', 'state', 'freeze.json');
+const DURUM = durumYolu();
 // Kilit varken de yazılması gereken kit dosyaları (ilerleme notu, hook durumları)
 const SERBEST = ['docs/workflow/progress.md', '.claude/state/'];
+
+// .claude/settings.json → permissions karşılığı (deny: .env ve secrets/, ask: kural ve koruma dosyaları)
+const KORUMALI = [
+  ['deny', /^(\.env(\.local|\.production|\.[^/]+\.local)?|secrets\/.*)$/i, 'Ortam ve sır dosyaları AI tarafından okunmaz ve yazılmaz.'],
+  ['ask', /^(CLAUDE\.md|AGENTS\.md|\.mcp\.json|\.claude\/.*|\.codex\/.*|\.agents\/hooks\.json|\.github\/workflows\/.*)$/i, 'Kural, koruma ve iş akışı dosyaları kullanıcı onayıyla değişir.'],
+];
+export const korumali = (rel) => KORUMALI.find(([, re]) => re.test(rel)) ?? null;
 
 const goreli = (dosya, kokDizin) => path.relative(kokDizin, path.resolve(kokDizin, dosya)).split(path.sep).join('/');
 
@@ -23,8 +34,8 @@ export function izinli(dosya, kilit, kokDizin = kok) {
   return rel === k || rel.startsWith(`${k}/`);
 }
 
-function kilitOku() {
-  try { return JSON.parse(fs.readFileSync(DURUM, 'utf8')).dir || null; } catch { return null; }
+function kilitOku(dizin = kok) {
+  try { return JSON.parse(fs.readFileSync(durumYolu(dizin), 'utf8')).dir || null; } catch { return null; }
 }
 
 // Modu SADECE ilk argüman belirler (izin listesi önekle eşleşir: "--set:*" ve "--status" onaysız, "--off" onaylı).
@@ -52,14 +63,19 @@ function ayarla() {
 }
 
 function hook() {
-  const kilit = kilitOku();
+  const g = girdiOku();
+  if (!g) process.exit(0);
+  const yollar = g.dosyalar.map(({ yol }) => path.resolve(g.dizin, yol));
+  if (g.arac !== 'claude') {
+    for (const yol of yollar) {
+      const k = korumali(goreli(yol, g.kok));
+      if (k) kararVer(g.arac, k[0], `${goreli(yol, g.kok)}: ${k[2]}`);
+    }
+  }
+  const kilit = kilitOku(g.kok);
   if (!kilit) process.exit(0);
-  let girdi;
-  try { girdi = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { process.exit(0); }
-  const yol = girdi.tool_input?.file_path;
-  if (!yol || izinli(yol, kilit)) process.exit(0);
-  const neden = `Düzenleme kilidi: sadece ${kilit}/ değiştirilebilir. Bu dosya gerekiyorsa kullanıcıya sor; kilidi kaldırmak için /freeze off.`;
-  console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: neden } }));
+  const disari = yollar.find((yol) => !izinli(yol, kilit, g.kok));
+  if (disari) kararVer(g.arac, 'deny', `Düzenleme kilidi: sadece ${kilit}/ değiştirilebilir. Bu dosya gerekiyorsa kullanıcıya sor; kilidi kaldırmak için /freeze off.`);
   process.exit(0);
 }
 

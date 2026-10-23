@@ -3,8 +3,9 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.8.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.9.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
+  <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
   <img alt="Dil" src="https://img.shields.io/badge/dil-T%C3%BCrk%C3%A7e-5b6577?style=flat-square">
@@ -17,6 +18,7 @@
   <a href="#-bulgu-raporları">Bulgular</a> ·
   <a href="#-proje-yapısı">Yapı</a> ·
   <a href="#-komutlar">Komutlar</a> ·
+  <a href="#-codex-ve-antigravity">Codex ve Antigravity</a> ·
   <a href="#-kiti-geliştirmek">Geliştirme</a>
 </p>
 
@@ -122,6 +124,8 @@ claude
 ```
 
 Var olan projede: `/adopt`. Kit başka bir yerde duruyorsa: `node <kit>/kit/kit.mjs init --project <proje>`. Eski yol olan **Use this template** de çalışmaya devam ediyor.
+
+`init` hangi araçla çalışacağını sorar. Codex veya Antigravity kullanıyorsan doğrudan seçebilirsin: `node vibe-kit/kit/kit.mjs init --tool codex` (birden fazlası: `--tool claude,codex`). Ayrıntı: [Codex ve Antigravity](#-codex-ve-antigravity).
 
 <details>
 <summary><b>Skill plugin'lerini kurmak</b></summary>
@@ -312,8 +316,10 @@ Kurulumdan sonra her proje bu düzende başlar ve **bu düzende kalır**. Kod ö
 ├── src/  veya  app/         # özellik bazlı kod (tipe göre; docs/architecture/structure.md)
 ├── tests/
 ├── sandbox/                 # deneme ve geçici işler (git'e girmez)
-└── CLAUDE.md · README.md · CHANGELOG.md
+└── AGENTS.md · CLAUDE.md · README.md · CHANGELOG.md
 ```
+
+`AGENTS.md` ortak kuralları tutar (Claude Code, Codex, Antigravity okur); `CLAUDE.md` onu `@AGENTS.md` ile içe alır ve Claude Code'a özel ekleri taşır. Codex veya Antigravity seçildiyse `.agents/skills/` (komutların skill kopyaları) ve aracın hook ayarı (`.codex/hooks.json`, `.agents/hooks.json`) da gelir.
 
 ```mermaid
 flowchart LR
@@ -347,7 +353,7 @@ flowchart TB
 | Paket kapısı | Paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur |
 | Yıkıcı komut kalkanı | `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset` engellenir; prod deploy ve uzak veritabanı işlemleri sorulur |
 | Yapı koruyucu | Harita dışı yeni dosya sorulur, dağınıklık dosyaları engellenir |
-| Yapılandırma onayı | `CLAUDE.md`, `.claude/`, `.mcp.json` ve iş akışı dosyaları onayın olmadan değişmez |
+| Yapılandırma onayı | `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.codex/`, `.mcp.json` ve iş akışı dosyaları onayın olmadan değişmez |
 | Commit kapısı | Kurul denetimi olmadan commit atılmaz |
 | Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazabilir |
 | Güvenlik incelemesi | `security-guidance` (Anthropic): yazarken riskli kalıp uyarısı, commit'te ayrı modelle inceleme. Tur sonu incelemesi kota için kapalı gelir |
@@ -368,7 +374,7 @@ flowchart TB
 | Komut | Ne yapar |
 |---|---|
 | `/start [fikir]` | 9 adımlı başlangıç sihirbazı |
-| `/adopt` | Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, CLAUDE.md'yi yeniden yazar, uyum yol haritası çıkarır |
+| `/adopt` | Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, AGENTS.md ve CLAUDE.md'yi yeniden yazar, uyum yol haritası çıkarır |
 | `/plan-task [görev]` | Karar noktalarını sorar, kurul görüşüyle plan çıkarır |
 | `/build [görev]` | Önce kabul testleri, sonra uygulama; kanıt ve kurul denetimi |
 | `/design [kapsam]` | Görsel önizlemeli tasarım kararları |
@@ -387,7 +393,29 @@ flowchart TB
 | `/retro` | Dersleri projeye ve kite geri yazar |
 | `/research [konu]` | Makaleler, GitHub'daki benzer projeler, rakip ürünler; fark tablosu; seçilen özellikler PRD'ye |
 | `/handoff [devral]` | Projeyi başka kişiye/hesaba devreder veya devralır; aynı yerden devam |
-| `/kit-update` | Projeyi kitin son sürümüne çeker |
+| `/kit-update` | Projeyi kitin son sürümüne çeker (`--tool codex` ile araç eklenir) |
+
+## 🔀 Codex ve Antigravity
+
+Kit Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul ajanları, soru arayüzü ve durum çubuğu çalışmaz.
+
+| Parça | Claude Code | Codex | Antigravity |
+|---|---|---|---|
+| Kurallar | `CLAUDE.md` (`@AGENTS.md` içe alır) | `AGENTS.md` | `AGENTS.md` |
+| Komutlar | `/start`, `/build`… | Skill: `$start` ya da `/skills` | Skill: `/start` |
+| Korumalar (sır, kalkan, yapı, kilit, paket) | `.claude/settings.json` | `.codex/hooks.json` | `.agents/hooks.json` |
+| "Sor" kararı (main'e push, harita dışı dosya) | Onay penceresi | Engellenir; AI sana sorar, onaylarsan işlemi sen yaparsın | Onay penceresi |
+| İzin listesi: `rm -rf`, `reset --hard`, `push --force`, `.env`; kural ve koruma dosyalarına yazma | `.claude/settings.json` izinleri | Hook: engellenir | Hook: engellenir veya sorulur |
+| Oturum başı notu | Var | Var | Var |
+| Seçenekli sorular | AskUserQuestion | Numaralı düz metin | `ask_question` |
+| Kurul ve konsey ajanları | Ayrı modeller | Tek model, rolleri sırayla üstlenir | Tek model |
+| Durum çubuğu, limit, pano yenileme, commit kapısı | Var | Yok | Yok |
+
+- **Kurulum:** `node <kit>/kit/kit.mjs init --tool codex` (ya da `antigravity`, ya da `claude,codex`). Komutların kaynağı tektir (`.claude/commands/`); `.agents/skills/` altındaki kopyaları `init`, `install` ve `update` üretir. Kopyaları düzenleme, kaynağı düzenle.
+- **Codex:** Proje hook'ları ancak klasöre güvendiğinde ve `/hooks` ile onayladığında çalışır. Bunu ilk oturumda yap, yoksa korumalar devre dışı kalır. Codex'i proje kökünde başlat; Windows'ta hook betikleri göreli yolla çağrılır.
+- **Sınır:** Kabuk komutuyla dosya yazmak (`echo > dosya`, heredoc) yapı koruyucuya ve düzenleme kilidine takılmaz; sır taraması komut metninde yapılır, kural ve koruma dosyalarını değiştiren kabuk komutu sorulur. Claude Code'da da durum aynı, orada her kabuk komutu zaten onaya gelir.
+- **Var olan projeye araç eklemek:** `/kit-update --tool claude,codex`.
+- **Dayanak:** Araçların resmi hook ve skill dokümanları (2026-10-23). İki araç da hızlı değişiyor; ilk kullanımda bir sır yazma denemesiyle korumaların çalıştığını gör. Araştırma notu: `kit/research/2026-10-23-codex-antigravity.md`.
 
 ## 🧰 Yetenek paketleri
 
@@ -438,7 +466,8 @@ Tam eşleme: [`docs/workflow/skills.md`](docs/workflow/skills.md)
 
 ```
 kit/
-├── kit.mjs                  # init · install · update
+├── kit.mjs                  # init · install · update (--tool)
+├── tools/                   # codex/.codex/hooks.json · antigravity/.agents/hooks.json
 ├── templates/
 │   ├── web-saas/            # stack, design-guide, structure.json, CI, Dependabot, MCP, pre-commit
 │   ├── mobile/

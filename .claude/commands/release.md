@@ -12,7 +12,7 @@ Kaynak listeler: `docs/operations/release-checklist.md`, `docs/architecture/stac
    - `first` modunda önce `/findings-all security,legal,perf` öner (tahmini maliyetiyle); raporlardaki Kritik bulgular yayını engeller.
    - `first` modunda paralel başlat: `security-auditor` alt ajanı (tüm kod tabanı; kurul toplantısına zaten katılıyorsa tekrar çalıştırma), `security-review` skill'i, `ponytail:ponytail-audit` (kalite, yük altında kırılacak yerler); arayüz varsa `impeccable:impeccable` → `audit` (erişilebilirlik, performans, responsive)
    - Son CI çalışmasının durumu (`gh run list --branch main --limit 1`, gh kuruluysa)
-   - Lint, tip kontrolü, testler, build (`CLAUDE.md` → Komutlar)
+   - Lint, tip kontrolü, testler, build (`AGENTS.md` → Komutlar)
    - Bağımlılık açık taraması ve Semgrep (`docs/security/checklist.md` §9)
    - Kabul testleri: MVP kriterlerinin tamamı yeşil mi (JUnit raporu)? Saldırgan testleri var mı?
    - `docs/operations/accounts.md` eksiksiz mi, 30 gün içinde dolan tarih var mı? `docs/operations/feature-flags.md`'de riskli özellikler bayrakta mı?

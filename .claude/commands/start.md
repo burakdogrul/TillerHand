@@ -30,6 +30,11 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
 0b. **Anlatıcı mod:** Sor: "Yazılımı yeni öğreniyorsan, Anlatıcı mod her değişikliği ve hatayı sade Türkçe anlatır. Cevaplar biraz uzar, bu da biraz daha fazla token demek. Açılsın mı?" Seçenekler: "Evet" ve "Hayır, kısa cevaplar". Kullanıcının bilgi seviyesi düşükse "Evet" önerilen olsun.
     - Evet ise `.claude/settings.local.json` dosyasına `"outputStyle": "anlatici"` ekle (dosya varsa birleştir; bu dosya git'e girmez, kişisel ayardır).
     - Mod bir sonraki mesajdan itibaren geçerli olur. Terminalde `/output-style anlatici` komutu da aynı işi yapar. Kapatmak için değeri sil.
+0c. **Araç:** Bu projede hangi yapay zekâ araçlarıyla çalışılacak? `.kit.json` → `tool` doluysa (`init` sırasında seçildi) tek satırla bildir, tekrar sorma. Yoksa **çoklu seçimle** sor:
+    - **Claude Code (Önerilen):** Kit bunun için yazıldı; bütün özellikler (kurul ajanları, soru arayüzü, durum çubuğu, limit).
+    - **Codex:** Kurallar `AGENTS.md`'den, komutlar skill olarak (`$start`), korumalar `.codex/hooks.json` ile. Kurul tek model, seçenekler düz metin, durum çubuğu yok.
+    - **Antigravity:** Kurallar `AGENTS.md`'den, komutlar skill olarak (`/start`), korumalar `.agents/hooks.json` ile. Kurul tek model, durum çubuğu yok.
+    Seçimi `**Profil:**` satırına ekle (örn. `araç: claude,codex`) ve Adım 3'teki kurulum komutuna `--tool <liste>` olarak ver. Claude Code dosyaları her durumda kurulur (hook betikleri ortaktır).
 1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version` ve kitin yeri. İki kurulum yolu var: kökte `kit/kit.mjs` (template yolu) ya da `.kit.json` → `kit` alanındaki klasör (`init` ile kurulmuş, `type` boş). Klasörde zaten uygulama kodu varsa (`package.json`, `pyproject.toml`, `src/` vb.) dur ve `/adopt` öner.
 2. `docs/workflow/skills.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. LSP eklentisi dil sunucusu ister: web ve mobil için `npm i -g typescript-language-server typescript`, backend için `npm i -g pyright` (global kurulum; kullanıcı onayıyla). **Eklentiler:** Proje ayarı eklentileri açar ama indirmez; kurulmamış olanlar yükleme hatası verir ve skill'leri gelmez. Kullanıcıya listeyi göster ve sor: "Proje ayarındaki eklentiler kurulsun mu?" Önce `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele; onay gelirse `node .claude/hooks/plugins-sync.mjs --kur` çalıştır. Betik eksikleri proje kapsamında kurar, `false` olanları (Remotion) kurup kapatır. Sonra kullanıcıdan `/reload-plugins` çalıştırmasını iste. claude CLI yoksa eksik eklentilerin `/plugin install x@y` komutlarını ver ve "Kurup devam edelim mi, eksik skill olmadan mı?" diye sor.
 3. `caveman:caveman` skill'ini yükle (rapor dili).
@@ -77,8 +82,8 @@ Kullanıcıya ne yapılacağını tek cümleyle söyle, sonra çalıştır:
 
 ```bash
 # template yolu (kökte kit/ var): kit/ kurulumdan sonra silinir
-node kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai]
-# init yolu (.kit.json → kit): kit klasörüne dokunulmaz
+node kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai] [--tool claude,codex,antigravity]
+# init yolu (.kit.json → kit): kit klasörüne dokunulmaz; araç init'te seçildiyse --tool gerekmez
 node <kit>/kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai] --project .
 ```
 
@@ -94,8 +99,8 @@ node <kit>/kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai] --
 Bütün kararlar bitince:
 1. docs/architecture/stack.md → "Seçilen teknolojiler" tablosunu doldur.
 2. Seçim önerilenden farklıysa docs/architecture/stack.md'nin Komutlar, Klasör yapısı, Kodlama kuralları, AI hataları ve Doğrulama bölümlerini seçime göre yeniden yaz. Bunlara bağlı `.github/workflows/ci.yml`, `.claude/settings.json` izinleri, `.env.example`, pre-commit ayarları ve `.mcp.json` dosyalarını da uyarla. Farkları raporla.
-3. `CLAUDE.md` → Komutlar bölümünü doldur.
-3a. **Başka bilgisayarda kurulabilirlik:** Çalışma ortamı sürümünü sabitle: Node için `.nvmrc`, Python için `.python-version` (sürüm stack.md'deki). `README.md` → Gereksinimler (çalışma ortamı ve sürümü, sistem bağımlılıkları: veritabanı, ffmpeg vb., hesaplar) ve Kurulum bölümlerini doldur; komutlar `CLAUDE.md` → Komutlar ile aynı olsun. Kilit dosyası (`package-lock.json`, `uv.lock` vb.) ilk paket kurulumunda oluşur ve commit'e girer.
+3. `AGENTS.md` → Komutlar bölümünü doldur.
+3a. **Başka bilgisayarda kurulabilirlik:** Çalışma ortamı sürümünü sabitle: Node için `.nvmrc`, Python için `.python-version` (sürüm stack.md'deki). `README.md` → Gereksinimler (çalışma ortamı ve sürümü, sistem bağımlılıkları: veritabanı, ffmpeg vb., hesaplar) ve Kurulum bölümlerini doldur; komutlar `AGENTS.md` → Komutlar ile aynı olsun. Kilit dosyası (`package-lock.json`, `uv.lock` vb.) ilk paket kurulumunda oluşur ve commit'e girer.
 3b. **Stack skill'leri:** Web'de (React/Next) `npx -y skills@1.7.2 add vercel-labs/agent-skills --skill react-best-practices --skill composition-patterns -a claude-code -y --copy`, mobilde `--skill react-native-guidelines` ile çalıştır. Gelen SKILL.md dosyalarını kurmadan önce oku (üçüncü taraf içerik). Mobilde Maestro CLI kurulu değilse kurulumunu söyle (`docs/workflow/mcp-catalog.md`).
 4. `docs/decisions/log.md`: Günlükte eksik karar kalmadığını kontrol et, teknoloji yığınını `docs/decisions/adr-0001-tech-stack.md` olarak kaydet (şablon: `adr-template.md`).
 

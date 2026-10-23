@@ -4,8 +4,8 @@
 //   Paket yok                          -> engellenir (deny)
 //   Çok yeni / az indirilmiş / popüler bir pakete çok benzeyen / doğrulanamadı -> kullanıcıya sorulur (ask)
 // Karar Claude Code'un izin arayüzünden geçer; AI kendisi atlayamaz.
-import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { girdiOku, kararVer } from './arac.mjs';
 
 export const ESIK = { yeniGun: 30, npmHaftalikIndirme: 500 };
 
@@ -109,15 +109,11 @@ export async function denetle({ eko, ad }, al = fetch, simdi = Date.now()) {
   }
 }
 
-const karar = (decision, reason) => {
-  console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: decision, permissionDecisionReason: reason } }));
-  process.exit(0);
-};
-
 async function hook() {
-  let komut = '';
-  try { komut = JSON.parse(readFileSync(0, 'utf8')).tool_input?.command ?? ''; } catch { process.exit(0); }
-  const paketler = paketleriBul(komut);
+  const g = girdiOku();
+  if (!g) process.exit(0);
+  const karar = (decision, reason) => kararVer(g.arac, decision, reason);
+  const paketler = paketleriBul(g.komut);
   if (!paketler.length) process.exit(0);
   const sonuclar = await Promise.all(paketler.map(async (p) => ({ ...p, ...(await denetle(p)) })));
   const yok = sonuclar.filter((s) => s.durum === 'yok');

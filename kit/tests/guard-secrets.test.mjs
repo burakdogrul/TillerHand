@@ -31,18 +31,23 @@ test('normal kodda alarm vermez', () => {
 
 const calistir = (girdi) => spawnSync(process.execPath, [HOOK], { input: JSON.stringify(girdi), encoding: 'utf8' });
 
-test('hook: Write içinde sır varsa 2 ile çıkar', () => {
+const engellendi = (r) => JSON.parse(r.stdout || '{}').hookSpecificOutput?.permissionDecision === 'deny';
+
+test('hook: Write içinde sır varsa engeller (deny)', () => {
   const r = calistir({ tool_name: 'Write', tool_input: { file_path: 'a.ts', content: `x = "${SAHTE.stripe}"` } });
-  assert.equal(r.status, 2);
-  assert.match(r.stderr, /ENGELLENDİ/);
+  assert.equal(r.status, 0);
+  assert.ok(engellendi(r));
+  assert.match(r.stdout, /ENGELLENDİ/);
 });
 
 test('hook: Edit ve MultiEdit kontrol edilir', () => {
-  assert.equal(calistir({ tool_input: { file_path: 'a', new_string: SAHTE.aws } }).status, 2);
-  assert.equal(calistir({ tool_input: { file_path: 'a', edits: [{ new_string: 'ok' }, { new_string: SAHTE.pem }] } }).status, 2);
+  assert.ok(engellendi(calistir({ tool_input: { file_path: 'a', new_string: SAHTE.aws } })));
+  assert.ok(engellendi(calistir({ tool_input: { file_path: 'a', edits: [{ new_string: 'ok' }, { new_string: SAHTE.pem }] } })));
 });
 
 test('hook: temiz içerik ve bozuk girdi geçer', () => {
-  assert.equal(calistir({ tool_input: { file_path: 'a', content: 'hello' } }).status, 0);
+  const temiz = calistir({ tool_input: { file_path: 'a', content: 'hello' } });
+  assert.equal(temiz.status, 0);
+  assert.equal(temiz.stdout, '');
   assert.equal(spawnSync(process.execPath, [HOOK], { input: 'bozuk', encoding: 'utf8' }).status, 0);
 });

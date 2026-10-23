@@ -83,8 +83,10 @@ export function durumOku(kok) {
       .map(([no, tarih, tur, kapsam, katilan, sonuc, kritik, karar]) => ({ no, tarih, tur, kapsam, katilan, sonuc, kritik, karar })),
   };
 
+  const baslik = (f) => oku(d(f)).match(/^# (.+)$/m)?.[1].trim();
   return {
-    proje: (oku(d('CLAUDE.md')).match(/^# (.+)$/m)?.[1] ?? 'Proje').trim(),
+    // Proje adı AGENTS.md'de; 3.9.0 öncesi projelerde CLAUDE.md'de (güncelleme AGENTS.md'yi yer tutucuyla ekler)
+    proje: [baslik('AGENTS.md'), baslik('CLAUDE.md')].find((a) => a && a !== '[PROJE ADI]') ?? baslik('AGENTS.md') ?? 'Proje',
     // type: null = init ile kuruldu, tip henüz seçilmedi (/start veya /adopt bekliyor)
     kurulu: !!kit && kit.type !== null,
     kitBekliyor: kit ? kit.type === null : fs.existsSync(d('kit/kit.mjs')),

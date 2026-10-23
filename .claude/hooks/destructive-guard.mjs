@@ -4,8 +4,8 @@
 // yasaklar yetmez; koruma ajanın dışında olmalı. Bu hook kararı Claude Code'un izin katmanına bırakır:
 //   deny : veri yok eden komutlar, prod veritabanı adresi içeren komutlar. Gerekirse kullanıcı kendisi çalıştırır.
 //   ask  : prod'a deploy, mağazaya gönderim, geri alınması zor git işlemleri. Kullanıcıya sorulur.
-import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { girdiOku, kararVer } from './arac.mjs';
 
 const YIKICI = [
   [/\bdrop\s+(table|database|schema|index|view|collection)\b/i, 'DROP ile veri yapısı siliniyor'],
@@ -15,7 +15,7 @@ const YIKICI = [
   [/\b(supabase\s+db\s+reset|prisma\s+migrate\s+reset|prisma\s+db\s+push\b[^;]*--force-reset|drizzle-kit\s+drop)\b/i, 'Veritabanı sıfırlanıyor'],
   [/\b(alembic\s+downgrade\s+base|dropdb\b|rails\s+db:(drop|reset)|django-admin\s+flush|manage\.py\s+flush)\b/i, 'Veritabanı veya şema siliniyor'],
   [/\bdocker\s+(compose\s+down\b[^;]*\s-v\b|volume\s+(rm|prune)\b|system\s+prune\b[^;]*--volumes)/i, 'Docker volume (kalıcı veri) siliniyor'],
-  [/\bgit\s+clean\b[^;]*-[a-z]*f[a-z]*d/i, 'git clean ile takip edilmeyen dosyalar kalıcı siliniyor'],
+  [/\bgit\s+clean\b(?=[^;]*\s--?[a-z]*f)(?=[^;]*\s-[a-z]*d)/i, 'git clean ile takip edilmeyen dosyalar kalıcı siliniyor'],
   [/\bredis-cli\b[^;]*\b(flushall|flushdb)\b/i, 'Redis verisi siliniyor'],
   [/\bfirebase\s+firestore:delete\b/i, 'Firestore verisi siliniyor'],
 ];
@@ -32,6 +32,25 @@ const ONAYLI = [
   [/\bgit\s+(rebase|filter-branch|filter-repo)\b/i, 'Git geçmişi yeniden yazılıyor'],
   [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'Migration uygulanıyor (hedef ortamı kontrol et)'],
 ];
+
+// Claude Code'da .claude/settings.json → permissions ile engellenen/sorulan komutlar. Codex ve Antigravity'de
+// bu liste yok; karşılığı burada (sadece o araçlarda uygulanır, Claude'un davranışı değişmez).
+const IZIN_KARSILIGI = [
+  ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'rm -rf ile toplu silme'],
+  ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'Klasör toplu siliniyor'],
+  ['deny', /\bgit\s+reset\s+[^;&|]*--hard\b/i, 'git reset --hard ile commit edilmemiş iş siliniyor'],
+  ['deny', /\bgit\s+push\b[^;&|]*\s(--force\S*|-\w*f\w*|\+\S+)(?=\s|$)/i, 'git push --force ile uzak geçmiş eziliyor'],
+  ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, '.env veya secrets/ dosyasına erişiliyor (AI okumaz, yazmaz)'],
+  ['ask', /freeze-guard\.mjs\s+--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
+  // Dosya araçlarındaki KORUMALI kuralının kabuk karşılığı: kural veya koruma dosyasını anan ve yazan/silen komut sorulur
+  ['ask', /(?=.*(\.claude[/\\]|\.codex[/\\]|\.agents[/\\]hooks\.json|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
+];
+
+export function izinKarsiligi(komut) {
+  const k = komut.replace(/\s+/g, ' ').replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, ''); // hata yönlendirmesi yazma sayılmaz
+  const e = IZIN_KARSILIGI.find(([, re]) => re.test(k));
+  return e ? { karar: e[0], neden: `${e[2]}. ${e[0] === 'deny' ? 'AI bu komutu çalıştıramaz; gerekliyse kullanıcı kendisi çalıştırır.' : 'Kullanıcı onayı gerekli.'}` } : null;
+}
 
 export function degerlendir(komut) {
   const k = komut.replace(/\s+/g, ' ');
@@ -51,9 +70,8 @@ export function degerlendir(komut) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  let komut = '';
-  try { komut = JSON.parse(readFileSync(0, 'utf8')).tool_input?.command ?? ''; } catch { process.exit(0); }
-  const s = degerlendir(komut);
-  if (s) console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: s.karar, permissionDecisionReason: `Kalkan: ${s.neden}` } }));
+  const g = girdiOku();
+  const s = g && (degerlendir(g.komut) ?? (g.arac !== 'claude' ? izinKarsiligi(g.komut) : null));
+  if (s) kararVer(g.arac, s.karar, `Kalkan: ${s.neden}`);
   process.exit(0);
 }

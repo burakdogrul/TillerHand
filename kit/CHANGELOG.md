@@ -5,6 +5,57 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.9.0] - 2026-10-23
+
+Kit artık OpenAI Codex ve Google Antigravity'de de çalışıyor: kurallar, komutlar ve korumalar. Kurul ajanları, soru arayüzü ve durum çubuğu Claude Code'a özel kalıyor. Dayanak: iki aracın resmi hook ve skill dokümanları (`kit/research/2026-10-23-codex-antigravity.md`).
+
+### Eklendi
+- **`AGENTS.md`:** Ortak kurallar (temel kurallar, Bitti tanımı, Asla, Git, Komutlar, proje adı) buraya taşındı. Üç araç da bu dosyayı okur. `CLAUDE.md` onu `@AGENTS.md` ile içe alır ve Claude Code'a özel kuralları tutar (skill tablosu, limit). Claude Code'un gördüğü kurallar değişmedi; sadece sıralama değişti ve iki araç için bir karşılık bölümü eklendi.
+- **`kit.mjs --tool claude,codex,antigravity`** (`init`, `install`, `update`): Birden fazla araç seçilebilir. `init` bu seçeneği verilmezse terminalde sorar. Seçim `.kit.json` → `tool` alanına yazılır. Claude Code dosyaları her durumda kurulur.
+  - Codex veya Antigravity seçildiyse `.claude/commands/*.md` ve `.claude/skills/` dosyalarından `.agents/skills/<ad>/SKILL.md` üretilir. Codex bunları `$start` ya da `/skills` ile, Antigravity `/start` ile çağırır. Kaynak tek kalır, kit reposunda kopya tutulmaz. Kopyalar her güncellemede yenilenir.
+  - Hook ayarları: `.codex/hooks.json` (Codex) ve `.agents/hooks.json` (Antigravity). Şablonları `kit/tools/<araç>/` altında. Güncellemede diğer kit dosyalarıyla aynı kural geçerli: değiştirilmediyse yenilenir, değiştirildiyse `.kit-new` olarak gelir.
+- **Hook girdi/çıktı katmanı (`.claude/hooks/arac.mjs`):** Sır engeli, yıkıcı komut kalkanı, paket kapısı, yapı koruyucu, düzenleme kilidi ve oturum başı hook'u üç aracın biçimini okur ve kararı o aracın biçiminde yazar.
+  - Codex: Claude ile aynı alanlar. Dosya düzenleme `apply_patch` ile gelir; eklenen, güncellenen ve taşınan dosyalar yama metninden çıkarılır.
+  - Antigravity: `toolCall.name/args` biçimi. Desteklenen araçlar: `run_command`, `write_to_file`, `replace_file_content`, `multi_replace_file_content`. Karar `decision`, oturum notu `injectSteps` ile yazılır.
+  - Codex'te "sor" kararı (`ask`) yok; verilirse araç yine çalışıyor. Bu yüzden Codex'te "sor" engellemeye döner ve AI'ya kullanıcıya sorması söylenir (kullanıcı kararı).
+  - Proje kökü Codex'te girdideki `cwd`'den, Antigravity'de `workspacePaths`'ten alınır.
+- **Claude Code izin listesinin karşılığı (Codex, Antigravity):** Bu araçlarda `.claude/settings.json` izinleri yok. Güvenlik denetiminin RET kararı üzerine karşılıkları hook'a eklendi. Sadece bu iki araçta uygulanır, Claude Code'un davranışı değişmez.
+  - Engellenen komutlar: `rm -rf`, Windows'ta toplu silme, `git reset --hard`, `git push --force` ve `.env` ile `secrets/` erişimi.
+  - `freeze-guard --off` sorulur.
+  - `.env` dosyalarına yazma engellenir. Şu dosyalara yazma sorulur: `CLAUDE.md`, `AGENTS.md`, `.claude/**` (kilit dosyası dahil), `.codex/**`, `.agents/hooks.json`, `.mcp.json`, `.github/workflows/**`. Codex'te "sor" engellemeye döner.
+  - Sır engeli kabuk komutunu da tarar (heredoc, `echo > dosya`).
+  - Fail-closed: Yama başlığı anlaşılmazsa yamanın tamamı taranır ve kilit engeller. Antigravity'de içerik alanının adı ne olursa olsun bütün argümanlar taranır; hedef yol yoksa kilit engeller.
+  - Proje kökü, hook betiğinin kendi yerinden (`<proje>/.claude/hooks/`) bulunur; cwd'ye ya da ajanın açabileceği işaretlere (`.git`) bağlı değildir. Böylece Codex alt klasörde açılsa da kilit ve yapı koruması çalışır. Göreli yama yolları oturumun klasörüne göre çözülür.
+  - Kural veya koruma dosyasını anan ve onu yazan ya da silen kabuk komutu sorulur (`rm`, `sed -i`, `>`, `cp`, `Remove-Item`…). Kit betiklerini çalıştırmak (`node .claude/hooks/...`) serbesttir.
+  - Codex tanıma: `CLAUDE_PROJECT_DIR` yoksa girdi Codex sayılır (ask, engellemeye döner).
+- **`/start` ve `/adopt` Adım 0c:** Projede kullanılacak araçlar çoklu seçimle sorulur. `init` sırasında seçildiyse sadece bildirilir.
+- Pano başlığında Claude Code dışındaki araçlar görünür. Yapı haritasına `AGENTS.md`, `.agents/**` ve `.codex/**` eklendi.
+- Testler (`kit/tests/arac.test.mjs`): Sır yazma denemesi üç aracın girdi biçiminde de engellenir. Denetimde bulunan atlatma yolları saldırgan testi olarak eklendi: boşluklu yama başlığı, alan adı değişimi, alt klasör, koruma dosyası ve kilit silme, yasak komutlar, kabukla sır yazma, turn_id'siz Codex girdisi. Ayrıca kalkan, yapı koruyucu, düzenleme kilidi ve oturum başı her biçimde test edilir. `init --tool` ile doğru dosyaların üretildiği, güncellemede kopyaların yenilendiği ve kullanıcının değiştirdiği hook ayarının korunduğu da testli.
+
+### Değişti
+- **`init` dolu klasörde Codex ve Antigravity dosyalarını da ezmez.** Projenin kendi `.agents/skills/` dosyaları korunur; kitin hali `.kit-new` olarak yanına konur. Projede `AGENTS.md` varsa kitin `CLAUDE.md`'si, `/adopt` Adım 4'e kadar kitin kurallarını `@AGENTS.md.kit-new` satırıyla içe alır.
+- `--tool` verilmeden ve etkileşimsiz çalışan `init` (örneğin AI'nın çalıştırdığı) `tool` alanını boş bırakır; aracı `/start` veya `/adopt` sorar.
+- Yıkıcı komut kalkanı `git clean` komutunu bayraklar ayrı yazıldığında da yakalıyor (`-f -d`, `-d -f`, `--force -d`). Bu düzeltme Claude Code'u da etkiler.
+- Sır engeli artık çıkış kodu 2 yerine `permissionDecision: deny` ile engelliyor. Claude Code'da sonuç aynı; Antigravity çıkış kodunu belgelemediği için bu biçime geçildi.
+- `git push` kalkanı `-fu` ve `+dal` biçimlerini de yakalar; `.env` kuralı `.env.example` dışındaki tüm `.env*` dosyalarını kapsar (sadece Codex ve Antigravity).
+- Proje adı `AGENTS.md`'den okunur (durum çubuğu, pano, bildirim). 3.9.0 öncesi projelerde ad `CLAUDE.md`'de kalır ve oradan okunmaya devam eder.
+- "Komutlar", "Bitti tanımı" ve "Asla" listelerine yapılan atıflar `AGENTS.md`'yi gösteriyor (`/build`, `/release`, `/rollback`, `/retro`, `/wrap-up`, karar protokolü, kod inceleme ajanı).
+
+### Bilinen sınırlar
+- Kurul ve konsey ajanları, `AskUserQuestion`, durum çubuğu, limit okuma, pano yenileme (`Stop`), commit kapısı ve hatırlatıcı Codex ve Antigravity'de yok.
+- Antigravity IDE'de skill'lerin eğik çizgiyle çağrıldığı belgelenmemiş (App ve CLI'da belgeli).
+- Codex'te proje hook'ları, klasöre güvenilip `/hooks` ile onaylanınca çalışır.
+- Kabuk komutları için hook sadece kazara veya tek adımda yapılan atlatmayı keser. Glob (`rm .cl*/…`), `cd` ile yol bölme ve değişkenle kurulan yollar yakalanmaz; asıl sınırı aracın kendi sandbox'ı çizer.
+- Kabuk komutuyla dosya yazmak (`echo > dosya`, `sed -i`) yapı koruyucuya ve düzenleme kilidine takılmaz. Claude Code'da da aynı, orada kabuk komutları onaya gelir.
+- Codex'te hook betiği Unix'te `git rev-parse --show-toplevel` ile, Windows'ta göreli yolla çağrılır. Bu yüzden Windows'ta Codex proje kökünde açılmalı.
+- İki aracın hook biçimi resmi dokümana göre yazıldı ve testlerle doğrulandı. Gerçek araçta henüz denenmedi.
+
+### Elle uyarla
+- **`AGENTS.md` ve `CLAUDE.md`** (Codex veya Antigravity kullanacaksan gerekli, yoksa isteğe bağlı): Güncelleme `AGENTS.md`'yi yer tutucularla ekler; mevcut `CLAUDE.md`'ye dokunmaz. Proje adını, tek cümlelik tanımı, Komutlar bölümünü ve varsa `## Proje kuralları` bölümünü `AGENTS.md`'ye taşı. Sonra `CLAUDE.md`'yi kitin yeni `CLAUDE.md`'si ile değiştir (`@AGENTS.md` + Claude'a özel kurallar). Bu yapılmazsa Claude Code eskisi gibi çalışır, Codex ve Antigravity ise yer tutuculu kuralları görür.
+- **Araç eklemek:** `/kit-update --tool claude,codex`.
+- **`.claude/settings.json` → `permissions.ask`:** `Edit(./AGENTS.md)`, `Edit(./.codex/**)` ve `Edit(./.agents/hooks.json)` satırlarını ekle. Bu dosyalar da kural ve koruma taşıdığı için değişiklikleri onayla yapılmalı.
+- **`.claude/structure.json` → `allow`:** `AGENTS.md`, `.agents/**` ve `.codex/**` satırlarını ekle.
+
 ## [3.8.0] - 2026-10-23
 
 ### Eklendi

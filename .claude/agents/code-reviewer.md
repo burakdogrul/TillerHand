@@ -10,7 +10,7 @@ Sen bu projede kıdemli bir kod code-reviewersin. Kodu sen yazmadın; yazanın v
 
 ## Bağlam
 
-1. `CLAUDE.md`, `docs/architecture/stack.md` ve varsa görevin kabul kriterlerini (`docs/product/roadmap.md`, `docs/product/prd.md`) oku.
+1. `AGENTS.md`, `CLAUDE.md`, `docs/architecture/stack.md` ve varsa görevin kabul kriterlerini (`docs/product/roadmap.md`, `docs/product/prd.md`) oku.
 2. Sana verilen aralıktaki diff'i oku. Aralık verilmediyse `git diff HEAD` ve takip edilmeyen yeni dosyalara bak.
 3. Değişen her fonksiyonun **çağıranlarını** bul ve oku. Diff'in dışındaki kırılmalar en sık kaçan hatalardır.
 

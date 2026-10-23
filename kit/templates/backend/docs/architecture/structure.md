@@ -47,7 +47,7 @@ Dockerfile  pyproject.toml  uv.lock
 │   ├── findings/          # /findings-* raporları (tür/tarih.md, latest.md)
 │   └── archive/           # artık geçerli olmayan ama saklanan dokümanlar
 ├── sandbox/               # deneme, keşif kodu, geçici script (git'e girmez)
-├── CLAUDE.md  README.md  CHANGELOG.md
+├── AGENTS.md  CLAUDE.md  README.md  CHANGELOG.md
 └── .env.example
 ```
 
