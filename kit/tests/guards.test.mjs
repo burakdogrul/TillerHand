@@ -62,6 +62,10 @@ test('kalkan: yıkıcı komutlar engellenir, normal komutlar geçer', () => {
   assert.equal(k('vercel deploy --target=production'), 'ask', '--target=production');
   assert.equal(k('vercel deploy --target production'), 'ask', '--target production');
   assert.equal(k('vercel deploy --target preview'), 'serbest');
+  assert.equal(k('vercel deploy --target "production"'), 'ask', 'tırnaklı hedef');
+  assert.equal(k("vercel deploy --target='prod'"), 'ask', 'tırnaklı = hedef');
+  assert.equal(k('vercel deploy --target    production'), 'ask', 'çok boşluk');
+  assert.equal(k('vercel --scope ekip "promote" https://a.vercel.app'), 'ask', 'tırnaklı alt komut');
   assert.equal(k('git push origin main'), 'ask');
   assert.equal(k('psql postgres://u:p@db.ornek-prod.com:5432/app -c "select 1"'), 'ask', 'uzak veritabanı');
   assert.equal(k('psql postgres://u:p@localhost:5432/app -c "select 1"'), 'serbest');

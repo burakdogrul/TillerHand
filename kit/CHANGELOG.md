@@ -5,6 +5,11 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.11.2] - 2026-10-23
+
+### Güvenlik
+- Kalkan: tırnaklı veya çok boşluklu yazım da yakalanır (`--target "production"`, `--target='prod'`, `--target    production`, `"promote"`). Commit sonrası güvenlik incelemesinin bulgusu.
+
 ## [3.11.1] - 2026-10-23
 
 ### Güvenlik
