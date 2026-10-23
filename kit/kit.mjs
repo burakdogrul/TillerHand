@@ -2,6 +2,11 @@
 // Vibe Coding Kit: kurulum ve güncelleme.
 //   node kit/kit.mjs install --type web-saas [--addons ai] [--keep-kit]
 //       Template'ten açılmış projede tipi ve ekleri yerleştirir, sonra kit/ klasörünü siler. /start çalıştırır.
+//   node <kit-klonu>/kit/kit.mjs init [--project <yol>]
+//       Kiti ayrı duran bir klasörden projeye kurar (varsayılan: bulunulan klasör). Kit klasörüne dokunmaz.
+//       Dolu klasörde mevcut dosyanın üzerine yazmaz: kitin hali yanına .kit-new olarak konur (/adopt birleştirir).
+//   node <kit-klonu>/kit/kit.mjs install --type web-saas --project <yol>
+//       init ile kurulmuş projeye tipi yerleştirir. /start ve /adopt çalıştırır.
 //   node <kit-klonu>/kit/kit.mjs update --project <yol> [--addons ai]
 //       Projeyi kitin bu sürümüne çeker. /kit-update çalıştırır.
 //
@@ -11,6 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const KIT = path.dirname(fileURLToPath(import.meta.url));
 const KOK = path.dirname(KIT);
@@ -100,6 +106,30 @@ function parcaUygula(proje, { tur, hedef, kaynak }) {
   fs.appendFileSync(yol, (mevcut && !mevcut.endsWith('\n') ? '\n' : '') + (mevcut ? '\n' : '') + parca);
 }
 
+// Projenin kendi dosyasını ezme: kitin yeni hali yanına .kit-new olarak gider.
+// .gitignore satır satır birleşir, .claude/settings.json derin birleşir (projenin değeri kalır).
+function guvenliKopyala(proje, rel, kaynak, cakisan) {
+  const hedef = path.join(proje, rel);
+  if (!fs.existsSync(hedef)) { kopyala(kaynak, hedef); return; }
+  if (hash(hedef) === hash(kaynak)) return;
+  if (rel === '.gitignore') {
+    for (const satir of oku(kaynak).split(/\r?\n/)) if (satir.trim()) satirEkle(hedef, satir);
+    return;
+  }
+  if (rel === '.claude/settings.json') {
+    fs.writeFileSync(hedef, JSON.stringify(birlestir(JSON.parse(oku(kaynak)), JSON.parse(oku(hedef))), null, 2) + '\n');
+    return;
+  }
+  kopyala(kaynak, hedef + '.kit-new');
+  cakisan.push(rel);
+}
+
+function satirEkle(dosya, satir) {
+  const mevcut = fs.existsSync(dosya) ? oku(dosya) : '';
+  if (mevcut.split(/\r?\n/).includes(satir)) return;
+  fs.appendFileSync(dosya, (mevcut && !mevcut.endsWith('\n') ? '\n' : '') + satir + '\n');
+}
+
 function kayitYaz(proje, veri) {
   fs.writeFileSync(path.join(proje, '.kit.json'), JSON.stringify(veri, null, 2) + '\n');
 }
@@ -109,8 +139,65 @@ function dogrula(tip, ekler) {
   for (const e of ekler) if (!EKLER.includes(e)) throw new Error(`Geçersiz ek: ${e}. Seçenekler: ${EKLER.join(', ')}`);
 }
 
-function install({ type, addons, keepKit }) {
+const cakismaRaporu = (cakisan) => cakisan.length && console.log(
+  `Mevcut dosyaya dokunulmadı, kitin hali yanına .kit-new olarak kondu (${cakisan.length}):\n  ${cakisan.join('\n  ')}`);
+
+function init({ project }) {
+  const proje = path.resolve(project ?? process.cwd());
+  if (proje === KOK) throw new Error('Hedef kitin kendi klasörü. Proje klasöründen çalıştır: node <kit>/kit/kit.mjs init');
+  if (fs.existsSync(path.join(proje, '.kit.json'))) throw new Error('Kit bu projede zaten kurulu (.kit.json var).');
+  fs.mkdirSync(proje, { recursive: true });
+  const cakisan = [];
+  const { kopyalar } = katmanlar(KOK, []);
+  for (const [rel, kaynak] of kopyalar) guvenliKopyala(proje, rel, kaynak, cakisan);
+  if (!fs.existsSync(path.join(proje, 'README.md'))) kopyala(path.join(KIT, 'project', 'README.md'), path.join(proje, 'README.md'));
+
+  // Kit proje klasörünün içindeyse git'e girmesin
+  const kitRel = path.relative(proje, KOK).replace(/\\/g, '/');
+  const iceride = !kitRel.startsWith('..') && !path.isAbsolute(kitRel);
+  if (iceride) satirEkle(path.join(proje, '.gitignore'), `${kitRel}/`);
+  let git = 'vardı';
+  if (!fs.existsSync(path.join(proje, '.git'))) {
+    git = spawnSync('git', ['init', '-q'], { cwd: proje }).status === 0 ? 'açıldı' : 'açılamadı (git kurulu mu?)';
+  }
+
+  const files = {};
+  for (const rel of kopyalar.keys()) if (!cakisan.includes(rel)) files[rel] = hash(path.join(proje, rel));
+  const bugun = new Date().toISOString().slice(0, 10);
+  // type: null = kit kuruldu, tip henüz seçilmedi (/start Adım 3 veya /adopt)
+  kayitYaz(proje, { version: SURUM, source: KAYNAK, kit: iceride ? kitRel : KOK, type: null, addons: [], created: bugun, updated: bugun, files });
+
+  console.log(`Kit ${SURUM} kuruldu: ${proje}`);
+  console.log(`Kit klasörü: ${iceride ? `${kitRel} (.gitignore'a eklendi)` : KOK} · git deposu: ${git}`);
+  cakismaRaporu(cakisan);
+  console.log('Sonraki adım: Claude Code\'da bu klasörü yeni oturumla aç (komutlar ve hook\'lar yüklensin). Yeni projede /start [fikir], var olan projede /adopt.');
+}
+
+// init ile kurulmuş projeye tip katmanı. init'in koyduğu ve kullanıcının değiştirmediği dosyalar ezilir,
+// projenin kendi dosyaları ezilmez (.kit-new).
+function installProje(proje, type, addons) {
+  const kayitYolu = path.join(proje, '.kit.json');
+  if (!fs.existsSync(kayitYolu)) throw new Error(`.kit.json yok: önce init çalıştır (node ${path.join(KIT, 'kit.mjs')} init).`);
+  const j = JSON.parse(oku(kayitYolu));
+  if (j.type) throw new Error(`Kit bu projede zaten kurulu (tip: ${j.type}).`);
+  const files = { ...j.files };
+  const cakisan = [];
+  const { kopyalar, parcalar } = katmanlar(null, [type, ...addons.map((e) => `addons/${e}`)]);
+  for (const [rel, kaynak] of kopyalar) {
+    const hedef = path.join(proje, rel);
+    if (fs.existsSync(hedef) && files[rel] === hash(hedef)) kopyala(kaynak, hedef);
+    else guvenliKopyala(proje, rel, kaynak, cakisan);
+    if (!cakisan.includes(rel)) files[rel] = hash(hedef);
+  }
+  for (const p of parcalar) parcaUygula(proje, p);
+  kayitYaz(proje, { ...j, version: SURUM, type, addons, updated: new Date().toISOString().slice(0, 10), files });
+  console.log(`Kuruldu: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${SURUM}) · ${proje}`);
+  cakismaRaporu(cakisan);
+}
+
+function install({ type, addons, keepKit, project }) {
   dogrula(type, addons);
+  if (project && path.resolve(project) !== KOK) return installProje(path.resolve(project), type, addons);
   if (fs.existsSync(path.join(KOK, '.kit.json'))) throw new Error('Kit bu projede zaten kurulu (.kit.json var).');
 
   const { kopyalar, parcalar } = katmanlar(null, [type, ...addons.map((e) => `addons/${e}`)]);
@@ -196,14 +283,15 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const [islem, ...geri] = process.argv.slice(2);
   try {
     const a = argumanlar(geri);
-    if (islem === 'install') {
+    if (islem === 'init') init(a);
+    else if (islem === 'install') {
       if (!a.type) throw new Error(`--type gerekli: ${TIPLER.join(' | ')}`);
       install(a);
     } else if (islem === 'update') {
       if (!a.project) throw new Error('--project gerekli');
       update(a);
     } else {
-      console.log('Kullanım:\n  node kit/kit.mjs install --type <type> [--addons ai] [--keep-kit]\n  node kit/kit.mjs update --project <yol> [--addons ai]');
+      console.log('Kullanım:\n  node kit/kit.mjs install --type <type> [--addons ai] [--keep-kit] [--project <yol>]\n  node <kit>/kit/kit.mjs init [--project <yol>]\n  node kit/kit.mjs update --project <yol> [--addons ai]');
       process.exit(islem ? 1 : 0);
     }
   } catch (e) {

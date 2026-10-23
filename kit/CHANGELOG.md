@@ -5,6 +5,32 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.7.0] - 2026-10-23
+
+Kit ile proje artık ayrı klasörlerde durabiliyor ve var olan projeler kite alınabiliyor. İkisi de gerçek proje denemesinden gelen geri bildirim.
+
+### Eklendi
+- **`kit.mjs init` (kur ve ayrıl):** Kit hangi klasörde duruyorsa oradan çalışır ve projeyi hedef klasöre kurar (`node vibe-kit/kit/kit.mjs init`, varsayılan hedef bulunulan klasör). Kit klasörüne dokunulmaz, birden çok projede tekrar kullanılabilir.
+  - Proje klasöründe git deposu yoksa açar. Kit proje klasörünün içindeyse `.gitignore`'a ekler.
+  - Dolu klasörde projenin dosyalarının üzerine yazmaz: kitin hali yanına `.kit-new` olarak konur. `.gitignore` satır satır, `.claude/settings.json` derin birleşir; projenin değerleri korunur.
+  - `.kit.json` → `type: null` "kuruldu, tip bekleniyor" demek. Durum çubuğu, pano ve oturum başı bunu `/start` veya `/adopt` önerisi olarak gösterir.
+  - `install --type <tip> --project <yol>`: init ile kurulan projeye tip katmanını ekler. init'in koyduğu ve kullanıcının değiştirmediği yer tutucular ezilir, projenin kendi dosyaları ezilmez. Kit klasörü silinmez.
+  - Testli: boş klasör, dolu klasör, ikinci init reddi, ardından `update`.
+- **`/adopt` (var olan projeyi kite al):** 9 adımlı uyum sihirbazı.
+  - Tarama derinliği maliyetiyle sorulur (hızlı / derin + seçilen bulgu raporları).
+  - Stack, yapı, özellikler, testler ve git geçmişi taranır. `.kit-new` dosyaları tek tek karar olarak sorulur.
+  - PRD, stack, mimari ve README koddan çıkarılır; amaç, kitle ve "neyi beğenmiyorsun" sorulur.
+  - CLAUDE.md kitinkine göre yeniden yazılır. Eski dosyadaki projeye özel kurallar çoklu seçimle sorulup `## Proje kuralları` bölümüne taşınır; eskisi `docs/archive/`'e gider.
+  - Mevcut testler çalıştırılıp değerlendirilir. Kritik akışların doğru davranışı kullanıcıya sorulur: kod yanlış davranışı kilitlemesin.
+  - Uyum yol haritası: Faz 0'da güvenli zemin ve kritik akış testleri, Faz 1'de kitin klasör yapısına özellik özellik taşıma (ayrı dal, her görevde çalışan nokta), Faz 2'de bulgular, sonra yeni özellikler.
+
+### Değişti
+- `/start` Adım 1 iki kurulum yolunu tanır (template veya init); klasörde kod varsa `/adopt` önerir. Adım 3'te init yolunun komutu var.
+- README ve rehber: Yeni kurulum yolu ana yol oldu, "Use this template" alternatif olarak kaldı.
+
+### Elle uyarla
+- `CLAUDE.md` (projenin): "Kurulum durumu" satırı `.kit.json` → `type: null` durumunu ve `/adopt`'u da içeriyor (kitin `CLAUDE.md`'sine bak). Kurulmuş projelerde etkisi yok.
+
 ## [3.6.0] - 2026-10-23
 
 Dondurma bitti. Bu sürüm, kitin ilk gerçek projede (3.5.1) denenmesinden gelen geri bildirimlerden çıktı.

@@ -94,7 +94,7 @@ const bulgu = bulguRaporlari(oku(dosya('docs/findings/README.md')));
 // Dikkat gerektirenler
 const dikkat = [];
 const ekle = (sev, metin, eylem = '') => dikkat.push({ sev, metin, eylem });
-if (d.kitBekliyor) ekle('bilgi', 'Proje henüz kurulmadı.', '/start [fikrin]');
+if (d.kitBekliyor) ekle('bilgi', 'Proje henüz kurulmadı. Var olan kodu kite almak için /adopt.', '/start [fikrin]');
 const sonRet = [...d.kurul.toplantilar].reverse().find((t) => /RET/i.test(t.sonuc) && !/KOŞULLU/i.test(t.sonuc));
 if (sonRet && !sonRet.karar) ekle('kritik', `Kurul RET verdi (${sonRet.tur}, ${sonRet.kapsam}): ${sonRet.kritik || 'kritik bulgu'}`, 'Claude\'a sor: düzelt / riski kabul et');
 const lsev = seviye(limit);
@@ -406,7 +406,7 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
   <div><h1>${e(d.proje)}</h1></div>
   <div class="meta">
     ${rozet(saglik, saglik === 'iyi' ? 'Yolunda' : saglik === 'uyari' ? 'Dikkat gerekiyor' : 'Engel var').replace('class="badge', 'class="badge health')}
-    ${d.kit ? `<span class="pill">${e(d.kit.type)}${d.kit.addons?.length ? ' + ' + e(d.kit.addons.join(', ')) : ''}</span><span class="pill">kit ${e(d.kit.version)}</span>` : '<span class="pill">kit kurulmadı</span>'}
+    ${d.kit?.type ? `<span class="pill">${e(d.kit.type)}${d.kit.addons?.length ? ' + ' + e(d.kit.addons.join(', ')) : ''}</span><span class="pill">kit ${e(d.kit.version)}</span>` : '<span class="pill">kit kurulmadı</span>'}
     ${git?.dal ? `<span class="pill">⎇ ${e(git.dal)}</span>` : ''}
     <label class="refresh"><input type="checkbox" id="oto" checked> 30 sn'de yenile</label>
   </div>

@@ -112,6 +112,54 @@ test('guncelle: sonradan AI eki', () => {
   assert.deepEqual(kayit(p).addons, ['ai']);
 });
 
+test('init: kit ayrı klasörde kalır, proje kendi klasöründe kurulur', () => {
+  const oyun = path.join(tmp, 'oyun');
+  fs.mkdirSync(oyun);
+  fs.cpSync(klonla('oyun-kit'), path.join(oyun, 'git_repo'), { recursive: true });
+  const kitMjs = path.join(oyun, 'git_repo', 'kit', 'kit.mjs');
+  const r = node(kitMjs, 'init', '--project', oyun);
+  assert.equal(r.status, 0, r.stderr);
+  for (const f of ['CLAUDE.md', 'README.md', '.claude/commands/start.md', '.claude/commands/adopt.md', 'docs/workflow/progress.md', '.git']) {
+    assert.ok(fs.existsSync(path.join(oyun, f)), `${f} kuruldu`);
+  }
+  assert.ok(!fs.existsSync(path.join(oyun, 'kit')), 'kitin kendi klasörü projeye kopyalanmadı');
+  assert.ok(fs.existsSync(kitMjs), 'kit klasörüne dokunulmadı');
+  assert.match(oku(path.join(oyun, '.gitignore')), /^git_repo\/$/m);
+  assert.match(oku(path.join(oyun, 'README.md')), /^# \[PROJE ADI\]/m, 'projenin README şablonu');
+  assert.deepEqual([kayit(oyun).type, kayit(oyun).kit], [null, 'git_repo']);
+  const durum = spawnSync(process.execPath, [path.join(oyun, '.claude/hooks/statusline.mjs')], { input: JSON.stringify({ workspace: { project_dir: oyun } }), encoding: 'utf8' }).stdout;
+  assert.match(durum, /Kit kurulmadı.*\/adopt/);
+  assert.notEqual(node(kitMjs, 'init', '--project', oyun).status, 0, 'ikinci init reddedilir');
+
+  const k = node(kitMjs, 'install', '--type', 'web-saas', '--project', oyun);
+  assert.equal(k.status, 0, k.stderr);
+  assert.equal(kayit(oyun).type, 'web-saas');
+  assert.equal(oku(path.join(oyun, 'docs/architecture/stack.md')), oku(path.join(REPO, 'kit/templates/web-saas/docs/architecture/stack.md')), 'tipin stack.md\'si ortak yer tutucunun üzerine yazıldı');
+  assert.ok(!fs.readdirSync(oyun, { recursive: true }).some((f) => f.endsWith('.kit-new')), 'boş projede çakışma yok');
+  assert.ok(fs.existsSync(kitMjs), 'install kit klasörünü silmedi');
+  assert.match(guncelle(oyun).stdout, /Değişiklik yok/);
+});
+
+test('init: dolu klasörde projenin dosyalarına dokunmaz', () => {
+  const p = path.join(tmp, 'eski-proje');
+  const dosya = { 'CLAUDE.md': '# Eski\n- Her zaman pnpm kullan\n', '.gitignore': 'node_modules\n', 'package.json': '{"name":"eski"}\n', '.claude/settings.json': '{"model":"x","permissions":{"allow":["Bash(pnpm test)"]}}\n', '.env.example': 'ESKI=\n' };
+  for (const [f, s] of Object.entries(dosya)) { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); yaz(path.join(p, f), s); }
+  const r = node(path.join(klonla('eski-kit'), 'kit', 'kit.mjs'), 'init', '--project', p);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(oku(path.join(p, 'CLAUDE.md')), dosya['CLAUDE.md'], 'eski CLAUDE.md duruyor');
+  assert.ok(fs.existsSync(path.join(p, 'CLAUDE.md.kit-new')) && /CLAUDE\.md/.test(r.stdout), 'kitin CLAUDE.md\'si yanında');
+  assert.equal(oku(path.join(p, 'package.json')), dosya['package.json']);
+  assert.match(oku(path.join(p, '.gitignore')), /^node_modules$/m);
+  assert.match(oku(path.join(p, '.gitignore')), /^\.env$/m, 'kitin .gitignore satırları eklendi');
+  const ayar = JSON.parse(oku(path.join(p, '.claude/settings.json')));
+  assert.equal(ayar.model, 'x', 'projenin ayarı kaldı');
+  assert.ok(ayar.permissions.allow.includes('Bash(pnpm test)') && ayar.hooks, 'izinler ve kitin hook\'ları birleşti');
+  const k = node(path.join(tmp, 'eski-kit', 'kit', 'kit.mjs'), 'install', '--type', 'web-saas', '--project', p);
+  assert.equal(k.status, 0, k.stderr);
+  assert.equal(oku(path.join(p, '.env.example')), dosya['.env.example'], 'projenin .env.example\'ı duruyor');
+  assert.ok(fs.existsSync(path.join(p, '.env.example.kit-new')));
+});
+
 test('oturum başı: sıradaki komut kullanıcıya gösterilir (/clear sonrası)', () => {
   const oturum = (p) => JSON.parse(spawnSync(process.execPath, [path.join(p, '.claude/hooks/session-start.mjs')], {
     encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p },

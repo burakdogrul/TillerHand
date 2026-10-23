@@ -14,14 +14,15 @@ const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 try {
   const d = durumOku(kok);
   if (d.kitBekliyor) {
-    notlar.push('Proje henüz kurulmadı. Kullanıcıya "/start [proje fikri]" ile başlamasını öner; kurulum bitmeden kod yazma.');
-    siradaki = 'Başlamak için: /start [proje fikrin]';
+    notlar.push('Proje henüz kurulmadı. Kullanıcıya yeni projede "/start [proje fikri]", klasörde var olan kod varsa "/adopt" öner; kurulum bitmeden kod yazma.');
+    siradaki = 'Başlamak için: /start [proje fikrin] · var olan projede: /adopt';
   } else {
     const a = d.alanlar;
     notlar.push(`Aşama: ${a['Aktif faz'] ?? '-'} · Görev: ${a['Aktif görev'] ?? '-'} · Soru modu: ${a['Soru modu'] ?? 'açık'} · Kurul: ${d.kurul.durum}`);
     if (/başlangıç/i.test(a['Aktif faz'] ?? '') && d.kurulu) {
-      notlar.push(`/start yarım kaldı (adım ${a['Başlangıç adımı']}). Kullanıcıya /start ile kaldığı yerden devam etmeyi öner.`);
-      siradaki = `Devam: /start (adım ${a['Başlangıç adımı']})`;
+      const komut = /uyum/i.test(a['Aktif faz']) ? '/adopt' : '/start';
+      notlar.push(`${komut} yarım kaldı (adım ${a['Başlangıç adımı']}). Kullanıcıya ${komut} ile kaldığı yerden devam etmeyi öner.`);
+      siradaki = `Devam: ${komut} (adım ${a['Başlangıç adımı']})`;
     } else {
       const g = d.fazlar.flatMap((f) => f.gorevler).find((x) => !x.bitti);
       const kod = g?.metin.match(/^(G-\d+)/)?.[1];

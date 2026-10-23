@@ -2,7 +2,7 @@
 
 > [Tek cümle: Bu proje kimin için, hangi problemi çözüyor?]
 
-**Kurulum durumu:** Kökte `kit/` klasörü varsa ve `.kit.json` yoksa proje henüz kurulmamıştır. Kullanıcıya `/start [fikir]` öner; kurulum bitmeden kod yazma.
+**Kurulum durumu:** Kökte `kit/` klasörü varsa ve `.kit.json` yoksa, ya da `.kit.json` → `type` boşsa (`null`) proje henüz kurulmamıştır. Kullanıcıya yeni projede `/start [fikir]`, klasörde var olan kod varsa `/adopt` öner; kurulum bitmeden kod yazma.
 
 @docs/workflow/progress.md
 

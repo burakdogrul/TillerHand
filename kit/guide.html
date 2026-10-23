@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · GitHub template · v3.6</p>
+  <p class="eyebrow">Claude Code · GitHub template · v3.7</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -186,20 +186,23 @@ html { scroll-behavior: smooth; }
   <div class="section-head">
     <p class="eyebrow">Başlamadan</p>
     <h2>Yeni proje açmak</h2>
-    <p class="lede">Kit bir GitHub template reposu. Her proje ondan açılır; proje tipi kurulumda değil, <code>/start</code> sırasında soruyla seçilir.</p>
+    <p class="lede">Kit ve proje ayrı klasörlerde durur: <code>init</code> kitin ihtiyaç duyulan dosyalarını proje klasörüne kopyalar, git deposu açar, kit klasörüne dokunmaz. Proje tipi kurulumda değil, <code>/start</code> sırasında soruyla seçilir.</p>
   </div>
-<pre class="term"><span class="c"># 1. GitHub: burakdogrul/vibecoding → Use this template → Create a new repository</span>
-<span class="c"># 2. Klonla ve aç</span>
-git clone https://github.com/burakdogrul/yeni-proje.git
-cd yeni-proje
+<pre class="term"><span class="c"># 1. Proje klasörü ve içinde kit</span>
+mkdir yeni-proje &amp;&amp; cd yeni-proje
+git clone https://github.com/burakdogrul/vibecoding.git vibe-kit
+node vibe-kit/kit/kit.mjs init      <span class="c"># vibe-kit/ .gitignore'a girer</span>
 claude
-<span class="c"># 3. Claude Code içinde</span>
-/start Serbest çalışanlar için fatura ve tahsilat takip uygulaması</pre>
+<span class="c"># 2. Claude Code içinde (yeni oturum)</span>
+/start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
+<span class="c"># var olan projede /start yerine:</span>
+/adopt</pre>
+  <p class="note"><b>Var olan proje:</b> <code>/adopt</code> kodu tarar, belgeleri koddan çıkarır, neyi beğenmediğini sorar, eski CLAUDE.md'deki kuralları tek tek sorup yenisine taşır. Önce kritik akışlara doğru davranışa göre test yazılır, sonra yapı özellik özellik ayrı dalda kitin düzenine taşınır. Projenin dosyalarının üzerine yazılmaz; kitin hali <code>.kit-new</code> olarak yanına konur. Eski yol (GitHub <b>Use this template</b>) da çalışır.</p>
   <h3>Hiç bilmiyorsan</h3>
   <ol>
     <li><b>Hesap ve programlar (bir kez):</b> GitHub hesabı, Claude Pro veya Max, Claude masaüstü uygulaması, Node.js (LTS) ve Git. İstersen GitHub Desktop da kurabilirsin.</li>
-    <li><b>Proje:</b> Kitin GitHub sayfasında <b>Use this template → Create a new repository</b> (Private). GitHub Desktop'ta <b>Clone</b> ile bilgisayarına al.</li>
-    <li><b>Aç:</b> Claude masaüstü uygulamasında <b>Code</b> sekmesine geç, klasörü seç ve eklentileri kabul et.</li>
+    <li><b>Proje:</b> Projen için bir klasör aç ve Claude masaüstü uygulamasında <b>Code</b> sekmesinde seç. Claude'a yaz: "github.com/burakdogrul/vibecoding reposunu bu klasörün içine vibe-kit adıyla klonla, sonra <code>node vibe-kit/kit/kit.mjs init</code> çalıştır".</li>
+    <li><b>Aç:</b> Aynı klasörde yeni oturum aç ki kitin komutları yüklensin, sonra eklentileri kabul et.</li>
     <li><b>Başlat:</b> <code>/start fikrin</code> yaz. Her sorunun ilk seçeneği önerilendir. Pro'daysan profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
     <li><b>Her gün:</b> <code>/build</code> ile çalış (görev kodu gerekmez), <code>/wrap-up</code> ve <code>/clear</code> ile bırak; temiz ekranda sıradaki komut yazar. Bozulursa <code>/rollback</code>, merak edersen <code>/dashboard</code>.</li>
   </ol>
@@ -610,7 +613,8 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
     <table>
       <thead><tr><th>Komut</th><th>Ne yapar</th></tr></thead>
       <tbody>
-        <tr><td class="f">/start [fikir]</td><td>Sekiz adımlı sihirbaz: fikir, tip, kurulum, teknoloji, mimari, tasarım, yol haritası</td></tr>
+        <tr><td class="f">/start [fikir]</td><td>Dokuz adımlı sihirbaz: fikir, tip, kurulum, teknoloji, mimari, kurul, tasarım, yol haritası</td></tr>
+        <tr><td class="f">/adopt</td><td>Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, CLAUDE.md'yi yeniden yazar, kritik akış testleri ve özellik özellik taşıma ile uyum yol haritası</td></tr>
         <tr><td class="f">/plan-task [görev]</td><td>Karar noktalarını sorar, plan çıkarır, onay alır</td></tr>
         <tr><td class="f">/build [görev]</td><td>Uygular; yeni karar çıkarsa durur; kanıt üretir; sıradaki adımı sorar</td></tr>
         <tr><td class="f">/design [kapsam]</td><td>Görsel önizlemeli tasarım kararları ve uygulama</td></tr>
@@ -679,7 +683,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.6.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.7.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

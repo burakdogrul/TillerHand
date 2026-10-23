@@ -30,7 +30,7 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
 0b. **Anlatıcı mod:** Sor: "Yazılımı yeni öğreniyorsan, Anlatıcı mod her değişikliği ve hatayı sade Türkçe anlatır. Cevaplar biraz uzar, bu da biraz daha fazla token demek. Açılsın mı?" Seçenekler: "Evet" ve "Hayır, kısa cevaplar". Kullanıcının bilgi seviyesi düşükse "Evet" önerilen olsun.
     - Evet ise `.claude/settings.local.json` dosyasına `"outputStyle": "anlatici"` ekle (dosya varsa birleştir; bu dosya git'e girmez, kişisel ayardır).
     - Mod bir sonraki mesajdan itibaren geçerli olur. Terminalde `/output-style anlatici` komutu da aynı işi yapar. Kapatmak için değeri sil.
-1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version`, kökte `kit/kit.mjs` var mı, `.kit.json` yok mu.
+1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version` ve kitin yeri. İki kurulum yolu var: kökte `kit/kit.mjs` (template yolu) ya da `.kit.json` → `kit` alanındaki klasör (`init` ile kurulmuş, `type` boş). Klasörde zaten uygulama kodu varsa (`package.json`, `pyproject.toml`, `src/` vb.) dur ve `/adopt` öner.
 2. `docs/workflow/skills.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. LSP eklentisi dil sunucusu ister: web ve mobil için `npm i -g typescript-language-server typescript`, backend için `npm i -g pyright` (global kurulum; kullanıcı onayıyla). **Eklentiler:** Proje ayarı eklentileri açar ama indirmez; kurulmamış olanlar yükleme hatası verir ve skill'leri gelmez. Kullanıcıya listeyi göster ve sor: "Proje ayarındaki eklentiler kurulsun mu?" Önce `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele; onay gelirse `node .claude/hooks/plugins-sync.mjs --kur` çalıştır. Betik eksikleri proje kapsamında kurar, `false` olanları (Remotion) kurup kapatır. Sonra kullanıcıdan `/reload-plugins` çalıştırmasını iste. claude CLI yoksa eksik eklentilerin `/plugin install x@y` komutlarını ver ve "Kurup devam edelim mi, eksik skill olmadan mı?" diye sor.
 3. `caveman:caveman` skill'ini yükle (rapor dili).
 4. **Limit:** Limiti oku (`docs/workflow/usage-limits.md` §1) ve raporla. Seçilen derinliğin tahmini maliyetini kalan limitle karşılaştır; adımlar arasında durup sonra devam edilebileceğini söyle. Seviye sarı veya kırmızıysa §3'teki seçenekleri sor.
@@ -74,7 +74,10 @@ Ayrıca sor: **Projede yapay zeka (LLM) özelliği olacak mı?** Evet ise AI eki
 Kullanıcıya ne yapılacağını tek cümleyle söyle, sonra çalıştır:
 
 ```bash
+# template yolu (kökte kit/ var): kit/ kurulumdan sonra silinir
 node kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai]
+# init yolu (.kit.json → kit): kit klasörüne dokunulmaz
+node <kit>/kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai] --project .
 ```
 
 Çıktıyı raporla. Artık `docs/architecture/stack.md` seçilen tipin dosyasıdır. Proje yapısını (`docs/architecture/structure.md`) kullanıcıya kısaca göster: kod özellik bazlı olacak, yapı haritası (`.claude/structure.json`) korunacak, deneme işleri `sandbox/` altına gidecek. Commit öner: `chore: kit kurulumu (<tip>)`.

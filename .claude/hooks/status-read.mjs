@@ -85,8 +85,9 @@ export function durumOku(kok) {
 
   return {
     proje: (oku(d('CLAUDE.md')).match(/^# (.+)$/m)?.[1] ?? 'Proje').trim(),
-    kurulu: !!kit,
-    kitBekliyor: !kit && fs.existsSync(d('kit/kit.mjs')),
+    // type: null = init ile kuruldu, tip henüz seçilmedi (/start veya /adopt bekliyor)
+    kurulu: !!kit && kit.type !== null,
+    kitBekliyor: kit ? kit.type === null : fs.existsSync(d('kit/kit.mjs')),
     kit,
     alanlar,
     durum: (ib['Şu anki durum'] ?? '').split('\n').filter((s) => s.trim() && !s.startsWith('>')).join(' ').trim(),

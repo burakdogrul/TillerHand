@@ -44,7 +44,7 @@ try {
   const d = durumOku(kok);
   const parcalar = [];
   if (d.kitBekliyor) {
-    parcalar.push('◆ Kit kurulmadı · başlamak için: /start [fikrin]');
+    parcalar.push('◆ Kit kurulmadı · başlamak için: /start [fikrin] · var olan kod: /adopt');
   } else {
     const a = d.alanlar;
     const soru = (a['Soru modu'] ?? 'açık')

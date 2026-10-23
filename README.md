@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.6.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.7.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -56,13 +56,26 @@ Kod yazmayı bilmen gerekmez. Teknik işleri (git, terminal komutları, kuruluml
 - [GitHub Desktop](https://desktop.github.com) (isteğe bağlı): Projeyi bilgisayarına almanın en kolay yolu.
 
 **3. Kendi projeni oluştur**
-1. Bu kitin GitHub sayfasında yeşil **Use this template** düğmesine bas, sonra **Create a new repository**'yi seç.
-2. Projene bir ad ver (örn. `fatura-takip`), **Private** seç ve **Create repository**'ye bas.
-3. Projeyi bilgisayarına al. GitHub Desktop'ta **File → Clone repository** ile projeni seç. Ya da Claude'a "şu repoyu Belgeler klasörüne klonla: <adres>" yaz.
 
-**4. Claude'da aç ve başlat**
-1. Claude masaüstü uygulamasında **Code** sekmesine geç ve proje klasörünü seç.
-2. Eklentileri kurmayı önerirse kabul et.
+Kit ve projen ayrı klasörlerde durur. Kit dosyaları uygulamanın arasına karışmaz, projenin git geçmişi de sadece kendisine ait olur.
+
+1. Projen için bir klasör aç (örn. `Belgeler/fatura-takip`).
+2. Claude masaüstü uygulamasında **Code** sekmesine geç ve bu klasörü seç.
+3. Şunu yaz: `github.com/burakdogrul/vibecoding reposunu bu klasörün içine vibe-kit adıyla klonla, sonra node vibe-kit/kit/kit.mjs init komutunu çalıştır`.
+   - Kit, ihtiyaç duyulan dosyaları (`.claude/`, `CLAUDE.md`, `docs/`) proje klasörüne kopyalar, git deposu açar ve `vibe-kit/` klasörünü `.gitignore`'a ekler. Kit klasörüne dokunulmaz.
+   - Kiti tek bir yerde de tutabilirsin (örn. `Belgeler/vibe-kit`). O zaman her yeni projede `node ../vibe-kit/kit/kit.mjs init` yeterli.
+4. **Yeni oturum aç** (sol üstte yeni oturum, aynı klasör). Kitin komutları ve korumaları yeni oturumda yüklenir.
+
+<details>
+<summary>Eski yol: GitHub "Use this template"</summary>
+
+Kitin GitHub sayfasında **Use this template → Create a new repository** ile yeni repo aç, bilgisayarına klonla ve klasörü Claude'da aç. Kit dosyaları projeyle aynı repoda başlar; `/start` kurulumda `kit/` klasörünü siler.
+</details>
+
+**Var olan bir projen mi var?** Aynı şekilde kur, sonra `/start` yerine `/adopt` yaz. Claude kodu tarar, belgeleri koddan çıkarır, neyi beğenmediğini sorar ve projeyi adım adım kitin düzenine getiren bir yol haritası hazırlar. Önce kritik akışlara test yazılır, dosyalar sonra taşınır. Projendeki dosyaların üzerine yazılmaz: kitin hali yanına `.kit-new` olarak konur ve her biri sana sorulur.
+
+**4. Başlat**
+1. Eklentileri kurmayı önerirse kabul et.
 3. Fikrini yaz:
    ```
    /start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
@@ -91,21 +104,23 @@ Kod yazmayı bilmen gerekmez. Teknik işleri (git, terminal komutları, kuruluml
 
 **Gereksinimler:** [Claude Code](https://claude.com/claude-code), Git, Node.js 18+
 
-1. Bu repoda **Use this template → Create a new repository** ile yeni repo aç.
-2. Klonla ve Claude Code'u başlat:
+1. Kiti proje klasörüne kur:
 
 ```bash
-git clone https://github.com/<kullanici>/<yeni-proje>.git
-cd <yeni-proje>
+mkdir yeni-proje && cd yeni-proje
+git clone https://github.com/burakdogrul/vibecoding.git vibe-kit
+node vibe-kit/kit/kit.mjs init
 claude
 ```
 
-3. Proje açılınca Claude Code, tanımlı skill plugin'lerini kurmayı önerir. Kabul et.
-4. Başlat:
+2. Proje açılınca Claude Code, tanımlı skill plugin'lerini kurmayı önerir. Kabul et.
+3. Başlat. Yeni projede:
 
 ```
 /start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
 ```
+
+Var olan projede: `/adopt`. Kit başka bir yerde duruyorsa: `node <kit>/kit/kit.mjs init --project <proje>`. Eski yol olan **Use this template** de çalışmaya devam ediyor.
 
 <details>
 <summary><b>Skill plugin'lerini kurmak</b></summary>
@@ -352,6 +367,7 @@ flowchart TB
 | Komut | Ne yapar |
 |---|---|
 | `/start [fikir]` | 9 adımlı başlangıç sihirbazı |
+| `/adopt` | Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, CLAUDE.md'yi yeniden yazar, uyum yol haritası çıkarır |
 | `/plan-task [görev]` | Karar noktalarını sorar, kurul görüşüyle plan çıkarır |
 | `/build [görev]` | Önce kabul testleri, sonra uygulama; kanıt ve kurul denetimi |
 | `/design [kapsam]` | Görsel önizlemeli tasarım kararları |
@@ -419,7 +435,7 @@ Tam eşleme: [`docs/workflow/skills.md`](docs/workflow/skills.md)
 
 ```
 kit/
-├── kit.mjs                  # install · update
+├── kit.mjs                  # init · install · update
 ├── templates/
 │   ├── web-saas/            # stack, design-guide, structure.json, CI, Dependabot, MCP, pre-commit
 │   ├── mobile/
