@@ -25,10 +25,10 @@ const PROD_DB = /\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis|rediss):\/\/[^\s'"
 const PROD_ISARET = /\b(--prod(uction)?\b|NODE_ENV=production|ENV=production|DATABASE_URL_PROD|PROD_DATABASE_URL)\b/;
 
 const ONAYLI = [
-  // Tırnak ve fazla boşluk kabukta aynı komuttur: --target "production", "promote"
-  [/\bvercel\b[^;&|]*(--prod\b|--target(=|\s+)["']?prod(uction)?\b)/i, 'Prod ortamına deploy'],
+  // Tırnaklı yazımı tirnaksiz() açar; burada sadece kabuğun gördüğü hal
+  [/\bvercel\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'Prod ortamına deploy'],
   // Alt komut bayraklardan sonra da gelebilir: vercel --scope ekip promote <url>
-  [/\bvercel(@[\w.-]+)?\b[^;&|]*\s["']?(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
+  [/\bvercel(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
   [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify\s+deploy\b[^;]*--prod/i, 'Sunucuya deploy'],
   [/\beas\s+(submit|update\b[^;]*--branch\s+production)/i, 'Mağazaya gönderim veya prod OTA güncellemesi'],
   [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'Ana dala doğrudan push'],
@@ -49,13 +49,27 @@ const IZIN_KARSILIGI = [
   ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
 ];
 
+// Kabuğun göreceği hal: $'..' açılır, tırnaklar, \ kaçışı ve PowerShell ` kaçışı düşer. Sadece eşleştirme içindir.
+// Neden: --pro""d, pr\omote, $'--prod' kabukta --prod ve promote olur; kuralları tek tek tırnağa göre yazmak atlatılır.
+export const tirnaksiz = (s) => s.replace(/\$'((?:[^'\\]|\\.)*)'/g, '$1').replace(/\\(.)/g, '$1').replace(/[`'"]/g, '');
+
+// Ham ve tırnağı açılmış metinden sıkı olan karar kazanır (deny > ask)
+const SIRA = { deny: 2, ask: 1 };
+const sikisi = (...s) => s.filter(Boolean).sort((a, b) => SIRA[b.karar] - SIRA[a.karar])[0] ?? null;
+
 export function izinKarsiligi(komut) {
+  return sikisi(izinTek(komut), izinTek(tirnaksiz(komut)));
+}
+function izinTek(komut) {
   const k = komut.replace(/\s+/g, ' ').replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, ''); // hata yönlendirmesi yazma sayılmaz
   const e = IZIN_KARSILIGI.find(([, re]) => re.test(k));
   return e ? { karar: e[0], neden: `${e[2]}. ${e[0] === 'deny' ? 'AI bu komutu çalıştıramaz; gerekliyse kullanıcı kendisi çalıştırır.' : 'Kullanıcı onayı gerekli.'}` } : null;
 }
 
 export function degerlendir(komut) {
+  return sikisi(degerlendirTek(komut), degerlendirTek(tirnaksiz(komut)));
+}
+function degerlendirTek(komut) {
   const k = komut.replace(/\s+/g, ' ');
   const prodDb = PROD_DB.test(k) || PROD_ISARET.test(k);
   for (const [re, neden] of YIKICI) {

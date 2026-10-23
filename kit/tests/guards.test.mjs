@@ -7,7 +7,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { paketleriBul, denetle, benzerPopuler } from '../../.claude/hooks/package-gate.mjs';
-import { degerlendir } from '../../.claude/hooks/destructive-guard.mjs';
+import { degerlendir, izinKarsiligi } from '../../.claude/hooks/destructive-guard.mjs';
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 
@@ -66,6 +66,14 @@ test('kalkan: yıkıcı komutlar engellenir, normal komutlar geçer', () => {
   assert.equal(k("vercel deploy --target='prod'"), 'ask', 'tırnaklı = hedef');
   assert.equal(k('vercel deploy --target    production'), 'ask', 'çok boşluk');
   assert.equal(k('vercel --scope ekip "promote" https://a.vercel.app'), 'ask', 'tırnaklı alt komut');
+  // Kabuk tırnağı ve kaçışı kaldırınca aynı komut: kurallar tırnağı açılmış metne de uygulanır
+  assert.equal(k('vercel deploy --pro""d'), 'ask', 'kelime içi tırnak');
+  assert.equal(k("vercel deploy --'prod'"), 'ask');
+  assert.equal(k('vercel pro\\mote https://a.vercel.app'), 'ask', 'ters eğik çizgi kaçışı');
+  assert.equal(k("vercel deploy $'--prod'"), 'ask', "$'..' dizgisi");
+  assert.equal(k('psql -c "DR""OP TABLE users"'), 'deny', 'SQL içinde tırnak');
+  assert.equal(k('git commit -m "it\'s fine"'), 'serbest', 'tırnaklı sıradan komut serbest');
+  assert.equal(izinKarsiligi('git reset --ha"rd" HEAD~1')?.karar, 'deny', 'izin karşılığı da tırnağı açar');
   assert.equal(k('git push origin main'), 'ask');
   assert.equal(k('psql postgres://u:p@db.ornek-prod.com:5432/app -c "select 1"'), 'ask', 'uzak veritabanı');
   assert.equal(k('psql postgres://u:p@localhost:5432/app -c "select 1"'), 'serbest');

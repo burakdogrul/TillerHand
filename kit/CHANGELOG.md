@@ -5,6 +5,11 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.11.3] - 2026-10-23
+
+### Güvenlik
+- Yıkıcı komut kalkanı ve izin karşılığı (Codex, Antigravity) komutu kabuğun göreceği hale getirip de değerlendirir: `$'..'` açılır, tırnaklar, `\` ve PowerShell `` ` `` kaçışları düşer. Ham ve açılmış halden sıkı olan karar kazanır. Böylece `--pro""d`, `pr\omote`, `$'--prod'`, `DR""OP`, `--ha"rd"` gibi yazımlar tek tek regex'e gerek kalmadan yakalanır. Commit sonrası güvenlik incelemesinin bulgusu (kök neden düzeltmesi; 3.11.2'nin tırnak eklerinin yerini alır).
+
 ## [3.11.2] - 2026-10-23
 
 ### Güvenlik
