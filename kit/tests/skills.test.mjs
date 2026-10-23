@@ -94,6 +94,28 @@ test('ayarlar 3.11: tarayıcı MCP\'leri katalogda, ajan Playwright CLI kullanı
   assert.match(fs.readFileSync(path.join(KOK, '.claude/commands/release.md'), 'utf8'), /vercel@63\.1\.1 deploy/, '/release önizleme deploy\'u');
 });
 
+test('ayarlar 3.12: rea, Understand-Anything, design-md, three.js sabit sürümle ve uyarıyla', () => {
+  const oku = (p) => fs.readFileSync(path.join(KOK, p), 'utf8');
+  assert.ok(oku('docs/workflow/mcp-catalog.md').includes('rea-agents@6.2.0'), 'katalog: rea sabit sürüm');
+  for (const k of ['research', 'adopt']) {
+    const md = oku(`.claude/commands/${k}.md`);
+    assert.match(md, /\brea\b/, `/${k}: rea`);
+    assert.match(md, /yetkili/, `/${k}: yetki uyarısı`);
+  }
+  for (const k of ['release', 'handoff', 'adopt']) assert.match(oku(`.claude/commands/${k}.md`), /\/understand/, `/${k}: Understand-Anything`);
+  const komutlar = fs.readdirSync(path.join(KOK, '.claude/commands')).map((f) => oku(`.claude/commands/${f}`)).join('\n');
+  assert.ok(!/\/understand[^\n`]*--auto-update/.test(komutlar), 'UA --auto-update komutlarda kullanılmaz');
+  const design = oku('.claude/commands/design.md');
+  assert.ok(design.includes('awesome-design-md/3b605329240ce735b510037cca322f1831fdd7f8/'), '/design: design-md sabit commit');
+  assert.match(design, /takli[dt]/, '/design: marka taklidi yok');
+  const start = oku('.claude/commands/start.md');
+  for (const s of ['threejs-fundamentals', 'threejs-performance', 'threejs-react-three-fiber']) assert.ok(start.includes(s), `/start: ${s}`);
+  assert.ok(start.includes('threejs-skills/0e181866f095b5f06d005133876e926515390d95/'), '/start: three.js skill\'leri sabit commit');
+  const motion = oku('.claude/skills/ui-motion/SKILL.md');
+  for (const s of ['React Three Fiber', 'dispose', 'WebGL', 'GSAP']) assert.ok(motion.includes(s), `ui-motion: ${s}`);
+  for (const l of ['perf', 'ux']) assert.match(oku(`.claude/findings/lenses/${l}.md`), /WebGL/, `${l} lens: WebGL`);
+});
+
 test('eklenti eşitleme: kurulu olmayanı ve kapalıyı bulur, başka projedeki kurulumu saymaz', async () => {
   const { eksikler } = await import('../../.claude/hooks/plugins-sync.mjs');
   const kok = path.resolve(os.tmpdir(), 'proje-a');

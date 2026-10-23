@@ -5,6 +5,22 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.12.0] - 2026-10-23
+
+### Eklenen
+- **rea (tersine mühendislik CLI'ı, sabit sürüm `rea-agents@6.2.0`):** `/research` bir rakip özelliğin nasıl çalıştığını kanıtıyla inceleyebilir; `/adopt` repodaki kaynağı olmayan parçaları (derlenmiş paket, küçültülmüş JS, ASAR) listeler. Her ikisi önce yetki ve lisans uyarısıyla sorar; rakibin kodu, metni ve markası alınmaz. `setup` çalıştırılmaz (ajan ayarlarını değiştirir). Katalog: `docs/workflow/mcp-catalog.md`.
+- **Understand-Anything (insan için kod haritası, `yayin` paketi):** `/adopt` görsel harita, `/handoff` devralan için tanıtım rehberi (`/understand-onboard`), `/release first` bakım haritası önerir. İlk çalıştırma bütün kodu okur: maliyet söylenir ve sorulur. Türkçe çıktı yok (`--language en`), `--auto-update` kullanılmaz. Pano, graf 30 günden eskiyse ipucu verir.
+- **İlham markası (`/design` 1b):** awesome-design-md'den (84 marka, MIT) sadece seçilen markanın DESIGN.md'si sabit commit'ten `.previews/ref/`'e indirilir, Impeccable ile ilkeleri damıtılır. Marka taklidi yok.
+- **three.js (`/start` 3c):** 3D seçilirse `CloudAI-X/threejs-skills`'ten (MIT) `threejs-fundamentals`, `threejs-performance` ve React'te `threejs-react-three-fiber` sabit commit'ten kopyalanır; gerisi Context7.
+- **`ui-motion` → 3D bölümü:** tembel yükleme, WebGL yoksa statik yedek, hareket azaltma, mobil GPU (piksel oranı ≤2, isteğe bağlı render), `dispose()`, fps ölçüsü. GSAP satırı lisans notuyla.
+- **GSAP (`/design` cesur yön):** `gsap-skills:` skill'leri. Lisans doğrulandı: ücretsiz, ticari kullanım dahil; tek yasak Webflow'a rakip kodsuz animasyon aracı (gsap.com/standard-license, arşiv kopyası 2026).
+- `/findings-perf` ve `/findings-ux` lens'lerine animasyon ve 3D kontrolleri (tembel yükleme, `dispose`, ScrollTrigger temizliği, statik yedek, scroll-jacking erişilebilirliği).
+
+### Değişen
+- Yapı haritalarına `.ua/**` eklendi (Understand-Anything grafı). **Elle uyarla:** kurulu projede `.claude/structure.json` → `allow`'a `".ua/**"` ekle.
+- `.gitignore`: `.ua/intermediate/`, `.ua/diff-overlay.json`. **Elle uyarla:** kurulu projenin `.gitignore`'una ekle.
+- README, `kit/guide.html` ve pano güncellendi.
+
 ## [3.11.4] - 2026-10-23
 
 ### Güvenlik

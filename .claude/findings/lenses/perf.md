@@ -12,7 +12,8 @@
 4. **Dış çağrılar:** Timeout ve retry eksikliği, gereksiz tekrar çağrı, toplu yapılabilecek tekil çağrılar.
 5. **AI maliyeti (varsa):** Gereksiz büyük model, `max_tokens` eksikliği, prompt önbellekleme kullanılmaması, kullanıcı başı sınır yokluğu.
 6. **Altyapı maliyeti:** Plan seviyesi ile kullanım uyumu, boşta çalışan kaynak, bant genişliği, log ve depolama büyümesi; `docs/product/unit-economics.md` ile karşılaştır.
-7. **Ölçeklenme:** Tek noktada darboğaz, durum bilgisi tutan sunucu, kuyruk birikmesi.
+7. **Animasyon ve 3D (varsa):** three.js ana pakette mi (tembel yüklenmeli), WebGL sahnesi görünmezken render ediyor mu, `dispose()` eksik mi (sayfa geçişinde bellek artışı), mobilde piksel oranı sınırsız mı; GSAP ScrollTrigger'ın her kaydırmada düzen okuması (layout thrashing), sayfa değişince `kill()` edilmeyen tetikleyiciler.
+8. **Ölçeklenme:** Tek noktada darboğaz, durum bilgisi tutan sunucu, kuyruk birikmesi.
 
 ## Araçlar
 

@@ -80,7 +80,7 @@ test('bulgu raporları: son rapor tür başına, sayılar ayrıştırılır', as
 test('üretim varlıkları: marka paketi, video çıktısı, araştırma başlığı', async () => {
   const { uretimVarliklari } = await import('../../.claude/hooks/dashboard-data.mjs');
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'varlik-'));
-  assert.deepEqual(uretimVarliklari(p), { markaKlasor: null, marka: [], markaRehberi: false, videolar: [], arastirma: [] });
+  assert.deepEqual(uretimVarliklari(p), { markaKlasor: null, marka: [], markaRehberi: false, videolar: [], arastirma: [], kodHaritasiGun: null });
   for (const k of ['assets/brand', 'marketing/motion/demo/out', 'marketing/motion/taslak', 'docs/research', 'docs/design']) fs.mkdirSync(path.join(p, k), { recursive: true });
   fs.writeFileSync(path.join(p, 'assets/brand/logo.svg'), '<svg/>');
   fs.writeFileSync(path.join(p, 'docs/design/brand.md'), '# Marka');
@@ -93,6 +93,13 @@ test('üretim varlıkları: marka paketi, video çıktısı, araştırma başlı
   assert.equal(v.markaRehberi, true);
   assert.deepEqual(v.videolar, [{ ad: 'demo', mp4: 'marketing/motion/demo/out/demo.mp4' }, { ad: 'taslak', mp4: null }]);
   assert.deepEqual(v.arastirma.map((r) => r.baslik), ['2026-10-05-kvkk', 'Ödeme sağlayıcıları']);
+  // Understand-Anything grafı: yaşı gün olarak (otomatik güncelleme kapalı, eskiyince panoda ipucu)
+  fs.mkdirSync(path.join(p, '.ua'));
+  const graf = path.join(p, '.ua/knowledge-graph.json');
+  fs.writeFileSync(graf, '{}');
+  const kirkGunOnce = new Date(Date.now() - 40 * 864e5);
+  fs.utimesSync(graf, kirkGunOnce, kirkGunOnce);
+  assert.equal(uretimVarliklari(p).kodHaritasiGun, 40);
 });
 
 test('maliyet: ccusage proje adı ve günlük özet (date/period alanları)', async () => {

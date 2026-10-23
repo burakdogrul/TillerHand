@@ -34,6 +34,7 @@ Dosyaları toptan okuma: kod haritası bağlıysa önce onu kullan, yoksa paket 
 5. **Kurulabilirlik:** README'de kurulum adımı, `.env.example`, sistem bağımlılıkları.
 6. **Git geçmişi:** Son 30 commit'in özeti, aktif dallar, en çok değişen dosyalar (riskli bölgeler).
 7. **Mevcut belgeler:** README, eski `CLAUDE.md` ve `AGENTS.md` (yerinde duruyorlar; kitinkiler `.kit-new` uzantılı), varsa docs klasörü.
+8. **Kaynağı olmayan parçalar:** Repoya girmiş derlenmiş paket, küçültülmüş JS, Electron ASAR veya kaynağı kayıp bağımlılık. Varsa listele. İçini anlamak gerekirse rea CLI öner (`docs/workflow/mcp-catalog.md` → rea): sadece projenin sahibi olduğu veya incelemeye yetkili olduğu parçalar için, lisansını kontrol ederek.
 
 Bulguları kısa bir tablo halinde göster. Hızlı taramada kodun içine dalma: sadece yapı ve özet.
 
@@ -71,6 +72,8 @@ Ortak kurallar `AGENTS.md`'de (Claude Code, Codex, Antigravity okur); `CLAUDE.md
 ## Adım 6: Derin tarama (seçildiyse)
 
 Adım 0'da seçilen bulgu raporlarını çalıştır (`/findings-all <türler>` veya tek tek). Kritik ve yüksek bulguları Adım 8'deki yol haritasına aday olarak al.
+
+**İnsan için kod haritası (isteğe bağlı):** Kullanıcı kodu kendisi de görsel olarak keşfetmek isterse Understand-Anything öner (`yayin` paketi: `node .claude/hooks/tools.mjs --gerekli yayin`). `/understand` ilk çalıştırmada bütün kodu okur, büyük projede pahalıdır: maliyeti söyle ve sor. Türkçe çıktı yok; `--language en` kullan. Sonra `/understand-dashboard`. Kod haritası (codebase-memory-mcp) ajan içindir, bu insan içindir; biri diğerinin yerine geçmez.
 
 ## Adım 7: Kurul ve tasarım (isteğe bağlı)
 

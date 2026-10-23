@@ -15,7 +15,7 @@
 | ponytail | ponytail | `ponytail:` |
 | mattpocock-skills | mattpocock | `mattpocock-skills:` |
 | gsap-skills (GreenSock, resmi) | gsap-skills | `gsap-skills:` (`tasarim` paketi) |
-| understand-anything | understand-anything | `/understand`, `/understand-dashboard` (`yayin` paketi; `--auto-update` kullanılmaz) |
+| understand-anything | understand-anything | `/understand --language en`, `/understand-dashboard`, `/understand-onboard` (`yayin` paketi; `--auto-update` kullanılmaz). Açıkken oturum başı hook'u graf eskiyse sormadan günceller ve token harcar: iş bitince `/tools` ile paketi kapat |
 | security-guidance, claude-security, hookify, claude-md-management, session-report | claude-plugins-official (Anthropic) | otomatik hook / `/claude-security`, `/hookify`, `/revise-claude-md`, `/session-report` |
 | typescript-lsp (web, mobil) · pyright-lsp (backend) | claude-plugins-official | Dil sunucusu: tip hatası ve tanıma gitme. `npm i -g typescript-language-server typescript` veya `npm i -g pyright` gerekir |
 | supabase, postgres-best-practices | supabase-agent-skills | `supabase:`, `postgres-best-practices:` (web, mobil; backend'de sadece postgres) |
@@ -24,6 +24,8 @@
 
 **Vercel skill'leri** (`react-best-practices`, `composition-patterns` web'de; `react-native-guidelines` mobilde) plugin değildir. `/start` stack kararından sonra projeye kopyalar:
 `npx -y skills@1.7.2 add vercel-labs/agent-skills --skill react-best-practices --skill composition-patterns -a claude-code -y --copy`
+
+**three.js skill'leri** (`threejs-fundamentals`, `threejs-performance`, React'te `threejs-react-three-fiber`; `CloudAI-X/threejs-skills`, MIT) plugin değildir. Sadece 3D seçilirse `/start` 3c sabit commit'ten kopyalar. Her biri ~6k token, çağrılınca yüklenir.
 
 ## Kitin kendi skill'leri (`.claude/skills/`)
 

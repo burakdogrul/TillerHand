@@ -36,5 +36,8 @@ sandbox/
 # Tanıtım videosu kareleri ve çıktıları (motion-video)
 marketing/**/frames/
 marketing/**/out/
+# Understand-Anything yerel ara dosyaları (grafın kendisi .ua/ altında commit'lenebilir)
+.ua/intermediate/
+.ua/diff-overlay.json
 # claude-security tarama çıktısı (açık ayrıntısı içerir; özet docs/findings/security'de)
 CLAUDE-SECURITY-*/

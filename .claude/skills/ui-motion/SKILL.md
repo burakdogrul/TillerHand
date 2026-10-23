@@ -31,10 +31,20 @@ Hareketin işi bilgi vermektir: ne değişti, nereden geldi, sistem çalışıyo
 
 | Stack | Kütüphane |
 |---|---|
-| Web (React/Next.js) | Basit durumlar için CSS geçişleri; yay, layout ve giriş/çıkış için **Motion** (`motion/react`). GSAP sadece açılış sayfasında kaydırmaya bağlı anlatım gerekiyorsa. |
+| Web (React/Next.js) | Basit durumlar için CSS geçişleri; yay, layout ve giriş/çıkış için **Motion** (`motion/react`). GSAP sadece açılış sayfasında kaydırmaya bağlı anlatım gerekiyorsa (`gsap-skills:`, `tasarim` paketi; ücretsiz, ticari dahil, Webflow'a rakip kodsuz animasyon aracında yasak). |
+| Web 3D | **three.js**; React'te **React Three Fiber** + drei. Skill'ler `/start` 3c'de kopyalanır (`threejs-*`). |
 | Mobil (Expo) | **react-native-reanimated** (UI thread'de çalışır) ve `LayoutAnimation` yerine Reanimated layout animasyonları. Haptik geri bildirim önemli eylemlerde. |
 
 Yeni bir animasyon kütüphanesi eklemek `teknik` karardır; sor.
+
+## 3D
+
+1. **Tembel yükle.** three.js ana pakete girmez: sahne görünür alana gelince dinamik `import()` ile yüklenir; Next.js'te `ssr: false`. İlk ekranı (LCP) beklemez.
+2. **Yedek her zaman var.** WebGL yoksa, bağlam kaybolursa (`webglcontextlost`) veya yükleme hata verirse aynı yerde statik görsel gösterilir. Sahne bilgi taşıyorsa aynı bilgi metin olarak da sayfada olur.
+3. **Hareket azaltma.** `prefers-reduced-motion: reduce` açıkken otomatik dönen kamera ve sürekli animasyon durur; sahne sabit kare olarak kalır.
+4. **Mobil GPU.** Piksel oranı `Math.min(devicePixelRatio, 2)`; gölge ve son işlem efektleri mobilde kapalı başlar. Sahne görünmüyorken veya sekme arka plandayken render döngüsü durur (R3F'te `frameloop="demand"` tercih edilir).
+5. **Temizlik.** Bileşen kalkınca geometri, materyal, doku ve renderer `dispose()` edilir; olay dinleyicileri sökülür. Bellek sızıntısını DevTools bellek panelinde iki kez aç-kapa ile dene.
+6. **Ölçü.** Masaüstünde 60 fps, orta seviye telefonda 30 fps altına düşmez; düşüyorsa `threejs-performance` skill'i.
 
 ## İnceleme
 

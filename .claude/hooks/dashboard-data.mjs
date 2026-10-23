@@ -179,7 +179,9 @@ export function uretimVarliklari(kok) {
       return { dosya, baslik };
     })
     .sort((x, y) => y.dosya.localeCompare(x.dosya));
-  return { markaKlasor, marka, markaRehberi: fs.existsSync(path.join(kok, 'docs/design/brand.md')), videolar, arastirma };
+  let kodHaritasiGun = null;
+  try { kodHaritasiGun = Math.floor((Date.now() - fs.statSync(path.join(kok, '.ua/knowledge-graph.json')).mtimeMs) / 864e5); } catch {}
+  return { markaKlasor, marka, markaRehberi: fs.existsSync(path.join(kok, 'docs/design/brand.md')), videolar, arastirma, kodHaritasiGun };
 }
 
 // ---------- Harcama alarmları (docs/operations/spend-alarms.md) ----------

@@ -128,6 +128,7 @@ if (geciken.length) ekle('bilgi', `Kaldırma tarihi geçen ${geciken.length} bay
 if (gb.yeni) ekle('bilgi', `${gb.yeni} işlenmemiş kullanıcı geri bildirimi var.`, '/user-feedback');
 const acikPaketler = (() => { try { return paketDurumu(kok).filter((p) => p.acik).map((p) => p.ad); } catch { return []; } })();
 if (acikPaketler.length) ekle('bilgi', `Açık bağlam paketleri: ${acikPaketler.join(', ')}. Her oturumda skill listesine yük ekler.`, 'Kullanmıyorsan /tools kapat <paket>');
+if (varlik.kodHaritasiGun > 30) ekle('bilgi', `İnsan için kod haritası (Understand-Anything) ${varlik.kodHaritasiGun} gündür güncellenmedi.`, '/understand (sadece değişenleri okur; yayin paketi)');
 if (baglam?.yuzde >= 70 && Date.now() - baglam.okundu < 3600e3) ekle('uyari', `Bağlam %${baglam.yuzde} dolu; yanıt kalitesi düşebilir.`, '/wrap-up ve /clear');
 for (const r of Object.values(bulgu.son)) if (r.kritik > 0) ekle('uyari', `${BULGU_TURLERI[r.tur] ?? r.tur} bulgu raporunda ${r.kritik} kritik bulgu var (sağlık ${r.saglik}/100).`, `docs/findings/${r.tur}/latest.md`);
 // Önem sırası: kritik > uyarı > bilgi (aynı önemde eklenme sırası korunur)

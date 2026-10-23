@@ -25,6 +25,7 @@
     "ai/**",
     "marketing/**",
     ".previews/**",
+    ".ua/**",
     "pyproject.toml",
     "uv.lock",
     ".python-version",

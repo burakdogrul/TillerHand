@@ -28,6 +28,7 @@ Konu: $ARGUMENTS (boşsa `docs/product/prd.md` → problem ve değer önerisi)
 ## 3. Ticari ürünler
 
 - WebSearch ile rakipler. Her ürün için resmi sayfası: fiyat (tarihiyle), ana özellikler, hedef kitle. Kullanıcı yorumlarındaki tekrar eden şikayetler (mağaza yorumları, G2, Reddit gibi kaynaklar; kaynağı belirt).
+- **Bir özelliğin nasıl çalıştığı (isteğe bağlı, sadece kullanıcı isterse):** rea CLI (`docs/workflow/mcp-catalog.md` → rea). Önce şu uyarıyla sor: "Sadece sahip olduğun veya incelemeye yetkili olduğun yazılımı inceleyebiliriz. Lisans sözleşmesi veya kullanım şartları tersine mühendisliği yasaklıyor olabilir; bu hukuki görüş değildir." Onay gelirse uygun alt komutu `--help` ile seç (site için web, masaüstü/Electron için `analyze-javascript-application <yol> --json`). Rapora özelliğin nasıl çalıştığı ve kanıtı girer. Rakibin kodu, metni, görseli veya markası alınmaz; fikir kendi kodumuzla yeniden yazılır.
 
 ## 4. Rapor → `docs/research/YYYY-AA-GG-<konu>.md`
 

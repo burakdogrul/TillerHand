@@ -10,6 +10,7 @@ Kaynak listeler: `docs/operations/release-checklist.md`, `docs/architecture/stac
 1. **Otomatik kontrol edebildiklerini çalıştır:**
    - `first` modunda önce limiti oku; tam denetim pahalıdır (`docs/workflow/usage-limits.md`). `node .claude/hooks/tools.mjs --gerekli guvenlik` kapalıysa açmayı sor. Kurul kurulduysa **canlıya alma kurul toplantısı** (tüm kurul, `.claude/board/rules.md`) yap.
    - `first` modunda önce `/findings-all security,legal,perf` öner (tahmini maliyetiyle); raporlardaki Kritik bulgular yayını engeller.
+   - `first` modunda isteğe bağlı: yayın sonrası bakımı devralacak kişi için Understand-Anything ile insan için mimari harita (`yayin` paketi; `/understand --language en`, sonra `/understand-onboard`). İlk çalıştırma bütün kodu okur: maliyeti söyle ve sor.
    - `first` modunda paralel başlat: `security-auditor` alt ajanı (tüm kod tabanı; kurul toplantısına zaten katılıyorsa tekrar çalıştırma), `security-review` skill'i, `ponytail:ponytail-audit` (kalite, yük altında kırılacak yerler); arayüz varsa `impeccable:impeccable` → `audit` (erişilebilirlik, performans, responsive)
    - Son CI çalışmasının durumu (`gh run list --branch main --limit 1`, gh kuruluysa)
    - Lint, tip kontrolü, testler, build (`AGENTS.md` → Komutlar)

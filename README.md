@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.11.4-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.12.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -428,6 +428,10 @@ Kit Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve
 | **Logo** | `logo-design`: marka soruları, 4-6 SVG konsept görsel önizlemeyle, seçim, iyileştirme, favicon/ikon/PNG paketi ve kullanım kuralları | API gerekmez |
 | **Tanıtım videosu** | `motion-video`: tek kesintisiz dönüşüm, gerçek imleç, kapalı formlu yaylar, 120 BPM; `renderAt(t)` + Playwright + ffmpeg ile MP4 | Remotion seçeneği (resmi plugin, varsayılan kapalı) |
 | **Uygulama içi hareket** | `ui-motion`: süre belirteçleri, yaylar, hareket azaltma, performans; Motion / Reanimated | Impeccable `animate` ile denetlenir |
+| **Kaydırma animasyonu ve 3D** | Resmi `gsap-skills` (cesur yön, `tasarim` paketi); 3D seçilirse three.js skill'leri (temel, performans, React Three Fiber) sabit sürümle kopyalanır. `ui-motion` → 3D kuralları: tembel yükleme, statik yedek, hareket azaltma, mobil GPU, `dispose()` | GSAP ücretsiz, ticari dahil |
+| **İlham markası** | `/design`: beğendiğin ürünün DESIGN.md'si (awesome-design-md, 84 marka) tek dosya indirilir, Impeccable ile ilkeleri damıtılır | Marka taklidi yok: logo, ad, birebir palet alınmaz |
+| **Rakip özelliği nasıl çalışıyor** | `/research`, `/adopt`: **rea** CLI (sabit sürüm) ile site veya uygulama incelemesi, kanıtıyla | Sadece sahip olduğun veya yetkili olduğun yazılım; önce uyarı ve onay |
+| **İnsan için kod haritası** | **Understand-Anything** (`yayin` paketi): `/understand`, görsel pano, tanıtım rehberi. `/adopt`, `/handoff`, `/release first` önerir | İlk çalıştırma bütün kodu okur, pahalı; Türkçe çıktı yok |
 | **Kod zekâsı** | `typescript-lsp` (web, mobil), `pyright-lsp` (backend): her düzenlemeden sonra tip hatası, tanıma gitme | Dil sunucusu global kurulur |
 | **Stack kuralları** | Vercel `react-best-practices` + `composition-patterns` (web), `react-native-guidelines` + Expo resmi skill'leri (mobil), Supabase `postgres-best-practices`, `web-quality-skills` (Core Web Vitals, erişilebilirlik, SEO) | Proje tipine göre açılır |
 | **Mobil test** | **Maestro** MCP (kabul testleri cihazda) + **Expo** MCP (EAS build, TestFlight çökme kayıtları) | Maestro CLI ve Expo hesabı gerekir |

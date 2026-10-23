@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · Codex · Antigravity · v3.11</p>
+  <p class="eyebrow">Claude Code · Codex · Antigravity · v3.12</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -493,6 +493,8 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
         <tr><td>Değişebilen bilgi: sürüm, fiyat, mevzuat, rakip</td><td class="f">source-research · Context7</td></tr>
         <tr><td>Logo, ikon, marka paketi</td><td class="f">logo-design</td></tr>
         <tr><td>Uygulama içi hareket</td><td class="f">ui-motion</td></tr>
+        <tr><td>Kaydırma animasyonu (cesur yön)</td><td class="f">gsap-skills (tasarim paketi)</td></tr>
+        <tr><td>3D sahne (seçilirse)</td><td class="f">threejs-fundamentals · threejs-performance · threejs-react-three-fiber</td></tr>
         <tr><td>Tanıtım videosu</td><td class="f">motion-video (Remotion isteğe bağlı)</td></tr>
         <tr><td>Durum blokları, ilerleme notları</td><td class="f">caveman:caveman</td></tr>
         <tr><td>Fikri ve büyük planları sorgulamak</td><td class="f">mattpocock-skills:grilling</td></tr>
@@ -531,7 +533,8 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <article class="type"><h3>Doğru kaynak</h3><p class="stack">source-research · Context7 · Firecrawl (isteğe bağlı)</p><ul><li>Önce resmi doküman, mevzuat, standart</li><li>Her iddiaya kaynak, tarih, güven seviyesi (A-D)</li><li>Kütüphane dokümanı Context7'den güncel</li><li>Firecrawl API anahtarı ister; anahtar senin ortam değişkeninde kalır</li></ul></article>
     <article class="type"><h3>Logo</h3><p class="stack">logo-design · SVG</p><ul><li>Marka soruları → 4-6 konsept görsel önizlemeyle</li><li>16 px okunurluk, tek renk hal, koyu zemin</li><li>Favicon, uygulama ikonları, PNG boyutları, kullanım kuralları</li></ul></article>
     <article class="type"><h3>Tanıtım videosu</h3><p class="stack">motion-video · renderAt(t) · Playwright · ffmpeg</p><ul><li>Tek kesintisiz dönüşüm, gerçek imleç, 120 BPM</li><li>Kapalı formlu yaylar (testle doğrulandı)</li><li>Önce vuruş haritası ve 4 kare onayı, sonra MP4</li></ul></article>
-    <article class="type"><h3>Arayüz hareketi</h3><p class="stack">ui-motion · Motion · Reanimated</p><ul><li>Süre belirteçleri, yaylar, sadece transform/opacity</li><li>Hareket azaltma tercihi zorunlu</li><li>Impeccable animate ile denetim</li></ul></article>
+    <article class="type"><h3>Arayüz hareketi ve 3D</h3><p class="stack">ui-motion · Motion · Reanimated · GSAP · three.js</p><ul><li>Süre belirteçleri, yaylar, sadece transform/opacity</li><li>Hareket azaltma tercihi zorunlu</li><li>Kaydırma anlatımı GSAP ile (ücretsiz, ticari dahil)</li><li>3D: tembel yükleme, statik yedek, mobil GPU, dispose()</li></ul></article>
+    <article class="type"><h3>İnceleme ve keşif</h3><p class="stack">rea · Understand-Anything · awesome-design-md</p><ul><li>Rakip özelliği nasıl çalışıyor: rea CLI, sadece yetkili olduğun yazılımda, önce onay</li><li>İnsan için kod haritası ve tanıtım rehberi: /adopt, /handoff, /release first önerir</li><li>İlham markasının DESIGN.md'si damıtılır; marka taklidi yok</li></ul></article>
     <article class="type"><h3>Güvenlik</h3><p class="stack">security-guidance · claude-security · Trail of Bits</p><ul><li>Yazarken: riskli kalıp uyarısı (ücretsiz)</li><li>Commit'te: ayrı modelle derin inceleme; tur sonu incelemesi kota için kapalı</li><li>/findings-security: çok ajanlı, doğrulanmış tarama</li></ul></article>
     <article class="type"><h3>Kod zekâsı</h3><p class="stack">typescript-lsp · pyright-lsp</p><ul><li>Her düzenlemeden sonra tip hatası</li><li>Tanıma git, referans bul</li><li>Uydurma API'yi derlemeden yakalar</li></ul></article>
     <article class="type"><h3>Stack kuralları</h3><p class="stack">Vercel · Expo · Supabase · web-quality</p><ul><li>Proje tipine göre açılır, ihtiyaç olunca yüklenir</li><li>React, React Native, Postgres, Core Web Vitals</li></ul></article>
@@ -719,7 +722,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.11.4 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.12.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

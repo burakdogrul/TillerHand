@@ -35,12 +35,13 @@ Projenin durumu sohbette değil dosyalarda ve git'te yaşar. Devir, bu dosyalar�
 - Bilinen sorunlar, riskli bölgeler, yapılmaması gerekenler
 ```
 
+2b. **İsteğe bağlı, devralan kodu ilk kez görecekse:** Understand-Anything ile tanıtım rehberi (`yayin` paketi: `node .claude/hooks/tools.mjs --gerekli yayin`). `/understand --language en` ilk çalıştırmada bütün kodu okur, büyük projede pahalıdır: maliyeti söyle ve sor. Sonra `/understand-onboard`; çıktının yolunu devir notunun "Devralanın ihtiyacı" bölümüne yaz.
 3. Commit edilmemiş değişiklik varsa commit öner: `docs: devir notu`. Uzak depo varsa push öner (onayla). Push yoksa devralanın projeyi nasıl alacağını söyle (repo daveti veya klasör kopyası; `.env` dosyası kopyalanmaz).
 4. Kullanıcıya devralan kişiye ileteceği tek satırı ver: "Repoyu klonla, Claude Code'da aç, `/handoff devral` yaz."
 
 ## Devral (`/handoff devral`)
 
-1. `docs/workflow/handoff.md`'yi oku ve özetle: nerede kalındı, bekleyen kararlar, dikkat edilecekler.
+1. `docs/workflow/handoff.md`'yi oku ve özetle: nerede kalındı, bekleyen kararlar, dikkat edilecekler. Notta Understand-Anything tanıtım rehberi varsa yolunu ver; görsel harita için `/understand-dashboard` (`yayin` paketi).
 2. Ortamı kur, her adımı tek satırla raporla:
    - `node --version`, `git --version`; README'deki çalışma ortamı sürümüyle (`.nvmrc` / `.python-version`) uyuşuyor mu?
    - Eklentiler: `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele, onayla `--kur`, sonra `/reload-plugins`. Paket tercihleri kişiseldir ve devirle gelmez: gerekenleri `/tools` ile göster.

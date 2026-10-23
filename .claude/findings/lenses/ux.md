@@ -14,6 +14,7 @@
 6. **Metin:** Hitap tutarlılığı (`docs/product/glossary.md`), belirsiz buton metinleri, suçlayıcı hata mesajları, AI kokan kalıplar.
 7. **Mobil ve responsive:** 375px genişlikte taşma, başparmak erişimi, klavyenin içeriği örtmesi.
 8. **Güven işaretleri:** Ödeme ve kişisel veri adımlarında güven veren açıklamalar.
+9. **Animasyon ve 3D (varsa):** WebGL yokken veya hata verince statik yedek var mı; sahnedeki bilgi metin olarak da var mı; hareket azaltma açıkken kaydırmaya bağlı (GSAP) ve 3D hareket duruyor mu; kaydırmayı ele geçiren (scroll-jacking) bölüm klavyeyle ve ekran okuyucuyla geçilebiliyor mu.
 
 ## Araçlar
 
