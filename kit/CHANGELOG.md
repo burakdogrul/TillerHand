@@ -124,7 +124,7 @@ Yayın sonrası otomatik güvenlik incelemesinin bulguları (sadece Codex ve Ant
 
 ## [3.9.0] - 2026-10-23
 
-Kit artık OpenAI Codex ve Google Antigravity'de de çalışıyor: kurallar, komutlar ve korumalar. Kurul ajanları, soru arayüzü ve durum çubuğu Claude Code'a özel kalıyor. Dayanak: iki aracın resmi hook ve skill dokümanları (`kit/research/2026-10-23-codex-antigravity.md`).
+Kit artık OpenAI Codex ve Google Antigravity'de de çalışıyor: kurallar, komutlar ve korumalar. Kurul ajanları, soru arayüzü ve durum çubuğu Claude Code'a özel kalıyor. Dayanak: iki aracın resmi hook ve skill dokümanları.
 
 ### Eklendi
 - **`AGENTS.md`:** Ortak kurallar (temel kurallar, Bitti tanımı, Asla, Git, Komutlar, proje adı) buraya taşındı. Üç araç da bu dosyayı okur. `CLAUDE.md` onu `@AGENTS.md` ile içe alır ve Claude Code'a özel kuralları tutar (skill tablosu, limit). Claude Code'un gördüğü kurallar değişmedi; sadece sıralama değişti ve iki araç için bir karşılık bölümü eklendi.

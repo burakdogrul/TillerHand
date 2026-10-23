@@ -416,7 +416,7 @@ Kit Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve
 - **Codex:** Proje hook'ları ancak klasöre güvendiğinde ve `/hooks` ile onayladığında çalışır. Bunu ilk oturumda yap, yoksa korumalar devre dışı kalır. Codex'i proje kökünde başlat; Windows'ta hook betikleri göreli yolla çağrılır.
 - **Sınır:** Kabuk komutuyla dosya yazmak (`echo > dosya`, heredoc) yapı koruyucuya ve düzenleme kilidine takılmaz; sır taraması komut metninde yapılır, kural ve koruma dosyalarını değiştiren kabuk komutu sorulur. Claude Code'da da durum aynı, orada her kabuk komutu zaten onaya gelir.
 - **Var olan projeye araç eklemek:** `/kit-update --tool claude,codex`.
-- **Dayanak:** Araçların resmi hook ve skill dokümanları (2026-10-23). İki araç da hızlı değişiyor; ilk kullanımda bir sır yazma denemesiyle korumaların çalıştığını gör. Araştırma notu: `kit/research/2026-10-23-codex-antigravity.md`.
+- **Dayanak:** Araçların resmi hook ve skill dokümanları (2026-10-23). İki araç da hızlı değişiyor; ilk kullanımda bir sır yazma denemesiyle korumaların çalıştığını gör.
 
 ## 🧰 Yetenek paketleri
 
