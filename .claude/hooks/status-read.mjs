@@ -96,6 +96,7 @@ export function durumOku(kok) {
     bekleyen: satirlar(ib['Bekleyen kararlar']),
     sorunlar: satirlar(ib['Açık sorunlar / bloklayıcılar']),
     kaldigiYer: satirlar(bolumBul(ib, 'Kaldığı yer')),
+    devirBekliyor: /^\*\*Durum:\*\*\s*bekliyor/im.test(oku(d('docs/workflow/handoff.md'))),
     fazlar,
     gorev,
     kararlar,

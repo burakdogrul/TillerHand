@@ -49,6 +49,7 @@ Kodun söylediğini taslak olarak yaz, koddan anlaşılmayanı sor (AskUserQuest
 1. **`docs/product/prd.md`:** Problem, hedef kullanıcı, mevcut özellikler (koddan), kabul kriterleri taslağı. Sor: Projenin amacı ve kitlesi doğru anlaşıldı mı? **Neyi beğenmiyorsun, neyi iyileştirmek istiyorsun?** (çoklu seçim + serbest). Eksik veya yarım kalan özellikler hangileri?
 2. **`docs/architecture/stack.md`:** "Seçilen teknolojiler" tablosunu mevcut stack'le doldur. Kitin kataloğundan farklı seçimler hata değildir; değiştirmeyi önermek ayrı bir karardır ve sadece ciddi bir sebep varsa sorulur (güvenlik, bakımı bitmiş sürüm, maliyet).
 3. **`docs/architecture/overview.md`, `docs/product/glossary.md`:** Veri modeli, servisler, ana kavramlar.
+3b. **Araştırma (pahalı adım, isteğe bağlı):** Benzer projeler ve rakiplerle karşılaştırma için `/research` öner (hızlı: limitin yaklaşık %10-15'i). Yap / Sonraya bırak. Seçilen özellikler Adım 8'de Faz 3'e girer.
 4. **README:** Gereksinimler ve Kurulum bölümleri (`/start` Adım 4 madde 3a). Eksik kilit dosyası veya sürüm dosyası Adım 8'de ilk görevlerden biri olur.
 
 ## Adım 4: CLAUDE.md'yi yeniden yaz

@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.7.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.8.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
   <img alt="Tipler" src="https://img.shields.io/badge/tipler-web%20%C2%B7%20mobil%20%C2%B7%20backend-5b6577?style=flat-square">
@@ -32,7 +32,7 @@
 | 🗂️ **Korunan yapı** | Özellik bazlı klasör haritası; harita dışı yazım sorulur, dağınıklık engellenir, CI denetler. |
 | 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, düzenleme kilidi, commit kapısı, yazarken güvenlik incelemesi. |
 | 📊 **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit. |
-| ⏱️ **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur; işler limite göre planlanır, gerekirse güvenli durulur. |
+| ⏱️ **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur; işler limite göre planlanır. Limit sadece uyarı verir (%90, %95, %99), işi durdurmaz. |
 | 🌐 **Doğru kaynak** | Değişebilen bilgi birincil kaynaktan doğrulanır (kaynak ve tarihle); kütüphane dokümanı Context7'den güncel gelir. |
 | 🎨 **Logo ve video** | SVG logo ve marka paketi; kod ile üretilen, 120 BPM ritimli tanıtım videosu. |
 | ↩️ **Geri alma** | `/rollback`: Son çalışan hale güvenle döner. Geçmiş silinmez, yarım iş saklanır. |
@@ -96,7 +96,8 @@ Kitin GitHub sayfasında **Use this template → Create a new repository** ile y
 | Bırakırken | `/wrap-up` (her şeyi kaydeder), sonra `/clear`. Temiz ekranın üstünde sıradaki komut yazar: `Sıradaki: /build G-004 · ...` |
 
 **Bilmen gereken üç şey**
-- **Limit:** Pro'da 5 saatlik ve haftalık kullanım limiti vardır. Claude dolmaya yaklaşınca uyarır ve yarım iş bırakmadan güvenli şekilde durur. Limit yenilenince `/build` ile devam edersin.
+- **Limit:** Pro'da 5 saatlik ve haftalık kullanım limiti vardır. Claude %90, %95 ve %99'da uyarır ama işi durdurmaz; sen "dur" dersen güvenli şekilde durur. Limit dolup iş kesilirse, yenilenince `/build` ile kaldığın yerden devam edersin.
+- **Devir:** Projeyi bir ekip arkadaşına veya başka bir hesaba bırakacaksan `/handoff` yaz. Devralan kişi repoyu açıp `/handoff devral` yazar ve aynı yerden devam eder.
 - **Kararlar sende:** Claude veritabanı, tasarım, maliyet gibi kararları sormadan vermez. Ödeme, veri silme ve canlıya alma gibi geri dönüşü zor işlerden önce mutlaka onay ister.
 - **Canlıya çıkınca:** Ürünün ücretli servislerine harcama tavanı koy (`docs/operations/spend-alarms.md`). `/release` bunu kontrol eder.
 
@@ -384,6 +385,8 @@ flowchart TB
 | `/maintain [weekly\|monthly\|quarterly]` | Düzenli bakım |
 | `/user-feedback` | Kullanıcı geri bildirimini yol haritasına işler |
 | `/retro` | Dersleri projeye ve kite geri yazar |
+| `/research [konu]` | Makaleler, GitHub'daki benzer projeler, rakip ürünler; fark tablosu; seçilen özellikler PRD'ye |
+| `/handoff [devral]` | Projeyi başka kişiye/hesaba devreder veya devralır; aynı yerden devam |
 | `/kit-update` | Projeyi kitin son sürümüne çeker |
 
 ## 🧰 Yetenek paketleri

@@ -28,6 +28,10 @@ try {
       const kod = g?.metin.match(/^(G-\d+)/)?.[1];
       if (kod) siradaki = `Sıradaki: /build ${kod} · ${g.metin.replace(/^G-\d+:\s*/, '').split(' — ')[0].replace(/\*\*/g, '').slice(0, 70)}`;
     }
+    if (d.devirBekliyor) {
+      notlar.push('Devir notu bekliyor (docs/workflow/handoff.md): proje başka kişiden veya hesaptan devralınıyor. İşe başlamadan /handoff devral öner.');
+      siradaki = `Devir notu var: /handoff devral${siradaki ? ` · sonra ${siradaki}` : ''}`;
+    }
     if (siradaki) notlar.push(siradaki);
     if (d.kaldigiYer.length) notlar.push(`Kaldığı yer: ${d.kaldigiYer.join(' | ')}. Kullanıcıya buradan devam etmeyi öner.`);
     if (d.bekleyen.length) notlar.push(`Bekleyen kararlar: ${d.bekleyen.join(' | ')}. Önce bunları sor.`);

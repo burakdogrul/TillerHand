@@ -5,6 +5,27 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.8.0] - 2026-10-23
+
+### Eklendi
+- **`/handoff` (devir):** Proje başka bir kişiye veya hesaba geçerken (ekip arkadaşı, kurumsal hesap, kapanan hesap) aynı yerden devam etmek için.
+  - Devreden kişi `/handoff` çalıştırır: `/wrap-up` adımları uygulanır, `docs/workflow/handoff.md`'ye devir notu yazılır. Notta nerede kalındığı, bekleyen kararlar, gereken hesaplar ve ortam değişkenlerinin sadece adları (değerleri asla) bulunur. Ardından commit ve push önerilir.
+  - Devralan kişi `/handoff devral` çalıştırır: not özetlenir; eklentiler, bağımlılıklar ve testler kurulup çalıştırılır; sıradaki görev söylenir.
+  - Bekleyen devir notu oturum başında ekranda (`Devir notu var: /handoff devral`) ve panonun "Dikkat" listesinde görünür (testli).
+- **`/research` (literatür ve pazar araştırması):** Akademik makaleler (Semantic Scholar ve arXiv açık arayüzleri), GitHub'daki benzer projeler (`gh search repos`) ve ticari ürünler taranır.
+  - Rapor `docs/research/` altına yazılır: kategori tabloları, fark haritası, fırsatlar. Panoda zaten bir yeri vardı.
+  - Eklenecek özellikler çoklu seçimle sorulur; seçilenler PRD'ye ve yol haritasına girer.
+  - Derinlik maliyetiyle sorulur: hızlı ~%10-15, derin ~%25-35. `/start` Adım 1b'de ve `/adopt` Adım 3b'de pahalı adım olarak isteğe bağlı sunulur.
+
+### Değişti
+- **Limit artık işi durdurmuyor, sadece uyarıyor.** Gerçek kullanımda %90'daki "güvenli dur" kuralı işi neredeyse tamamen kesiyordu ve kullanıcının devam için ikna etmesi gerekiyordu. Yeni kural:
+  - %90'da hatırlatma, %95'te "çok azaldı" uyarısı (kaldığı yer sessizce kaydedilir), %99'da "iş yarım kalabilir" uyarısı.
+  - Kullanıcı "dur" demedikçe iş devam eder. Sarı ve kırmızı seviyede seçenek sorusu da kalktı; maliyet tek satırla söylenir, seçenekler istenirse sunulur.
+  - Etkilenen yerler: `docs/workflow/usage-limits.md`, `CLAUDE.md` kural 4, `/build`, `/plan-task`, `/start`, `/board`.
+
+### Elle uyarla
+- `CLAUDE.md` (projenin) kural 4: limit cümlesini kitin `CLAUDE.md`'sindeki yeni haliyle değiştir. Değiştirilmezse eski "%90'da güvenli dur" kuralı projede geçerli kalır.
+
 ## [3.7.0] - 2026-10-23
 
 Kit ile proje artık ayrı klasörlerde durabiliyor ve var olan projeler kite alınabiliyor. İkisi de gerçek proje denemesinden gelen geri bildirim.

@@ -7,7 +7,7 @@ Planlanacak iş: $ARGUMENTS
 
 Bu adımda **kod yazma**, sadece plan çıkar.
 
-0. **Limit:** Limiti oku ve görevin tahmini maliyetini hesapla (`docs/workflow/usage-limits.md` §3). Seviye sarı veya kırmızıysa ya da tahmin kalan payı aşıyorsa seçenekleri sor. Plan, seçilen seçeneğe göre şekillenir (örn. "limite sığan kısmı yap").
+0. **Limit:** Limiti oku ve görevin tahmini maliyetini hesapla (`docs/workflow/usage-limits.md` §3). Seviye sarı veya kırmızıysa ya da tahmin kalan payı aşıyorsa bunu planın başında tek satırla belirt ve plana "limite sığan kısım" sırasını ekle. Ayrıca soru sorma.
 1. Gerekli bağlamı oku: `docs/product/roadmap.md` (görev ve kabul kriteri), `docs/product/prd.md` (ilgili özellik), `docs/architecture/overview.md`, `docs/decisions/log.md`. Görevin dokunacağı mevcut kodu oku.
 2. Projede benzer bir şey zaten var mı bak. Varsa onu yeniden kullan.
 3. **Karar noktalarını çıkar ve sor.** Bu görevde kullanıcının vermesi gereken kararları listele: kütüphane, kullanıcı akışı, veri alanı, hata davranışı, metin, tasarım vb. (`docs/workflow/decision-protocol.md`). Daha önce verilmiş olanları `docs/decisions/log.md`'den al, tekrar sorma. Kalanları AskUserQuestion ile sor. Büyük bir özellikse önce `mattpocock-skills:grilling` ile kapsamı sorgula. Modül sınırları belirsizse `mattpocock-skills:codebase-design` kullan.

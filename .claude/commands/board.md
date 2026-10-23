@@ -18,6 +18,6 @@ argument-hint: [boş | setup | convene <plan|task|phase-end|release|konu> | coun
 
 - **`council <soru>`:** Karar konseyi (`.claude/board/council.md`). Soruyu ve seçenekleri netleştir, eksikse önce kullanıcıya seçenekleri onaylat. Bitince başkanın önerisiyle kararı AskUserQuestion ile sor.
 
-Toplantıdan önce limiti kontrol et (`node .claude/hooks/usage.mjs`). Tam kurul toplantısı pahalıdır. Seviye sarı veya kırmızıysa tahmini maliyeti söyle ve `docs/workflow/usage-limits.md` §3'teki seçenekleri sor.
+Toplantıdan önce limiti kontrol et (`node .claude/hooks/usage.mjs`). Tam kurul toplantısı pahalıdır. Seviye sarı veya kırmızıysa tahmini maliyeti tek satırla söyle (`docs/workflow/usage-limits.md` §3). Tam kurul isteğe bağlı bir toplantıysa üye sayısını azaltmayı öner; limit yüzünden toplantıyı durdurma.
 
 Bitince: kurul sentezi, kullanıcıya sorulan kararlar, günlüğe eklenen satır, durum bloğu.

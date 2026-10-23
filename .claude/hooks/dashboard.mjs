@@ -95,6 +95,7 @@ const bulgu = bulguRaporlari(oku(dosya('docs/findings/README.md')));
 const dikkat = [];
 const ekle = (sev, metin, eylem = '') => dikkat.push({ sev, metin, eylem });
 if (d.kitBekliyor) ekle('bilgi', 'Proje henüz kurulmadı. Var olan kodu kite almak için /adopt.', '/start [fikrin]');
+if (d.devirBekliyor) ekle('uyari', 'Devir notu bekliyor: proje başka kişiden veya hesaptan devralınıyor (docs/workflow/handoff.md).', '/handoff devral');
 const sonRet = [...d.kurul.toplantilar].reverse().find((t) => /RET/i.test(t.sonuc) && !/KOŞULLU/i.test(t.sonuc));
 if (sonRet && !sonRet.karar) ekle('kritik', `Kurul RET verdi (${sonRet.tur}, ${sonRet.kapsam}): ${sonRet.kritik || 'kritik bulgu'}`, 'Claude\'a sor: düzelt / riski kabul et');
 const lsev = seviye(limit);
@@ -263,7 +264,7 @@ const urun = `
 <div class="grid2">
   <section class="card"><h3>Marka paketi</h3>${varlik.marka.length ? `<p class="muted small"><code>${e(varlik.markaKlasor)}</code> · ${varlik.marka.length} dosya${varlik.markaRehberi ? ' · <a href="docs/design/brand.md" target="_blank" rel="noopener">kullanım kuralları</a>' : ''}</p><ul class="links">${varlik.marka.map((f) => `<li><a href="${e(varlik.markaKlasor)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f)}</a></li>`).join('')}</ul>` : bos('Logo henüz yok.', 'logo-design')}</section>
   <section class="card"><h3>Tanıtım ve araştırma</h3><h4>Videolar</h4>${varlik.videolar.length ? `<ul class="links">${varlik.videolar.map((v) => `<li><b>${e(v.ad)}</b> ${v.mp4 ? `<a href="${v.mp4.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">mp4</a>` : rozet('bilgi', 'render yok')}</li>`).join('')}</ul>` : bos('Video yok.', 'motion-video')}
-    <h4>Araştırma notları</h4>${varlik.arastirma.length ? `<ul class="links">${varlik.arastirma.slice(0, 8).map((r) => `<li><a href="${r.dosya.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">${md(r.baslik)}</a></li>`).join('')}</ul>` : bos('Not yok.', 'source-research')}</section>
+    <h4>Araştırma notları</h4>${varlik.arastirma.length ? `<ul class="links">${varlik.arastirma.slice(0, 8).map((r) => `<li><a href="${r.dosya.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">${md(r.baslik)}</a></li>`).join('')}</ul>` : bos('Not yok.', '/research')}</section>
 </div>
 <section class="card"><h3>Yayınlanmamış değişiklikler (CHANGELOG)</h3>${yayinlanmamis.length ? `<ul>${yayinlanmamis.map((s) => `<li>${md(s)}</li>`).join('')}</ul>` : bos('Yayınlanmamış değişiklik yok.')}</section>`;
 

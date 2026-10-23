@@ -6,7 +6,7 @@ argument-hint: [görev kodu, boşsa sıradaki görev]
 Görev: $ARGUMENTS
 Boşsa `docs/workflow/progress.md` → "Sıradaki adım" veya `docs/product/roadmap.md`'deki ilk işaretsiz görevi al.
 
-0. **Limit ve bağlam:** Limiti oku, 5 saatlik yüzdeyi ve başlangıç saatini not et (maliyet günlüğü için). Bağlam %50'yi geçmişse önce `/wrap-up` + `/clear` öner. Seviye sarı/kırmızıysa veya tahmin kalan payı aşıyorsa `docs/workflow/usage-limits.md` §3'teki seçenekleri sor. `docs/workflow/progress.md` → "Kaldığı yer" doluysa oradan devam et.
+0. **Limit ve bağlam:** Limiti oku, 5 saatlik yüzdeyi ve başlangıç saatini not et (maliyet günlüğü için). Bağlam %50'yi geçmişse önce `/wrap-up` + `/clear` öner. Seviye sarı/kırmızıysa veya tahmin kalan payı aşıyorsa bunu tek satırla söyle ve başla (`docs/workflow/usage-limits.md` §3; soru sorma). `docs/workflow/progress.md` → "Kaldığı yer" doluysa oradan devam et.
 1. Görevi ve kabul kriterlerini bana tek cümleyle tekrar et. `docs/workflow/progress.md` → aktif görevi güncelle.
 2. Bu görev için onaylanmış bir plan yoksa ve 2'den fazla dosyaya dokunacaksa önce `/plan-task` adımlarını uygula (karar noktaları dahil), onay bekle.
 2b. **Önce kabul testleri:** Görevin kabul kriterleri için testleri (kimlik test adında: `Ö-01.1`) ve gerekiyorsa saldırgan testlerini yaz, çalıştır ve **kırmızı** olduklarını göster. Sonra uygula.
@@ -17,7 +17,7 @@ Boşsa `docs/workflow/progress.md` → "Sıradaki adım" veya `docs/product/road
    - Kod haritası bağlıysa keşfi onunla yap; dosyaları toptan okuma.
    - Paket kurarken paket kapısı uyarırsa (uydurma / çok yeni / az kullanılan) kullanıcıya bildir; zorlamaya çalışma.
    - Plan bayrak gerektiriyorsa özelliği bayrak arkasına koy ve `docs/operations/feature-flags.md`'ye ekle.
-   - Çalışırken 5 saatlik limit %90'a gelirse `docs/workflow/usage-limits.md` §4 (güvenli durma) uygula.
+   - Çalışırken limit %90 / %95 / %99'a gelirse `docs/workflow/usage-limits.md` §4'teki uyarıları ver; işi durdurma.
    - Projedeki mevcut kalıpları kullan.
    - Hata, boş ve yükleniyor durumlarını unutma.
    - Kritik akışa dokunuyorsan (`docs/quality/test-plan.md`) test ekle.

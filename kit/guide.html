@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · GitHub template · v3.7</p>
+  <p class="eyebrow">Claude Code · GitHub template · v3.8</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -417,16 +417,19 @@ KULLANICIYA SORULMALI: yok</pre>
   <div class="section-head">
     <p class="eyebrow">docs/workflow/usage-limits.md</p>
     <h2>Limit farkındalığı</h2>
-    <p class="lede">İş başlamadan 5 saatlik ve haftalık limit okunur. Masaüstünde <code>get_usage</code> aracıyla, terminal ve IDE'de Claude Code'un durum çubuğuna gönderdiği <code>rate_limits</code> bilgisiyle. İşin tahmini maliyeti kalan payı aşıyorsa sana sorulur.</p>
+    <p class="lede">İş başlamadan 5 saatlik ve haftalık limit okunur. Masaüstünde <code>get_usage</code> aracıyla, terminal ve IDE'de Claude Code'un durum çubuğuna gönderdiği <code>rate_limits</code> bilgisiyle. Limit sadece uyarı sebebidir: iş durmaz, sen "dur" demedikçe devam eder.</p>
   </div>
   <div class="two">
-    <div class="ask" aria-label="Örnek limit sorusu">
-      <p class="ctx">5 saatlik limit %78 (sıfırlanma 21:40). G-014 ödeme entegrasyonu tahmini %15 + kurul toplantıları %5.</p>
-      <p class="qt">Limit bu işin tamamına yetmeyebilir. Nasıl ilerleyelim?</p>
-      <div class="opt rec"><b>Limite sığanı yap, kalanı sıraya koy (Önerilen)</b><span>Önce webhook ve imza doğrulaması; arayüz kısmı yenilenmeden sonraya.</span></div>
-      <div class="opt"><b>Hepsini başlat, dolunca kaydet, 21:40'ta otomatik devam</b><span>%90'da güvenli noktada durur, kaldığı yeri yazar, zamanlanmış görevle devam eder.</span></div>
-      <div class="opt"><b>Ucuz modele geçerek devam</b><span>Uygulama işi hızlı modelli alt ajana gider; güvenlik ve mimari kararlar güçlü modelde kalır.</span></div>
-      <div class="opt"><b>Kurulu hafiflet</b><span>Toplantılara sadece Güvenlik ve Mimar katılır.</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Çalışırken</th><th>Ne olur</th></tr></thead>
+        <tbody>
+          <tr><td>%90</td><td>Tek satır hatırlatma ve sıfırlanma saati; iş devam eder</td></tr>
+          <tr><td>%95</td><td>"Limit çok azaldı" uyarısı; kaldığı yer sessizce kaydedilir, iş devam eder</td></tr>
+          <tr><td>%99</td><td>"İş yarım kalabilir" uyarısı; adımlar küçük tutulur, WIP commit önerilir</td></tr>
+          <tr><td>"dur" dersen</td><td>Güvenli durur: adımı tamamlar, testleri çalıştırır, kaldığı yeri yazar</td></tr>
+        </tbody>
+      </table>
     </div>
     <div class="table-wrap">
       <table>
@@ -434,7 +437,7 @@ KULLANICIYA SORULMALI: yok</pre>
         <tbody>
           <tr><td>yeşil</td><td>&lt; %60</td><td>&lt; %70</td><td>Normal çalışır, limit durum bloğunda görünür</td></tr>
           <tr><td>sarı</td><td>%60–84</td><td>%70–89</td><td>Tahmini maliyeti söyler, kurul yarıya iner</td></tr>
-          <tr><td>kırmızı</td><td>≥ %85</td><td>≥ %90</td><td>Yeni işten önce seçenekleri sorar</td></tr>
+          <tr><td>kırmızı</td><td>≥ %85</td><td>≥ %90</td><td>Maliyeti ve kalan payı tek satırla söyler; seçenekleri sen istersen sunar</td></tr>
         </tbody>
       </table>
     </div>
@@ -631,6 +634,8 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
         <tr><td class="f">/retro</td><td>Dersler projeye; kit önerileri kit reposunda bir dala</td></tr>
         <tr><td class="f">/findings-&lt;tür&gt;</td><td>tech · business · security · ux · perf · legal · all: puanlı bulgu raporu</td></tr>
         <tr><td class="f">/user-feedback</td><td>Kullanıcı geri bildirimini temalara ayırır, yol haritasına aldırır</td></tr>
+        <tr><td class="f">/research [konu]</td><td>Makaleler, GitHub'daki benzer projeler ve rakip ürünler; benzer/farklı yön tablosu; seçilen özellikler PRD'ye ve yol haritasına</td></tr>
+        <tr><td class="f">/handoff [devral]</td><td>Projeyi başka kişiye veya hesaba devreder (devir notu) ya da devralır (ortamı kurar, sıradaki görevi söyler)</td></tr>
         <tr><td class="f">/kit-update</td><td>Projeyi kitin son sürümüne çeker; çakışmaları sorar</td></tr>
       </tbody>
     </table>
@@ -683,7 +688,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.7.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.8.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

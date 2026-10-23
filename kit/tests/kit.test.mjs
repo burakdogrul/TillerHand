@@ -176,6 +176,15 @@ test('oturum başı: sıradaki komut kullanıcıya gösterilir (/clear sonrası)
   const o = oturum(p);
   assert.match(o.systemMessage, /Sıradaki: \/build G-002 · Proje iskeleti kuruldu/);
   assert.match(o.hookSpecificOutput.additionalContext, /\/build G-002/);
+
+  const devir = path.join(p, 'docs/workflow/handoff.md');
+  yaz(devir, '# Devir notu\n\n**Durum:** bekliyor\n**Devreden:** a\n');
+  assert.match(oturum(p).systemMessage, /Devir notu var: \/handoff devral/);
+  const r = node(path.join(p, '.claude/hooks/dashboard.mjs'), p);
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(oku(path.join(p, 'dashboard.html')).includes('Devir notu bekliyor'), 'pano devir notunu dikkat listesinde gösteriyor');
+  yaz(devir, oku(devir).replace('bekliyor', 'devralındı'));
+  assert.match(oturum(p).systemMessage, /Sıradaki: \/build G-002/);
 });
 
 test('durum çubuğu ve pano: kurulum öncesi ve sonrası', () => {

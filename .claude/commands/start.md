@@ -33,7 +33,7 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
 1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version` ve kitin yeri. İki kurulum yolu var: kökte `kit/kit.mjs` (template yolu) ya da `.kit.json` → `kit` alanındaki klasör (`init` ile kurulmuş, `type` boş). Klasörde zaten uygulama kodu varsa (`package.json`, `pyproject.toml`, `src/` vb.) dur ve `/adopt` öner.
 2. `docs/workflow/skills.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. LSP eklentisi dil sunucusu ister: web ve mobil için `npm i -g typescript-language-server typescript`, backend için `npm i -g pyright` (global kurulum; kullanıcı onayıyla). **Eklentiler:** Proje ayarı eklentileri açar ama indirmez; kurulmamış olanlar yükleme hatası verir ve skill'leri gelmez. Kullanıcıya listeyi göster ve sor: "Proje ayarındaki eklentiler kurulsun mu?" Önce `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele; onay gelirse `node .claude/hooks/plugins-sync.mjs --kur` çalıştır. Betik eksikleri proje kapsamında kurar, `false` olanları (Remotion) kurup kapatır. Sonra kullanıcıdan `/reload-plugins` çalıştırmasını iste. claude CLI yoksa eksik eklentilerin `/plugin install x@y` komutlarını ver ve "Kurup devam edelim mi, eksik skill olmadan mı?" diye sor.
 3. `caveman:caveman` skill'ini yükle (rapor dili).
-4. **Limit:** Limiti oku (`docs/workflow/usage-limits.md` §1) ve raporla. Seçilen derinliğin tahmini maliyetini kalan limitle karşılaştır; adımlar arasında durup sonra devam edilebileceğini söyle. Seviye sarı veya kırmızıysa §3'teki seçenekleri sor.
+4. **Limit:** Limiti oku (`docs/workflow/usage-limits.md` §1) ve raporla. Seçilen derinliğin tahmini maliyetini kalan limitle karşılaştır; adımlar arasında durup sonra devam edilebileceğini söyle. Seviye sarı veya kırmızıysa bunu tek satırla söyle; durdurma.
 5. **Kod haritası:** Oturumda codebase-memory-mcp araçları (`index_repository`, `search_graph` vb.) var mı bak. Yoksa sor: "Kod haritası kurulsun mu? AI, kodu dosya dosya okumak yerine sorgular; proje büyüdükçe oturum başına ciddi token tasarrufu sağlar."
    - **Kur (Önerilen):** Kurulumu kullanıcı kendi terminalinde yapar; uzaktan indirilen script'i sen çalıştırma. Resmi komutları ver:
      - Windows (PowerShell): `Invoke-WebRequest -Uri https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 -OutFile install.ps1; Unblock-File .\install.ps1; .\install.ps1`
@@ -57,6 +57,8 @@ Sırayla netleştir:
 6. Kişisel veri, ödeme ve AI kullanımı var mı?
 
 MVP büyük görünüyorsa küçültmeyi bir karar olarak sor. Fikirdeki riskleri açıkça söyle. `docs/product/prd.md`'yi yaz, özetini göster, onay al.
+
+**1b. Araştırma (pahalı adım, isteğe bağlı):** Sor: "Fikirle ilgili makaleleri, GitHub'daki benzer projeleri ve rakip ürünleri araştırayım mı? Hızlı araştırma 5 saatlik limitin yaklaşık %10-15'i." Seçenekler: Yap / Sonraya bırak (Faz 0'a `/research` görevi eklenir). Önerilen: fikir alanı tanıdık değilse veya ticari üründe "Yap", aksi halde "Sonraya bırak". Yap ise `/research` akışını uygula; seçilen özellikler PRD'ye girer.
 
 ## Adım 2: Proje tipi
 
