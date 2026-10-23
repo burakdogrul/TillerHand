@@ -5,6 +5,11 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.9.3] - 2026-10-23
+
+### Düzeltildi
+- Antigravity okuma koruması iç içe argümanlara da bakar: dizi ya da nesne içindeki `.env` ve `secrets/` yolları da engellenir.
+
 ## [3.9.2] - 2026-10-23
 
 ### Düzeltildi

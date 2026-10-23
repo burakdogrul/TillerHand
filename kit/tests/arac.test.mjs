@@ -250,6 +250,7 @@ test('saldırgan: Claude izin listesindeki yasak komutlar Codex ve Antigravity\'
   assert.equal(calistir('freeze-guard.mjs', 'antigravity', kok, oku('.claude/hooks/arac.mjs')), null, 'kural dosyası okunabilir');
   assert.equal(calistir('freeze-guard.mjs', 'antigravity', kok, { toolCall: { name: 'list_dir', args: { DirectoryPath: path.join(kok, 'secrets') } }, workspacePaths: [kok] }), 'deny', 'secrets klasörünün kendisi');
   assert.equal(calistir('freeze-guard.mjs', 'antigravity', kok, { toolCall: { name: 'yeni_okuma_araci', args: { Dosya: path.join(kok, '.env.local') } }, workspacePaths: [kok] }), 'deny', 'bilinmeyen araç adı');
+  assert.equal(calistir('freeze-guard.mjs', 'antigravity', kok, { toolCall: { name: 'view_files', args: { Liste: [{ Yol: path.join(kok, '.env') }] } }, workspacePaths: [kok] }), 'deny', 'iç içe argüman');
   const kilit = 'node .claude/hooks/freeze-guard.mjs --off';
   assert.equal(calistir('destructive-guard.mjs', 'codex', kok, komut('codex', kok, kilit)), 'deny');
   assert.equal(calistir('destructive-guard.mjs', 'antigravity', kok, komut('antigravity', kok, kilit)), 'ask');

@@ -20,6 +20,8 @@ export function aracBul(g) {
 }
 
 const metinMi = (x) => typeof x === 'string';
+// İç içe dizi ve nesnelerdeki bütün metinler (okuma koruması yolu argümanın neresinde olursa olsun görsün)
+const metinler = (x) => (metinMi(x) ? [x] : x && typeof x === 'object' ? Object.values(x).flatMap(metinler) : []);
 
 // Proje kökü betiğin kendi yerinden çıkar (<proje>/.claude/hooks/): cwd'ye veya ajanın açabileceği işaret
 // dosyalarına (.git) bağlı değil, Codex alt klasörde açılsa da doğru kalır.
@@ -51,7 +53,7 @@ export function cozumle(g) {
     // İçerik alanı adından bağımsız: tüm argümanlar taranır
     if (AG_YAZMA.includes(name)) sonuc.dosyalar.push({ yol: metinMi(args.TargetFile) ? args.TargetFile : '', metin: JSON.stringify(args) });
     // Okuma: araç adından bağımsız, argümanlardaki her metin olası yol sayılır (bilinmeyen okuma aracı da kapsanır)
-    sonuc.okunan = Object.values(args).filter(metinMi);
+    sonuc.okunan = metinler(args);
     return sonuc;
   }
   const t = g.tool_input ?? {};
