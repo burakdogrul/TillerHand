@@ -29,6 +29,7 @@
 | 7 | veri | Supabase yazma | Şema her zaman CLI migration; MCP prod'da salt-okunur, yazma sadece dev branch/yerel | tek (etki) |
 | 8 | teknik | Yönetim komutu adı | `/tools` | çift |
 | 9 | teknik | GSAP skill'leri | Resmi `gsap-skills` plugin'i, `tasarim` paketinde (varsayılan kapalı) | çift |
+| 11 | guvenlik | Kalkan atlatma bulguları (3. tur) | Şüpheliyse sor: gizleme işareti + korunan kelime → "ask"; kabuk ayrıştırıcı eklenmez | çift |
 | 10 | teknik | three.js rehberi | `/start`'ta 3D gerekirse `CloudAI-X/threejs-skills`'ten 3 skill (fundamentals, performance, react-three-fiber) sabit sürümle kopyalanır; gerisi Context7 | çift |
 
 Karar 7: kit reposunda kurul kurulmadığı için `board-architect` ve `security-auditor` rolüyle tek model değerlendirildi; ikisi de seçilen seçeneği önerdi.

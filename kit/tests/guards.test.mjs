@@ -74,6 +74,15 @@ test('kalkan: yıkıcı komutlar engellenir, normal komutlar geçer', () => {
   assert.equal(k('psql -c "DR""OP TABLE users"'), 'deny', 'SQL içinde tırnak');
   assert.equal(k('git commit -m "it\'s fine"'), 'serbest', 'tırnaklı sıradan komut serbest');
   assert.equal(izinKarsiligi('git reset --ha"rd" HEAD~1')?.karar, 'deny', 'izin karşılığı da tırnağı açar');
+  // Şüpheliyse sor: gizleme işareti + korunan anahtar kelime (kabuğu taklit etmeye çalışmaz)
+  assert.equal(k('vercel deploy --pr\\\nod'), 'ask', 'satır sonu \\');
+  assert.equal(k("vercel deploy $'\\x2d\\x2dprod'"), 'ask', 'ANSI-C kaçışı');
+  assert.equal(k('vercel pro$()mote https://a.vercel.app'), 'ask', 'boş ikame');
+  assert.equal(k('git reset --ha${X}rd HEAD~1'), 'ask', 'değişken parçası');
+  assert.equal(k('psql -c "DR`true`OP TABLE users"'), 'ask', 'ters tırnak ikamesi');
+  assert.equal(k('rm -r$@f build'), 'ask', '$@ parçası');
+  assert.equal(k('echo $(date) && npm run build'), 'serbest', 'gizleme var, korunan kelime yok');
+  assert.equal(k("vercel deploy $'--target=preview'"), 'serbest', 'önizleme');
   assert.equal(k('git push origin main'), 'ask');
   assert.equal(k('psql postgres://u:p@db.ornek-prod.com:5432/app -c "select 1"'), 'ask', 'uzak veritabanı');
   assert.equal(k('psql postgres://u:p@localhost:5432/app -c "select 1"'), 'serbest');

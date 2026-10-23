@@ -5,6 +5,14 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.11.4] - 2026-10-23
+
+### Güvenlik
+- **Şüpheliyse sor.** Komutta gizleme işareti (satır sonu `\`, `$'..'`, `$(...)`, `` `...` ``, `${...}`, `$@`/`$*`) varken, gevşek normalleştirmeden sonra korunan bir işlem çıkarsa (Vercel prod/promote/rollback, `DROP`/`TRUNCATE`, `reset --hard`, `push --force`, `rm -rf`, `db reset`) kalkan sorar. Kabuğu taklit etmeye çalışmaz; bu atlatma sınıfını tek kuralla kapatır. Commit sonrası güvenlik incelemesinin bulgusu.
+
+### Bilinen sınır
+- Kalkan metne bakar; `$X` değişkeni veya bir dosyadan okunan komut çözülemez. Claude Code'da asıl sınır izin katmanıdır (`permissions.ask`/`deny`) ve kullanıcının onayıdır. Gizleme işaretli komut içinde korunan kelime geçerse (örn. `$(...)` ile yazılan bir commit mesajında "rollback") nadiren gereksiz soru çıkar.
+
 ## [3.11.3] - 2026-10-23
 
 ### Güvenlik

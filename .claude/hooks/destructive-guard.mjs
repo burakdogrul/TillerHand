@@ -66,8 +66,26 @@ function izinTek(komut) {
   return e ? { karar: e[0], neden: `${e[2]}. ${e[0] === 'deny' ? 'AI bu komutu çalıştıramaz; gerekliyse kullanıcı kendisi çalıştırır.' : 'Kullanıcı onayı gerekli.'}` } : null;
 }
 
+// Şüpheliyse sor: kabuğu taklit etmek yerine, gizleme işareti varken korunan bir kelime çıkarsa karar "ask".
+// Neden: satır sonu \, $'\x2d..', pro$()d, ha${X}rd, `..` gibi yazımlar metinden tam çözülemez (kullanıcı kararı 2026-10-23).
+const GIZLEME = /\\\r?\n|\$'|\$\(|`|\$\{|\$[@*]/;
+const KORUNAN = [
+  /\bvercel\b.*\b(prod|production|promote|rollback)\b/, /\b(drop|truncate)\b/, /\breset\b.*\bhard\b/,
+  /\bpush\b.*(\s-f\b|force)/, /\brm\b.*\s-[a-z]*(rf|fr)/, /\b(db|migrate)\s+reset\b/,
+];
+const kacisCoz = (m, e) => /^x/.test(e) ? String.fromCharCode(parseInt(e.slice(1), 16)) : /^u/.test(e) ? String.fromCharCode(parseInt(e.slice(1), 16))
+  : /^[0-7]/.test(e) ? String.fromCharCode(parseInt(e, 8)) : e;
+const gevsek = (s) => s.toLowerCase().replace(/\\\r?\n/g, '').replace(/`[^`]*`|\$\([^)]*\)|\$\{[^}]*\}|\$[@*]/g, '')
+  .replace(/\\(x[0-9a-f]{1,2}|u[0-9a-f]{1,4}|[0-7]{1,3}|.)/g, kacisCoz).replace(/[$'"]/g, '').replace(/\s+/g, ' ');
+function gizlemeTek(komut) {
+  if (!GIZLEME.test(komut)) return null;
+  const g = gevsek(komut);
+  return KORUNAN.some((re) => re.test(g))
+    ? { karar: 'ask', neden: 'Komut gizlenmiş görünüyor (satır sonu \\, $\'..\', $(...), `...` veya ${...}) ve korunan bir işlem içeriyor. Kullanıcı onayı gerekli.' } : null;
+}
+
 export function degerlendir(komut) {
-  return sikisi(degerlendirTek(komut), degerlendirTek(tirnaksiz(komut)));
+  return sikisi(degerlendirTek(komut), degerlendirTek(tirnaksiz(komut)), gizlemeTek(komut));
 }
 function degerlendirTek(komut) {
   const k = komut.replace(/\s+/g, ' ');
