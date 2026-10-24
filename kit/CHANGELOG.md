@@ -5,6 +5,16 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.14.3] - 2026-10-24
+
+Commit sonrası otomatik güvenlik incelemesinin üç bulgusu.
+
+### Değişen
+- **Kapı komut onayı kullanıcı klasöründe:** Onay artık `.git/` yerine `~/.vibe-kit/kapi-onayi/<proje yolu özeti>.json`'da durur. Ev klasörü işletim sisteminden okunur, `HOME`/`USERPROFILE` ile yönlendirilemez. `.git` içeren zip/arşiv veya `.claude/state/` ile gelen hazır onay artık okunmaz. Bu kayda dosya aracıyla veya kabukla yazmak sorulur.
+- **`--onayla` sadece tam yazımla:** `node .claude/hooks/gate.mjs --onayla` dışındaki her yazım engellenir: ortam değişkeni öneki, node bayrağı, yönlendirme, zincir.
+- **Çözülemeyen kabuk hedefi:** Hedef değişken, ters tırnak, süslü parantez veya ağ yolu yüzünden çözülemiyorsa ve komut kural/koruma dosyası adını anıyorsa (`$D/AGENTS.md`, `{AGENTS,X}.md`, `.claude`, `.git`), kilit veya plan olmasa da sorulur. Yerel UNC yolları (`\\?\C:\…`, `\\localhost\c$\…`) sürücü yoluna çevrilir.
+- **Elle uyarla:** 3.14.1/3.14.2'de verilen komut onayı geçersiz olur; ilk kapı çalışmasında komutlar bir kez yeniden onaylanır. Eski `.git/kit-kapi-onayi.json` silinebilir.
+
 ## [3.14.2] - 2026-10-24
 
 ### Değişen

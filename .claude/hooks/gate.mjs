@@ -8,8 +8,9 @@
 //   eski sonuçta commit'i durdurur. Yeşil kontrolün çıktısı yazılmaz, kırmızının son 30 satırı yazılır.
 //   Hiçbir kontrol geçmediyse (komutlar boş, Semgrep yok) sonuç BOŞ: commit kapısı açılmaz.
 //   node .claude/hooks/gate.mjs --onayla   komutları kullanıcı onayıyla kaydeder. Yeni veya değişen komut onaysız çalışmaz:
-//   güvenilmeyen bir deponun AGENTS.md'si kapı üzerinden kod çalıştıramasın. Onay git dizininde durur (klonla gelmez).
+//   güvenilmeyen bir deponun AGENTS.md'si kapı üzerinden kod çalıştıramasın. Onay kullanıcı klasöründe durur (~/.vibe-kit/).
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -32,13 +33,13 @@ export function komutlar(md) {
   });
 }
 
-// Onay kaydı git ortak dizininde (worktree'ler paylaşır); git yoksa .claude/state/.
-// GIT_DIR / GIT_COMMON_DIR miras alınmaz: komut önüne yazılan değişkenle onay başka yerden okunmasın.
-function onayYolu(kok) {
-  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^GIT_/i.test(k)));
-  const r = spawnSync('git', ['rev-parse', '--git-common-dir'], { cwd: kok, encoding: 'utf8', env });
-  const dizin = r.status === 0 && r.stdout.trim() ? path.resolve(kok, r.stdout.trim()) : path.join(kok, '.claude', 'state');
-  return path.join(dizin, 'kit-kapi-onayi.json');
+// Onay kaydı proje dışında, kullanıcı klasöründe (proje gerçek yolunun özetiyle): hiçbir depo, arşiv veya .git onay taşıyamaz.
+// Ev klasörü işletim sisteminden okunur (os.userInfo); HOME/USERPROFILE değişkeniyle başka yere yönlendirilemez.
+export function onayYolu(kok) {
+  let gercekKok = kok;
+  try { gercekKok = fs.realpathSync.native(kok); } catch { /* yok: verilen yol */ }
+  const anahtar = crypto.createHash('sha256').update(gercekKok.toLowerCase()).digest('hex').slice(0, 32);
+  return path.join(os.userInfo().homedir, '.vibe-kit', 'kapi-onayi', `${anahtar}.json`);
 }
 const ozet = (liste) => crypto.createHash('sha256').update(JSON.stringify(liste.map((k) => [k.ad, k.komut]))).digest('hex');
 export const komutListesi = (liste) => liste.filter((k) => k.komut).map((k) => `- ${k.ad}: ${k.komut}`).join('\n');

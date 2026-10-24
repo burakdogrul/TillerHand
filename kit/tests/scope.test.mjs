@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { izinKarsiligi } from '../../.claude/hooks/destructive-guard.mjs';
+import { onayYolu } from '../../.claude/hooks/gate.mjs';
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 let p, HOOK;
@@ -28,7 +29,7 @@ before(() => {
   HOOK = path.join(p, '.claude', 'hooks', 'freeze-guard.mjs');
   for (const f of ['src/a.ts', 'src/b.ts', 'src/lib/c.ts', 'src/ödeme dosyası.ts', 'docs/not.md', 'CHANGELOG.md']) yaz(f);
 });
-after(() => fs.rmSync(p, { recursive: true, force: true }));
+after(() => { fs.rmSync(onayYolu(p), { force: true }); fs.rmSync(p, { recursive: true, force: true }); });
 
 test('F-06 plan yokken sessiz; plan kaydedilince liste dışı mevcut dosya sorulur', () => {
   assert.equal(duzenle('src/b.ts'), null, 'plansız iş');
@@ -184,6 +185,17 @@ test('3.14.1 yeniden denetim: cd çözümü, kabuk sarmalayıcıları, birleşik
   cli('--plan-bitir');
   assert.equal(kabuk('echo x > .git/hooks/pre-commit')?.permissionDecision, 'ask', 'plan olmadan da');
   assert.equal(kabuk('echo SIR=1 > .env')?.permissionDecision, 'deny', '.env kabukla da yazılmaz');
+});
+
+test('3.14.3 çözülemeyen hedef kural dosyası adını içeriyorsa kilit/plan olmadan da sorulur; yerel UNC çevrilir', () => {
+  yaz('AGENTS.md', '# x');
+  const sor = ['echo x > $D/AGENTS.md', 'sed -i s/a/b/ {AGENTS,X}.md', 'cp x `pwd`/.claude/settings.json',
+    `echo x > \\\\?\\${p}\\AGENTS.md`];
+  if (process.platform === 'win32') sor.push(`echo x > \\\\localhost\\${p[0]}$\\${p.slice(3)}\\AGENTS.md`);
+  for (const k of sor) assert.equal(kabuk(k)?.permissionDecision, 'ask', k);
+  for (const k of ['echo x > $OUT', 'echo $HOME > out.txt']) assert.equal(kabuk(k), null, k);
+  assert.equal(kabuk('echo {} > ~/.vibe-kit/kapi-onayi/x.json')?.permissionDecision, 'ask', 'kullanıcı klasöründeki onay kaydı');
+  assert.equal(duzenle(`${onayYolu(p)}`)?.karar, 'ask', 'dosya aracıyla da');
 });
 
 test('3.14.1 NotebookEdit kalkana takılır', () => {

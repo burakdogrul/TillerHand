@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { komutlar } from '../../.claude/hooks/gate.mjs';
+import { komutlar, onayYolu } from '../../.claude/hooks/gate.mjs';
 import { izinKarsiligi } from '../../.claude/hooks/destructive-guard.mjs';
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
@@ -32,7 +32,7 @@ before(() => {
   yaz('a.js', 'x');
   sh('git add . && git commit -qm init');
 });
-after(() => fs.rmSync(p, { recursive: true, force: true }));
+after(() => { fs.rmSync(onayYolu(p), { force: true }); fs.rmSync(p, { recursive: true, force: true }); });
 
 test('F-03 komutlar AGENTS.md → Komutlar bloğundan okunur; boş olan tanımsız', () => {
   const md = '## Komutlar\n\n```bash\n# /start doldurur\ngeliştirme:  npm run dev\ntest:        npm run test   # vitest\nlint:        [ ]\ntip kontrol: npx tsc --noEmit\nbuild:       npm run build\n```\n';
@@ -152,15 +152,16 @@ test('3.14.1 komut onayı: yeni veya değişen komut onaysız çalışmaz; onay 
   assert.match(r.stdout, /writeFileSync/, 'kullanıcı neyi onayladığını görür');
   assert.ok(!fs.existsSync(isaret), 'onaysız komut çalışmaz');
   assert.equal(gate('--onayla').status, 0);
-  assert.ok(fs.existsSync(path.join(p, '.git', 'kit-kapi-onayi.json')), 'onay klonla gelemeyecek yerde');
+  assert.ok(fs.existsSync(onayYolu(p)), '3.14.3: onay proje dışında, kullanıcı klasöründe');
+  assert.ok(!onayYolu(p).startsWith(p), 'depo veya arşiv onay taşıyamaz');
   assert.equal(gate('--run').status, 0);
   assert.ok(fs.existsSync(isaret), 'onaydan sonra çalışır');
   fs.rmSync(isaret);
   agents(`node -e "require('fs').writeFileSync('calisti', '2')"`);
   assert.equal(gate('--run').status, 1, 'komut değişince eski onay geçmez');
   assert.ok(!fs.existsSync(isaret));
-  // Depoyla gelen sahte onay (.claude/state) .git varken okunmaz
-  fs.copyFileSync(path.join(p, '.git', 'kit-kapi-onayi.json'), path.join(p, '.claude/state/kit-kapi-onayi.json'));
+  // Depo veya arşivle gelen sahte onay (.git, .claude/state) okunmaz
+  for (const y of ['.git/kit-kapi-onayi.json', '.claude/state/kit-kapi-onayi.json']) fs.copyFileSync(onayYolu(p), path.join(p, y));
   assert.equal(gate('--run').status, 1);
   const sor = (k) => {
     const c = commit(k);
@@ -171,7 +172,8 @@ test('3.14.1 komut onayı: yeni veya değişen komut onaysız çalışmaz; onay 
   assert.equal(sor("node ./.claude/hooks/gate.mjs '--onayla'"), 'ask');
   assert.equal(sor('node .claude/hooks/gate.mjs --run'), null);
   // 3.14.2: zincirdeki komut AGENTS.md'yi onay penceresinden sonra değiştirebilir (pencere eski listeyi gösterir)
-  for (const k of ['node -e "1" && node .claude/hooks/gate.mjs --onayla', 'cd . ; node .claude/hooks/gate.mjs --onayla', 'node .claude/hooks/gate.mjs --onayla $(true)'])
+  for (const k of ['node -e "1" && node .claude/hooks/gate.mjs --onayla', 'cd . ; node .claude/hooks/gate.mjs --onayla', 'node .claude/hooks/gate.mjs --onayla $(true)',
+    'NODE_OPTIONS=--require=./x.js node .claude/hooks/gate.mjs --onayla', 'node --require ./x.js .claude/hooks/gate.mjs --onayla', 'node .claude/hooks/gate.mjs --onayla > >(cat)'])
     assert.equal(sor(k), 'deny', k);
   assert.equal(izinKarsiligi('node .claude/hooks/gate.mjs --onayla')?.karar, 'ask', 'Codex/Antigravity');
   assert.equal(izinKarsiligi('echo x > .git/kit-kapi-onayi.json')?.karar, 'ask', '.git kabukla yazılmaz');
@@ -183,7 +185,7 @@ test('3.14.1 denetim: GIT_DIR ile başka yerdeki onay kaydı kullanılamaz', () 
   execSync('git init --bare -q .', { cwd: bare, stdio: 'ignore' });
   agents('node -e "process.exit(3)"');
   gate('--onayla');
-  fs.copyFileSync(path.join(p, '.git', 'kit-kapi-onayi.json'), path.join(bare, 'kit-kapi-onayi.json')); // sahte onay: exit(3)
+  fs.copyFileSync(onayYolu(p), path.join(bare, 'kit-kapi-onayi.json')); // sahte onay: exit(3)
   agents('node -e "process.exit(0)"');
   gate('--onayla'); // gerçek onay başka komut için
   agents('node -e "process.exit(3)"');

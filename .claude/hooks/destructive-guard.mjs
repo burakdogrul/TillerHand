@@ -95,8 +95,10 @@ export function kabukHedefleri(komut, dizin) {
   let belirsiz = null;
   const bel = (m) => { belirsiz ??= m; };
   const coz = (t, d = dizin) => {
-    if (/^(\\\\|\/\/)/.test(t)) return null; // UNC: hook ağ yoluna dokunmasın
-    let h = t.replace(/\$\{?PWD\}?/g, d).replace(/^~(?=\/|\\|$)/, os.homedir());
+    // Yerel UNC (\\?\C:\x, \\.\C:\x, \\localhost\c$\x) sürücü yoluna çevrilir; diğer UNC belirsiz sayılır, hook ağ yoluna dokunmaz
+    let h = t.replace(/^(\\\\|\/\/)[?.][\\/]/, '').replace(/^(\\\\|\/\/)(localhost|127\.0\.0\.1)[\\/]([a-zA-Z])\$(?=[\\/]|$)/i, '$3:');
+    if (/^(\\\\|\/\/)/.test(h)) return bel(`hedef ağ yolu (${t})`), null;
+    h = h.replace(/\$\{?PWD\}?/g, d).replace(/^~(?=\/|\\|$)/, os.homedir());
     if (/[$`]/.test(h)) return bel(`hedef değişken veya komut içeriyor (${t})`), null;
     if (/\{[^}]*(,|\.\.)[^}]*\}/.test(h)) return bel(`hedef süslü parantez açılımı içeriyor (${t})`), null;
     if (process.platform === 'win32') h = h.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:');
@@ -194,14 +196,20 @@ function dosyaArgumanlari(ad, a) {
 // Kilit veya onaylı plan varken kabukla proje içindeki mevcut bir dosyayı değiştirmek sorulur (dosya araçlarındaki
 // freeze-guard'ın kabuk karşılığı). Yeni dosya ve proje dışı (geçici) dosya serbest; kökü veya üst klasörü hedeflemek sorulur.
 // Kural ve koruma dosyaları (.claude/, .git/, AGENTS.md…; kilit, plan ve onay durumları dahil) kilit/plan olmasa da sorulur, .env engellenir.
+export const VIBE_KIT = /[\\/]\.vibe-kit([\\/]|$)/i;
 export function kapsamSorunu(komut, dizin, kok) {
   const { hedefler, belirsiz } = kabukHedefleri(komut, dizin);
   const gkok = gercek(kok);
   for (const h of hedefler) {
+    if (VIBE_KIT.test(h)) return { karar: 'ask', neden: `${h}: kapı komut onayı kaydı (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/gate.mjs --onayla kullanılır. Kullanıcı onayı gerekli.` };
     const rel = goreli(gercek(h), gkok);
     const k = korumali(rel) ?? korumali(`${rel}/`);
     if (k) return { karar: k[0], neden: k[0] === 'deny' ? `${rel}: ${k[2]}`
       : `${rel}: ${k[2]} Kabuk komutuyla değiştiriliyor; kilit, plan ve onay durumları için ilgili kit komutunu kullan. Kullanıcı onayı gerekli.` };
+  }
+  // Hedef çözülemedi ama komut kural/koruma dosyası adını anıyor ($D/AGENTS.md, {AGENTS,X}.md): kilit/plan olmasa da sorulur
+  if (belirsiz && /AGENTS|CLAUDE|\.(claude|git|github|codex|agents|env|mcp)\b|secrets|vibe-kit/i.test(komut)) {
+    return { karar: 'ask', neden: `${belirsiz}; komut kural veya koruma dosyası adını içeriyor (.claude, .git, AGENTS.md…), hedef doğrulanamadı. Kullanıcı onayı gerekli.` };
   }
   const kilit = kilitOku(kok), plan = planOku(kok);
   if (!kilit && !plan) return null;

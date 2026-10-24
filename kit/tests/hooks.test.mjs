@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { limitYaz, limitOku, seviye } from '../../.claude/hooks/usage.mjs';
+import { onayYolu } from '../../.claude/hooks/gate.mjs';
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 const KAPI = path.join(HOOKS, 'commit-gate.mjs');
@@ -26,7 +27,7 @@ before(() => {
   yaz('a.js', 'x');
   sh('git add . && git commit -qm init');
 });
-after(() => fs.rmSync(p, { recursive: true, force: true }));
+after(() => { fs.rmSync(onayYolu(p), { force: true }); fs.rmSync(p, { recursive: true, force: true }); });
 
 test('commit kapısı: kurul yoksa geçer (şablonla gelen başkan ve danışman kurul sayılmaz)', () => {
   yaz('.claude/agents/board-chair.md', '---\nname: board-chair\n---\n');

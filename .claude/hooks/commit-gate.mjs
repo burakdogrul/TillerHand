@@ -87,10 +87,11 @@ function hook() {
   }
   // Kapı komut onayı AGENTS.md'deki komutlara çalışma izni verir: kullanıcıya sorulur (izin listesi yazımı farklı yolu da kapsasın)
   if (/gate\.mjs\b[^;&|\n]*--onayla\b/i.test(acik)) {
-    // Pencere AGENTS.md'yi şimdi okur: zincirdeki başka komut onu pencereden sonra değiştirip başka listeyi onaylatmasın
-    if (/\$\(|`/.test(komut) || acik.split(/&&|\|\||[;|&\n]/).filter((s) => s.trim()).length > 1) {
+    // Pencere AGENTS.md'yi şimdi okur: zincir, ortam değişkeni, node bayrağı veya yönlendirme onu pencereden sonra
+    // değiştirip başka listeyi onaylatmasın. Sadece tam yazım kabul edilir.
+    if (!/^\s*node\s+(\.\/)?\.claude[\\/]hooks[\\/]gate\.mjs\s+(['"]?)--onayla\2\s*$/.test(komut)) {
       console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny',
-        permissionDecisionReason: 'Kapı komut onayı tek başına çalıştırılır (zincir veya $(...) olmadan): node .claude/hooks/gate.mjs --onayla' } }));
+        permissionDecisionReason: 'Kapı komut onayı sadece tam bu yazımla, tek başına çalıştırılır (zincir, ortam değişkeni, bayrak, yönlendirme yok): node .claude/hooks/gate.mjs --onayla' } }));
       process.exit(0);
     }
     const liste = komutListesi(komutlar(agentsOku(kok))) || '(tanımlı komut yok)';

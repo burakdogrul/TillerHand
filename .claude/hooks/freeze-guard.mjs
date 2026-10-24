@@ -126,6 +126,9 @@ function hook() {
   if (!g) process.exit(0);
   const gkok = gercek(g.kok);
   const yollar = g.dosyalar.map(({ yol }) => gercek(path.resolve(g.dizin, yol)));
+  // Kapı komut onayı kaydı (gate.mjs, kullanıcı klasöründe ~/.vibe-kit/): AI onu elle yazamasın
+  const onay = yollar.find((yol) => /[\\/]\.vibe-kit([\\/]|$)/i.test(yol));
+  if (onay) kararVer(g.arac, 'ask', `${onay}: kapı komut onayı kaydı; elle yazılmaz, node .claude/hooks/gate.mjs --onayla kullanılır.`);
   if (g.arac !== 'claude') {
     for (const yol of yollar) {
       const k = korumali(goreli(yol, gkok));
