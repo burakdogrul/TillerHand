@@ -8,7 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseInput, decisionText, patchFiles } from '../../.claude/hooks/shared.mjs';
-import { commandToSkill } from '../kit.mjs';
+import { commandToSkill, syncToolSection } from '../kit.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const HOOKS = path.join(REPO, '.claude', 'hooks');
@@ -299,4 +299,33 @@ test('init: the project\'s AGENTS.md and skill files are not overwritten; a tool
 test('3.14.1 NotebookEdit: notebook path and new cell text are read', () => {
   const f = parseInput({ tool_name: 'NotebookEdit', tool_input: { notebook_path: '/p/n.ipynb', new_source: 'print(1)', cell_id: 'c1' } }).files;
   assert.deepEqual(f.map(({ path: p, text }) => ({ path: p, text })), [{ path: '/p/n.ipynb', text: 'print(1)' }]);
+});
+
+test('3.15.1 F-13 the Codex/Antigravity section of AGENTS.md is filled only for those tools', () => {
+  const block = (body) => `# X\n\n<!-- kit:other-tools -->\n${body}<!-- /kit:other-tools -->\n\n## Next\n`;
+  const kit = block('## Codex ve Antigravity\'de\n\nkural\n');
+  assert.equal(syncToolSection(kit, kit, false), block(''), 'claude only: emptied, markers stay');
+  assert.equal(syncToolSection(block(''), kit, true), kit, 'tool added later: filled from the kit');
+  assert.equal(syncToolSection(kit, kit, true), kit);
+  const edited = block('kendi notum\n');
+  assert.equal(syncToolSection(edited, kit, false), edited, 'a user-edited block is not emptied');
+  assert.equal(syncToolSection(edited, kit, true), edited, 'and not overwritten');
+  assert.equal(syncToolSection('# Eski\n- pnpm\n', kit, false), '# Eski\n- pnpm\n', 'no markers: untouched');
+
+  const tmp = tempRoot('tools-section');
+  const kitDir = path.join(tmp, 'kit-clone');
+  fs.cpSync(REPO, kitDir, { recursive: true, filter: (src) => !/[\/](\.git|node_modules)$/.test(src) && !src.endsWith('.kit.json') });
+  const kitMjs = path.join(kitDir, 'kit', 'kit.mjs');
+  const section = /<!-- kit:other-tools -->\n## Codex ve Antigravity'de/;
+  const agents = (p) => fs.readFileSync(path.join(p, 'AGENTS.md'), 'utf8');
+  const cl = path.join(tmp, 'cl');
+  assert.equal(spawnSync(process.execPath, [kitMjs, 'init', '--project', cl], { encoding: 'utf8' }).status, 0);
+  assert.doesNotMatch(agents(cl), section, 'init without a tool: empty block');
+  assert.match(agents(cl), /<!-- kit:other-tools -->\n<!-- \/kit:other-tools -->/);
+  assert.equal(spawnSync(process.execPath, [kitMjs, 'install', '--type', 'backend', '--project', cl, '--tool', 'codex'], { encoding: 'utf8' }).status, 0);
+  assert.match(agents(cl), section, 'install --tool codex fills it');
+  const cx = path.join(tmp, 'cx');
+  assert.equal(spawnSync(process.execPath, [kitMjs, 'init', '--project', cx, '--tool', 'antigravity'], { encoding: 'utf8' }).status, 0);
+  assert.match(agents(cx), section, 'init --tool antigravity: filled');
+  fs.rmSync(tmp, { recursive: true, force: true });
 });

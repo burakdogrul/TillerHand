@@ -5,6 +5,12 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.15.1] - 2026-10-24
+
+### Değişen
+- **Daha az bağlam:** `AGENTS.md`'deki "Codex ve Antigravity'de" bölümü yalnız bu araçlardan biri seçiliyse dolu kurulur. Sadece Claude Code kullanan projede her oturum ~450 token (AGENTS.md'nin ~%20'si) daha az yüklenir. Sonradan `--tool codex` veya `--tool antigravity` eklenince bölüm geri gelir. Bölümü değiştirdiysen kit ona dokunmaz.
+- **Elle uyarla:** Kurulu projelerin `AGENTS.md`'si değişmez (proje dosyası). Aynı kazancı istersen, Codex/Antigravity kullanmıyorsan bu bölümü silebilirsin.
+
 ## [3.15.0] - 2026-10-24
 
 Kitin kodu İngilizceye geçti. Kullanıcıya ve AI'ya giden mesajlar, belgeler ve komutlar Türkçe kalıyor; davranış değişmedi.

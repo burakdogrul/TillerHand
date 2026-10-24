@@ -26,6 +26,7 @@ Yapıldı: … · Kurul: … · Otomatik kararlar: …
 Sıradaki: … · bekleyen karar: …
 ```
 
+<!-- kit:other-tools -->
 ## Codex ve Antigravity'de
 
 Kit Claude Code için yazıldı; bu iki araçta şu karşılıklar geçerli:
@@ -35,6 +36,7 @@ Kit Claude Code için yazıldı; bu iki araçta şu karşılıklar geçerli:
 - **Alt ajanlar** (kurul üyeleri, konsey, inceleme ajanları `.claude/agents/`): Çalıştıramıyorsan ilgili tanımı oku, o rolle kendin değerlendir ve raporda "tek model" diye belirt.
 - **Korumalar** (sır engeli, yıkıcı komut kalkanı, yapı koruyucu, düzenleme kilidi, test koruması, düzenleme turu sayacı, paket kapısı ve Claude Code izin listesinin karşılığı) hook olarak çalışır: Codex `.codex/hooks.json`, Antigravity `.agents/hooks.json`. Kural ve koruma dosyalarına (`AGENTS.md`, `.claude/`, `.codex/`, `.agents/hooks.json`) yazma onaya bağlıdır. Engellenen işlemi başka yoldan (örneğin kabuk komutuyla) yapmaya çalışma; nedenini kullanıcıya söyle.
 - Claude Code eklentilerine ait skill'ler (adı `eklenti:skill` biçiminde) bu araçlarda yok: o adımı atla. Limit okuma ve durum çubuğu da yok: durum bloğunda limit "-" kalır.
+<!-- /kit:other-tools -->
 
 ## Gerektiğinde oku
 

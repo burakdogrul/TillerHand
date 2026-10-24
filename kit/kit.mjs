@@ -183,8 +183,27 @@ export function commandToSkill(name, md) {
 
 // Files for the chosen tools. Skill copies and hooks.json follow the same rule as isKitOwned on update: refreshed if the
 // user has not changed them, .kit-new if changed (or the project's own file); a hook config the user deleted does not come back.
+// AGENTS.md "Codex ve Antigravity'de" section: filled only for projects that use those tools (F-13: ~450 tokens a session).
+// An empty block is filled from the kit; only an unchanged kit block is emptied; a file without markers is left alone.
+const TOOL_BLOCK = /(<!-- kit:other-tools -->\r?\n)([\s\S]*?)(<!-- \/kit:other-tools -->)/;
+export function syncToolSection(text, kitText, needed) {
+  const m = text.match(TOOL_BLOCK);
+  const kitBody = kitText.match(TOOL_BLOCK)?.[2] ?? '';
+  if (!m || (needed ? m[2].trim() : m[2] !== kitBody)) return text;
+  return text.replace(TOOL_BLOCK, (all, open, body, close) => open + (needed ? kitBody : '') + close);
+}
+
 function installTools(projectDir, tools, files, conflicts) {
   const others = tools.filter((a) => a !== 'claude');
+  const kitAgents = read(path.join(ROOT, 'AGENTS.md'));
+  for (const rel of ['AGENTS.md', 'AGENTS.md.kit-new']) {
+    const p = path.join(projectDir, rel);
+    if (!fs.existsSync(p)) continue;
+    const before = read(p), after = syncToolSection(before, kitAgents, others.length > 0);
+    if (after === before) continue;
+    fs.writeFileSync(p, after);
+    if (rel in files) files[rel] = hash(p);
+  }
   if (!others.length) return;
   const skills = new Map(); // .agents/skills/... -> content
   const commandsDir = path.join(projectDir, '.claude', 'commands');
