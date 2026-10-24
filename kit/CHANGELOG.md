@@ -5,6 +5,11 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.14.2] - 2026-10-24
+
+### Değişen
+- **Kapı komut onayı tek başına çalışır:** `gate.mjs --onayla` başka komutlarla zincirlenirse (`&&`, `;`, `|`) veya `$(...)` içerirse engellenir. Onay penceresi AGENTS.md'deki komutları pencere açılırken okur; zincirdeki bir komut dosyayı sonradan değiştirip başka bir listeyi onaylatamaz.
+
 ## [3.14.1] - 2026-10-24
 
 3.14.0 güvenlik denetiminden ertelenen ORTA/DÜŞÜK bulgular.

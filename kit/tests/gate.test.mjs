@@ -170,6 +170,9 @@ test('3.14.1 komut onayı: yeni veya değişen komut onaysız çalışmaz; onay 
   assert.match(JSON.parse(commit('node .claude/hooks/gate.mjs --onayla').stdout).hookSpecificOutput.permissionDecisionReason, /writeFileSync/, 'kullanıcı neyi onayladığını görür');
   assert.equal(sor("node ./.claude/hooks/gate.mjs '--onayla'"), 'ask');
   assert.equal(sor('node .claude/hooks/gate.mjs --run'), null);
+  // 3.14.2: zincirdeki komut AGENTS.md'yi onay penceresinden sonra değiştirebilir (pencere eski listeyi gösterir)
+  for (const k of ['node -e "1" && node .claude/hooks/gate.mjs --onayla', 'cd . ; node .claude/hooks/gate.mjs --onayla', 'node .claude/hooks/gate.mjs --onayla $(true)'])
+    assert.equal(sor(k), 'deny', k);
   assert.equal(izinKarsiligi('node .claude/hooks/gate.mjs --onayla')?.karar, 'ask', 'Codex/Antigravity');
   assert.equal(izinKarsiligi('echo x > .git/kit-kapi-onayi.json')?.karar, 'ask', '.git kabukla yazılmaz');
   agents('node -e "process.exit(0)"');
