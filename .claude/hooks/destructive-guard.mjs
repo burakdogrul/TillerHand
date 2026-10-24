@@ -6,6 +6,7 @@
 //   ask  : prod'a deploy, mağazaya gönderim, geri alınması zor git işlemleri. Kullanıcıya sorulur.
 import { pathToFileURL } from 'node:url';
 import { girdiOku, kararVer } from './arac.mjs';
+import { testDosyasi, ayarDosyasi } from './test-guard.mjs';
 
 const YIKICI = [
   [/\bdrop\s+(table|database|schema|index|view|collection)\b/i, 'DROP ile veri yapısı siliniyor'],
@@ -42,6 +43,18 @@ const ONAYLI = [
   [/\bgit\s+(rebase|filter-branch|filter-repo)\b/i, 'Git geçmişi yeniden yazılıyor'],
   [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'Migration uygulanıyor (hedef ortamı kontrol et)'],
 ];
+
+// Test koruması dosya araçlarında çalışır; kabukla (sed -i, rm, >, mv, git checkout) test veya test ayar dosyası değiştirmek sorulur.
+// Komut zincirinin her parçası ayrı bakılır: "rm -r node_modules && npx vitest run a.test.ts" testi değiştirmez.
+const TEST_YAZAN = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
+const testYolu = (t) => testDosyasi(t) || ayarDosyasi(t) || /(^|[/\\])(tests?|__tests__|e2e|spec)[/\\]?$/i.test(t);
+function testYazimi(komut) {
+  return komut.split(/&&|\|\||[;|\n]/).some((parca) => {
+    const p = parca.replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, '');
+    const hedefler = [...p.matchAll(/>{1,2}\s*([^\s;&|<>]+)/g)].map((m) => m[1]);
+    return hedefler.some(testYolu) || (TEST_YAZAN.test(p) && p.split(/\s+/).some(testYolu));
+  });
+}
 
 // Claude Code'da .claude/settings.json → permissions ile engellenen/sorulan komutlar. Codex ve Antigravity'de
 // bu liste yok; karşılığı burada (sadece o araçlarda uygulanır, Claude'un davranışı değişmez).
@@ -110,6 +123,9 @@ function degerlendirTek(komut) {
   }
   if (prodDb && /\b(psql|mysql|mongosh|redis-cli|prisma|drizzle-kit|alembic|supabase)\b/i.test(k)) {
     return { karar: 'ask', neden: 'Komut localhost dışındaki bir veritabanına bağlanıyor (prod olabilir). Kullanıcı onayı gerekli; AI prod erişim bilgisi kullanmamalı.' };
+  }
+  if (testYazimi(k)) {
+    return { karar: 'ask', neden: 'Test dosyası kabuk komutuyla değiştiriliyor, taşınıyor veya siliniyor. Testi geçirmek için testi zayıflatmak yasak (AGENTS.md kural 7); test düzenlemesini dosya aracıyla yap. Kullanıcı onayı gerekli.' };
   }
   return null;
 }

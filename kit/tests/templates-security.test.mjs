@@ -48,3 +48,22 @@ test('F-07 karmaşıklık bütçesi üç şablonun CI\'ında, refactor turu yol 
   assert.equal((oku('docs/product/roadmap.md').match(/Refactor turu/g) ?? []).length, 2);
   assert.match(oku('.claude/commands/start.md'), /Refactor turu/);
 });
+
+test('F-01 3.13.1 RLS testi: CI\'da DB_URL yoksa atlamaz, değişikliği satırı yeniden okuyarak doğrular, kapsam dışını yazar', () => {
+  const ci = rlsCalistir({ API_URL: 'http://127.0.0.1:54321', ANON_KEY: 'a', SERVICE_ROLE_KEY: 's', CI: 'true' });
+  assert.notEqual(ci.status, 0);
+  assert.match(ci.stdout + ci.stderr, /DB_URL yok/);
+  const rls = oku(`kit/templates/web-saas/${RLS}`);
+  assert.match(rls, /assert\.deepEqual\(\(await admin\.from\(ad\)\.select\(\)\.eq\(anahtar, id\)\.single\(\)\)\.data, satir/);
+  assert.match(rls, /SECURITY DEFINER/);
+  assert.ok(rls.includes('update({ ...ornek(), [sahip]: b.id })'), 'güncelleme satırdan farklı değer yazar');
+});
+
+test('F-01 3.13.1 CI şablonları: GITHUB_TOKEN salt okunur, supabase status çıktısı eval edilmez', () => {
+  for (const t of ['web-saas', 'mobile', 'backend']) {
+    const ci = oku(`kit/templates/${t}/.github/workflows/ci.yml`);
+    assert.match(ci, /^permissions:\n {2}contents: read$/m, t);
+    assert.ok(!/\beval\b/.test(ci), t);
+    assert.match(ci, /sir-taramasi:\n.*\n.*\n {4}permissions:\n {6}contents: read\n {6}pull-requests: read/, `${t}: gitleaks özel depoda PR commit'lerini okur`);
+  }
+});

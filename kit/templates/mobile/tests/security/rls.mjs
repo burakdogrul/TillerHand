@@ -2,8 +2,10 @@
 // silememeli ve onun adına yazamamalı. RLS'i kapalı veya bu teste kayıtsız public tablo varsa test kırmızıdır.
 // Sadece YEREL Supabase'e karşı çalışır (dev ve prod verisine dokunmaz, sır gerekmez). CI: .github/workflows/ci.yml → rls.
 //   npx -y supabase@2.120.0 start
-//   eval "$(npx -y supabase@2.120.0 status -o env)" && export API_URL ANON_KEY SERVICE_ROLE_KEY DB_URL
+//   npx -y supabase@2.120.0 status -o env  → API_URL, ANON_KEY, SERVICE_ROLE_KEY, DB_URL değerlerini ortama aktar (CI'daki adıma bak)
 //   node --test tests/security/rls.mjs   (adı .test.mjs değil: Vitest/Jest ortamsız toplamasın)
+// Kapsam dışı: view'lar (security_invoker yoksa sahibinin yetkisiyle çalışır, RLS'i atlar) ve SECURITY DEFINER
+// fonksiyonlar. Bunlar public şemadaysa elle incele veya ayrı test yaz.
 // Her yeni tabloda: TABLOLAR'a ekle. Bilerek herkesin okuduğu tablo (fiyat planları vb.) HERKESE_ACIK'a; yazma yine kapalı olmalı.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,6 +24,8 @@ const DB = process.env.DB_URL;
 
 const yerel = (u) => { try { return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(u).hostname); } catch { return false; } };
 if (!API || !ANON || !SERVIS) throw new Error('API_URL, ANON_KEY ve SERVICE_ROLE_KEY yok: önce yerel Supabase\'i başlat ve "supabase status -o env" çıktısını ortama aktar.');
+// CI'da tablo listesi atlanırsa RLS'i kapalı tablo fark edilmeden geçer
+if (!DB && process.env.CI) throw new Error(`DB_URL yok: CI'da tablo listesi atlanamaz. "supabase status -o env" çıktısındaki DB_URL'yi ortama aktar.`);
 if (!yerel(API) || (DB && !yerel(DB))) throw new Error(`RLS testi sadece yerel Supabase'e karşı çalışır; ${new URL(API).hostname} yerel değil. Dev veya prod projesine karşı çalıştırma.`);
 
 let istemci, admin, kullanicilar;
@@ -78,9 +82,10 @@ for (const { ad, sahip, ornek, anahtar = 'id' } of TABLOLAR) {
 
     assert.equal((await anon.from(ad).select().eq(anahtar, id)).data?.length ?? 0, 0, 'anonim okuyabiliyor');
     assert.equal((await b.c.from(ad).select().eq(anahtar, id)).data?.length ?? 0, 0, 'başka kullanıcı okuyabiliyor');
-    assert.equal((await b.c.from(ad).update(ornek()).eq(anahtar, id).select()).data?.length ?? 0, 0, 'başka kullanıcı güncelleyebiliyor');
+    assert.equal((await b.c.from(ad).update({ ...ornek(), [sahip]: b.id }).eq(anahtar, id).select()).data?.length ?? 0, 0, 'başka kullanıcı güncelleyebiliyor');
     assert.equal((await b.c.from(ad).delete().eq(anahtar, id).select()).data?.length ?? 0, 0, 'başka kullanıcı silebiliyor');
-    assert.equal((await admin.from(ad).select().eq(anahtar, id)).data?.length, 1, 'satır silinmiş olmamalı');
+    // Dönen satır sayısı 0 olsa da değişiklik uygulanmış olabilir (select politikası yokken): satır yeniden okunur
+    assert.deepEqual((await admin.from(ad).select().eq(anahtar, id).single()).data, satir, 'başka kullanıcı satırı değiştirmiş veya silmiş');
     assert.ok((await b.c.from(ad).insert({ ...ornek(), [sahip]: a.id })).error, 'başka kullanıcı onun adına yazabiliyor');
     assert.ok((await anon.from(ad).insert({ ...ornek(), [sahip]: a.id })).error, 'anonim yazabiliyor');
   });

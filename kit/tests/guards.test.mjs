@@ -109,6 +109,21 @@ test('F-04 kalkan: prod ortam değişkenleri ajanın makinesine çekilemez', () 
   assert.equal(k('vercel env pull --environment=pro$()duction'), 'ask', 'gizlenmiş pull');
 });
 
+test('F-02 kalkan: test dosyasını kabukla değiştiren veya silen komut sorulur, testi çalıştırmak serbest', () => {
+  const k = (s) => degerlendir(s)?.karar ?? 'serbest';
+  for (const s of [
+    "sed -i 's/expect/x/' src/a.test.ts", 'rm src/a.test.ts', 'rm -r tests/', 'echo x > src/a.test.ts',
+    "cat >> kit/tests/x.test.mjs <<'EOF'", 'mv tests/a.test.ts src/a.ts', 'git checkout -- tests/a.test.ts',
+    'Set-Content tests\\a.test.ts x', 'npm run lint && rm "src/a.test.ts"', 'perl -pi -e s/a/b/ odeme_test.py',
+    "sed -e 's/a/b/' -i tests/a.test.ts", "sed --in-place 's/a/b/' a.test.ts", "sed -i 's/x/y/' package.json",
+    'rm vitest.config.ts', 'echo {} > conftest.py',
+  ]) assert.equal(k(s), 'ask', s);
+  for (const s of [
+    'npx vitest run src/a.test.ts', 'node --test "kit/tests/*.test.mjs" 2>&1 | grep fail', 'cat tests/a.test.ts',
+    'rm -r node_modules && npx vitest run src/a.test.ts', 'node --test kit/tests/a.test.mjs > sonuc.txt',
+  ]) assert.equal(k(s), 'serbest', s);
+});
+
 test('bağlam yüzdesi: durum çubuğu hazır alanı veya token hesabını gösterir', () => {
   const cubuk = (cw) => spawnSync(process.execPath, [path.join(HOOKS, 'statusline.mjs')], {
     input: JSON.stringify({ workspace: { project_dir: os.tmpdir() }, context_window: cw }), encoding: 'utf8',

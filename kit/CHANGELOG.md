@@ -5,6 +5,23 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.13.1] - 2026-10-24
+
+### Değişen
+- **Test koruması kabukta da çalışır:** Test dosyasını kabuk komutuyla değiştiren, taşıyan veya silen komut (`sed -i`, `perl -i`, `rm`, `mv`, `cp`, `tee`, `>`/`>>`, `git checkout/restore`, PowerShell `Set-Content` vb.) kalkanda sorulur. Test ayar dosyaları da kapsanır; `sed -e … -i` ve `--in-place` yazımları da. Komut zincirinin her parçasına ayrı bakılır; testi çalıştırmak serbest.
+- **Test ayar dosyaları:** `vitest`/`vite`/`jest`/`playwright`/`cypress` config (`.json` dahil), `.mocharc.*`, `conftest.py`, `noxfile.py`, `pytest.ini`, `pyproject.toml`, `package.json` gibi dosyalarda kapsamı daraltabilecek bir satır (`include`/`exclude`, `testMatch`, `testIgnore`, `passWithNoTests`, `bail`, `retries`, `forbidOnly`, `setupFiles`, kapsam eşikleri `lines`/`branches`/`fail_under`, `addopts`, `collect_ignore`, `"test…"`/`"ci…"` script'i) eklenir veya çıkarsa sorulur. Alias, eklenti gibi değişiklikler sessiz geçer.
+- **Test koruması sezgileri:** `;//` ile yoruma alma, Python'da boşluksuz `#assert`, `skipIf`/`runIf` ve matcher'sız `expect(x)` yakalanır. `model.fit(` odaklanmış test, supertest `.expect(200)` matcher'sız expect sayılmaz; satır kıran `expect(x)
+  .toBe()` zinciri sorun sayılmaz. Test yolu desenlerine `*.e2e-spec.ts`, `*_test.go` ve `spec/` eklendi.
+- **Codex taşıma:** Test klasöründe kalsa da koşucunun tanımadığı bir ada (`a.test.ts` → `tests/a.ts`) taşıma ve herhangi bir dosyayı var olan bir testin üstüne taşıma sorulur.
+- **RLS testi (web ve mobil şablon):** Başka kullanıcının güncelleme denemesi satırdan farklı değer yazar (sahibi kendisine çevirir); güncelleme ve silme denemesinden sonra satır admin ile yeniden okunur ve ilk haliyle karşılaştırılır (select politikası yokken dönen satır sayısı 0 olsa da değişiklik yakalanır). CI'da `DB_URL` yoksa tablo listesi atlanmaz, test kırmızı olur. View ve `SECURITY DEFINER` fonksiyonların kapsam dışı olduğu dosyada yazıyor.
+- **CI şablonları (üçü):** `permissions: contents: read`; gitleaks işine ayrıca `pull-requests: read` (özel depoda PR commit listesi için); gitleaks PR yorumu kapalı (`GITLEAKS_ENABLE_COMMENTS: "false"`, sızıntı yine işi kırmızı yapar). RLS işinde `supabase status -o env` çıktısı `eval` edilmez; yalnız gereken anahtarlar okunup aktarılır.
+- **Elle uyarla:** Değiştirdiğin `ci.yml` için `/kit-update` `.kit-new` bırakır: üstteki `permissions` bloğunu, gitleaks adımına `GITLEAKS_ENABLE_COMMENTS` satırını ve `rls` işinin yeni ortam aktarma satırlarını kendi dosyana al. `tests/security/rls.mjs`'i değiştirdiysen `TABLOLAR` listeni yeni dosyaya taşı.
+
+### Bilinen sınır
+- Kabuk koruması metne bakar: betik içinden (`node -e`, `python -c`, heredoc'la çalıştırılan program), `find … -delete`, `awk -i inplace`, `git apply`, `cd tests; rm *` ile test dosyasına yazmak yakalanmaz.
+- Ayar dosyası kuralı sezgiseldir: listede olmayan bir alan veya çok satırlı `include: [` dizisinden satır silmek sorulmaz.
+- Test koruması sezgisi `it['skip']`, `test.todo`, `it.fails`, `expect.any(Object)` yazımlarını yakalamaz.
+
 ## [3.13.0] - 2026-10-24
 
 ### Eklenen
@@ -22,7 +39,7 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 - **Elle uyarla:** Kurulu projede `.mcp.json` Supabase satırı prod ref'ine bağlıysa dev ref'i ile değiştir. Değiştirdiğin `ci.yml` için `/kit-update` `.kit-new` bırakır: `karmasiklik` ve `rls` işlerini kendi dosyana al. `docs/operations/accounts.md`'ye Ortamlar tablosunu, `docs/product/roadmap.md`'ye faz sonu refactor görevlerini ekle. Supabase'li projede `tests/security/rls.mjs` → `TABLOLAR`'a mevcut tabloları yaz.
 
 ### Bilinen sınır
-- Test koruması ve kalkan metne bakar: kabuk komutuyla (`sed`, heredoc) test dosyası değiştirmek test korumasına takılmaz; Claude Code'da her kabuk komutu zaten onaya gelir. Kalkan, belge yazan bir heredoc içinde geçen örnek komutu da yakalayabilir.
+- Test koruması ve kalkan metne bakar: kabuk komutuyla (`sed`, heredoc) test dosyası değiştirmek test korumasına takılmaz (3.13.1'de kalkana eklendi). Kalkan, belge yazan bir heredoc içinde geçen örnek komutu da yakalayabilir.
 - Antigravity'de PostToolUse çıktı taşımaz; düzenleme turu notu bir sonraki model çağrısında gelir.
 - RLS testi kit içinde Docker'sız doğrulandı (yerel olmayan URL reddi, ortam yok hatası); gerçek `supabase start` ile uçtan uca çalıştırma ilk kullanan projede CI'da görülecek.
 

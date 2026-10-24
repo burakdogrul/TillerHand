@@ -6,6 +6,10 @@ on:
     branches: [main]
   pull_request:
 
+# İşler depoyu sadece okur; ele geçirilen bir adım token ile depoya yazamasın
+permissions:
+  contents: read
+
 jobs:
   kontrol:
     runs-on: ubuntu-latest
@@ -61,8 +65,9 @@ jobs:
       - name: RLS saldırgan testi (anonim ve ikinci kullanıcı)
         if: hashFiles('supabase/config.toml') != ''
         run: |
-          eval "$(npx -y supabase@2.120.0 status -o env)"
-          export API_URL ANON_KEY SERVICE_ROLE_KEY DB_URL PUBLISHABLE_KEY SECRET_KEY
+          # Sadece gereken anahtarlar alınır; çıktı kabuk komutu olarak çalıştırılmaz
+          anahtarlar=$(npx -y supabase@2.120.0 status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL|PUBLISHABLE_KEY|SECRET_KEY)=')
+          while IFS="=" read -r ad deger; do deger="${deger%\"}"; export "$ad=${deger#\"}"; done <<< "$anahtarlar"
           node --test tests/security/rls.mjs
 
   semgrep:
@@ -83,6 +88,10 @@ jobs:
 
   sir-taramasi:
     runs-on: ubuntu-latest
+    # gitleaks PR'da commit listesini okur (pulls/{n}/commits); özel depoda bu izin olmadan 403
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -91,3 +100,5 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Token salt okunur: PR yorumu kapalı, sızıntı işi kırmızı yapar
+          GITLEAKS_ENABLE_COMMENTS: "false"

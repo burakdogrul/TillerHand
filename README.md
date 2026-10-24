@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.13.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.13.1-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -356,7 +356,7 @@ flowchart TB
 | Yapılandırma onayı | `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.codex/`, `.mcp.json` ve iş akışı dosyaları onayın olmadan değişmez |
 | Commit kapısı | Kurul denetimi olmadan commit atılmaz |
 | Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazabilir |
-| Test koruması | Test dosyasında beklenti silinir veya yoruma alınırsa, `.skip`/`.only` eklenirse, beklenti gevşetilirse (`toBeTruthy`) ya da test dosyası silinirse sorulur |
+| Test koruması | Test dosyasında beklenti silinir veya yoruma alınırsa, `.skip`/`.only`/`skipIf` eklenirse, beklenti gevşetilirse (`toBeTruthy`, matcher'sız `expect`) ya da test dosyası silinir veya taşınırsa sorulur. Test ayarında kapsamı daraltan değişiklik (`include`/`exclude`, `passWithNoTests`, test script'i) ve test dosyasına yazan kabuk komutu (`sed -i`, `rm`, `>`) da sorulur |
 | Düzenleme turu sayacı | Aynı kod dosyası bir oturumda 5., 10. kez düzenlenince AI'ya Semgrep ve güvenlik incelemesi hatırlatılır |
 | Dev/prod ayrımı | Yerel ortam ve AI (salt-okunur MCP dahil) sadece dev projesine bağlanır; prod sırları barındırma panelinde kalır, `/release` kontrol eder |
 | CI bütçeleri | Değişen dosyalarda fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır (lizard); Supabase varsa yerel Supabase'e karşı RLS saldırgan testi |

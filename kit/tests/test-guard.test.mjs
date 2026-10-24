@@ -91,3 +91,51 @@ test('F-02 hook: Codex Add File var olan testi ezerse ve test, test olmayan yola
   assert.match(calistir(yama('*** Update File: b.test.ts\n*** Move to: src/b.ts'), codex).hookSpecificOutput.permissionDecisionReason, /taşınıyor/);
   assert.equal(calistir(yama('*** Update File: b.test.ts\n*** Move to: tests/b.test.ts'), codex), null, 'testten teste taşıma serbest');
 });
+
+test('F-02 3.13.1 sezgiler: ;// yorumu, #assert, skipIf/runIf, matcher\'sız expect yakalanır; model.fit ve zincir serbest', () => {
+  const eski = "test('a', () => {\n  expect(a).toBe(1); expect(b).toBe(2);\n});\n";
+  assert.match(zayiflatma(eski, eski.replace(' expect(b)', '// expect(b)')), /beklenti/, ';// yorumu');
+  assert.match(zayiflatma('def test_a():\n    assert a\n    assert b\n', 'def test_a():\n    assert a\n    #assert b\n'), /beklenti/, 'boşluksuz #');
+  assert.match(zayiflatma(eski, eski.replace("test('", "test.skipIf(ci)('")), /atlan/);
+  assert.match(zayiflatma(eski, eski.replace("test('", "it.runIf(false)('")), /atlan/);
+  assert.match(zayiflatma(eski, eski.replace('expect(b).toBe(2)', 'expect(b)')), /gevşe/, 'matcher yok');
+  const fit = "test('m', () => {\n  model.fit(x);\n  expect(model.w).toBe(1);\n});\n";
+  assert.equal(zayiflatma(fit, fit + "test('n', () => {\n  model.fit(z);\n  expect(f(g(1))).toBe(1);\n});\n"), null, 'model.fit odaklama değil');
+  assert.equal(zayiflatma(eski, eski + "test('c', () => {\n  expect(c)\n    .toBe(3);\n});\n"), null, 'satır kıran zincir');
+});
+
+test('F-02 3.13.1 test yolu desenleri', () => {
+  for (const f of ['src/app.e2e-spec.ts', 'pkg/odeme_test.go', 'spec/models/user_spec.rb']) assert.ok(testDosyasi(f), f);
+});
+
+test('F-02 3.13.1 test ayar dosyasında kapsamı daraltan değişiklik sorulur, diğerleri serbest', () => {
+  const edit = (dosya, old_string, new_string) => calistir({ tool_name: 'Edit', cwd: p, tool_input: { file_path: path.join(p, dosya), old_string, new_string } });
+  assert.equal(edit('vitest.config.ts', "include: ['src/**/*.test.ts'],", "include: ['src/a.test.ts'],").hookSpecificOutput.permissionDecision, 'ask');
+  assert.equal(edit('vitest.config.ts', "plugins: [],", "plugins: [react()],"), null, 'eklenti serbest');
+  assert.equal(edit('package.json', '"test": "vitest run",', '"test": "vitest run --passWithNoTests",').hookSpecificOutput.permissionDecision, 'ask');
+  assert.equal(edit('package.json', '"lint": "eslint .",', '"lint": "eslint src",'), null);
+  assert.equal(edit('conftest.py', '', 'collect_ignore = ["tests/odeme"]\n').hookSpecificOutput.permissionDecision, 'ask');
+  assert.equal(edit('src/package.json.ts', '"test": 1', '"test": 2'), null, 'ayar dosyası değil');
+});
+
+test('F-02 3.13.1 Codex Move: test klasöründe ama çalışmayan ada veya var olan testin üstüne taşıma sorulur', () => {
+  fs.writeFileSync(path.join(p, 'd.test.ts'), "test('d', () => { expect(1).toBe(1); });\n");
+  fs.writeFileSync(path.join(p, 'e.test.ts'), "test('e', () => { expect(2).toBe(2); });\n");
+  const yama = (govde) => ({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: `*** Begin Patch\n${govde}\n*** End Patch` } });
+  const codex = { CLAUDE_PROJECT_DIR: '' };
+  assert.match(calistir(yama('*** Update File: d.test.ts\n*** Move to: tests/d.ts'), codex).hookSpecificOutput.permissionDecisionReason, /taşınıyor/);
+  assert.match(calistir(yama('*** Update File: d.test.ts\n*** Move to: e.test.ts'), codex).hookSpecificOutput.permissionDecisionReason, /üstüne/);
+});
+
+test('F-02 3.13.1 denetim: supertest .expect serbest, eşik ve ci script\'i sorulur, test olmayan dosyayı var olan testin üstüne taşımak sorulur', () => {
+  const eski = "test('a', async () => {\n  expect(1).toBe(1);\n});\n";
+  assert.equal(zayiflatma(eski, eski + "test('b', async () => {\n  await request(app).get('/x').expect(200);\n});\n"), null, 'supertest');
+  const edit = (dosya, old_string, new_string) => calistir({ tool_name: 'Edit', cwd: p, tool_input: { file_path: path.join(p, dosya), old_string, new_string } });
+  assert.equal(edit('vitest.config.ts', '    lines: 80,', '    lines: 10,').hookSpecificOutput.permissionDecision, 'ask', 'çok satırlı eşik');
+  assert.equal(edit('package.json', '"ci": "npm run lint && vitest run",', '"ci": "npm run lint",').hookSpecificOutput.permissionDecision, 'ask');
+  assert.equal(edit('pyproject.toml', 'fail_under = 80', 'fail_under = 0').hookSpecificOutput.permissionDecision, 'ask');
+  assert.equal(edit('jest.config.json', '"bail": 0', '"bail": 1').hookSpecificOutput.permissionDecision, 'ask', 'json ayar');
+  fs.writeFileSync(path.join(p, 'f.test.ts'), "test('f', () => { expect(1).toBe(1); });\n");
+  const yama = { tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Update File: src/f.ts\n*** Move to: f.test.ts\n*** End Patch' } };
+  assert.match(calistir(yama, { CLAUDE_PROJECT_DIR: '' }).hookSpecificOutput.permissionDecisionReason, /üstüne/);
+});
