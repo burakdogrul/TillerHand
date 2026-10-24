@@ -5,6 +5,14 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.18.2] - 2026-10-25
+
+### Düzeltilen
+- **Değerlendirme, iki ölçüm hatası.** Her ikisi de doğru yazılmış kodu cezalandırıyordu:
+  - `trash`: Saati dışarıdan alan bir uygulama (`createStore(now = Date.now)`), 30 gün testinden haksız yere kalıyordu. Test tarihi uygulama yüklendikten sonra taklit ediyordu. Artık taklit uygulama yüklenmeden başlıyor.
+  - Referans çözümler aynı milisaniyede oluşan notları en yeni önce sıralamıyordu. Ajanın bunu sınayan makul testi referans çözümde kırmızı kalıyor ve mutant ölçümünden düşüyordu; `bug-sort`'ta iki koşul da 0/2 çıkmıştı. Referans çözümler ve mutantlar düzeltildi.
+- Sonuç dosyası her koşunun kod yamasını da tutuyor (`src`, `tests`, `package.json`). Böylece düzenekte ileride yapılacak bir düzeltme, ajanlar yeniden koşmadan puanlanabilir.
+
 ## [3.18.1] - 2026-10-25
 
 ### Düzeltilen

@@ -236,6 +236,8 @@ function score(task, dir, base) {
   const changed = git(dir, 'diff', '--cached', '--numstat', base).trim().split('\n').filter(Boolean)
     .map((l) => { const [add, del, file] = l.split('\t'); return { file, add: Number(add) || 0, del: Number(del) || 0 }; });
   const code = changed.filter((c) => /^(src|tests)\/|^package\.json$/.test(c.file));
+  // The agent's code change, kept in the result: a later fix to the hidden tests or mutants can be scored without a new run
+  const patch = git(dir, 'diff', '--cached', base, '--', 'src', 'tests', 'package.json');
   const hidden = path.join(dir, 'tests', '__hidden__');
   fs.mkdirSync(hidden, { recursive: true });
   fs.copyFileSync(path.join(TASKS_DIR, 'helper.mjs'), path.join(hidden, 'helper.mjs'));
@@ -252,6 +254,7 @@ function score(task, dir, base) {
     codeFiles: code.length,
     codeLines: code.reduce((s, c) => s + c.add + c.del, 0),
     otherFiles: changed.length - code.length,
+    patch: patch.length <= 200_000 ? patch : null,
   };
 }
 
@@ -290,6 +293,7 @@ function scored(task, cond, dir, base, res) {
   const failed = res && (res.code !== 0 || !j || j.is_error);
   return {
     ...s,
+    patch: scrub(s.patch, dir),
     error: failed ? scrub(j?.result || (j?.subtype !== 'success' && j?.subtype) || res.err || `exit ${res.code}`, dir).slice(0, 500)
       : s.hidden.pass + s.hidden.fail === 0 ? 'gizli testler çalışmadı (0/0)' : null,
     costUsd: j?.total_cost_usd ?? null, durationS: j ? Math.round(j.duration_ms / 1000) : res ? Math.round(res.wallMs / 1000) : null,

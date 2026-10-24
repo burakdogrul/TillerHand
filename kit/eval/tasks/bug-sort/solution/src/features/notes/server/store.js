@@ -9,8 +9,8 @@ export function createStore() {
       return note;
     },
     list() {
-      // newest first
-      return [...notes].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+      // newest first; equal createdAt (same millisecond): the later note first
+      return [...notes].sort((a, b) => (a.createdAt !== b.createdAt ? (a.createdAt < b.createdAt ? 1 : -1) : Number(b.id) - Number(a.id)));
     },
     get(id) {
       return notes.find((n) => n.id === id);

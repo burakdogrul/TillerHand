@@ -15,8 +15,8 @@ export function createStore() {
       return note;
     },
     list() {
-      // newest first
-      return [...notes].filter(live).sort((a, b) => a.createdAt < b.createdAt).map(strip);
+      // newest first; equal createdAt (same millisecond): the later note first
+      return [...notes].filter(live).sort((a, b) => (a.createdAt !== b.createdAt ? (a.createdAt < b.createdAt ? 1 : -1) : Number(b.id) - Number(a.id))).map(strip);
     },
     get(id) {
       const n = notes.find((x) => x.id === id && live(x));

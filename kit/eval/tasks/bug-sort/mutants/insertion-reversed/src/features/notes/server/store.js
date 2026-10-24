@@ -9,7 +9,7 @@ export function createStore() {
       return note;
     },
     list() {
-      // newest first
+      // newest first; equal createdAt (same millisecond): the later note first
       return [...notes].reverse();
     },
     get(id) {
