@@ -1,0 +1,1 @@
+Özellik: çöp kutusu. Silinen not hemen yok olmasın, 30 gün içinde geri alınabilsin. `POST /notes/:id/restore` notu geri getirir, `GET /trash` çöp kutusundaki notları listeler. 30 günü geçen not geri alınamaz.

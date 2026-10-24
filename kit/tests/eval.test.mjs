@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { tally, parseStream, caughtTests, scrub } from '../eval/run.mjs';
+import { tally, parseStream, caughtTests, scrub, mutantsKilled, summary } from '../eval/run.mjs';
 
 const EVAL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'eval');
 const tasks = fs.readdirSync(path.join(EVAL, 'tasks')).filter((d) => fs.statSync(path.join(EVAL, 'tasks', d)).isDirectory());
@@ -17,10 +17,12 @@ delete env.NODE_TEST_CONTEXT;
 const nodeTest = (cwd, file) => tally(spawnSync(process.execPath, ['--test', '--test-reporter=spec', file], { cwd, env, encoding: 'utf8', timeout: 60000 }).stdout);
 
 // The fixture in a temp folder with the hidden tests next to it, optionally with the task's reference solution on top
-function hiddenRun(task, { solution = false } = {}) {
+// (and a mutant on top of that)
+function hiddenRun(task, { solution = false, mutant = null } = {}) {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-'));
   fs.cpSync(path.join(EVAL, 'fixture'), p, { recursive: true });
-  if (solution) fs.cpSync(path.join(EVAL, 'tasks', task, 'solution'), p, { recursive: true });
+  if (solution || mutant) fs.cpSync(path.join(EVAL, 'tasks', task, 'solution'), p, { recursive: true });
+  if (mutant) fs.cpSync(path.join(EVAL, 'tasks', task, 'mutants', mutant), p, { recursive: true });
   const hidden = path.join(p, 'tests', '__hidden__');
   fs.mkdirSync(hidden);
   fs.copyFileSync(path.join(EVAL, 'tasks', 'helper.mjs'), path.join(hidden, 'helper.mjs'));
@@ -52,6 +54,54 @@ test('eval: every task\'s reference solution turns the hidden tests green and ke
     assert.ok(hidden.pass > 0 && hidden.fail === 0, `${t}: hidden ${JSON.stringify(hidden)}`);
     assert.ok(visible.pass > 0 && visible.fail === 0, `${t}: visible ${JSON.stringify(visible)}`);
   }
+});
+
+test('eval: every task has at least two mutants and each one turns the hidden tests red', () => {
+  assert.ok(tasks.length >= 6, 'second round: 6 tasks');
+  for (const t of tasks) {
+    const list = fs.readdirSync(path.join(EVAL, 'tasks', t, 'mutants'));
+    assert.ok(list.length >= 2, `${t}: mutants`);
+    for (const m of list) {
+      const { hidden, visible } = hiddenRun(t, { mutant: m });
+      assert.ok(hidden.fail > 0, `${t}/${m}: the mutant is caught by the hidden tests (${JSON.stringify(hidden)})`);
+      // The fixture's own tests miss it: a kill can only come from a test the agent wrote
+      assert.ok(visible.pass > 0 && visible.fail === 0, `${t}/${m}: visible tests stay green (${JSON.stringify(visible)})`);
+    }
+  }
+});
+
+test('eval: mutantsKilled runs the agent\'s tests that pass on the reference solution against each mutant', () => {
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-'));
+  fs.cpSync(path.join(EVAL, 'fixture'), p, { recursive: true });
+  const total = fs.readdirSync(path.join(EVAL, 'tasks', 'bug-sort', 'mutants')).length;
+  assert.deepEqual(mutantsKilled(p, 'bug-sort'), { killed: 0, total }, 'the fixture\'s own tests do not check the order');
+  fs.writeFileSync(path.join(p, 'tests', 'sort.test.mjs'), `import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createStore } from '../src/features/notes/server/store.js';
+test('newest first', () => {
+  const s = createStore();
+  for (const d of ['2025-03-01', '2024-01-01', '2025-10-01']) s.create({ title: d, createdAt: d });
+  assert.deepEqual(s.list().map((n) => n.createdAt), ['2025-10-01', '2025-03-01', '2024-01-01']);
+});
+`);
+  // The agent's own module is missing from the reference solution: that file is left out, not counted as a kill
+  fs.writeFileSync(path.join(p, 'tests', 'own.test.mjs'), `import { test } from 'node:test';
+import { helper } from '../src/features/notes/server/agent-only.js';
+test('own module', () => helper());
+`);
+  assert.deepEqual(mutantsKilled(p, 'bug-sort'), { killed: total, total });
+  fs.rmSync(p, { recursive: true, force: true });
+});
+
+test('eval: summary groups repeated runs by task and condition', () => {
+  const row = (task, cond, pass, fail, cost) => ({ task, cond, hidden: { pass, fail }, mutants: { killed: pass, total: 2 }, costUsd: cost, durationS: 10 });
+  const broken = { task: 'a', cond: 'plain', error: 'düzenek hatası: x' }; // no hidden, no mutants
+  const s = summary([row('a', 'kit', 2, 0, 0.2), row('a', 'kit', 1, 1, 0.4), broken, row('a', 'plain', 2, 0, 0.1)]);
+  assert.deepEqual(s.map((x) => [x.task, x.cond, x.runs]), [['a', 'kit', 2], ['a', 'plain', 2]]);
+  assert.deepEqual([s[0].hiddenAvg, s[0].hiddenMin, s[0].hiddenMax], [0.75, 0.5, 1]);
+  assert.ok(Math.abs(s[0].costAvg - 0.3) < 1e-9);
+  assert.equal(s[0].killedAvg, 1.5);
+  assert.deepEqual([s[1].hiddenAvg, s[1].hiddenMin, s[1].mutantTotal], [0.5, 0, 2], 'a run without a result counts as 0; the total comes from a scored run');
 });
 
 test('eval: tally reads the node --test summary', () => {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Kit evaluation: the same task with the kit (kit) and without it (plain), scored by hidden tests.
-//   node kit/eval/run.mjs [--task bug-sort,feature-tags] [--cond kit,plain] [--model sonnet] [--dry] [--keep]
+//   node kit/eval/run.mjs [--task bug-sort,feature-tags] [--cond kit,plain] [--model sonnet] [--repeat 3] [--dry] [--keep]
 // --dry: prepares the run folders and scores them without running Claude (the hidden tests must fail).
 // Each run gets a fresh temp folder with the fixture. Kit runs get init + install web-saas and the state /start would
 // leave (stack, AGENTS.md → Komutlar, question mode off, gate approval). Both run `claude -p` with the same model, the
@@ -54,6 +54,8 @@ const conds = (opt('--cond', 'kit,plain')).split(',');
 const model = opt('--model', 'sonnet');
 const dry = args.includes('--dry');
 const keep = args.includes('--keep') || dry;
+const repeat = Number(opt('--repeat', '1'));
+if (!Number.isInteger(repeat) || repeat < 1 || repeat > 10) throw new Error('--repeat 1-10 arası bir tam sayı olmalı');
 for (const t of tasks) if (!allTasks.includes(t)) throw new Error(`Bilinmeyen görev: ${t}. Seçenekler: ${allTasks.join(', ')}`);
 for (const c of conds) if (c !== 'kit' && c !== 'plain') throw new Error(`Bilinmeyen koşul: ${c} (kit, plain)`);
 
@@ -195,11 +197,40 @@ export function caughtTests(dir, ownOutput = nodeTestOut(dir, ['tests/**/*.test.
   }
 }
 
+// Test quality: the agent's tests run on the task's reference solution and on each mutant of it (one planted bug). A test
+// that passes on the solution and fails on a mutant kills it. Tests that need the agent's own modules cannot load on the
+// solution and are left out, so a kill always means a behavior check.
+// shortcut: tests are matched by name; a duplicate name or one that changes per run (a timestamp in it), or a test that
+// times out only on a mutant, can miscount. Upgrade to per-file runs if that shows up in results.
+export function mutantsKilled(dir, task) {
+  const mutantsDir = path.join(TASKS_DIR, task, 'mutants');
+  const mutants = fs.existsSync(mutantsDir) ? fs.readdirSync(mutantsDir) : [];
+  if (!fs.existsSync(path.join(dir, 'tests'))) return { killed: 0, total: mutants.length };
+  const passing = (mutant) => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-eval-mutant-'));
+    try {
+      fs.cpSync(FIXTURE, tmp, { recursive: true });
+      fs.cpSync(path.join(TASKS_DIR, task, 'solution'), tmp, { recursive: true });
+      if (mutant) fs.cpSync(path.join(mutantsDir, mutant), tmp, { recursive: true });
+      fs.cpSync(path.join(dir, 'tests'), path.join(tmp, 'tests'), { recursive: true, filter: (src) => !src.includes('__hidden__') });
+      return testNames(nodeTestOut(tmp, ['tests/**/*.test.mjs'])).pass;
+    } finally {
+      // A test process left running can lock the folder on Windows: a leftover temp folder must not cost the row its score
+      try { fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* left in the temp folder */ }
+    }
+  };
+  const base = passing(null);
+  const killed = mutants.filter((m) => { const p = passing(m); return [...base].some((n) => !p.has(n)); }).length;
+  return { killed, total: mutants.length };
+}
+
 function score(task, dir, base) {
   // The agent's own suite first, before the hidden files are in tests/
   const ownOutput = nodeTestOut(dir, ['tests/**/*.test.mjs']); // node expands the glob itself; same as the fixture's npm test
   const own = tally(ownOutput);
   const caught = caughtTests(dir, ownOutput);
+  let mutants = null; // a failure here must not lose the hidden-test score
+  try { mutants = mutantsKilled(dir, task); } catch { /* reported as "-" */ }
   git(dir, 'add', '-A');
   // Against the base commit, so a commit by the agent still counts as a change
   const changed = git(dir, 'diff', '--cached', '--numstat', base).trim().split('\n').filter(Boolean)
@@ -217,6 +248,7 @@ function score(task, dir, base) {
     own,
     testsAdded: countTests(dir) - countTests(FIXTURE),
     testsCaught: caught,
+    mutants,
     codeFiles: code.length,
     codeLines: code.reduce((s, c) => s + c.add + c.del, 0),
     otherFiles: changed.length - code.length,
@@ -230,32 +262,50 @@ export function scrub(text, dir) {
   return pairs.reduce((s, [p, to]) => s.replaceAll(p, to), text);
 }
 
-async function one(task, cond, portStart) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `kit-eval-${task}-${cond}-`));
-  const approval = approvalPath(dir); // resolved while the folder exists
-  const row = { task, cond, model, dir: keep ? dir : null };
-  let port = null;
+// One task, every condition: all folders are prepared first, the agents run side by side, and scoring (synchronous,
+// several test runs) waits until every agent has stopped, so it cannot stall a running agent and stretch its time.
+async function pair(task) {
+  const runs = conds.map((cond, i) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), `kit-eval-${task}-${cond}-`));
+    // approvalPath is resolved while the folder exists
+    return { cond, dir, portStart: PORT_BASE + i * 10, approval: approvalPath(dir), row: { task, cond, model, dir: keep ? dir : null } };
+  });
+  const fail = (r, e) => { r.row.error = scrub(`düzenek hatası: ${e.message}`, r.dir).slice(0, 500); };
+  for (const r of runs) try { r.base = prepare(r.dir, r.cond); } catch (e) { fail(r, e); }
+  await Promise.all(runs.map(async (r) => {
+    if (dry || r.row.error) return;
+    try {
+      r.port = await freePort(r.portStart);
+      r.res = await claude(r.dir, prompt(task, r.cond), r.port);
+    } catch (e) { fail(r, e); }
+  }));
+  return runs.map((r) => finish(task, r));
+}
+
+function scored(task, cond, dir, base, res) {
+  const s = score(task, dir, base);
+  if (keep && res) fs.writeFileSync(path.join(dir, 'eval-stream.jsonl'), res.stream); // after scoring: not part of the diff
+  const j = res?.json;
+  const u = j?.usage ?? {};
+  const failed = res && (res.code !== 0 || !j || j.is_error);
+  return {
+    ...s,
+    error: failed ? scrub(j?.result || (j?.subtype !== 'success' && j?.subtype) || res.err || `exit ${res.code}`, dir).slice(0, 500)
+      : s.hidden.pass + s.hidden.fail === 0 ? 'gizli testler çalışmadı (0/0)' : null,
+    costUsd: j?.total_cost_usd ?? null, durationS: j ? Math.round(j.duration_ms / 1000) : res ? Math.round(res.wallMs / 1000) : null,
+    turns: j?.num_turns ?? null,
+    tokens: j ? (u.input_tokens ?? 0) + (u.output_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) : null,
+    outputTokens: u.output_tokens ?? null,
+    testFirst: res?.testFirst ?? null, gateRan: res && cond === 'kit' ? res.gateRan : null, // plain has no gate
+    claudeVersion: res?.init?.claude_code_version ?? null,
+    plugins: res?.init?.plugins?.map((p) => p.name) ?? null,
+    summary: scrub(j?.result, dir)?.slice(0, 1500) ?? null,
+  };
+}
+
+function finish(task, { cond, dir, approval, base, port, res = null, row }) {
   try {
-    const base = prepare(dir, cond);
-    if (!dry) port = await freePort(portStart);
-    const res = dry ? null : await claude(dir, prompt(task, cond), port);
-    const s = score(task, dir, base);
-    if (keep && res) fs.writeFileSync(path.join(dir, 'eval-stream.jsonl'), res.stream); // after scoring: not part of the diff
-    const j = res?.json;
-    const u = j?.usage ?? {};
-    const failed = res && (res.code !== 0 || !j || j.is_error);
-    Object.assign(row, s, {
-      error: failed ? scrub(j?.result || (j?.subtype !== 'success' && j?.subtype) || res.err || `exit ${res.code}`, dir).slice(0, 500)
-        : s.hidden.pass + s.hidden.fail === 0 ? 'gizli testler çalışmadı (0/0)' : null,
-      costUsd: j?.total_cost_usd ?? null, durationS: j ? Math.round(j.duration_ms / 1000) : res ? Math.round(res.wallMs / 1000) : null,
-      turns: j?.num_turns ?? null,
-      tokens: j ? (u.input_tokens ?? 0) + (u.output_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) : null,
-      outputTokens: u.output_tokens ?? null,
-      testFirst: res?.testFirst ?? null, gateRan: res && cond === 'kit' ? res.gateRan : null, // plain has no gate
-      claudeVersion: res?.init?.claude_code_version ?? null,
-      plugins: res?.init?.plugins?.map((p) => p.name) ?? null,
-      summary: scrub(j?.result, dir)?.slice(0, 1500) ?? null,
-    });
+    if (!row.error) Object.assign(row, scored(task, cond, dir, base, res));
   } catch (e) {
     row.error = scrub(`düzenek hatası: ${e.message}`, dir).slice(0, 500);
   } finally {
@@ -269,19 +319,47 @@ async function one(task, cond, portStart) {
     }
   }
   const t = (x) => (x ? `${x.pass}/${x.pass + x.fail}` : '-');
-  console.log(`${task} · ${cond}${keep ? ` (${dir})` : ''}: gizli ${t(row.hidden)} · görünür ${t(row.visible)} · $${row.costUsd ?? '-'} · ${row.durationS ?? '-'} sn${row.error ? ` · HATA: ${row.error.slice(0, 120)}` : ''}`);
+  const m = row.mutants ? ` · mutant ${row.mutants.killed}/${row.mutants.total}` : '';
+  console.log(`${task} · ${cond}${keep ? ` (${dir})` : ''}: gizli ${t(row.hidden)} · görünür ${t(row.visible)}${m} · $${row.costUsd ?? '-'} · ${row.durationS ?? '-'} sn${row.error ? ` · HATA: ${row.error.slice(0, 120)}` : ''}`);
   return row;
+}
+
+// Repeated runs of the same task and condition: the hidden-test share as mean and range. A run that was scored counts
+// with its real share even if Claude reported an error (budget cap); a run with no hidden result counts as 0.
+export function summary(rows) {
+  const groups = new Map();
+  for (const r of rows) {
+    const k = `${r.task}\0${r.cond}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+  const avg = (xs) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
+  return [...groups.values()].map((g) => {
+    const share = g.map((r) => (r.hidden?.pass + r.hidden?.fail ? r.hidden.pass / (r.hidden.pass + r.hidden.fail) : 0));
+    return {
+      task: g[0].task, cond: g[0].cond, runs: g.length,
+      hiddenAvg: avg(share), hiddenMin: Math.min(...share), hiddenMax: Math.max(...share),
+      killedAvg: avg(g.map((r) => r.mutants?.killed ?? 0)), mutantTotal: g.find((r) => r.mutants)?.mutants.total ?? 0,
+      costAvg: avg(g.map((r) => r.costUsd).filter((x) => x != null)), durationAvg: avg(g.map((r) => r.durationS).filter((x) => x != null)),
+    };
+  });
 }
 
 function report(rows, meta) {
   const pct = (t) => (t && t.pass + t.fail ? `${t.pass}/${t.pass + t.fail}` : '-');
   const yn = (v) => (v === true ? 'evet' : v === false ? 'hayır' : '-');
+  const share = (x) => `%${Math.round(x * 100)}`;
   const lines = [`# Kit değerlendirmesi · ${VERSION} · ${model} · ${new Date().toISOString().slice(0, 10)}`, '',
-    `Claude Code ${meta.claude} · Node ${meta.node}`, '', ...meta.plugins.map(([cond, list]) => `- Eklentiler (${cond}): ${list}`), '',
-    '| Görev | Koşul | Gizli test | Görünür test | Kendi testleri | Eklenen test | Hatayı yakalayan | Önce test | Kapı | Kod dosyası / satır | Diğer dosya | Maliyet ($) | Süre (sn) | Tur | Token |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---:|---:|---:|---:|',
-    ...rows.map((r) => `| ${r.task} | ${r.cond} | ${pct(r.hidden)} | ${pct(r.visible)} | ${pct(r.own)} | ${r.testsAdded ?? '-'} | ${r.testsCaught ?? '-'} | ${yn(r.testFirst)} | ${yn(r.gateRan)} | ${r.codeFiles ?? '-'} / ${r.codeLines ?? '-'} | ${r.otherFiles ?? '-'} | ${r.costUsd?.toFixed(2) ?? '-'} | ${r.durationS ?? '-'} | ${r.turns ?? '-'} | ${r.tokens ?? '-'} |`),
-    '', ...rows.filter((r) => r.error).map((r) => `- ${r.task} · ${r.cond} hata: ${r.error}`)];
+    `Claude Code ${meta.claude} · Node ${meta.node} · tekrar: ${repeat}`, '', ...meta.plugins.map(([cond, list]) => `- Eklentiler (${cond}): ${list}`), '',
+    '## Özet', '',
+    '| Görev | Koşul | Koşu | Gizli test (ort.) | En düşük / en yüksek | Öldürülen mutant (ort.) | Maliyet ($, ort.) | Süre (sn, ort.) |',
+    '|---|---|---:|---:|---|---:|---:|---:|',
+    ...summary(rows).map((s) => `| ${s.task} | ${s.cond} | ${s.runs} | ${share(s.hiddenAvg)} | ${share(s.hiddenMin)} / ${share(s.hiddenMax)} | ${s.killedAvg.toFixed(1)}/${s.mutantTotal} | ${s.costAvg?.toFixed(2) ?? '-'} | ${s.durationAvg?.toFixed(0) ?? '-'} |`),
+    '', '## Koşular', '',
+    '| Görev | Koşul | Tekrar | Gizli test | Görünür test | Kendi testleri | Eklenen test | Hatayı yakalayan | Öldürülen mutant | Önce test | Kapı | Kod dosyası / satır | Diğer dosya | Maliyet ($) | Süre (sn) | Tur | Token |',
+    '|---|---|---:|---|---|---|---|---|---|---|---|---|---|---:|---:|---:|---:|',
+    ...rows.map((r) => `| ${r.task} | ${r.cond} | ${r.rep ?? 1} | ${pct(r.hidden)} | ${pct(r.visible)} | ${pct(r.own)} | ${r.testsAdded ?? '-'} | ${r.testsCaught ?? '-'} | ${r.mutants ? `${r.mutants.killed}/${r.mutants.total}` : '-'} | ${yn(r.testFirst)} | ${yn(r.gateRan)} | ${r.codeFiles ?? '-'} / ${r.codeLines ?? '-'} | ${r.otherFiles ?? '-'} | ${r.costUsd?.toFixed(2) ?? '-'} | ${r.durationS ?? '-'} | ${r.turns ?? '-'} | ${r.tokens ?? '-'} |`),
+    '', ...rows.filter((r) => r.error).map((r) => `- ${r.task} · ${r.cond} · ${r.rep ?? 1} hata: ${r.error}`)];
   return lines.join('\n') + '\n';
 }
 
@@ -296,9 +374,10 @@ if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(proces
   if (!dry) console.log(`Ara sonuç: ${partial}`);
   const rows = [];
   for (const task of tasks) {
-    // Both conditions of a task run side by side, each from its own port range
-    rows.push(...await Promise.all(conds.map((c, i) => one(task, c, PORT_BASE + i * 10))));
-    if (!dry) fs.writeFileSync(partial, json(rows)); // a crash or Ctrl+C later keeps the finished rows
+    for (let rep = 1; rep <= repeat; rep++) {
+      rows.push(...(await pair(task)).map((r) => ({ ...r, rep })));
+      if (!dry) fs.writeFileSync(partial, json(rows)); // a crash or Ctrl+C later keeps the finished rows
+    }
   }
   const versionOut = spawnSync('claude', ['--version'], { encoding: 'utf8' }).stdout?.trim();
   const plugins = conds.map((c) => [c, [...new Set(rows.filter((r) => r.cond === c).flatMap((r) => r.plugins ?? []))].join(', ') || '-']);

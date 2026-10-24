@@ -1,0 +1,1 @@
+Özellik: `GET /notes` sayfalansın. `?limit=` sayfa boyudur: varsayılan 20, 1 ile 100 arası; dışındaki değer 400 döner. Sonraki sayfa varsa yanıtta `x-next-cursor` başlığı gelir, istemci onu `?cursor=` ile geri gönderir; geçersiz cursor 400 döner. Mevcut istemciler bozulmamalı: yanıt gövdesi yine en yeni not önce sıralı bir not dizisidir.

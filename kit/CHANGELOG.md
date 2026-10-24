@@ -5,6 +5,16 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.18.0] - 2026-10-25
+
+### Yeni
+- **Değerlendirmede zor görevler** (`kit/eval/`, kiti geliştirenler için; projelere kopyalanmaz). Üç yeni görev eklendi:
+  - `trash` (örtük gereksinim): çöp kutusu ve 30 gün içinde geri alma.
+  - `paging` (çok adımlı sözleşme): sayfalama; eski istemci bozulmamalı.
+  - `tr-sort` (tuzak): Türkçe alfabetik sıralama ve büyük/küçük harf duyarsız arama.
+- **Mutant ölçümü:** Her görevin iki mutantı var: referans çözümün tek bir hata eklenmiş kopyaları. Rapor, ajanın testlerinin bu hatalardan kaçını yakaladığını gösterir.
+- **Tekrar:** `--repeat N` her hücreyi N kez koşar. Rapor görev × koşul özetiyle başlar: gizli test ortalaması, en düşük ve en yüksek değer, öldürülen mutant, maliyet ve süre.
+
 ## [3.17.0] - 2026-10-25
 
 ### Kaldırılan
