@@ -196,6 +196,17 @@ test('3.14.3 çözülemeyen hedef kural dosyası adını içeriyorsa kilit/plan 
   for (const k of ['echo x > $OUT', 'echo $HOME > out.txt']) assert.equal(kabuk(k), null, k);
   assert.equal(kabuk('echo {} > ~/.vibe-kit/kapi-onayi/x.json')?.permissionDecision, 'ask', 'kullanıcı klasöründeki onay kaydı');
   assert.equal(duzenle(`${onayYolu(p)}`)?.karar, 'ask', 'dosya aracıyla da');
+  // 3.14.4: glob ev klasörüne çözülür, bağ gerçek yola; cihaz yolu yalnız sürücü harfiyle çevrilir
+  const vk = path.dirname(path.dirname(onayYolu(p)));
+  fs.mkdirSync(vk, { recursive: true });
+  const bag = path.join(p, 'vkbag');
+  fs.symlinkSync(vk, bag, 'junction');
+  try {
+    for (const k of ['rm ~/.v*/kapi-onayi/x.json', 'echo {} > vkbag/kapi-onayi/x.json', 'echo x > \\\\?\\GLOBALROOT\\x\\AGENTS.md', 'echo x > \\\\?\\UNC\\srv\\s\\AGENTS.md'])
+      assert.equal(kabuk(k)?.permissionDecision, 'ask', k);
+  } finally {
+    try { fs.unlinkSync(bag); } catch { fs.rmdirSync(bag); }
+  }
 });
 
 test('3.14.1 NotebookEdit kalkana takılır', () => {

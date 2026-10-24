@@ -5,6 +5,12 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.14.4] - 2026-10-24
+
+### Değişen
+- **Onay kaydı glob ve bağla da korunur:** Kabuk hedefi onay klasörünü (`~/.vibe-kit/`) içeren bir klasöre çözülürse (`rm ~/.v*/…`) ya da bağ üzerinden gerçek yolu oraya çıkarsa sorulur.
+- **Cihaz yolları:** `\\?\` ve `\\.\` yalnız sürücü harfinden önce düşer, `\\?\UNC\…` normal UNC sayılır; `\\?\GLOBALROOT\…` gibi diğer biçimler "doğrulanamadı" sayılır.
+
 ## [3.14.3] - 2026-10-24
 
 Commit sonrası otomatik güvenlik incelemesinin üç bulgusu.

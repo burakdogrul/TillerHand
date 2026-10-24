@@ -96,7 +96,9 @@ export function kabukHedefleri(komut, dizin) {
   const bel = (m) => { belirsiz ??= m; };
   const coz = (t, d = dizin) => {
     // Yerel UNC (\\?\C:\x, \\.\C:\x, \\localhost\c$\x) sürücü yoluna çevrilir; diğer UNC belirsiz sayılır, hook ağ yoluna dokunmaz
-    let h = t.replace(/^(\\\\|\/\/)[?.][\\/]/, '').replace(/^(\\\\|\/\/)(localhost|127\.0\.0\.1)[\\/]([a-zA-Z])\$(?=[\\/]|$)/i, '$3:');
+    // \\?\ ve \\.\ yalnız sürücü harfinden önce düşer; \\?\UNC\ normal UNC'ye döner; GLOBALROOT, pipe vb. belirsiz kalır
+    let h = t.replace(/^(\\\\|\/\/)[?.][\\/](?=[a-zA-Z]:)/, '').replace(/^(\\\\|\/\/)[?.][\\/]UNC[\\/]/i, '\\\\')
+      .replace(/^(\\\\|\/\/)(localhost|127\.0\.0\.1)[\\/]([a-zA-Z])\$(?=[\\/]|$)/i, '$3:');
     if (/^(\\\\|\/\/)/.test(h)) return bel(`hedef ağ yolu (${t})`), null;
     h = h.replace(/\$\{?PWD\}?/g, d).replace(/^~(?=\/|\\|$)/, os.homedir());
     if (/[$`]/.test(h)) return bel(`hedef değişken veya komut içeriyor (${t})`), null;
@@ -200,8 +202,11 @@ export const VIBE_KIT = /[\\/]\.vibe-kit([\\/]|$)/i;
 export function kapsamSorunu(komut, dizin, kok) {
   const { hedefler, belirsiz } = kabukHedefleri(komut, dizin);
   const gkok = gercek(kok);
+  // Onay klasörü, onu içeren klasör (glob ~/.v* → ~) veya bağ üzerinden gerçek yolu: hepsi sorulur
+  const vk = path.join(os.userInfo().homedir, '.vibe-kit');
+  const onayaDokunur = (y) => VIBE_KIT.test(y) || !/^\.\.|^$/.test(path.relative(y, vk)) && !path.isAbsolute(path.relative(y, vk));
   for (const h of hedefler) {
-    if (VIBE_KIT.test(h)) return { karar: 'ask', neden: `${h}: kapı komut onayı kaydı (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/gate.mjs --onayla kullanılır. Kullanıcı onayı gerekli.` };
+    if (onayaDokunur(h) || onayaDokunur(gercek(h))) return { karar: 'ask', neden: `${h}: kapı komut onayı kaydı (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/gate.mjs --onayla kullanılır. Kullanıcı onayı gerekli.` };
     const rel = goreli(gercek(h), gkok);
     const k = korumali(rel) ?? korumali(`${rel}/`);
     if (k) return { karar: k[0], neden: k[0] === 'deny' ? `${rel}: ${k[2]}`
