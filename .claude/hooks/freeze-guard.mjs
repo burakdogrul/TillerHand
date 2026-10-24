@@ -162,7 +162,7 @@ function hook() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [arg, value] = process.argv.slice(2);
-  const mode = OLD_FLAGS[arg] ?? arg;
-  if (OLD_FLAGS[arg]) console.error(`Uyarı: ${arg} eski bayrak; yenisi ${mode}. 3.16.0'da kalkacak.`);
+  const mode = (Object.hasOwn(OLD_FLAGS, arg) ? OLD_FLAGS[arg] : arg);
+  if (Object.hasOwn(OLD_FLAGS, arg)) console.error(`Uyarı: ${arg} eski bayrak; yenisi ${mode}. 3.16.0'da kalkacak.`);
   MODES.includes(mode) ? configure(mode, value) : hook();
 }

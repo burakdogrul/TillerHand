@@ -116,8 +116,8 @@ const OLD_FLAGS = { '--ac': '--enable', '--kapat': '--disable', '--gerekli': '--
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const [arg, name] = process.argv.slice(2);
-  const flag = OLD_FLAGS[arg] ?? arg;
-  if (OLD_FLAGS[arg]) console.error(`Uyarı: ${arg} eski bayrak; yenisi ${flag}. 3.16.0'da kalkacak.`);
+  const flag = (Object.hasOwn(OLD_FLAGS, arg) ? OLD_FLAGS[arg] : arg);
+  if (Object.hasOwn(OLD_FLAGS, arg)) console.error(`Uyarı: ${arg} eski bayrak; yenisi ${flag}. 3.16.0'da kalkacak.`);
   try {
     if (flag === '--enable' || flag === '--disable') {
       const ids = setPackage(root, name, flag === '--enable');

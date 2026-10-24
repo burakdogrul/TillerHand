@@ -100,19 +100,27 @@ export function merge(a, b) {
 // settings.json belongs to the project and is not replaced on update, but the kit's permission rules must reach it:
 // missing allow/ask/deny rules are added (the project's own rules stay), and hook flags renamed in 3.15.0 are rewritten
 // so the old and new hook entries do not both run.
+// Returns { settings, added: ['ask: Bash(...)', ...] }; throws on a shape it cannot merge safely (the caller reports it).
 export function migrateSettings(projectSettings, kitSettings) {
+  const isObject = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  if (!isObject(projectSettings)) throw new Error('kök bir nesne değil');
   const s = structuredClone(projectSettings);
+  if (s.permissions !== undefined && !isObject(s.permissions)) throw new Error('permissions bir nesne değil');
+  const added = [];
   for (const k of ['allow', 'ask', 'deny']) {
-    const have = new Set(s.permissions?.[k] ?? []);
+    const list = s.permissions?.[k];
+    if (list !== undefined && !Array.isArray(list)) throw new Error(`permissions.${k} bir dizi değil`);
+    const have = new Set(list ?? []);
     const add = (kitSettings.permissions?.[k] ?? []).filter((r) => !have.has(r));
-    if (add.length) (s.permissions ??= {})[k] = [...(s.permissions[k] ?? []), ...add];
+    if (add.length) (s.permissions ??= {})[k] = [...(list ?? []), ...add];
+    added.push(...add.map((r) => `${k}: ${r}`));
   }
-  for (const groups of Object.values(s.hooks ?? {})) {
-    for (const h of (Array.isArray(groups) ? groups : []).flatMap((g) => g?.hooks ?? [])) {
+  for (const groups of Object.values(isObject(s.hooks) ? s.hooks : {})) {
+    for (const h of (Array.isArray(groups) ? groups : []).flatMap((g) => (Array.isArray(g?.hooks) ? g.hooks : []))) {
       if (typeof h?.command === 'string') h.command = h.command.replace(/(dashboard\.mjs"?)\s+--sessiz\b/, '$1 --quiet');
     }
   }
-  return s;
+  return { settings: s, added };
 }
 
 function applyPatch(projectDir, { kind, target, source }) {
@@ -339,10 +347,15 @@ function update({ project, addons: newAddons, tool }) {
       continue;
     }
     if (rel === '.claude/settings.json') {
-      let local;
-      try { local = JSON.parse(read(target)); } catch { report.conflicts.push(`${rel} (geçerli JSON değil, izinler eklenmedi)`); continue; }
-      const next = migrateSettings(local, JSON.parse(read(source)));
-      if (JSON.stringify(next) !== JSON.stringify(local)) { fs.writeFileSync(target, JSON.stringify(next, null, 2) + '\n'); report.updated.push(`${rel} (izin kuralları)`); }
+      let local, migrated;
+      try {
+        local = JSON.parse(read(target));
+        migrated = migrateSettings(local, JSON.parse(read(source)));
+      } catch (e) { report.conflicts.push(`${rel} (izinler eklenmedi: ${e.message})`); continue; }
+      if (JSON.stringify(migrated.settings) !== JSON.stringify(local)) {
+        fs.writeFileSync(target, JSON.stringify(migrated.settings, null, 2) + '\n');
+        report.updated.push(`${rel}${migrated.added.length ? ` (eklenen izin kuralları: ${migrated.added.join(' · ')})` : ' (hook bayrağı)'}`);
+      }
       continue;
     }
     if (!isKitOwned(rel)) continue;

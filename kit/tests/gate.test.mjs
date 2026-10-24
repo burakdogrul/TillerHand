@@ -205,6 +205,14 @@ test('3.15.0 old flag and old state: --onayla still approves (with a warning) an
   assert.equal(ask('node -e "1" && node .claude/hooks/gate.mjs --onayla'), 'deny', 'the old flag keeps the exact-spelling rule');
   assert.equal(permissionEquivalent('node .claude/hooks/gate.mjs --onayla')?.decision, 'ask', 'Codex/Antigravity: old flag');
   assert.equal(permissionEquivalent('node .claude/hooks/commit-gate.mjs --approve "board-qa"'), null, 'commit-gate --approve is not the gate approval');
+  // 3.15.0 audit: Windows paths (unquote drops backslashes) and a renamed copy must not slip past the gate approval rule
+  assert.equal(ask('node .claude\\hooks\\gate.mjs --approve'), 'ask', 'Windows path, exact spelling');
+  assert.equal(ask('node ".claude\\hooks\\gate.mjs" --approve'), 'deny', 'quoted Windows path is not the exact spelling');
+  assert.equal(ask('node hooks\\gate.mjs --approve ; echo x'), 'deny');
+  assert.equal(ask("node '.claude\\hooks\\gate.mjs' --onayla ; echo x"), 'deny');
+  assert.equal(ask('node /tmp/h/x-gate.mjs --approve'), 'deny', 'renamed copy');
+  assert.equal(permissionEquivalent('node /tmp/h/x-gate.mjs --approve')?.decision, 'ask', 'Codex/Antigravity: renamed copy');
+  assert.equal(permissionEquivalent('node .claude\\hooks\\gate.mjs --approve')?.decision, 'ask', 'Codex/Antigravity: Windows path');
   // An approval left in the pre-3.15 folder with the pre-3.15 key
   const a = JSON.parse(fs.readFileSync(approvalPath(p), 'utf8'));
   fs.rmSync(approvalPath(p));

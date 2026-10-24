@@ -240,7 +240,7 @@ export function scopeIssue(command, dir, root) {
 
 // Commands denied/asked in Claude Code via .claude/settings.json → permissions. Codex and Antigravity have no such
 // list; this is its counterpart (applied only on those tools, Claude's behavior does not change).
-// Old flags (--plan-ekle, --onayla) stay until 3.16.0. (?<![\w-]) keeps commit-gate.mjs --approve out of the gate rule.
+// Old flags (--plan-ekle, --onayla) stay until 3.16.0. (?<!commit-) keeps only commit-gate.mjs --approve out of the gate rule.
 const PERMISSION_EQUIVALENT = [
   ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'rm -rf ile toplu silme'],
   ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'Klasör toplu siliniyor'],
@@ -249,7 +249,7 @@ const PERMISSION_EQUIVALENT = [
   ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, '.env veya secrets/ dosyasına erişiliyor (AI okumaz, yazmaz)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--(plan-add|plan-ekle)\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
-  ['ask', /(?<![\w-])gate\.mjs['"]?\s+['"]?--(approve|onayla)\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
+  ['ask', /(?<!commit-)gate\.mjs['"]?\s+['"]?--(approve|onayla)\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked
   // (.git: the gate command approval and git hooks live there)
   ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents|git)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],

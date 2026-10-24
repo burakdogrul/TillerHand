@@ -214,12 +214,15 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
   const stop = (flag) => ({ Stop: [{ hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs" ${flag}` }] }] });
   const old = { permissions: { allow: ['Bash(npm test)'], ask: ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)'] }, hooks: stop('--sessiz') };
-  const s = migrateSettings(old, kit);
+  const { settings: s, added } = migrateSettings(old, kit);
+  assert.ok(added.includes('ask: Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'added rules are listed for the report');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'new ask rule added');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'));
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)'), 'old rule kept');
   assert.equal(s.permissions.allow[0], 'Bash(npm test)', 'project rule kept first');
   assert.deepEqual(s.hooks, stop('--quiet'));
-  assert.deepEqual(migrateSettings(s, kit), s, 'running again changes nothing');
+  assert.deepEqual(migrateSettings(s, kit), { settings: s, added: [] }, 'running again changes nothing');
+  for (const bad of [null, 'x', { permissions: 'abc' }, { permissions: { allow: 'xyz' } }, { permissions: { allow: { a: 1 } } }])
+    assert.throws(() => migrateSettings(bad, kit), Error, 'a broken shape is reported, not merged');
   assert.deepEqual(old.hooks, stop('--sessiz'), 'the input is not mutated');
 });
