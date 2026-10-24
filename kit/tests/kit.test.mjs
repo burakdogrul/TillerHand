@@ -220,15 +220,22 @@ test('status line and dashboard: before and after setup', () => {
 test('3.15.0 update settings migration: missing kit permission rules are added, project rules stay, the old dashboard flag is rewritten', () => {
   const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
   const stop = (flag) => ({ Stop: [{ hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs" ${flag}` }] }] });
-  const old = { permissions: { allow: ['Bash(npm test)'], ask: ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)'] }, hooks: stop('--sessiz') };
-  const { settings: s, added } = migrateSettings(old, kit);
+  const oldAllow = ['Bash(node .claude/hooks/freeze-guard.mjs --plan-kaydet:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-bitir)',
+    'Bash(node .claude/hooks/tools.mjs --gerekli:*)', 'Bash(node .claude/hooks/tools.mjs --olc)', 'Bash(node .claude/hooks/tools.mjs --kapat:*)'];
+  const oldAsk = ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)', 'Bash(node .claude/hooks/gate.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac:*)'];
+  // The user's own rule that only looks like an old one (another script, another spelling) stays
+  const own = ['Bash(npm test)', 'Bash(node scripts/x.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac)'];
+  const old = { permissions: { allow: [own[0], ...oldAllow, own[1]], ask: [...oldAsk, own[2]] }, hooks: stop('--sessiz') };
+  const { settings: s, added, removed } = migrateSettings(old, kit);
   assert.ok(added.includes('ask: Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'added rules are listed for the report');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'new ask rule added');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'));
-  assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)'), 'old rule kept');
-  assert.equal(s.permissions.allow[0], 'Bash(npm test)', 'project rule kept first');
+  assert.deepEqual(removed.sort(), [...oldAllow.map((r) => `allow: ${r}`), ...oldAsk.map((r) => `ask: ${r}`)].sort(), '3.17.0: the 8 old kit rules are removed and listed');
+  assert.ok(![...s.permissions.allow, ...s.permissions.ask].some((r) => [...oldAllow, ...oldAsk].includes(r)));
+  assert.deepEqual(s.permissions.allow.slice(0, 2), own.slice(0, 2), 'project rules kept, in order');
+  assert.ok(s.permissions.ask.includes(own[2]));
   assert.deepEqual(s.hooks, stop('--quiet'));
-  assert.deepEqual(migrateSettings(s, kit), { settings: s, added: [] }, 'running again changes nothing');
+  assert.deepEqual(migrateSettings(s, kit), { settings: s, added: [], removed: [] }, 'running again changes nothing');
   for (const bad of [null, 'x', { permissions: 'abc' }, { permissions: { allow: 'xyz' } }, { permissions: { allow: { a: 1 } } }])
     assert.throws(() => migrateSettings(bad, kit), Error, 'a broken shape is reported, not merged');
   assert.deepEqual(old.hooks, stop('--sessiz'), 'the input is not mutated');

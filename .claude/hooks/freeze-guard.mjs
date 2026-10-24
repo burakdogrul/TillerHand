@@ -59,11 +59,10 @@ const PLAN_FREE = ['docs/', 'CHANGELOG.md', ...FREE];
 export const inScope = (rel, paths) => [...PLAN_FREE, ...paths].some((y) => rel === y || (y.endsWith('/') && rel.startsWith(y)));
 
 // Broken or hand-edited file: no plan.
-// Keys before 3.15.0 (gorev, yollar) are still read; remove in 3.17.0.
 export function readPlan(dir = root) {
   try {
     const p = JSON.parse(fs.readFileSync(planPath(dir), 'utf8'));
-    const task = p?.task ?? p?.gorev, paths = p?.paths ?? p?.yollar;
+    const task = p?.task, paths = p?.paths;
     return typeof task === 'string' && Array.isArray(paths) ? { task, paths: paths.filter((y) => typeof y === 'string') } : null;
   } catch { return null; }
 }
@@ -95,8 +94,6 @@ function setPlan(mode, args) {
   console.log(`Kapsam kalkanı: ${plan.task} · ${plan.paths.length} yol. Liste dışı mevcut dosyaya yazım sorulur.`);
 }
 
-// Flags before 3.15.0; still accepted with a warning, remove in 3.17.0
-const OLD_FLAGS = { '--plan-kaydet': '--plan-save', '--plan-ekle': '--plan-add', '--plan-bitir': '--plan-end' };
 const MODES = ['--set', '--off', '--status', '--plan-save', '--plan-add', '--plan-end'];
 
 // ONLY the first argument sets the mode (the permission list matches by prefix: "--set:*" and "--status" without
@@ -161,8 +158,11 @@ function hook() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const [arg, value] = process.argv.slice(2);
-  const mode = (Object.hasOwn(OLD_FLAGS, arg) ? OLD_FLAGS[arg] : arg);
-  if (Object.hasOwn(OLD_FLAGS, arg)) console.error(`Uyarı: ${arg} eski bayrak; yenisi ${mode}. 3.17.0'da kalkacak.`);
+  const [mode, value] = process.argv.slice(2);
+  // A mistyped or removed flag must fail loudly: run as the hook it would pass silently and the AI would think the plan is saved
+  if (mode?.startsWith('--') && !MODES.includes(mode)) {
+    console.error(`Bilinmeyen bayrak: ${mode}. Kullanım: freeze-guard.mjs ${MODES.join(' | ')}`);
+    process.exit(1);
+  }
   MODES.includes(mode) ? configure(mode, value) : hook();
 }

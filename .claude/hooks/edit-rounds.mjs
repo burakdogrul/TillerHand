@@ -15,17 +15,14 @@ export const isCodeFile = (rel) => CODE.test(rel);
 
 const statePath = (root) => path.join(root, '.claude', 'state', 'edit-rounds.json');
 // The file may have been broken by hand or by another tool: only fields in the expected shape are taken.
-// Keys before 3.15.0 (oturum, sayac, bekleyen) are still read; remove in 3.17.0.
 function readState(root) {
   let d;
   try { d = JSON.parse(fs.readFileSync(statePath(root), 'utf8')); } catch { return {}; }
   if (!d || typeof d !== 'object') return {};
-  const rawCounts = d.counts ?? d.sayac;
-  const counts = rawCounts && typeof rawCounts === 'object' && !Array.isArray(rawCounts)
-    ? Object.fromEntries(Object.entries(rawCounts).filter(([, n]) => Number.isInteger(n) && n > 0)) : {};
-  const rawPending = d.pending ?? d.bekleyen;
-  const pending = Array.isArray(rawPending) ? rawPending.filter((x) => typeof x === 'string') : [];
-  return { session: d.session ?? d.oturum, counts, pending };
+  const counts = d.counts && typeof d.counts === 'object' && !Array.isArray(d.counts)
+    ? Object.fromEntries(Object.entries(d.counts).filter(([, n]) => Number.isInteger(n) && n > 0)) : {};
+  const pending = Array.isArray(d.pending) ? d.pending.filter((x) => typeof x === 'string') : [];
+  return { session: d.session, counts, pending };
 }
 function writeState(root, d) {
   fs.mkdirSync(path.dirname(statePath(root)), { recursive: true });

@@ -37,7 +37,7 @@ before(() => {
   sh('git add . && git commit -qm init');
 });
 after(() => {
-  for (const legacy of [false, true]) fs.rmSync(approvalPath(p, { legacy }), { force: true });
+  fs.rmSync(approvalPath(p), { force: true });
   fs.rmSync(p, { recursive: true, force: true });
 });
 
@@ -195,42 +195,42 @@ test('3.14.1 audit: an approval record elsewhere via GIT_DIR cannot be used', ()
   agents('node -e "process.exit(0)"');
 });
 
-test('3.15.0 old flag and old state: --onayla still approves (with a warning) and is asked; old approval and gate keys are read', () => {
+test('3.17.0 the pre-3.15 flag and state are gone: --onayla does not approve; the old approval folder and gate keys are not read', () => {
   agents('node -e "process.exit(0)"');
+  fs.rmSync(approvalPath(p), { force: true }); // an earlier test approved this same list
   const old = gate('--onayla');
-  assert.equal(old.status, 0);
-  assert.match(old.stderr, /eski bayrak.*--approve/);
-  assert.equal(gate('--run').status, 0, 'approval written by the old flag counts');
-  assert.equal(ask('node .claude/hooks/gate.mjs --onayla'), 'ask', 'the old flag is still asked');
-  assert.equal(ask('node -e "1" && node .claude/hooks/gate.mjs --onayla'), 'deny', 'the old flag keeps the exact-spelling rule');
-  assert.equal(permissionEquivalent('node .claude/hooks/gate.mjs --onayla')?.decision, 'ask', 'Codex/Antigravity: old flag');
+  assert.equal(old.status, 1);
+  assert.match(old.stderr, /Kullanım/);
+  assert.equal(gate('--run').status, 1, 'the old flag wrote no approval');
+  assert.equal(permissionEquivalent('node .claude/hooks/gate.mjs --onayla'), null, 'Codex/Antigravity: no rule for a flag that does nothing');
   assert.equal(permissionEquivalent('node .claude/hooks/commit-gate.mjs --approve "board-qa"'), null, 'commit-gate --approve is not the gate approval');
   // 3.15.0 audit: Windows paths (unquote drops backslashes) and a renamed copy must not slip past the gate approval rule
   assert.equal(ask('node .claude\\hooks\\gate.mjs --approve'), 'ask', 'Windows path, exact spelling');
   assert.equal(ask('node ".claude\\hooks\\gate.mjs" --approve'), 'deny', 'quoted Windows path is not the exact spelling');
   assert.equal(ask('node hooks\\gate.mjs --approve ; echo x'), 'deny');
-  assert.equal(ask("node '.claude\\hooks\\gate.mjs' --onayla ; echo x"), 'deny');
+  assert.equal(ask("node '.claude\\hooks\\gate.mjs' --approve ; echo x"), 'deny');
   assert.equal(ask('node /tmp/h/x-gate.mjs --approve'), 'deny', 'renamed copy');
   assert.equal(permissionEquivalent('node /tmp/h/x-gate.mjs --approve')?.decision, 'ask', 'Codex/Antigravity: renamed copy');
   assert.equal(permissionEquivalent('node .claude\\hooks\\gate.mjs --approve')?.decision, 'ask', 'Codex/Antigravity: Windows path');
-  // An approval left in the pre-3.15 folder with the pre-3.15 key
+  // An approval left in the pre-3.15 folder (kapi-onayi) with the pre-3.15 key
+  gate('--approve');
   const a = JSON.parse(fs.readFileSync(approvalPath(p), 'utf8'));
   fs.rmSync(approvalPath(p));
-  assert.equal(gate('--run').status, 1, 'no approval anywhere');
-  fs.mkdirSync(path.dirname(approvalPath(p, { legacy: true })), { recursive: true });
-  fs.writeFileSync(approvalPath(p, { legacy: true }), JSON.stringify({ ozet: a.digest }));
-  assert.equal(gate('--run').status, 0, 'the old approval folder and key are read');
-  // A gate result written before 3.15 is read by the commit gate
+  const oldFile = path.join(path.dirname(path.dirname(approvalPath(p))), 'kapi-onayi', path.basename(approvalPath(p)));
+  const hadOldDir = fs.existsSync(path.dirname(oldFile));
+  fs.mkdirSync(path.dirname(oldFile), { recursive: true });
+  fs.writeFileSync(oldFile, JSON.stringify({ ozet: a.digest, digest: a.digest }));
+  assert.equal(gate('--run').status, 1, 'the old approval folder is not read');
+  fs.rmSync(oldFile, { force: true });
+  if (!hadOldDir) fs.rmdirSync(path.dirname(oldFile)); // the test must not bring back the retired folder
+  // A gate result written before 3.15 is not read by the commit gate: the gate has to run again
+  gate('--approve');
   sh('git add -A && git commit -qm ara4 --allow-empty');
   write('a.js', 'eski');
   approve('board-qa');
   const signature = JSON.parse(fs.readFileSync(path.join(p, '.claude/state/commit-approval.json'), 'utf8')).signature;
-  fs.writeFileSync(path.join(p, '.claude/state/gate.json'), JSON.stringify({ imza: signature, gecti: false, bos: false, kontroller: [{ ad: 'test', durum: 'kaldı' }] }));
-  const red = commit();
-  assert.equal(red.status, 2);
-  assert.match(red.stderr, /kırmızı \(test\)/, 'old status values are mapped');
   fs.writeFileSync(path.join(p, '.claude/state/gate.json'), JSON.stringify({ imza: signature, gecti: true }));
-  assert.equal(commit().status, 0, 'an old green result with the right signature passes');
+  assert.equal(commit().status, 2, 'an old green result does not open the commit gate');
 });
 
 test('3.14.1 audit: a semgrep placed inside the project is not suggested', { skip: process.platform !== 'win32' }, () => {

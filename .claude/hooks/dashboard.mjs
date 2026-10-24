@@ -12,8 +12,7 @@ import { packageStatus, commandMode } from './tools.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
-// --sessiz: the flag before 3.15.0 (remove in 3.17.0)
-const quiet = args.includes('--quiet') || args.includes('--sessiz');
+const quiet = args.includes('--quiet');
 // Running as a hook (--quiet), an error must not break Claude's flow
 if (quiet) process.on('uncaughtException', () => process.exit(0));
 const root = path.resolve(args.find((a) => !a.startsWith('--')) ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
@@ -73,7 +72,7 @@ const designDirection = tableRows(findSection(sections(readText(file('docs/desig
 const assets = producedAssets(root);
 const councils = councilMinutes(root);
 let tokenCost = null;
-try { const c = JSON.parse(fs.readFileSync(file('.claude/state/cost.json'), 'utf8')); tokenCost = { ...costSummary(c.data ?? c.veri), readAt: c.readAt ?? c.okundu }; } catch { /* cost.mjs has not run yet */ }
+try { const c = JSON.parse(fs.readFileSync(file('.claude/state/cost.json'), 'utf8')); tokenCost = { ...costSummary(c.data), readAt: c.readAt }; } catch { /* cost.mjs has not run yet */ }
 let previews = [];
 try {
   previews = fs.readdirSync(file('.previews'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => {

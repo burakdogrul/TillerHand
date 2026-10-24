@@ -24,7 +24,7 @@ if (data.count % INTERVAL === 0) {
 }
 try {
   const b = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'context.json'), 'utf8'));
-  const percent = b.percent ?? b.yuzde; // yuzde: key before 3.15.0 (remove in 3.17.0)
+  const percent = b.percent;
   if (percent >= 70) notes.push(`[Kit] Bağlam %${percent} dolu: yanıt kalitesi düşebilir. Mevcut adımı bitir, kullanıcıya /wrap-up ve ardından /clear öner.`);
   else if (percent >= 50 && data.count % 4 === 0) notes.push(`[Kit] Bağlam %${percent}: uygun bir noktada /wrap-up + /clear önermeyi düşün.`);
 } catch { /* no context info */ }

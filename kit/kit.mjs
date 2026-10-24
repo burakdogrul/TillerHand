@@ -99,19 +99,30 @@ export function merge(a, b) {
   return b;
 }
 
+// Rules the kit added before 3.15.0 for Turkish flags that no longer exist: they match nothing now. Exact spelling only, so a rule
+// the user wrote is never removed.
+const OLD_RULES = {
+  allow: ['Bash(node .claude/hooks/freeze-guard.mjs --plan-kaydet:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-bitir)',
+    'Bash(node .claude/hooks/tools.mjs --gerekli:*)', 'Bash(node .claude/hooks/tools.mjs --olc)', 'Bash(node .claude/hooks/tools.mjs --kapat:*)'],
+  ask: ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)', 'Bash(node .claude/hooks/gate.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac:*)'],
+};
+
 // settings.json belongs to the project and is not replaced on update, but the kit's permission rules must reach it:
-// missing allow/ask/deny rules are added (the project's own rules stay), and hook flags renamed in 3.15.0 are rewritten
-// so the old and new hook entries do not both run.
-// Returns { settings, added: ['ask: Bash(...)', ...] }; throws on a shape it cannot merge safely (the caller reports it).
+// missing allow/ask/deny rules are added (the project's own rules stay), the kit's old rules are removed, and hook flags
+// renamed in 3.15.0 are rewritten so the old and new hook entries do not both run.
+// Returns { settings, added: ['ask: Bash(...)', ...], removed: [...] }; throws on a shape it cannot merge safely (the caller reports it).
 export function migrateSettings(projectSettings, kitSettings) {
   const isObject = (x) => x && typeof x === 'object' && !Array.isArray(x);
   if (!isObject(projectSettings)) throw new Error('kök bir nesne değil');
   const s = structuredClone(projectSettings);
   if (s.permissions !== undefined && !isObject(s.permissions)) throw new Error('permissions bir nesne değil');
-  const added = [];
+  const added = [], removed = [];
   for (const k of ['allow', 'ask', 'deny']) {
-    const list = s.permissions?.[k];
+    let list = s.permissions?.[k];
     if (list !== undefined && !Array.isArray(list)) throw new Error(`permissions.${k} bir dizi değil`);
+    const old = (list ?? []).filter((r) => OLD_RULES[k]?.includes(r));
+    if (old.length) list = s.permissions[k] = list.filter((r) => !old.includes(r));
+    removed.push(...old.map((r) => `${k}: ${r}`));
     const have = new Set(list ?? []);
     const add = (kitSettings.permissions?.[k] ?? []).filter((r) => !have.has(r));
     if (add.length) (s.permissions ??= {})[k] = [...(list ?? []), ...add];
@@ -128,7 +139,7 @@ export function migrateSettings(projectSettings, kitSettings) {
       if (typeof h?.command === 'string') h.command = h.command.replace(/(dashboard\.mjs"?)\s+--sessiz\b/, '$1 --quiet');
     }
   }
-  return { settings: s, added };
+  return { settings: s, added, removed };
 }
 
 function applyPatch(projectDir, { kind, target, source }) {
@@ -381,7 +392,8 @@ function update({ project, addons: newAddons, tool }) {
       } catch (e) { report.conflicts.push(`${rel} (izinler eklenmedi: ${e.message})`); continue; }
       if (JSON.stringify(migrated.settings) !== JSON.stringify(local)) {
         fs.writeFileSync(target, JSON.stringify(migrated.settings, null, 2) + '\n');
-        report.updated.push(`${rel}${migrated.added.length ? ` (eklenenler: ${migrated.added.join(' · ')})` : ' (hook bayrağı)'}`);
+        const notes = [migrated.added.length && `eklenenler: ${migrated.added.join(' · ')}`, migrated.removed.length && `kaldırılan eski satırlar: ${migrated.removed.join(' · ')}`].filter(Boolean);
+        report.updated.push(`${rel} (${notes.join('; ') || 'hook bayrağı'})`);
       }
       continue;
     }

@@ -113,7 +113,7 @@ test('settings: package plugins off by default, core on, marketplaces defined', 
   // Enabling a package runs plugin hooks with the user's rights: always asked
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'));
   assert.ok(!s.permissions.allow.some((r) => r.startsWith('Bash(node .claude/hooks/tools.mjs') && (r.includes(':*)') && !/--(required|disable):\*\)$/.test(r))), 'no broad permission');
-  assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --ac:*)'), '3.15.0: the old flag is still asked');
+  assert.ok(![...s.permissions.allow, ...s.permissions.ask].some((r) => /--(ac|kapat|gerekli|olc|onayla|plan-ekle|plan-kaydet|plan-bitir)\b/.test(r)), '3.17.0: no pre-3.15 flag');
   // --commands rewrites the shared settings.json: asked (Codex/Antigravity: the hook counterpart)
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --commands:*)'));
   for (const k of ['node .claude/hooks/tools.mjs --commands full', 'node ".claude/hooks/tools.mjs" "--commands" light'])

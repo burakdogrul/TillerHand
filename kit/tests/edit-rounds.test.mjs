@@ -69,10 +69,10 @@ test('F-05 a broken state file does not crash; the Antigravity note goes only to
   assert.equal(run({ invocationNum: 1, conversationId: 'baska', workspacePaths: [p] }, ['--inject']), null, 'another session\'s note is not given');
 });
 
-test('3.15.0 a state file with pre-3.15 keys is read and rewritten with the new keys', () => {
+test('3.17.0 a state file with pre-3.15 keys is not read: counting starts over with the new keys', () => {
   const state = path.join(p, '.claude', 'state', 'edit-rounds.json');
   fs.writeFileSync(state, JSON.stringify({ oturum: 'o1', sayac: { 'src/f.ts': 4 }, bekleyen: [] }));
-  assert.match(edit('src/f.ts', 'o1').hookSpecificOutput.additionalContext, /5\. kez/, 'old count carried over');
+  edit('src/f.ts', 'o1');
   const d = JSON.parse(fs.readFileSync(state, 'utf8'));
-  assert.deepEqual([d.session, d.counts['src/f.ts'], 'sayac' in d], ['o1', 5, false]);
+  assert.deepEqual([d.session, d.counts['src/f.ts'], 'sayac' in d], ['o1', 1, false]);
 });

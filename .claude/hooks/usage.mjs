@@ -37,11 +37,12 @@ export function readLimits(root, now = Date.now()) {
   } catch {
     return null;
   }
-  // Keys before 3.15.0 (okundu, yuzde, sifirlanma) are still read; remove in 3.17.0
-  data.readAt ??= data.okundu;
+  // An old (pre-3.15) or broken file is "unknown": read as numbers it would show NaN and a green level
+  if (!data || typeof data !== 'object' || typeof data.readAt !== 'number') return null;
   for (const k of Object.keys(WINDOWS)) {
     const w = data[k];
-    if (w) data[k] = { percent: w.percent ?? w.yuzde, resetsAt: w.resetsAt ?? w.sifirlanma };
+    if (typeof w?.percent === 'number') data[k] = { percent: w.percent, resetsAt: w.resetsAt };
+    else delete data[k];
     // Past the reset time the window has renewed; the old percentage no longer holds
     if (data[k]?.resetsAt && data[k].resetsAt * 1000 <= now) data[k] = { percent: 0, resetsAt: null, renewed: true };
   }

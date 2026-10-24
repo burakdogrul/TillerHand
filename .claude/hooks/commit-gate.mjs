@@ -71,20 +71,17 @@ function approve(note) {
   console.log(`Commit kapısı açıldı (${files.length} dosya). Not: ${note}`);
 }
 
-// State files before 3.15.0 used Turkish keys; read both (remove in 3.17.0)
 const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
-const OLD_STATUS = { 'geçti': 'passed', 'kaldı': 'failed', 'tanımsız': 'unset', 'atlandı': 'skipped' };
 function readGate() {
   const g = readJson(path.join(root, '.claude', 'state', 'gate.json'));
   if (!g) return null;
-  const raw = g.checks ?? g.kontroller;
   // A hand-broken file must not crash the hook (a crash exits 1, which does not block the commit)
-  const checks = (Array.isArray(raw) ? raw : []).filter((k) => k && typeof k === 'object').map((k) => ({ name: k.name ?? k.ad, status: OLD_STATUS[k.status ?? k.durum] ?? k.status ?? k.durum }));
-  return { signature: g.signature ?? g.imza, passed: g.passed ?? g.gecti, empty: g.empty ?? g.bos, checks };
+  const checks = (Array.isArray(g.checks) ? g.checks : []).filter((k) => k && typeof k === 'object').map((k) => ({ name: k.name, status: k.status }));
+  return { signature: g.signature, passed: g.passed, empty: g.empty, checks };
 }
 function readApproval() {
   const a = readJson(approvalFile);
-  return a && { signature: a.signature ?? a.imza, note: a.note ?? a.not };
+  return a && { signature: a.signature, note: a.note };
 }
 
 function hook() {
@@ -103,11 +100,11 @@ function hook() {
   }
   // The gate command approval gives the commands in AGENTS.md permission to run: the user is asked (also covers spellings the permission list misses).
   // (?<!commit-) keeps only commit-gate.mjs --approve out (a renamed copy like x-gate.mjs still matches); both the raw and
-  // unquoted text are tested (unquote drops the backslashes of .claude\hooks\gate.mjs). --onayla: flag before 3.15.0 (remove in 3.17.0).
-  if ([command, open].some((c) => /(?<!commit-)gate\.mjs\b[^;&|\n]*--(approve|onayla)\b/i.test(c))) {
+  // unquoted text are tested (unquote drops the backslashes of .claude\hooks\gate.mjs).
+  if ([command, open].some((c) => /(?<!commit-)gate\.mjs\b[^;&|\n]*--approve\b/i.test(c))) {
     // The prompt reads AGENTS.md now: a chain, an env variable, a node flag or a redirect must not change it after the
     // prompt and get another list approved. Only the exact spelling is accepted.
-    if (!/^\s*node\s+(\.\/)?\.claude[\\/]hooks[\\/]gate\.mjs\s+(['"]?)--(?:approve|onayla)\2\s*$/.test(command)) {
+    if (!/^\s*node\s+(\.\/)?\.claude[\\/]hooks[\\/]gate\.mjs\s+(['"]?)--approve\2\s*$/.test(command)) {
       console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny',
         permissionDecisionReason: 'Kapı komut onayı sadece tam bu yazımla, tek başına çalıştırılır (zincir, ortam değişkeni, bayrak, yönlendirme yok): node .claude/hooks/gate.mjs --approve' } }));
       process.exit(0);

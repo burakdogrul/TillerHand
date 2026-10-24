@@ -94,19 +94,16 @@ test('F-06 audit: a quoted mode is asked too; called from a subfolder the plan i
   cli('--plan-end');
 });
 
-test('3.15.0 old plan flags still work with a warning; --plan-ekle is still asked; an old plan.json is read', () => {
-  const saved = cli('--plan-kaydet', 'G-10', 'src/a.ts');
-  assert.equal(saved.status, 0, saved.stderr);
-  assert.match(saved.stderr, /eski bayrak.*--plan-save/);
-  assert.equal(edit('src/b.ts').decision, 'ask');
-  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-ekle src/b.ts')?.decision, 'ask', 'Codex/Antigravity: old flag');
-  assert.equal(cli('--plan-ekle', 'src/b.ts').status, 0);
-  assert.equal(edit('src/b.ts'), null);
-  assert.equal(cli('--plan-bitir').status, 0);
-  assert.ok(!fs.existsSync(path.join(p, '.claude/state/plan.json')));
+test('3.17.0 the pre-3.15 plan flags are unknown flags (an error, not a silent no-op); an old plan.json is not read', () => {
+  for (const flag of ['--plan-kaydet', '--plan-ekle', '--plan-bitir']) {
+    const r = cli(flag, 'G-10', 'src/a.ts');
+    assert.equal(r.status, 1, flag);
+    assert.match(r.stderr, /Bilinmeyen bayrak/, flag);
+  }
+  assert.ok(!fs.existsSync(path.join(p, '.claude/state/plan.json')), 'no plan was saved');
+  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-ekle src/b.ts'), null, 'Codex/Antigravity: no rule for a flag that does nothing');
   fs.writeFileSync(path.join(p, '.claude/state/plan.json'), JSON.stringify({ gorev: 'G-11', yollar: ['src/a.ts'] }));
-  assert.match(edit('src/b.ts')?.reason ?? '', /G-11/, 'pre-3.15 keys');
-  assert.equal(edit('src/a.ts'), null);
+  assert.equal(edit('src/b.ts'), null, 'pre-3.15 keys: no plan');
   cli('--plan-end');
 });
 

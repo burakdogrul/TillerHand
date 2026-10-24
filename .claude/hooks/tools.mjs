@@ -142,14 +142,9 @@ const tokenOf = (measurement, ids) => {
   return found.length ? `~${found.reduce((s, o) => s + o.skillTokens + o.agentTokens, 0)} token` : '? token (kurulu değil)';
 };
 const NOTE = 'Açtıktan sonra /reload-plugins. Oturum ortasında açmak prompt önbelleğini bozar; en iyisi faz sınırında, /clear ile.';
-// Flags before 3.15.0; still accepted with a warning, remove in 3.17.0
-const OLD_FLAGS = { '--ac': '--enable', '--kapat': '--disable', '--gerekli': '--required', '--olc': '--measure' };
-
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  const [arg, name] = process.argv.slice(2);
-  const flag = (Object.hasOwn(OLD_FLAGS, arg) ? OLD_FLAGS[arg] : arg);
-  if (Object.hasOwn(OLD_FLAGS, arg)) console.error(`Uyarı: ${arg} eski bayrak; yenisi ${flag}. 3.17.0'da kalkacak.`);
+  const [flag, name] = process.argv.slice(2);
   try {
     if (flag === '--enable' || flag === '--disable') {
       const ids = setPackage(root, name, flag === '--enable');

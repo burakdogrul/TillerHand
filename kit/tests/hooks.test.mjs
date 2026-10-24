@@ -81,3 +81,19 @@ test('limit: write, read, level and reset', () => {
   writeLimits(p, undefined, now); // rate_limits yoksa dosyaya dokunmaz
   assert.ok(readLimits(p, now));
 });
+
+test('3.17.0 limit: a file in the pre-3.15 shape or a broken one is unknown, never green', () => {
+  const file = path.join(p, '.claude', 'state', 'usage.json');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const now = 1_800_000_000_000;
+  for (const body of [{ okundu: now, five_hour: { yuzde: 92, sifirlanma: now / 1000 + 600 } }, null, [], { readAt: 'x' }]) {
+    fs.writeFileSync(file, JSON.stringify(body));
+    assert.equal(level(readLimits(p, now)), 'unknown', JSON.stringify(body));
+  }
+  // A window with a non-number percent is dropped, the other one still counts
+  fs.writeFileSync(file, JSON.stringify({ readAt: now, five_hour: { yuzde: 92 }, seven_day: { percent: 91, resetsAt: now / 1000 + 600 } }));
+  const r = readLimits(p, now);
+  assert.equal(r.five_hour, undefined);
+  assert.equal(level(r), 'red');
+  fs.rmSync(file);
+});

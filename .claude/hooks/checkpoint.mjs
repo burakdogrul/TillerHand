@@ -58,9 +58,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.log(`Çalışan nokta kaydedildi: ${saveCheckpoint(root, arg[1] ?? '')}`);
     } else if (mode === '--restore') {
       const target = arg[1];
-      // --evet: the flag before 3.15.0; still accepted with a warning, remove in 3.17.0
-      if (arg[2] === '--evet') console.error("Uyarı: --evet eski bayrak; yenisi --yes. 3.17.0'da kalkacak.");
-      if (!target || target.startsWith('--') || (arg[2] !== '--yes' && arg[2] !== '--evet')) {
+      if (!target || target.startsWith('--') || arg[2] !== '--yes') {
         console.error('Geri dönüş onay ister: node .claude/hooks/checkpoint.mjs --restore <etiket|commit> --yes');
         process.exit(1);
       }

@@ -5,6 +5,21 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.17.0] - 2026-10-25
+
+### Kaldırılan
+- **3.15.0 öncesinin Türkçe bayrakları artık çalışmıyor:** `--onayla`, `--evet`, `--sessiz`, `--kur`, `--plan-kaydet`, `--plan-ekle`, `--plan-bitir`, `--ac`, `--kapat`, `--gerekli`, `--olc`. Yerlerine `--approve`, `--yes`, `--quiet`, `--install`, `--plan-save`, `--plan-add`, `--plan-end`, `--enable`, `--disable`, `--required` ve `--measure` geçti. Eski bayraklar çoğunlukla kullanım mesajıyla hata verir. İki istisna var: `plugins-sync.mjs --kur` artık kurulum yapmaz, yalnızca listeler; `dashboard.mjs --sessiz` yok sayılır. Kapsam kalkanında (`freeze-guard.mjs`) bilinmeyen bayrak artık sessizce geçmiyor, hata veriyor; böylece AI planın kaydedildiğini sanmaz.
+- 3.15.0 öncesinin durum dosyası anahtarları (Türkçe JSON anahtarları) ve `~/.vibe-kit/kapi-onayi/` klasörü artık okunmuyor. Eski biçimli limit ve bağlam dosyası "bilinmiyor" sayılır; durum çubuğu ilk yanıttan sonra yenisini yazar.
+- `/kit-update`, kitin eski bayraklar için eklediği 8 izin satırını projenin `.claude/settings.json` dosyasından siler: 5'i allow'da, 3'ü ask'te. Silinenleri raporda listeler. Yalnız tam eşleşen satırlar silinir; senin yazdığın satırlara dokunulmaz.
+
+- Kullanılmayan `.claude/.hatirlatma.json` kitten çıktı (yerini 3.x'te `.claude/state/reminder.json` almıştı). Yeni projelere artık kopyalanmaz.
+
+### Elle uyarla
+- Projende `.claude/.hatirlatma.json` varsa silebilirsin; `/kit-update` onu "kitten kaldırılmış" diye listeler.
+- Kapı komut onayını 3.15.0'dan önce verdiysen ve o günden beri yenilemediysen bir kez daha onayla: `node .claude/hooks/gate.mjs --approve`. Kapı onaysız komut çalıştırmaz, bunu sana söyler.
+- Kendi betiklerinde veya notlarında eski bayraklardan biri geçiyorsa yenisiyle değiştir.
+- 3.15.0'dan önce açılıp hâlâ açık duran bir kapsam kalkanı planı varsa artık okunmaz. Planı `--plan-save` ile yeniden kaydet.
+
 ## [3.16.3] - 2026-10-25
 
 ### Düzeltilen

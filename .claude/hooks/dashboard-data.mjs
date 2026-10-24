@@ -267,10 +267,9 @@ export function githubStatus(root, now = Date.now()) {
   return data;
 }
 
-// yuzde, okundu: keys before 3.15.0 (remove in 3.17.0)
 export function readContext(root) {
   try {
     const c = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'context.json'), 'utf8'));
-    return { percent: c.percent ?? c.yuzde, readAt: c.readAt ?? c.okundu };
+    return typeof c?.percent === 'number' ? { percent: c.percent, readAt: c.readAt } : null;
   } catch { return null; }
 }

@@ -36,12 +36,11 @@ export function readCommands(md) {
 
 // The approval record lives outside the project, in the user folder (keyed by a digest of the project's real path): no repo,
 // archive or .git can carry an approval. The home folder comes from the OS (os.userInfo); HOME/USERPROFILE cannot redirect it.
-// legacy: the folder name before 3.15.0 (still read; remove in 3.17.0).
-export function approvalPath(root, { legacy = false } = {}) {
+export function approvalPath(root) {
   let realRoot = root;
   try { realRoot = fs.realpathSync.native(root); } catch { /* missing: the given path */ }
   const key = crypto.createHash('sha256').update(realRoot.toLowerCase()).digest('hex').slice(0, 32);
-  return path.join(os.userInfo().homedir, '.vibe-kit', legacy ? 'kapi-onayi' : 'gate-approval', `${key}.json`);
+  return path.join(os.userInfo().homedir, '.vibe-kit', 'gate-approval', `${key}.json`);
 }
 const digest = (list) => crypto.createHash('sha256').update(JSON.stringify(list.map((k) => [k.name, k.command]))).digest('hex');
 export const commandList = (list) => list.filter((k) => k.command).map((k) => `- ${k.name}: ${k.command}`).join('\n');
@@ -57,9 +56,7 @@ export function approve(root) {
 
 function isApproved(root, list) {
   if (!list.some((k) => k.command)) return true; // nothing to run
-  // An approval from before 3.15.0 hashed [ad, komut] with the same values, so its digest still matches
-  const read = (legacy) => { try { const a = JSON.parse(fs.readFileSync(approvalPath(root, { legacy }), 'utf8')); return a.digest ?? a.ozet; } catch { return null; } };
-  return [read(false), read(true)].includes(digest(list));
+  try { return JSON.parse(fs.readFileSync(approvalPath(root), 'utf8')).digest === digest(list); } catch { return false; }
 }
 
 function check(root, { name, command }) {
@@ -123,9 +120,7 @@ export function runGate(root) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const arg = process.argv[2];
-  // --onayla: the flag before 3.15.0; still accepted with a warning, remove in 3.17.0
-  if (arg === '--onayla') console.error('Uyarı: --onayla eski bayrak; yenisi --approve. 3.17.0\'da kalkacak.');
-  if (arg === '--approve' || arg === '--onayla') { console.log(approve(findRoot())); process.exit(0); }
+  if (arg === '--approve') { console.log(approve(findRoot())); process.exit(0); }
   if (arg !== '--run') { console.error('Kullanım: node .claude/hooks/gate.mjs --run | --approve'); process.exit(1); }
   const { passed, text } = runGate(findRoot());
   console.log(text);

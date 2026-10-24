@@ -38,9 +38,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // No shell: arguments go straight to claude (claude is a single-file executable, .exe on Windows)
   const run = (...arg) => execFileSync('claude', arg, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000 });
   const reason = (h) => (h.stderr || h.stdout || h.message || '').toString().trim().split('\n')[0];
-  // --kur: the flag before 3.15.0; still accepted with a warning, remove in 3.17.0
-  if (process.argv.includes('--kur')) console.error("Uyarı: --kur eski bayrak; yenisi --install. 3.17.0'da kalkacak.");
-  const install = process.argv.includes('--install') || process.argv.includes('--kur');
+  const install = process.argv.includes('--install');
   let wanted;
   try { wanted = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf8')).enabledPlugins; } catch (h) {
     console.error(`.claude/settings.json okunamadı: ${h.message}`);
