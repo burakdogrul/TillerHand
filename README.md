@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.16.1-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.16.2-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -494,7 +494,7 @@ kit/
 ```
 
 - **Test:** `node --test "kit/tests/*.test.mjs"` (CI'da `kit-tests` iş akışı çalıştırır).
-- **Değerlendirme:** `node kit/eval/run.mjs`. Aynı görev kitli ve kitsiz `claude -p` ile çalışır, gizli testlerle puanlanır (`kit/eval/README.md`). İlk ölçüm (3.16.0, Sonnet, 3 görev, n=1): iki koşul da gizli testlerin hepsini geçti. Kit 11 test ekledi, kitsiz 3; kit ~2,3 kat maliyet ve ~1,7 kat süre harcadı. Görevler kolay kaldı, doğruluk farkı için daha zor görevler gerekiyor (`kit/eval/results/`).
+- **Değerlendirme:** `node kit/eval/run.mjs`. Aynı görev kitli ve kitsiz `claude -p` ile çalışır, gizli testlerle puanlanır (`kit/eval/README.md`). İlk ölçüm (3.16.0, Sonnet, 3 görev, n=1): iki koşul da gizli testlerin hepsini geçti. Kit 11 test ekledi, kitsiz 3; kit ~2,3 kat maliyet ve ~1,7 kat süre harcadı. Görevler kolay kaldı, doğruluk farkı için daha zor görevler gerekiyor. Bu ilk ölçüm 3.16.2'de düzeltilen bir kurulum hatasından etkilendi, yeniden koşulacak (`kit/eval/results/`).
 - **Sürüm çıkarmak:**
   1. `kit/VERSION` dosyasındaki numarayı artır.
   2. `kit/CHANGELOG.md`'de "[Yayınlanmamış]" bölümünü sürüm numarasıyla adlandır.

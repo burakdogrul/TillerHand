@@ -118,9 +118,16 @@ test('init: the kit stays in its own folder, the project is set up in its folder
   fs.cpSync(cloneKit('oyun-kit'), path.join(game, 'git_repo'), { recursive: true });
   const kitMjs = path.join(game, 'git_repo', 'kit', 'kit.mjs');
   fs.writeFileSync(path.join(game, 'git_repo', 'CLAUDE.local.md'), 'kişisel not'); // yerel klasörden kurulum
+  // Git-ignored personal files and secrets of a local kit checkout (3.16.2)
+  const personal = ['.claude/settings.local.json', '.claude/state/gate.json', '.env', '.env.local', 'secrets/key.txt', 'debug.log', 'CLAUDE-SECURITY-1/r.md'];
+  for (const f of personal) {
+    fs.mkdirSync(path.dirname(path.join(game, 'git_repo', f)), { recursive: true });
+    fs.writeFileSync(path.join(game, 'git_repo', f), '{}');
+  }
   const r = node(kitMjs, 'init', '--project', game);
   assert.equal(r.status, 0, r.stderr);
   assert.ok(!fs.existsSync(path.join(game, 'CLAUDE.local.md')), 'the personal CLAUDE.local.md is not copied into the project');
+  for (const f of personal) assert.ok(!fs.existsSync(path.join(game, f)), `${f} is not copied into the project`);
   for (const f of ['CLAUDE.md', 'README.md', '.claude/commands/start.md', '.claude/commands/adopt.md', 'docs/workflow/progress.md', '.git']) {
     assert.ok(fs.existsSync(path.join(game, f)), `${f} kuruldu`);
   }
@@ -137,7 +144,7 @@ test('init: the kit stays in its own folder, the project is set up in its folder
   assert.equal(k.status, 0, k.stderr);
   assert.equal(record(game).type, 'web-saas');
   assert.equal(read(path.join(game, 'docs/architecture/stack.md')), read(path.join(REPO, 'kit/templates/web-saas/docs/architecture/stack.md')), 'the type\'s stack.md overwrote the common placeholder');
-  assert.ok(!fs.readdirSync(game, { recursive: true }).some((f) => f.endsWith('.kit-new')), 'no conflicts in an empty project');
+  assert.deepEqual(fs.readdirSync(game, { recursive: true }).filter((f) => f.endsWith('.kit-new')), [], 'no conflicts in an empty project');
   assert.ok(fs.existsSync(kitMjs), 'install did not delete the kit folder');
   assert.match(update(game).stdout, /Değişiklik yok/);
 });

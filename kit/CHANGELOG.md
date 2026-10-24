@@ -5,6 +5,13 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.16.2] - 2026-10-25
+
+### Düzeltilen
+- **Güvenlik:** Kit yerel bir klasörden kurulunca (`init`, `install`) git'in yok saydığı kişisel dosyalar ve sırlar projeye kopyalanıyordu: `.env`, `.env.local`, `secrets/`, `.claude/settings.local.json`, `.claude/state/`, `*.log`. Artık hiçbir seviyede kopyalanmıyor. `.env.example` kopyalanmaya devam ediyor. GitHub'dan klonlanan kitte bu dosyalar olmadığı için sadece kitin yerel kopyasından kurulumlar etkilendi.
+- **Elle uyarla:** Kiti yerel bir kopyadan kurduysan projede bu dosyalar var mı bak (`.claude/settings.local.json` başkasının izinleri, `.env` başkasının sırları olabilir). Varsa sil; sırlar varsa değiştir.
+- 3.16.1'deki ilk değerlendirme ölçümü bu hatadan etkilendi (kitli koşu kişisel izin listesini devraldı). Sonuç dosyasında not var, ölçüm yeniden koşulacak.
+
 ## [3.16.1] - 2026-10-24
 
 ### Yeni

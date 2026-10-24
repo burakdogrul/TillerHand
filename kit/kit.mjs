@@ -34,6 +34,8 @@ const TOOLS = ['claude', 'codex', 'antigravity'];
 const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md']);
 // Files that only make sense in the kit repo and are not carried into projects
 const KIT_ONLY = ['.github/workflows/kit-tests.yml'];
+// Git-ignored personal files and secrets of a local kit checkout (a clone does not have them): never copied, at any depth
+const PERSONAL = /(^|\/)(\.env(\.(?!example(\.|$))[^/]*)?|secrets\/.*|\.claude\/(settings\.local\.json|state\/.*)|[^/]*\.kit-new|[^/]*\.log|logs\/.*|CLAUDE-SECURITY-[^/]*\/.*)$/;
 
 // Files the kit owns: on update they are replaced if the user has not changed them.
 // The rest belong to the project (CLAUDE.md, PRD, stack, settings.json...); the update only adds them if missing.
@@ -54,7 +56,7 @@ function listFiles(root, exclude = new Set()) {
       if (!rel && exclude.has(e.name)) continue;
       const r = rel ? `${rel}/${e.name}` : e.name;
       if (e.isDirectory()) walk(path.join(dir, e.name), r);
-      else if (!KIT_ONLY.includes(r)) result.push(r);
+      else if (!KIT_ONLY.includes(r) && !PERSONAL.test(r)) result.push(r);
     }
   })(root, '');
   return result;
