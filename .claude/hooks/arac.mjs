@@ -1,5 +1,6 @@
 // Hook girdi/çıktı katmanı: aynı koruma betikleri Claude Code, Codex ve Antigravity'de çalışsın.
 //   Claude Code: { tool_name, tool_input: { command | file_path, content, new_string, edits } }; CLAUDE_PROJECT_DIR verir.
+//                NotebookEdit: { notebook_path, new_source }.
 //   Codex:       Claude ile aynı alanlar + turn_id. Dosya düzenleme apply_patch; yama metni tool_input.command'da.
 //   Antigravity: { toolCall: { name, args }, workspacePaths }. Araçlar: run_command (CommandLine),
 //                write_to_file (TargetFile, CodeContent), replace_file_content (ReplacementContent),
@@ -79,13 +80,15 @@ export function cozumle(g) {
   const komut = metinMi(t.command) ? t.command : Array.isArray(t.command) ? t.command.join(' ') : t.command == null ? '' : JSON.stringify(t.command);
   if (g.tool_name === 'apply_patch') sonuc.dosyalar = yamaDosyalari(komut);
   else sonuc.komut = komut;
-  if (t.file_path) {
+  const dosya = t.file_path ?? t.notebook_path;
+  if (dosya) {
     const metin = metinMi(t.content) ? t.content
       : metinMi(t.new_string) ? t.new_string
-      : Array.isArray(t.edits) ? t.edits.map((e) => e?.new_string ?? '').join('\n') : '';
+      : Array.isArray(t.edits) ? t.edits.map((e) => e?.new_string ?? '').join('\n')
+      : metinMi(t.new_source) ? t.new_source : '';
     const once = metinMi(t.old_string) ? t.old_string
       : Array.isArray(t.edits) ? t.edits.map((e) => e?.old_string ?? '').join('\n') : undefined;
-    sonuc.dosyalar.push({ yol: String(t.file_path), metin, once, sonra: metin });
+    sonuc.dosyalar.push({ yol: String(dosya), metin, once, sonra: metin });
   }
   return sonuc;
 }

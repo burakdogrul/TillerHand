@@ -5,7 +5,7 @@ argument-hint: <klasör> | off | (boş = durum)
 
 Kilit: $ARGUMENTS
 
-- **Klasör verildiyse:** `node .claude/hooks/freeze-guard.mjs --set <klasör>` çalıştır. Bundan sonra o klasör dışına yazma hook tarafından engellenir (`docs/workflow/progress.md` hariç).
+- **Klasör verildiyse:** `node .claude/hooks/freeze-guard.mjs --set <klasör>` çalıştır. Bundan sonra o klasör dışına dosya aracıyla yazma hook tarafından engellenir (`docs/workflow/progress.md` hariç); kabuk komutuyla (`sed -i`, `mv`, `>`) mevcut bir dosyayı değiştirmek sorulur.
 - **`off` ise:** `node .claude/hooks/freeze-guard.mjs --off`.
 - **Boşsa:** `node .claude/hooks/freeze-guard.mjs --status` ve sonucu tek satırla söyle.
 

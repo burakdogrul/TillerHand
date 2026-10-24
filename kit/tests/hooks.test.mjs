@@ -43,6 +43,10 @@ test('commit kapısı: kurul varsa onaysız kod commit\'i durur, onayla geçer',
   assert.equal(r.status, 2);
   assert.match(r.stderr, /kurul denetimi/);
   assert.equal(onayla('board-qa').status, 0);
+  // 3.14.1: boş kapı commit'i açmaz; komutlar kullanıcı onayıyla çalışır
+  yaz('AGENTS.md', '## Komutlar\n\n```bash\ntest: node -e "process.exit(0)"\n```\n');
+  assert.equal(onayla('board-qa').status, 0);
+  spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--onayla'], { cwd: p, env: env() });
   spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, env: { ...env(), SEMGREP: 'olmayan-semgrep-komutu' } });
   assert.equal(kapi('git commit -m "feat: x"').status, 0, 'onay ve yeşil kapıdan sonra geçer');
   yaz('a.js', 'z'); // onaydan sonra değişiklik: onay geçersiz

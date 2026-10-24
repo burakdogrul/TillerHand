@@ -11,6 +11,7 @@ import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { kokBul } from './arac.mjs';
 import { tirnaksiz } from './destructive-guard.mjs';
+import { komutlar, komutListesi, agentsOku } from './gate.mjs'; // döngüsel içe alma: sadece çalışma anında kullanılır
 
 // Alt klasörden çağrılsa da proje kökü (betiğin yeri): onay ve kapı yanlış yere yazılmasın
 const kok = kokBul();
@@ -84,6 +85,13 @@ function hook() {
       permissionDecisionReason: 'Commit kapısı: "atlandı" onayı kurul denetimini ve deterministik kapıyı aşar. Sadece kullanıcı açıkça isterse onayla.' } }));
     process.exit(0);
   }
+  // Kapı komut onayı AGENTS.md'deki komutlara çalışma izni verir: kullanıcıya sorulur (izin listesi yazımı farklı yolu da kapsasın)
+  if (/gate\.mjs\b[^;&|\n]*--onayla\b/i.test(acik)) {
+    const liste = komutListesi(komutlar(agentsOku(kok))) || '(tanımlı komut yok)';
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
+      permissionDecisionReason: `Kapı komut onayı: AGENTS.md → Komutlar'daki şu komutlar bundan sonra her kapıda çalışır:\n${liste}\nGüvendiğin komutlarsa onayla.` } }));
+    process.exit(0);
+  }
   if (!COMMIT.test(komut) && !COMMIT.test(acik)) process.exit(0);
   if (!kurulVar() || denetimKapali()) process.exit(0);
   const zincir = zincirSorunu(komut);
@@ -118,7 +126,10 @@ function hook() {
   if (onay?.imza === d.imza && (atlandi || (kapi?.imza === d.imza && kapi.gecti === true))) process.exit(0);
   if (onay?.imza === d.imza) {
     const kalan = kapi?.imza === d.imza ? (kapi.kontroller ?? []).filter((k) => k.durum === 'kaldı').map((k) => k.ad) : null;
-    process.stderr.write(kalan
+    process.stderr.write(kalan && !kalan.length && kapi.bos
+      ? 'Commit durduruldu: deterministik kapı boş (hiçbir kontrol çalışmadı). AGENTS.md → Komutlar\'ı doldur ve kapıyı tekrar çalıştır.\n' +
+        'Kullanıcı bu commit için açıkça isterse --approve "atlandı: kullanıcı isteği" kullan.\n'
+      : kalan
       ? `Commit durduruldu: deterministik kapı kırmızı (${kalan.join(', ') || 'kaldı'}). Düzelt, node .claude/hooks/gate.mjs --run ile tekrar çalıştır, sonra onayla.\n` +
         'Kullanıcı ara commit (WIP) için açıkça isterse --approve "atlandı: kullanıcı isteği" kullan.\n'
       : 'Commit durduruldu: bu değişiklikler için deterministik kapı çalışmadı (ya da sonrasında değişiklik oldu). ' +

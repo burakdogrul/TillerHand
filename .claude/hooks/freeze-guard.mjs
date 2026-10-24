@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Düzenleme kilidi (/freeze): Kilit açıkken AI sadece seçilen klasöre yazabilir; hata ayıklarken veya
 // riskli bir özellikte işin başka dosyalara yayılmasını önler. Durum: .claude/state/freeze.json → { "dir": "src/features/auth" }
-//   PreToolUse (Write|Edit|MultiEdit) hook'u: kilit varken klasör dışına yazmayı engeller (deny).
+//   PreToolUse (Write|Edit|MultiEdit|NotebookEdit) hook'u: kilit varken klasör dışına yazmayı engeller (deny).
+//   Kabukla yazım (sed -i, mv, > …) destructive-guard'da: kilit veya plan dışındaki mevcut dosya sorulur (ask).
 //   Codex ve Antigravity'de ayrıca Claude Code izin listesinin dosya karşılığını uygular (KORUMALI): bu araçlarda
 //   settings.json yok; olmazsa AI kilidi, hook'ları ve kuralları kendisi değiştirebilir.
 //   node .claude/hooks/freeze-guard.mjs --set <klasör>   kilitle
@@ -28,11 +29,19 @@ const SERBEST = ['docs/workflow/progress.md', '.claude/state/'];
 // .claude/settings.json → permissions karşılığı (deny: .env ve secrets/, ask: kural ve koruma dosyaları)
 const KORUMALI = [
   ['deny', /^(\.env(\.local|\.production|\.[^/]+\.local)?|secrets(\/.*)?)$/i, 'Ortam ve sır dosyaları AI tarafından okunmaz ve yazılmaz.'],
-  ['ask', /^(CLAUDE\.md|AGENTS\.md|\.mcp\.json|\.claude\/.*|\.codex\/.*|\.agents\/hooks\.json|\.github\/workflows\/.*)$/i, 'Kural, koruma ve iş akışı dosyaları kullanıcı onayıyla değişir.'],
+  ['ask', /^(CLAUDE\.md|AGENTS\.md|\.mcp\.json|\.claude\/.*|\.codex\/.*|\.agents\/hooks\.json|\.github\/workflows\/.*|\.git(\/.*)?)$/i, 'Kural, koruma ve iş akışı dosyaları kullanıcı onayıyla değişir.'],
 ];
 export const korumali = (rel) => KORUMALI.find(([, re]) => re.test(rel)) ?? null;
 
-const goreli = (dosya, kokDizin) => path.relative(kokDizin, path.resolve(kokDizin, dosya)).split(path.sep).join('/');
+export const goreli = (dosya, kokDizin) => path.relative(kokDizin, path.resolve(kokDizin, dosya)).split(path.sep).join('/');
+
+// Sembolik bağ ve junction çözülür: kilit veya plan içindeki bir bağ dışarıdaki dosyaya yazdıramasın.
+// Yeni dosyada var olan en yakın üst klasör çözülür.
+export function gercek(yol) {
+  try { return fs.realpathSync.native(yol); } catch { /* yok: üst klasöre bak */ }
+  const ust = path.dirname(yol);
+  return ust === yol ? yol : path.join(gercek(ust), path.basename(yol));
+}
 
 export function izinli(dosya, kilit, kokDizin = kok) {
   const rel = goreli(dosya, kokDizin);
@@ -41,7 +50,7 @@ export function izinli(dosya, kilit, kokDizin = kok) {
   return rel === k || rel.startsWith(`${k}/`);
 }
 
-function kilitOku(dizin = kok) {
+export function kilitOku(dizin = kok) {
   try { return JSON.parse(fs.readFileSync(durumYolu(dizin), 'utf8')).dir || null; } catch { return null; }
 }
 
@@ -50,7 +59,7 @@ const PLAN_SERBEST = ['docs/', 'CHANGELOG.md', ...SERBEST];
 export const kapsamda = (rel, yollar) => [...PLAN_SERBEST, ...yollar].some((y) => rel === y || (y.endsWith('/') && rel.startsWith(y)));
 
 // Bozuk veya elle değiştirilmiş dosya: plan yok sayılır
-function planOku(dizin = kok) {
+export function planOku(dizin = kok) {
   try {
     const p = JSON.parse(fs.readFileSync(planYolu(dizin), 'utf8'));
     return typeof p?.gorev === 'string' && Array.isArray(p.yollar) ? { gorev: p.gorev, yollar: p.yollar.filter((y) => typeof y === 'string') } : null;
@@ -115,25 +124,26 @@ function ayarla() {
 function hook() {
   const g = girdiOku();
   if (!g) process.exit(0);
-  const yollar = g.dosyalar.map(({ yol }) => path.resolve(g.dizin, yol));
+  const gkok = gercek(g.kok);
+  const yollar = g.dosyalar.map(({ yol }) => gercek(path.resolve(g.dizin, yol)));
   if (g.arac !== 'claude') {
     for (const yol of yollar) {
-      const k = korumali(goreli(yol, g.kok));
-      if (k) kararVer(g.arac, k[0], `${goreli(yol, g.kok)}: ${k[2]}`);
+      const k = korumali(goreli(yol, gkok));
+      if (k) kararVer(g.arac, k[0], `${goreli(yol, gkok)}: ${k[2]}`);
     }
     // Okuma (view_file vb.): sadece .env ve secrets/ engellenir (Claude'daki Read(./.env) karşılığı)
     for (const yol of g.okunan) {
-      const rel = goreli(path.resolve(g.dizin, yol), g.kok);
+      const rel = goreli(gercek(path.resolve(g.dizin, yol)), gkok);
       const k = korumali(rel);
       if (k?.[0] === 'deny') kararVer(g.arac, 'deny', `${rel}: ${k[2]}`);
     }
   }
   const kilit = kilitOku(g.kok);
-  const disari = kilit && yollar.find((yol) => !izinli(yol, kilit, g.kok));
+  const disari = kilit && yollar.find((yol) => !izinli(yol, kilit, gkok));
   if (disari) kararVer(g.arac, 'deny', `Düzenleme kilidi: sadece ${kilit}/ değiştirilebilir. Bu dosya gerekiyorsa kullanıcıya sor; kilidi kaldırmak için /freeze off.`);
   const plan = planOku(g.kok);
   for (const [i, yol] of (plan ? yollar : []).entries()) {
-    const rel = goreli(yol, g.kok);
+    const rel = goreli(yol, gkok);
     // Yeni dosya sorulmaz (yapı koruyucu bakar); silme ve var olanın üstüne yazma sorulur
     if (kapsamda(rel, plan.yollar) || !(g.dosyalar[i].sil || fs.existsSync(yol))) continue;
     kararVer(g.arac, 'ask', `Kapsam kalkanı: ${rel || '(yol bilinmiyor)'} onaylı planda yok (görev ${plan.gorev}). Gerekliyse kullanıcıya sor; ` +

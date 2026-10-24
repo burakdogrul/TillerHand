@@ -295,3 +295,8 @@ test('init: projenin AGENTS.md ve skill dosyaları ezilmez; 3.8 kaydına sonrada
   assert.ok(fs.existsSync(path.join(q, '.codex/hooks.json')) && fs.existsSync(path.join(q, '.agents/skills/start/SKILL.md')));
   fs.rmSync(tmp, { recursive: true, force: true });
 });
+
+test('3.14.1 NotebookEdit: defter yolu ve yeni hücre metni okunur', () => {
+  const d = cozumle({ tool_name: 'NotebookEdit', tool_input: { notebook_path: '/p/n.ipynb', new_source: 'print(1)', cell_id: 'c1' } }).dosyalar;
+  assert.deepEqual(d.map(({ yol, metin }) => ({ yol, metin })), [{ yol: '/p/n.ipynb', metin: 'print(1)' }]);
+});

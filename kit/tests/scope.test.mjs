@@ -92,3 +92,104 @@ test('F-06 denetim: tırnaklı mod da sorulur; alt klasörden çağrılınca pla
   assert.equal(duzenle('src/b.ts'), null, 'plan yolları proje köküne göre');
   cli('--plan-bitir');
 });
+
+// 3.14.1: kabuk komutu (sed -i, mv, >, Set-Content…) plan veya kilit dışındaki mevcut dosyayı değiştiriyorsa sorulur
+const kabuk = (komut, dizin = p) => {
+  const r = spawnSync(process.execPath, [path.join(p, '.claude', 'hooks', 'destructive-guard.mjs')], { input: JSON.stringify({ tool_name: 'Bash', cwd: dizin, tool_input: { command: komut } }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p } });
+  return r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput : null;
+};
+
+test('3.14.1 kabuk: plan aktifken liste dışı mevcut dosyaya kabukla yazım sorulur', () => {
+  assert.equal(kabuk('sed -i s/x/y/ src/b.ts'), null, 'plan yokken sessiz');
+  cli('--plan-kaydet', 'G-4', 'src/a.ts');
+  for (const k of ['sed -i s/x/y/ src/b.ts', 'echo y > src/b.ts', 'echo y >> src/b.ts', 'mv src/b.ts src/b2.ts', 'git checkout -- src/b.ts',
+    'sed -i s/x/y/ "src/ödeme dosyası.ts"', 'cd src && sed -i s/x/y/ b.ts', 'Set-Content -Path src/b.ts -Value y']) {
+    const r = kabuk(k);
+    assert.equal(r?.permissionDecision, 'ask', k);
+    assert.match(r.permissionDecisionReason, /Kapsam kalkanı/, k);
+  }
+  assert.equal(kabuk('sed -i s/x/y/ b.ts', path.join(p, 'src'))?.permissionDecision, 'ask', 'oturumun cwd\'sine göre');
+  for (const k of ['sed -i s/x/y/ src/a.ts', 'cat src/b.ts', 'grep x src/b.ts > /dev/null', 'echo y > src/yeni.ts', 'echo y > docs/not.md', 'node --test 2>&1'])
+    assert.equal(kabuk(k), null, k);
+  cli('--plan-bitir');
+});
+
+test('3.14.1 kabuk: kilit dışına kabukla yazım sorulur', () => {
+  cli('--set', 'src/lib');
+  const r = kabuk('rm src/a.ts');
+  assert.equal(r?.permissionDecision, 'ask');
+  assert.match(r.permissionDecisionReason, /kilit/i);
+  assert.equal(kabuk('sed -i s/x/y/ src/lib/c.ts'), null);
+  fs.rmSync(path.join(p, '.claude/state/freeze.json'));
+});
+
+test('3.14.1 sembolik bağ/junction: plan veya kilit içinden dışarıdaki dosyaya yazılamaz', () => {
+  const bag = path.join(p, 'src', 'lib', 'kok');
+  fs.symlinkSync(p, bag, 'junction');
+  try {
+    cli('--plan-kaydet', 'G-5', 'src/lib/');
+    assert.equal(duzenle('src/lib/kok/src/b.ts')?.karar, 'ask', 'gerçek yol src/b.ts');
+    cli('--plan-bitir');
+    cli('--set', 'src/lib');
+    assert.equal(duzenle('src/lib/kok/src/b.ts')?.karar, 'deny');
+    fs.rmSync(path.join(p, '.claude/state/freeze.json'));
+    const codex = kanca({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Update File: src/lib/kok/AGENTS.md\n@@\n-x\n+y\n*** End Patch' } }, { CLAUDE_PROJECT_DIR: '' });
+    assert.equal(codex?.karar, 'deny');
+    assert.match(codex.neden, /AGENTS\.md:/, 'korumalı dosya bağ üzerinden de korunur');
+  } finally {
+    try { fs.unlinkSync(bag); } catch { fs.rmdirSync(bag); }
+  }
+});
+
+test('3.14.1 denetim: MSYS yolu, glob, değişken, kök hedefi, alt kabuk ve geniş yazan listesi sorulur', () => {
+  cli('--plan-kaydet', 'G-7', 'src/a.ts');
+  const sor = [
+    'sed -i s/x/y/ src/*.ts', 'rm -r src/*', 'mv * ../', 'sed -i s/x/y/ $PWD/src/b.ts', 'sed -i s/x/y/ `pwd`/src/b.ts',
+    'git checkout .', 'git restore .', 'git checkout -- .', 'echo x >| src/b.ts', 'ln -sf x src/b.ts', 'curl -o src/b.ts http://x',
+    'dd if=/dev/zero of=src/b.ts', 'git apply x.patch', 'git stash', 'patch -p1 < x.patch', '(cd src && sed -i s/x/y/ b.ts)',
+    'pushd src && sed -i s/x/y/ b.ts', 'npx prettier --write src/b.ts', 'npx eslint --fix src/b.ts',
+  ];
+  if (process.platform === 'win32') sor.push(`sed -i s/x/y/ /${p[0].toLowerCase()}${p.slice(2).replace(/\\/g, '/')}/src/b.ts`);
+  for (const k of sor) assert.equal(kabuk(k)?.permissionDecision, 'ask', k);
+  for (const k of ['grep -rn tee src', "sed -i 's/a*/b/' src/a.ts", "sed -i 's/$/x/' src/a.ts", 'git status', 'npx prettier --check src/b.ts'])
+    assert.equal(kabuk(k), null, k);
+  cli('--plan-bitir');
+});
+
+test('3.14.1 denetim: kit koruma durum dosyaları kabukla değiştirilemez (kilit ve plan Bash ile kapanmasın)', () => {
+  for (const k of ['rm .claude/state/plan.json', 'echo {} > .claude/state/freeze.json', 'echo {} > .claude/state/gate.json', 'rm -f .claude/state/commit-approval.json'])
+    assert.equal(kabuk(k)?.permissionDecision, 'ask', k);
+  const codex = kanca({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Update File: .git\n@@\n-x\n+y\n*** End Patch' } }, { CLAUDE_PROJECT_DIR: '' });
+  assert.equal(codex?.karar, 'deny', 'worktree .git işaretçi dosyası korunur');
+});
+
+test('3.14.1 yeniden denetim: cd çözümü, kabuk sarmalayıcıları, birleşik bayraklar, koruma klasörleri', () => {
+  cli('--set', 'src/lib');
+  const msys = `/${p[0].toLowerCase()}${p.slice(2).replace(/\\/g, '/')}`;
+  const sor = [
+    'cd $PWD/src && rm a.ts', 'cd "$(pwd)/src" && rm a.ts', '(cd src/lib); rm CHANGELOG.md', 'cd olmayan || rm CHANGELOG.md',
+    'cd', 'Set-Location src; rm a.ts', 'rm {src/a.ts,x}', 'rm src/{a,b}.ts', "rm sr'c'/a.ts", '\\rm src/a.ts', `rm ~/${path.relative(os.homedir(), p).split(path.sep).join('/')}/src/a.ts`,
+    'bash -c "rm src/a.ts"', "sh -c 'sed -i s/x/y/ src/a.ts'", 'find src -delete', 'find src -name x -exec rm {} ;', 'ls | xargs rm',
+    'git checkout main', 'git switch main', 'curl -sSLo src/a.ts http://x', 'curl -osrc/a.ts http://x', 'wget -qO src/a.ts http://x',
+    'tar -xf x.tar', 'unzip x.zip', 'rsync -a x/ src/',
+  ];
+  if (process.platform === 'win32') sor.push(`cd ${msys}/src && rm a.ts`);
+  for (const k of sor) assert.equal(kabuk(k)?.permissionDecision, 'ask', k);
+  for (const k of ['cd src/lib && sed -i s/x/y/ c.ts', 'pushd src/lib && sed -i s/x/y/ c.ts && popd', 'git checkout -- src/lib/c.ts', 'git status'])
+    assert.equal(kabuk(k), null, k);
+  fs.rmSync(path.join(p, '.claude/state/freeze.json'));
+  cli('--plan-kaydet', 'G-8', 'src/a.ts');
+  for (const k of ['rm -r .claude/state', 'rm .claude/state/*', 'cp x .claude/state/', 'tar -C .claude/state -xf x.tar', 'echo x > .git/hooks/pre-commit', 'sed -i s/a/b/ AGENTS.md', 'echo x > .claude/settings.json'])
+    assert.equal(kabuk(k)?.permissionDecision, 'ask', k);
+  cli('--plan-bitir');
+  assert.equal(kabuk('echo x > .git/hooks/pre-commit')?.permissionDecision, 'ask', 'plan olmadan da');
+  assert.equal(kabuk('echo SIR=1 > .env')?.permissionDecision, 'deny', '.env kabukla da yazılmaz');
+});
+
+test('3.14.1 NotebookEdit kalkana takılır', () => {
+  yaz('src/n.ipynb', '{}');
+  cli('--plan-kaydet', 'G-6', 'src/a.ts');
+  const r = kanca({ tool_name: 'NotebookEdit', cwd: p, tool_input: { notebook_path: path.join(p, 'src/n.ipynb'), new_source: 'x' } });
+  assert.equal(r?.karar, 'ask');
+  cli('--plan-bitir');
+});

@@ -8,11 +8,14 @@ import path from 'node:path';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { komutlar } from '../../.claude/hooks/gate.mjs';
+import { izinKarsiligi } from '../../.claude/hooks/destructive-guard.mjs';
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 let p;
 const env = () => ({ ...process.env, CLAUDE_PROJECT_DIR: p, SEMGREP: 'olmayan-semgrep-komutu' });
-const kapi = () => spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, encoding: 'utf8', env: env() });
+const gate = (...a) => spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), ...a], { cwd: p, encoding: 'utf8', env: env() });
+// Komut onayı ayrı testte; diğer testlerde kullanıcı komutları onaylamış sayılır
+const kapi = () => (gate('--onayla'), gate('--run'));
 const commit = (komut = 'git commit -m x') => spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], { input: JSON.stringify({ tool_input: { command: komut } }), encoding: 'utf8', env: env() });
 const onayla = (not) => spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs'), '--approve', not], { encoding: 'utf8', env: env() });
 const sh = (k) => execSync(k, { cwd: p, stdio: 'ignore' });
@@ -57,7 +60,11 @@ test('F-03 kapı: kırmızı kontrolün son satırları görünür, yeşil olan�
   assert.equal(yesil.status, 0);
   assert.doesNotMatch(yesil.stdout, /hiçbir kontrol çalışmadı/);
   fs.renameSync(path.join(p, 'AGENTS.md'), path.join(p, 'AGENTS.yok'));
-  assert.match(kapi().stdout, /YEŞİL.*hiçbir kontrol çalışmadı/, 'komutsuz projede uyarı');
+  const bos = kapi();
+  assert.equal(bos.status, 1, '3.14.1: hiçbir kontrol çalışmadıysa kapı boş, yeşil değil');
+  assert.match(bos.stdout, /BOŞ.*hiçbir kontrol çalışmadı/);
+  assert.doesNotMatch(bos.stdout, /onay/i, 'çalışacak komut yoksa komut onayı aranmaz');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8')).bos, true);
   fs.renameSync(path.join(p, 'AGENTS.yok'), path.join(p, 'AGENTS.md'));
 });
 
@@ -119,4 +126,93 @@ test('F-03 denetim: "atlandı" onayı her biçimde kullanıcıya sorulur', () =>
   assert.equal(sor("node .claude/hooks/commit-gate.mjs --approve 'atlandı'"), 'ask');
   assert.equal(sor('node .claude/hooks/commit-gate.mjs --approve atlandı:x'), 'ask');
   assert.equal(sor('node .claude/hooks/commit-gate.mjs --approve "board-qa"'), null);
+});
+
+test('3.14.1 boş kapı commit\'i durdurur; kullanıcı "atlandı" ile geçer', () => {
+  agents('node -e "process.exit(0)"');
+  sh('git add -A && git commit -qm ara3 --allow-empty');
+  fs.renameSync(path.join(p, 'AGENTS.md'), path.join(p, 'AGENTS.yok'));
+  yaz('a.js', 'bos');
+  assert.equal(kapi().status, 1);
+  onayla('board-qa');
+  const r = commit();
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /boş/);
+  onayla('atlandı: kullanıcı isteği');
+  assert.equal(commit().status, 0);
+  fs.renameSync(path.join(p, 'AGENTS.yok'), path.join(p, 'AGENTS.md'));
+});
+
+test('3.14.1 komut onayı: yeni veya değişen komut onaysız çalışmaz; onay .git\'te durur, onaylama sorulur', () => {
+  const isaret = path.join(p, 'calisti');
+  agents(`node -e "require('fs').writeFileSync('calisti', '1')"`);
+  const r = gate('--run');
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /onay/i);
+  assert.match(r.stdout, /writeFileSync/, 'kullanıcı neyi onayladığını görür');
+  assert.ok(!fs.existsSync(isaret), 'onaysız komut çalışmaz');
+  assert.equal(gate('--onayla').status, 0);
+  assert.ok(fs.existsSync(path.join(p, '.git', 'kit-kapi-onayi.json')), 'onay klonla gelemeyecek yerde');
+  assert.equal(gate('--run').status, 0);
+  assert.ok(fs.existsSync(isaret), 'onaydan sonra çalışır');
+  fs.rmSync(isaret);
+  agents(`node -e "require('fs').writeFileSync('calisti', '2')"`);
+  assert.equal(gate('--run').status, 1, 'komut değişince eski onay geçmez');
+  assert.ok(!fs.existsSync(isaret));
+  // Depoyla gelen sahte onay (.claude/state) .git varken okunmaz
+  fs.copyFileSync(path.join(p, '.git', 'kit-kapi-onayi.json'), path.join(p, '.claude/state/kit-kapi-onayi.json'));
+  assert.equal(gate('--run').status, 1);
+  const sor = (k) => {
+    const c = commit(k);
+    return c.stdout.trim() ? JSON.parse(c.stdout).hookSpecificOutput.permissionDecision : null;
+  };
+  assert.equal(sor('node .claude/hooks/gate.mjs --onayla'), 'ask', 'Claude: hook sorar');
+  assert.match(JSON.parse(commit('node .claude/hooks/gate.mjs --onayla').stdout).hookSpecificOutput.permissionDecisionReason, /writeFileSync/, 'kullanıcı neyi onayladığını görür');
+  assert.equal(sor("node ./.claude/hooks/gate.mjs '--onayla'"), 'ask');
+  assert.equal(sor('node .claude/hooks/gate.mjs --run'), null);
+  assert.equal(izinKarsiligi('node .claude/hooks/gate.mjs --onayla')?.karar, 'ask', 'Codex/Antigravity');
+  assert.equal(izinKarsiligi('echo x > .git/kit-kapi-onayi.json')?.karar, 'ask', '.git kabukla yazılmaz');
+  agents('node -e "process.exit(0)"');
+});
+
+test('3.14.1 denetim: GIT_DIR ile başka yerdeki onay kaydı kullanılamaz', () => {
+  const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'bare-'));
+  execSync('git init --bare -q .', { cwd: bare, stdio: 'ignore' });
+  agents('node -e "process.exit(3)"');
+  gate('--onayla');
+  fs.copyFileSync(path.join(p, '.git', 'kit-kapi-onayi.json'), path.join(bare, 'kit-kapi-onayi.json')); // sahte onay: exit(3)
+  agents('node -e "process.exit(0)"');
+  gate('--onayla'); // gerçek onay başka komut için
+  agents('node -e "process.exit(3)"');
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, encoding: 'utf8', env: { ...env(), GIT_DIR: bare, GIT_COMMON_DIR: bare } });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /komut onayı gerekli/);
+  fs.rmSync(bare, { recursive: true, force: true });
+  agents('node -e "process.exit(0)"');
+});
+
+test('3.14.1 denetim: proje içine konmuş semgrep önerilmez', { skip: process.platform !== 'win32' }, () => {
+  fs.writeFileSync(path.join(p, 'semgrep.cmd'), '@echo off\r\nexit /b 0\r\n');
+  yaz('c.js', 'kod');
+  gate('--onayla');
+  const e = { ...env() };
+  delete e.SEMGREP;
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, encoding: 'utf8', env: e });
+  assert.doesNotMatch(r.stdout, /SEMGREP=/, r.stdout);
+  fs.rmSync(path.join(p, 'semgrep.cmd'));
+  fs.rmSync(path.join(p, 'c.js'));
+});
+
+test('3.14.1 Semgrep: Windows\'ta .cmd olarak kuruluysa "kurulu değil" denmez', { skip: process.platform !== 'win32' }, () => {
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'sg-'));
+  fs.writeFileSync(path.join(bin, 'semgrep.cmd'), '@echo off\r\nexit /b 0\r\n');
+  yaz('b.js', 'yeni kod');
+  gate('--onayla');
+  const e = { ...process.env, CLAUDE_PROJECT_DIR: p, PATH: `${bin};${process.env.PATH}` };
+  delete e.SEMGREP;
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, encoding: 'utf8', env: e });
+  assert.match(r.stdout, /Semgrep.*atlandı.*SEMGREP=/);
+  assert.doesNotMatch(r.stdout, /kurulu değil/);
+  fs.rmSync(bin, { recursive: true, force: true });
+  fs.rmSync(path.join(p, 'b.js'));
 });

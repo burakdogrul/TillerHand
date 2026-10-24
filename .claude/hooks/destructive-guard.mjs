@@ -4,9 +4,13 @@
 // yasaklar yetmez; koruma ajanın dışında olmalı. Bu hook kararı Claude Code'un izin katmanına bırakır:
 //   deny : veri yok eden komutlar, prod veritabanı adresi içeren komutlar. Gerekirse kullanıcı kendisi çalıştırır.
 //   ask  : prod'a deploy, mağazaya gönderim, geri alınması zor git işlemleri. Kullanıcıya sorulur.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { girdiOku, kararVer } from './arac.mjs';
 import { testDosyasi, ayarDosyasi } from './test-guard.mjs';
+import { kilitOku, planOku, izinli, kapsamda, gercek, goreli, korumali } from './freeze-guard.mjs';
 
 const YIKICI = [
   [/\bdrop\s+(table|database|schema|index|view|collection)\b/i, 'DROP ile veri yapısı siliniyor'],
@@ -46,14 +50,179 @@ const ONAYLI = [
 
 // Test koruması dosya araçlarında çalışır; kabukla (sed -i, rm, >, mv, git checkout) test veya test ayar dosyası değiştirmek sorulur.
 // Komut zincirinin her parçası ayrı bakılır: "rm -r node_modules && npx vitest run a.test.ts" testi değiştirmez.
-const TEST_YAZAN = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
+const YAZAN = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
 const testYolu = (t) => testDosyasi(t) || ayarDosyasi(t) || /(^|[/\\])(tests?|__tests__|e2e|spec)[/\\]?$/i.test(t);
 function testYazimi(komut) {
   return komut.split(/&&|\|\||[;|\n]/).some((parca) => {
     const p = parca.replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, '');
     const hedefler = [...p.matchAll(/>{1,2}\s*([^\s;&|<>]+)/g)].map((m) => m[1]);
-    return hedefler.some(testYolu) || (TEST_YAZAN.test(p) && p.split(/\s+/).some(testYolu));
+    return hedefler.some(testYolu) || (YAZAN.test(p) && p.split(/\s+/).some(testYolu));
   });
+}
+
+// Kilit ve kapsam kalkanı için yazan komut, komutun ADINA bakılarak bulunur (yoldaki "copy", argümandaki "tee" sayılmaz).
+const YAZAN_AD = /^(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|ln|install|dd|black|set-content|add-content|out-file|new-item|remove-item|move-item|copy-item|clear-content)$/;
+const ONEK = /^(sudo|npx|bunx|pnpx|command|exec|env|nohup|time)$|^\w+=/;
+// 'hedef': argümanlar hedef dosyadır; 'belirsiz': komut hedefini argümanda göstermeden dosya değiştirir
+function yazanTuru(ad, a) {
+  if (YAZAN_AD.test(ad)) return 'hedef';
+  if (ad === 'sed') return a.some((x) => /^(-[a-zA-Z]*i|--in-place)/.test(x)) ? 'hedef' : null;
+  if (ad === 'perl') return a.some((x) => /^-[a-zA-Z]*i/.test(x)) ? 'hedef' : null;
+  if (/^(curl|wget)$/.test(ad)) return a.some((x) => /^(-[a-zA-Z]*[oO]|--output)/.test(x)) ? 'hedef' : null;
+  if (/^(prettier|eslint|biome|ruff)$/.test(ad)) return a.some((x) => /^(--write|--fix|-w|format)$/.test(x)) ? 'hedef' : null;
+  if (/^(rsync|unzip)$/.test(ad)) return 'hedef';
+  if (ad === 'tar') return a.some((x, i) => /^-[a-zA-Z]*x[a-zA-Z]*$|^--extract$/.test(x) || (i === 0 && /^[a-zA-Z]*x[a-zA-Z]*$/.test(x))) ? 'hedef' : null;
+  if (ad === 'find') return a.some((x) => /^-(delete|exec|execdir|ok|okdir|fprint\w*)$/.test(x)) ? 'hedef' : null;
+  if (ad === 'patch') return 'belirsiz';
+  if (ad === 'git') {
+    const [alt, ikinci] = a.filter((x) => !x.startsWith('-'));
+    if (/^(checkout|restore|rm|mv)$/.test(alt)) return 'hedef';
+    if (/^(apply|am|cherry-pick|revert|clean|switch)$/.test(alt) || (alt === 'stash' && !/^(list|show)$/.test(ikinci ?? ''))) return 'belirsiz';
+  }
+  return null;
+}
+
+const KABUK = /^(bash|sh|zsh|dash|ksh|cmd|powershell|pwsh)$/;
+const CD = /^(cd|pushd|chdir|set-location|sl)$/;
+
+// Kabukla değişebilecek dosyalar (kilit ve kapsam kalkanı): yönlendirme hedefleri ve yazan komutun argümanları.
+// Zincirdeki cd/pushd/popd ve alt kabuk izlenir; bash -c / sh -c içi de taranır; Git Bash yolu (/c/...) ve ~ çevrilir;
+// glob hedefi klasörü sayılır. Değişkenli, ters tırnaklı veya süslü parantezli hedef, doğrulanamayan cd ve hedefini
+// göstermeyen komut (git apply, git switch, patch, xargs rm) "belirsiz" döner: kilit veya plan açıkken sorulur.
+// shortcut: sezgisel; cp/copy'nin kaynağı da hedef sayılır (fazladan soru), node -e / python -c içindeki yazım görülmez.
+export function kabukHedefleri(komut, dizin) {
+  const hedefler = [];
+  let belirsiz = null;
+  const bel = (m) => { belirsiz ??= m; };
+  const coz = (t, d = dizin) => {
+    if (/^(\\\\|\/\/)/.test(t)) return null; // UNC: hook ağ yoluna dokunmasın
+    let h = t.replace(/\$\{?PWD\}?/g, d).replace(/^~(?=\/|\\|$)/, os.homedir());
+    if (/[$`]/.test(h)) return bel(`hedef değişken veya komut içeriyor (${t})`), null;
+    if (/\{[^}]*(,|\.\.)[^}]*\}/.test(h)) return bel(`hedef süslü parantez açılımı içeriyor (${t})`), null;
+    if (process.platform === 'win32') h = h.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:');
+    let yol = path.resolve(d, h);
+    // Glob: diskte yoksa ilk joker karakterden önceki klasör hedef sayılır (src/*.ts → src, * → bulunulan klasör)
+    if (/[*?[]/.test(h) && !fs.existsSync(yol)) {
+      const once = h.slice(0, h.search(/[*?[]/));
+      yol = path.resolve(d, once.endsWith('/') || once.endsWith('\\') || !once ? once || '.' : path.dirname(once));
+    }
+    return yol;
+  };
+  const ekle = (t) => { const y = coz(t); if (y) hedefler.push(y); };
+  const altKabuk = [], yigin = [];
+  for (const parca of komut.replace(/>\|/g, '>').split(/&&|\|\||[;|\n]/)) {
+    let p = parca.replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, '').trim();
+    // Alt kabuk ( … ) ve grup { …; }: süslü parantez açılımı ({a,b}) grup sayılmaz
+    const ac = /^(\(|\{\s)/.test(p), kapa = /(\)|(^|\s)\})$/.test(p);
+    if (ac) altKabuk.push(dizin);
+    p = p.replace(/^(\(|\{\s)\s*/, '').replace(/\s*(\)|(^|\s)\})$/, '');
+    for (const m of p.matchAll(/>{1,2}\s*((?:[^\s;&|<>"']+|"[^"]*"|'[^']*')+)/g)) ekle(m[1].replace(/["']/g, ''));
+    // Kabuk kelimesi: kelime ortasındaki tırnak da kelimeye dahil (o'ther' → other)
+    const ham = [...p.replace(/>{1,2}\s*((?:[^\s;&|<>"']+|"[^"]*"|'[^']*')+)/g, '').matchAll(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)].map((m) => m[0]);
+    const k = ham.map((x) => x.replace(/["']/g, ''));
+    while (k.length && ONEK.test(k[0])) { k.shift(); ham.shift(); while (k[0]?.startsWith('-')) { k.shift(); ham.shift(); } }
+    const ad = path.basename((k[0] ?? '').replace(/^\\/, '')).toLowerCase().replace(/\.(exe|cmd)$/, '');
+    const a = k.slice(1);
+    const kapat = () => { if (kapa && altKabuk.length) dizin = altKabuk.pop(); };
+    if (CD.test(ad) || ad === 'popd') {
+      const hedef = ad === 'popd' ? yigin.pop() : coz(a.filter((x) => !/^-/.test(x) && !/^\/d$/i.test(x)).pop() ?? '$HOME');
+      if (ad === 'pushd') yigin.push(dizin);
+      if (hedef && fs.existsSync(hedef)) dizin = hedef;
+      else bel(`${ad} hedefi doğrulanamadı (${a.join(' ') || 'ev dizini'}); sonraki komutların klasörü bilinmiyor`);
+      kapat();
+      continue;
+    }
+    // bash -c "…", cmd /c …, powershell -Command …: içteki komut aynı kurallarla taranır
+    if (KABUK.test(ad)) {
+      const i = a.findIndex((x) => /^(-c|\/c|-command)$/i.test(x));
+      if (i > -1) {
+        const ic = kabukHedefleri(ham.slice(i + 2).map((x) => x.replace(/^(["'])([\s\S]*)\1$/, '$2')).join(' '), dizin);
+        hedefler.push(...ic.hedefler);
+        if (ic.belirsiz) bel(ic.belirsiz);
+      }
+      kapat();
+      continue;
+    }
+    if (ad === 'xargs') {
+      const ic = a.filter((x) => !x.startsWith('-'));
+      if (yazanTuru(path.basename(ic[0] ?? '').toLowerCase(), ic.slice(1))) bel(`xargs ${ic[0]} hedef dosyayı göstermiyor`);
+      kapat();
+      continue;
+    }
+    const tur = yazanTuru(ad, a);
+    if (tur === 'belirsiz') bel(`${ad} ${a.find((x) => !x.startsWith('-')) ?? ''}`.trim() + ' hedef dosyayı göstermiyor');
+    if (tur === 'hedef') {
+      for (const x of dosyaArgumanlari(ad, a)) {
+        const y = coz(x);
+        if (!y) continue;
+        hedefler.push(y);
+        // git checkout <dal>: yol değilse dal değişimidir, bütün çalışma ağacı değişebilir
+        if (ad === 'git' && !fs.existsSync(y) && !a.slice(0, a.indexOf(x)).includes('--')) bel(`git ${a[0]} ${x}: yol değil (dal olabilir)`);
+      }
+    }
+    kapat();
+  }
+  return { hedefler, belirsiz };
+}
+
+// Yazan komutun hedef argümanları. sed betiği (-e yoksa ilk argüman) ve -e/-f değeri dosya değildir; dd'de sadece of=,
+// tar'da -C (yoksa bulunulan klasör), unzip'te -d (yoksa bulunulan klasör), rsync'te son argüman, find'da başlangıç klasörleri.
+function dosyaArgumanlari(ad, a) {
+  const deger = (bayrak) => { const i = a.findIndex((x) => bayrak.test(x)); return i > -1 ? a[i + 1] : null; };
+  if (ad === 'dd') return a.filter((x) => x.startsWith('of=')).map((x) => x.slice(3));
+  if (ad === 'tar') return [deger(/^(-C|--directory)$/) ?? '.'];
+  if (ad === 'unzip') return [deger(/^-d$/) ?? '.'];
+  if (ad === 'rsync') return a.filter((x) => !x.startsWith('-')).slice(-1);
+  if (ad === 'find') { const i = a.findIndex((x) => /^[-(!]/.test(x)); const k = a.slice(0, i < 0 ? a.length : i); return k.length ? k : ['.']; }
+  if (ad === 'git') return a.slice(a.findIndex((x) => !x.startsWith('-')) + 1).filter((x) => !x.startsWith('-'));
+  const sonuc = [];
+  let betikAtla = ad === 'sed' && !a.some((x) => /^(-e|--expression|-f|--file)/.test(x));
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    if (ad === 'sed' && /^(-e|-f)$/.test(x)) { i++; continue; }
+    if (x.startsWith('-')) {
+      if (/^--output(-document)?=/.test(x)) sonuc.push(x.split('=')[1]);
+      else if (/^(curl|wget)$/.test(ad) && /^-[a-zA-Z]*?[oO].+$/.test(x)) sonuc.push(x.replace(/^-[a-zA-Z]*?[oO]/, '')); // -osrc/a.ts
+      continue;
+    }
+    if (betikAtla) { betikAtla = false; continue; }
+    sonuc.push(x);
+  }
+  return sonuc;
+}
+
+// Kilit veya onaylı plan varken kabukla proje içindeki mevcut bir dosyayı değiştirmek sorulur (dosya araçlarındaki
+// freeze-guard'ın kabuk karşılığı). Yeni dosya ve proje dışı (geçici) dosya serbest; kökü veya üst klasörü hedeflemek sorulur.
+// Kural ve koruma dosyaları (.claude/, .git/, AGENTS.md…; kilit, plan ve onay durumları dahil) kilit/plan olmasa da sorulur, .env engellenir.
+export function kapsamSorunu(komut, dizin, kok) {
+  const { hedefler, belirsiz } = kabukHedefleri(komut, dizin);
+  const gkok = gercek(kok);
+  for (const h of hedefler) {
+    const rel = goreli(gercek(h), gkok);
+    const k = korumali(rel) ?? korumali(`${rel}/`);
+    if (k) return { karar: k[0], neden: k[0] === 'deny' ? `${rel}: ${k[2]}`
+      : `${rel}: ${k[2]} Kabuk komutuyla değiştiriliyor; kilit, plan ve onay durumları için ilgili kit komutunu kullan. Kullanıcı onayı gerekli.` };
+  }
+  const kilit = kilitOku(kok), plan = planOku(kok);
+  if (!kilit && !plan) return null;
+  const etiket = kilit ? `Düzenleme kilidi (${kilit}/)` : `Kapsam kalkanı (görev ${plan.gorev})`;
+  if (belirsiz) return { karar: 'ask', neden: `${etiket}: ${belirsiz}; hangi dosyaların değişeceği bilinemiyor. Gerekliyse kullanıcıya sor.` };
+  for (const h of hedefler) {
+    if (!fs.existsSync(h)) continue;
+    const yol = gercek(h), ust = path.relative(yol, gkok), rel = goreli(yol, gkok);
+    if (!ust.startsWith('..') && !path.isAbsolute(ust)) {
+      return { karar: 'ask', neden: `${etiket}: komut proje kökünü veya üst klasörünü hedefliyor (${rel || '.'}); kilit/plan dışındaki dosyalar da değişebilir. Gerekliyse kullanıcıya sor.` };
+    }
+    if (rel.startsWith('..') || path.isAbsolute(rel)) continue;
+    if (kilit && !izinli(yol, kilit, gkok)) {
+      return { karar: 'ask', neden: `Düzenleme kilidi: ${rel} kilit (${kilit}/) dışında ve komut onu değiştirebilir. Gerekliyse kullanıcıya sor.` };
+    }
+    if (plan && !kapsamda(fs.statSync(yol).isDirectory() ? `${rel}/` : rel, plan.yollar)) {
+      return { karar: 'ask', neden: `Kapsam kalkanı: ${rel} onaylı planda yok (görev ${plan.gorev}) ve komut onu değiştirebilir. Gerekliyse kullanıcıya sor; ` +
+        'onaylarsa node .claude/hooks/freeze-guard.mjs --plan-ekle <yol>.' };
+    }
+  }
+  return null;
 }
 
 // Claude Code'da .claude/settings.json → permissions ile engellenen/sorulan komutlar. Codex ve Antigravity'de
@@ -66,8 +235,10 @@ const IZIN_KARSILIGI = [
   ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, '.env veya secrets/ dosyasına erişiliyor (AI okumaz, yazmaz)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-ekle\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
+  ['ask', /gate\.mjs['"]?\s+['"]?--onayla\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
   // Dosya araçlarındaki KORUMALI kuralının kabuk karşılığı: kural veya koruma dosyasını anan ve yazan/silen komut sorulur
-  ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
+  // (.git: kapı komut onayı ve git hook'ları orada)
+  ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents|git)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
 ];
 
 // Kabuğun göreceği hal: $'..' açılır, tırnaklar, \ kaçışı ve PowerShell ` kaçışı düşer. Sadece eşleştirme içindir.
@@ -134,7 +305,7 @@ function degerlendirTek(komut) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const g = girdiOku();
   // İki listeden sıkı olan kazanır (deny > ask)
-  const sonuclar = g ? [degerlendir(g.komut), g.arac !== 'claude' ? izinKarsiligi(g.komut) : null].filter(Boolean) : [];
+  const sonuclar = g ? [degerlendir(g.komut), g.arac !== 'claude' ? izinKarsiligi(g.komut) : null, kapsamSorunu(g.komut, g.dizin, g.kok)].filter(Boolean) : [];
   const s = sonuclar.find((x) => x.karar === 'deny') ?? sonuclar[0];
   if (s) kararVer(g.arac, s.karar, `Kalkan: ${s.neden}`);
   process.exit(0);

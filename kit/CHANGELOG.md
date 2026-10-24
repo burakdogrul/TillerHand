@@ -5,6 +5,26 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.14.1] - 2026-10-24
+
+3.14.0 güvenlik denetiminden ertelenen ORTA/DÜŞÜK bulgular.
+
+### Değişen
+- **Boş kapı commit'i durdurur:** Hiçbir kontrol çalışmadıysa (Komutlar boş, Semgrep yok) kapı "BOŞ" der, çıkış kodu 1; commit kapısı açılmaz. Kullanıcı isterse `--approve "atlandı: kullanıcı isteği"`.
+- **Kapı komut onayı (`gate.mjs --onayla`):** AGENTS.md → Komutlar'daki lint/tip/test komutları yeni veya değişmişse kapı onları çalıştırmaz, listeleyip kullanıcı onayı ister. Onay git ortak dizininde (`.git/kit-kapi-onayi.json`) durur: klonlanan veya PR'la gelen depo hazır onay taşıyamaz. `GIT_DIR`/`GIT_COMMON_DIR` ortam değişkeniyle başka yere yönlendirilemez. `--onayla` her yazımda sorulur (Claude: izin listesi + commit kapısı hook'u; Codex/Antigravity: kalkan); onay penceresi onaylanacak komutları gösterir. `.git/` altına ve `.git` işaretçi dosyasına (worktree) dosya aracıyla veya kabukla yazmak da sorulur.
+- **Kabuk komutları kilit ve kapsam kalkanına takılır:** Kilit veya onaylı plan açıkken `sed -i`, `mv`, `cp`, `rm`, `ln`, `dd of=`, `curl -o`, `>`/`>>`/`>|`, `git checkout/restore`, `Set-Content`, `prettier --write`, `eslint --fix` gibi komutlar proje içindeki mevcut, liste/kilit dışı dosyayı hedefliyorsa sorulur. Yazan komut, komutun adına bakılarak bulunur (yoldaki "copy" sayılmaz). Zincirdeki `cd`/`pushd`/`popd`/`Set-Location`, alt kabuk, `bash -c`/`sh -c`/`cmd /c` içi, kelime ortası tırnak, `~` ve Git Bash yolları (`/c/...`) izlenir. `find -delete/-exec`, `tar -x`, `unzip`, `rsync` ve birleşik bayraklar (`curl -sSLo`) da görülür. Glob hedefi klasörü sayılır. Şunlar da sorulur: kökü veya üst klasörü hedefleyen komut (`git checkout .`), değişkenli, ters tırnaklı ya da süslü parantezli hedef, doğrulanamayan `cd` ve hedefini göstermeyen komut (`git apply`, `git stash`, `git switch`, dal adıyla `git checkout`, `patch`, `xargs rm`). Yeni dosya, proje dışı dosya ve `docs/` serbest.
+- **Kural ve koruma dosyaları kabukla da korunur (Claude Code dahil):** `.claude/` (kilit, plan, kapı ve onay durumları dahil), `.git/` ve `.git` işaretçi dosyası, `AGENTS.md`, `CLAUDE.md`, `.codex/`, iş akışları kabuk komutunun hedefi olunca kilit veya plan olmasa da sorulur; `.env` ve `secrets/` engellenir. Kilit ve plan Bash ile kapatılamaz, `.git/hooks/` altına sessizce hook yazılamaz.
+- **Sembolik bağ ve junction çözülür:** Kilit, kapsam kalkanı ve Codex/Antigravity korumalı dosya kuralı gerçek yola bakar; kilitli klasördeki bir bağ üzerinden dışarı yazılamaz.
+- **NotebookEdit:** Sır engeli, kilit/kapsam kalkanı ve test koruması Jupyter defter düzenlemesini de görür.
+- **Semgrep:** `--metrics=off` ile çalışır. Windows'ta `.cmd`/`.bat` olarak bulunursa "kurulu değil" yerine "bulundu ama çalıştırılamadı; `SEMGREP=<semgrep.exe yolu>`" der (dosya adları kabuğa verilmez). Proje klasörünün içindeki semgrep önerilmez.
+- `.claude/settings.json` (matcher `Write|Edit|MultiEdit|NotebookEdit`; ask: `gate.mjs --onayla`, `Edit(./.git/**)`), `.claude/board/rules.md`, `/build`, `/plan-task`, `/freeze`, README ve `kit/guide.html` güncellendi.
+- **Elle uyarla:** `settings.json`'ı değiştirdiysen yeni satırları `.kit-new`'den al. Güncellemeden sonra ilk kapı çalışmasında komut onayı istenir; komutları kontrol edip onayla.
+
+### Bilinen sınır
+- Kabuk hedefleri sezgisel: `cp`'nin kaynak dosyası da hedef sayılır (fazladan soru); `node -e`, `python -c` ve betik içinden yapılan yazım görülmez.
+- Komut onayı komutun metnini bağlar, çalıştırdığı içeriği bağlamaz: onaydan sonra `package.json` betiği veya test ayarı değişirse kapı yeni hali çalıştırır.
+- `awk -i inplace` ve `curl -O` (uzak adla kaydetme) hedef olarak görülmez.
+
 ## [3.14.0] - 2026-10-24
 
 ### Eklenen

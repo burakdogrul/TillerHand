@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.14.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.14.1-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -354,10 +354,10 @@ flowchart TB
 | Yıkıcı komut kalkanı | `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset` ve prod ortam değişkenlerini makineye çekmek (Vercel `env pull`, prod hedefli) engellenir; prod deploy ve uzak veritabanı işlemleri sorulur |
 | Yapı koruyucu | Harita dışı yeni dosya sorulur, dağınıklık dosyaları engellenir |
 | Yapılandırma onayı | `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.codex/`, `.mcp.json` ve iş akışı dosyaları onayın olmadan değişmez |
-| Deterministik kapı | `gate.mjs --run`: AGENTS.md'deki lint, tip kontrolü ve test ile Semgrep çalışır; çıktı kurul üyelerine girdi olur, kırmızı kontrol RET sayılır |
+| Deterministik kapı | `gate.mjs --run`: AGENTS.md'deki lint, tip kontrolü ve test ile Semgrep çalışır; çıktı kurul üyelerine girdi olur, kırmızı kontrol RET sayılır. Hiçbir kontrol çalışmazsa commit açılmaz. Yeni veya değişen komut önce kullanıcıya gösterilip onaylanır (`--onayla`); onay `.git/` içinde durur, klonlanan depoyla gelmez |
 | Commit kapısı | Kurul denetimi ve aynı değişiklikler için yeşil kapı olmadan commit atılmaz; ara commit için kullanıcı "atlandı" der |
-| Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazabilir |
-| Kapsam kalkanı | `/plan-task` onayından sonra planın dosya listesi kaydedilir; plan açıkken listede olmayan mevcut dosyaya yazım sorulur, listeye ekleme onaya bağlı. Yeni dosya ve `docs/` serbest, plansız iş sessiz |
+| Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazabilir; kabuk komutuyla klasör dışındaki dosyayı değiştirmek sorulur, sembolik bağ üzerinden dışarı yazılamaz |
+| Kapsam kalkanı | `/plan-task` onayından sonra planın dosya listesi kaydedilir; plan açıkken listede olmayan mevcut dosyaya yazım sorulur, listeye ekleme onaya bağlı. `sed -i`, `mv`, `>` gibi kabuk komutları da görülür. Yeni dosya ve `docs/` serbest, plansız iş sessiz |
 | Test koruması | Test dosyasında beklenti silinir veya yoruma alınırsa, `.skip`/`.only`/`skipIf` eklenirse, beklenti gevşetilirse (`toBeTruthy`, matcher'sız `expect`) ya da test dosyası silinir veya taşınırsa sorulur. Test ayarında kapsamı daraltan değişiklik (`include`/`exclude`, `passWithNoTests`, test script'i) ve test dosyasına yazan kabuk komutu (`sed -i`, `rm`, `>`) da sorulur |
 | Düzenleme turu sayacı | Aynı kod dosyası bir oturumda 5., 10. kez düzenlenince AI'ya Semgrep ve güvenlik incelemesi hatırlatılır |
 | Dev/prod ayrımı | Yerel ortam ve AI (salt-okunur MCP dahil) sadece dev projesine bağlanır; prod sırları barındırma panelinde kalır, `/release` kontrol eder |

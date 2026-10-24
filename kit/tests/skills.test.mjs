@@ -63,7 +63,7 @@ test('ayarlar 3.2: resmi eklentiler, kota ayarı, kilit hook\'u, tipe özel ekle
   for (const e of ['security-guidance', 'hookify', 'claude-md-management']) assert.equal(s.enabledPlugins[`${e}@claude-plugins-official`], true, e);
   for (const e of ['claude-security', 'session-report']) assert.equal(s.enabledPlugins[`${e}@claude-plugins-official`], false, `${e} pakette, varsayılan kapalı`);
   assert.equal(s.env.ENABLE_STOP_REVIEW, '0', 'tur sonu güvenlik incelemesi kotadan yer, kapalı gelir');
-  assert.ok(s.hooks.PreToolUse.some((m) => m.matcher === 'Write|Edit|MultiEdit' && m.hooks.some((h) => h.command.includes('freeze-guard.mjs'))));
+  assert.ok(s.hooks.PreToolUse.some((m) => m.matcher === 'Write|Edit|MultiEdit|NotebookEdit' && m.hooks.some((h) => h.command.includes('freeze-guard.mjs'))));
   // 3.13: test koruması ve düzenleme turu sayacı üç araçta kayıtlı
   const kayitli = (olaylar, olay, betik) => JSON.stringify(olaylar[olay] ?? []).includes(betik);
   assert.ok(kayitli(s.hooks, 'PreToolUse', 'test-guard.mjs') && kayitli(s.hooks, 'PostToolUse', 'edit-rounds.mjs'), 'Claude');
