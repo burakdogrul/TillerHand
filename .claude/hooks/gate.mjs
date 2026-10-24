@@ -36,7 +36,7 @@ export function readCommands(md) {
 
 // The approval record lives outside the project, in the user folder (keyed by a digest of the project's real path): no repo,
 // archive or .git can carry an approval. The home folder comes from the OS (os.userInfo); HOME/USERPROFILE cannot redirect it.
-// legacy: the folder name before 3.15.0 (still read; remove in 3.16.0).
+// legacy: the folder name before 3.15.0 (still read; remove in 3.17.0).
 export function approvalPath(root, { legacy = false } = {}) {
   let realRoot = root;
   try { realRoot = fs.realpathSync.native(root); } catch { /* missing: the given path */ }
@@ -123,8 +123,8 @@ export function runGate(root) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const arg = process.argv[2];
-  // --onayla: the flag before 3.15.0; still accepted with a warning, remove in 3.16.0
-  if (arg === '--onayla') console.error('Uyarı: --onayla eski bayrak; yenisi --approve. 3.16.0\'da kalkacak.');
+  // --onayla: the flag before 3.15.0; still accepted with a warning, remove in 3.17.0
+  if (arg === '--onayla') console.error('Uyarı: --onayla eski bayrak; yenisi --approve. 3.17.0\'da kalkacak.');
   if (arg === '--approve' || arg === '--onayla') { console.log(approve(findRoot())); process.exit(0); }
   if (arg !== '--run') { console.error('Kullanım: node .claude/hooks/gate.mjs --run | --approve'); process.exit(1); }
   const { passed, text } = runGate(findRoot());

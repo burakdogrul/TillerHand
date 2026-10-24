@@ -226,3 +226,16 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
     assert.throws(() => migrateSettings(bad, kit), Error, 'a broken shape is reported, not merged');
   assert.deepEqual(old.hooks, stop('--sessiz'), 'the input is not mutated');
 });
+
+test('F-10 update settings migration: the kit command list is added when the project has none, a Tam profile ({}) is kept', () => {
+  const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
+  const { settings: s, added } = migrateSettings({ permissions: {} }, kit);
+  assert.deepEqual(s.skillOverrides, kit.skillOverrides);
+  assert.ok(added.some((a) => a.startsWith('skillOverrides')), 'the addition is reported');
+  for (const own of [{}, { retro: 'on' }]) {
+    const r = migrateSettings({ permissions: {}, skillOverrides: own }, kit);
+    assert.deepEqual(r.settings.skillOverrides, own, 'the project value wins');
+    assert.ok(!r.added.some((a) => a.startsWith('skillOverrides')));
+  }
+  assert.throws(() => migrateSettings({ skillOverrides: 'x' }, kit), Error, 'a broken shape is reported');
+});

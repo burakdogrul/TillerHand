@@ -5,6 +5,17 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.16.0] - 2026-10-24
+
+### Yeni
+- **Hafif komut listesi:** Komut açıklamaları her oturumda skill listesine giriyordu (~1.600 token) ve 200K bağlamda liste taşıyordu. Hafif ve Standart profilde artık 18 seyrek komut (`/findings-*`, `/board`, `/retro`, `/rollback` gibi) listede sadece adıyla durur: `/` menüsünde görünür, adıyla çağrılır, açıklaması bağlama girmez. Her oturum ~1.100 token daha az. Açıklamasıyla kalan 10 komut: `/start`, `/adopt`, `/build`, `/fix-bug`, `/plan-task`, `/design`, `/tools`, `/review-changes`, `/wrap-up`, `/release`.
+- **Tam profil:** `/tools komutlar tam` (`node .claude/hooks/tools.mjs --commands full`) bütün açıklamaları geri getirir; `komutlar hafif` geri alır. Ayar `.claude/settings.json` → `skillOverrides`'ta, ekibin hepsi için geçerli; kendi değerlerin korunur. Codex ve Antigravity'de etkisi yoktur.
+- `/kit-update`, `skillOverrides` anahtarı olmayan projeye hafif listeyi ekler ve raporda yazar.
+- **Elle uyarla:** Projen Tam profildeyse güncellemeden sonra `/tools komutlar tam` çalıştır; yoksa seyrek komutların açıklaması listeden çıkar. Pano bu durumda uyarır.
+
+### Değişen
+- Eski bayraklar ve eski durum anahtarları bir sürüm daha (3.17.0'a kadar) çalışır.
+
 ## [3.15.1] - 2026-10-24
 
 ### Değişen

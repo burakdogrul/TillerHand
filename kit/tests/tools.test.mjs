@@ -7,7 +7,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { PACKAGES, setPackage, packageStatus } from '../../.claude/hooks/tools.mjs';
+import { PACKAGES, setPackage, packageStatus, CORE_COMMANDS, LIGHT_COMMANDS, setCommandMode, commandMode } from '../../.claude/hooks/tools.mjs';
+import { permissionEquivalent } from '../../.claude/hooks/destructive-guard.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCRIPT = path.join(ROOT, '.claude/hooks/tools.mjs');
@@ -113,4 +114,67 @@ test('settings: package plugins off by default, core on, marketplaces defined', 
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'));
   assert.ok(!s.permissions.allow.some((r) => r.startsWith('Bash(node .claude/hooks/tools.mjs') && (r.includes(':*)') && !/--(required|disable):\*\)$/.test(r))), 'no broad permission');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --ac:*)'), '3.15.0: the old flag is still asked');
+  // --commands rewrites the shared settings.json: asked (Codex/Antigravity: the hook counterpart)
+  assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --commands:*)'));
+  for (const k of ['node .claude/hooks/tools.mjs --commands full', 'node ".claude/hooks/tools.mjs" "--commands" light'])
+    assert.equal(permissionEquivalent(k)?.decision, 'ask', k);
+});
+
+test('F-10 settings: non-core kit commands ship name-only, core commands keep their description', () => {
+  const s = json(path.join(ROOT, '.claude/settings.json'));
+  const commands = fs.readdirSync(path.join(ROOT, '.claude/commands')).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3));
+  assert.deepEqual([...CORE_COMMANDS, ...LIGHT_COMMANDS].sort(), commands.sort(), 'every kit command is either core or light');
+  assert.equal(CORE_COMMANDS.length, 10);
+  assert.deepEqual(s.skillOverrides, Object.fromEntries(LIGHT_COMMANDS.map((c) => [c, 'name-only'])));
+});
+
+test('F-10 --commands full/light: only kit light commands change, the user values stay', () => {
+  const p = project();
+  const file = path.join(p, '.claude/settings.json');
+  const base = json(file);
+  fs.writeFileSync(file, JSON.stringify({ ...base, skillOverrides: { 'findings-legal': 'off', 'my-skill': 'name-only', retro: 'name-only', board: 'on' } }));
+  assert.equal(commandMode(p).mode, 'mixed');
+
+  setCommandMode(p, 'full');
+  let s = json(file);
+  assert.deepEqual(s.skillOverrides, { 'findings-legal': 'off', 'my-skill': 'name-only', board: 'on' }, 'full drops kit name-only values only');
+  assert.equal(commandMode(p).mode, 'full');
+  assert.deepEqual(s.enabledPlugins, base.enabledPlugins, 'other keys are kept');
+
+  setCommandMode(p, 'light');
+  s = json(file);
+  assert.equal(s.skillOverrides['findings-legal'], 'off', 'the user value is not overwritten');
+  assert.equal(s.skillOverrides.board, 'on', 'an explicit "on" is the user\'s choice too');
+  assert.equal(s.skillOverrides.retro, 'name-only');
+  assert.equal(s.skillOverrides['my-skill'], 'name-only');
+  assert.ok(CORE_COMMANDS.every((c) => !(c in s.skillOverrides)), 'core commands are never hidden');
+  assert.equal(commandMode(p).mode, 'mixed', 'board keeps its description');
+  delete s.skillOverrides.board;
+  fs.writeFileSync(file, JSON.stringify(s));
+  setCommandMode(p, 'light');
+  assert.equal(commandMode(p).mode, 'light', 'without the user value light hides board too');
+
+  fs.writeFileSync(file, JSON.stringify(base));
+  setCommandMode(p, 'full');
+  assert.deepEqual(json(file).skillOverrides, {}, 'full leaves an empty key so the update does not bring the list back');
+  fs.rmSync(p, { recursive: true, force: true });
+});
+
+test('F-10 --commands CLI: status shows the mode, a bad mode and a broken settings file are rejected', () => {
+  const p = project();
+  const file = path.join(p, '.claude/settings.json');
+  assert.equal(run(p, ['--commands', 'light']).status, 0);
+  assert.match(run(p, []).stdout, /Komut listesi: hafif/);
+  assert.equal(run(p, ['--commands', 'full']).status, 0);
+  assert.match(run(p, []).stdout, /Komut listesi: tam/);
+  assert.equal(run(p, ['--commands', 'x']).status, 1);
+  for (const bad of ['{"skillOverrides": {', '{"skillOverrides": "abc"}', '{"skillOverrides": ["a"]}', 'null']) {
+    fs.writeFileSync(file, bad);
+    assert.equal(run(p, ['--commands', 'full']).status, 1, bad);
+    assert.equal(fs.readFileSync(file, 'utf8'), bad, `${bad}: the file stays as it is`);
+  }
+  fs.rmSync(file);
+  assert.equal(run(p, ['--commands', 'light']).status, 1, 'a missing settings.json is not created');
+  assert.ok(!fs.existsSync(file));
+  fs.rmSync(p, { recursive: true, force: true });
 });

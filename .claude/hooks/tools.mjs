@@ -5,6 +5,7 @@
 //   node .claude/hooks/tools.mjs --disable <package>   deletes the personal override, back to the project default
 //   node .claude/hooks/tools.mjs --required <package>  0 if enabled, 2 if disabled (commands call it in their first step)
 //   node .claude/hooks/tools.mjs --measure             skill and agent description load of installed plugins
+//   node .claude/hooks/tools.mjs --commands light|full non-core kit commands listed by name only (Hafif/Standart) or in full (Tam)
 // Why: the skill list is capped at 1% of the context; past that, descriptions drop and skills get missed. Plugin skills cannot
 // be turned off one by one, a plugin is on or off as a whole. Enabling mid-session breaks the prompt cache: best at a phase boundary, with /clear.
 import fs from 'node:fs';
@@ -33,6 +34,12 @@ export const PACKAGES = {
   },
   video: { description: 'Remotion ile video', command: 'motion-video', plugins: ['remotion@remotion'] },
 };
+
+// Command descriptions are also in the skill list. Light: non-core commands are listed by name only (skillOverrides "name-only"),
+// still in the / menu and callable by name. Kit settings.json ships this list; a test keeps the two in sync.
+export const CORE_COMMANDS = ['start', 'adopt', 'build', 'fix-bug', 'plan-task', 'design', 'tools', 'review-changes', 'wrap-up', 'release'];
+export const LIGHT_COMMANDS = ['ask-mode', 'board', 'dashboard', 'findings-all', 'findings-business', 'findings-legal', 'findings-perf',
+  'findings-security', 'findings-tech', 'findings-ux', 'freeze', 'handoff', 'kit-update', 'maintain', 'research', 'retro', 'rollback', 'user-feedback'];
 
 const settingsPaths = (root) => ({ project: path.join(root, '.claude', 'settings.json'), local: path.join(root, '.claude', 'settings.local.json') });
 
@@ -74,6 +81,31 @@ export function setPackage(root, name, enabled) {
   return ids;
 }
 
+// Writes the shared project settings (the profile is team-wide). Only kit light commands without a value change; the user's
+// own values (another skill, or "on"/"off" on a kit command) stay. full keeps an empty key so the update does not add the list back.
+export function setCommandMode(root, mode) {
+  if (mode !== 'light' && mode !== 'full') throw new Error(`Bilinmeyen mod: ${mode}. Seçenekler: light, full`);
+  const file = settingsPaths(root).project;
+  if (!fs.existsSync(file)) throw new Error(`${file} yok; komut listesi yazılmadı.`);
+  const s = readJson(file);
+  const isObject = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  if (!isObject(s) || (s.skillOverrides !== undefined && !isObject(s.skillOverrides))) throw new Error(`${file} → skillOverrides bir nesne değil; düzeltmeden yazılmaz.`);
+  const o = { ...(s.skillOverrides ?? {}) };
+  for (const c of LIGHT_COMMANDS) {
+    if (mode === 'light' && o[c] === undefined) o[c] = 'name-only';
+    if (mode === 'full' && o[c] === 'name-only') delete o[c];
+  }
+  fs.writeFileSync(file, JSON.stringify({ ...s, skillOverrides: o }, null, 2) + '\n');
+}
+
+export function commandMode(root) {
+  const o = readJson(settingsPaths(root).project).skillOverrides ?? {};
+  // light: no light command lists its description (the user's "off" counts); full: none carries the kit's name-only
+  const named = LIGHT_COMMANDS.filter((c) => o[c] !== undefined && o[c] !== 'on').length;
+  const full = LIGHT_COMMANDS.every((c) => o[c] !== 'name-only');
+  return { named, mode: named === LIGHT_COMMANDS.length ? 'light' : full ? 'full' : 'mixed' };
+}
+
 const configDir = () => process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 function installRecords() {
   try { return JSON.parse(fs.readFileSync(path.join(configDir(), 'plugins', 'installed_plugins.json'), 'utf8')).plugins ?? {}; } catch { return {}; }
@@ -110,14 +142,14 @@ const tokenOf = (measurement, ids) => {
   return found.length ? `~${found.reduce((s, o) => s + o.skillTokens + o.agentTokens, 0)} token` : '? token (kurulu değil)';
 };
 const NOTE = 'Açtıktan sonra /reload-plugins. Oturum ortasında açmak prompt önbelleğini bozar; en iyisi faz sınırında, /clear ile.';
-// Flags before 3.15.0; still accepted with a warning, remove in 3.16.0
+// Flags before 3.15.0; still accepted with a warning, remove in 3.17.0
 const OLD_FLAGS = { '--ac': '--enable', '--kapat': '--disable', '--gerekli': '--required', '--olc': '--measure' };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const [arg, name] = process.argv.slice(2);
   const flag = (Object.hasOwn(OLD_FLAGS, arg) ? OLD_FLAGS[arg] : arg);
-  if (Object.hasOwn(OLD_FLAGS, arg)) console.error(`Uyarı: ${arg} eski bayrak; yenisi ${flag}. 3.16.0'da kalkacak.`);
+  if (Object.hasOwn(OLD_FLAGS, arg)) console.error(`Uyarı: ${arg} eski bayrak; yenisi ${flag}. 3.17.0'da kalkacak.`);
   try {
     if (flag === '--enable' || flag === '--disable') {
       const ids = setPackage(root, name, flag === '--enable');
@@ -144,6 +176,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.table(rows.map((r) => ({ eklenti: r.plugin, paket: r.pkg, açık: r.enabled, skill: r.skill, açıklamaTok: r.descTokens, ajanTok: r.agentTokens })));
       const top = (l) => l.reduce((s, r) => s + r.descTokens + r.agentTokens, 0);
       console.log(`Açık eklentiler: ~${top(rows.filter((r) => r.enabled))} token · hepsi açık olsaydı: ~${top(rows)} token. Kesin değer: /context, /doctor.`);
+    } else if (flag === '--commands') {
+      setCommandMode(root, name);
+      console.log(name === 'light'
+        ? `Komut listesi hafif: ${LIGHT_COMMANDS.length} komut sadece adıyla listelenir (/ menüsünde durur). Yeni oturumda geçerli.`
+        : 'Komut listesi tam: bütün komutlar açıklamasıyla listelenir. Yeni oturumda geçerli.');
     } else if (!flag) {
       const state = packageStatus(root);
       const project = readJson(settingsPaths(root).project).enabledPlugins ?? {};
@@ -153,9 +190,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       for (const d of state.filter((x) => x.plugins.length)) {
         console.log(`  ${d.name.padEnd(9)} ${d.enabled ? 'açık  ' : 'kapalı'}  ${tokenOf(measurement, d.plugins).padEnd(24)} ${d.command} · ${d.description}`);
       }
+      const cm = commandMode(root);
+      console.log(`Komut listesi: ${{ light: 'hafif', full: 'tam', mixed: 'karışık' }[cm.mode]} (${cm.named}/${LIGHT_COMMANDS.length} komut sadece adıyla; değiştirmek: --commands light|full)`);
       console.log(NOTE);
     } else {
-      console.error('Kullanım: tools.mjs [--enable <paket> | --disable <paket> | --required <paket> | --measure]');
+      console.error('Kullanım: tools.mjs [--enable <paket> | --disable <paket> | --required <paket> | --measure | --commands light|full]');
       process.exit(1);
     }
   } catch (h) {

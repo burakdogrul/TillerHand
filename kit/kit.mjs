@@ -115,6 +115,12 @@ export function migrateSettings(projectSettings, kitSettings) {
     if (add.length) (s.permissions ??= {})[k] = [...(list ?? []), ...add];
     added.push(...add.map((r) => `${k}: ${r}`));
   }
+  // 3.16.0: the light command list reaches projects that have none; a present key (Tam profile: {}) is the project's choice
+  if (s.skillOverrides !== undefined && !isObject(s.skillOverrides)) throw new Error('skillOverrides bir nesne değil');
+  if (s.skillOverrides === undefined && isObject(kitSettings.skillOverrides)) {
+    s.skillOverrides = { ...kitSettings.skillOverrides };
+    added.push(`skillOverrides: ${Object.keys(s.skillOverrides).length} komut sadece adıyla listelenir (Tam profilde: node .claude/hooks/tools.mjs --commands full)`);
+  }
   for (const groups of Object.values(isObject(s.hooks) ? s.hooks : {})) {
     for (const h of (Array.isArray(groups) ? groups : []).flatMap((g) => (Array.isArray(g?.hooks) ? g.hooks : []))) {
       if (typeof h?.command === 'string') h.command = h.command.replace(/(dashboard\.mjs"?)\s+--sessiz\b/, '$1 --quiet');
@@ -373,7 +379,7 @@ function update({ project, addons: newAddons, tool }) {
       } catch (e) { report.conflicts.push(`${rel} (izinler eklenmedi: ${e.message})`); continue; }
       if (JSON.stringify(migrated.settings) !== JSON.stringify(local)) {
         fs.writeFileSync(target, JSON.stringify(migrated.settings, null, 2) + '\n');
-        report.updated.push(`${rel}${migrated.added.length ? ` (eklenen izin kuralları: ${migrated.added.join(' · ')})` : ' (hook bayrağı)'}`);
+        report.updated.push(`${rel}${migrated.added.length ? ` (eklenenler: ${migrated.added.join(' · ')})` : ' (hook bayrağı)'}`);
       }
       continue;
     }

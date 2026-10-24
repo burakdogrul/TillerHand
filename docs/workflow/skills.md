@@ -51,7 +51,7 @@
 
 ## Bağlam paketleri
 
-Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skill listesi bağlamın %1'iyle sınırlıdır; taşınca az kullanılan skill'lerin açıklaması düşer ve Claude onları tanımaz. Plugin içindeki skill'ler tek tek kapatılamaz. Bu yüzden eklentiler **çekirdek** ve **paket** olarak ayrılır. Paketler `.claude/settings.json`'da kapalı gelir; ilgili komut ilk adımda `node .claude/hooks/tools.mjs --required <paket>` ile bakar, kapalıysa maliyetiyle birlikte açmayı sorar. Açma sadece bu makineyi etkiler (`.claude/settings.local.json`). Yönetim: `/tools`. Tanımlar: `.claude/hooks/tools.mjs` → `PAKETLER`.
+Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skill listesi bağlamın %1'iyle sınırlıdır; taşınca az kullanılan skill'lerin açıklaması düşer ve Claude onları tanımaz. Plugin içindeki skill'ler tek tek kapatılamaz. Bu yüzden eklentiler **çekirdek** ve **paket** olarak ayrılır. Paketler `.claude/settings.json`'da kapalı gelir; ilgili komut ilk adımda `node .claude/hooks/tools.mjs --required <paket>` ile bakar, kapalıysa maliyetiyle birlikte açmayı sorar. Açma sadece bu makineyi etkiler (`.claude/settings.local.json`). Yönetim: `/tools`. Tanımlar: `.claude/hooks/tools.mjs` → `PACKAGES`.
 
 | Paket | Eklentiler | Açan komut |
 |---|---|---|
@@ -64,6 +64,8 @@ Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skil
 - Paketi oturum ortasında açmak prompt önbelleğini bozar ve bütün bağlam yeniden okunur. En ucuzu faz sınırında, `/clear` ile birlikte açmaktır.
 - Kesin ölçüm: `/context` (Skills satırı), `/doctor`; kullanılmayan skill'ler: `/skill-doctor`. Kaba ölçüm: `/tools olc`. `/maintain monthly` bunu kontrol eder.
 - Bir eklentiyi çekirdeğe almak veya paketten çıkarmak `teknik` karardır.
+
+**Komut listesi (Hafif/Tam):** Kitin komut açıklamaları da aynı listeye girer (~1.600 token). Hafif ve Standart profilde çekirdek dışı 18 komut `skillOverrides` → `name-only` ile sadece adıyla listelenir: `/` menüsünde durur, Claude adıyla çağırabilir, açıklaması bağlama girmez. Açıklamasıyla kalan çekirdek: start, adopt, build, fix-bug, plan-task, design, tools, review-changes, wrap-up, release. Tam profil: `node .claude/hooks/tools.mjs --commands full`; geri dönmek: `--commands light`. Ayar `.claude/settings.json`'dadır (ekip geneli); kendi `skillOverrides` değerlerin korunur. Codex ve Antigravity'de etkisi yoktur. Liste: `.claude/hooks/tools.mjs` → `CORE_COMMANDS`, `LIGHT_COMMANDS`.
 
 ## Skill bütçesi
 

@@ -37,7 +37,7 @@ export function readLimits(root, now = Date.now()) {
   } catch {
     return null;
   }
-  // Keys before 3.15.0 (okundu, yuzde, sifirlanma) are still read; remove in 3.16.0
+  // Keys before 3.15.0 (okundu, yuzde, sifirlanma) are still read; remove in 3.17.0
   data.readAt ??= data.okundu;
   for (const k of Object.keys(WINDOWS)) {
     const w = data[k];

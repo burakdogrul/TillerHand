@@ -15,6 +15,7 @@ Hangi toplantı ve kararın konseye gideceğini proje profili belirler (`docs/wo
 |---|---|---|---|
 | Eklentiler | Çekirdek: ponytail, caveman, mattpocock-skills, impeccable, humanizer, security-guidance (+ tipin LSP ve stack skill'leri). Diğerleri proje kapsamında kapatılır | Hepsi açık | Hepsi açık |
 | Commit denetimi (her commit'te haiku kurul) | Kapalı | Açık | Açık |
+| Komut listesi (skill listesindeki açıklamalar) | 10 çekirdek komut açıklamalı, 18'i sadece adıyla | Hafif gibi | Hepsi açıklamalı |
 | Toplantı konseyi (3 aşama) | Yok; toplantılar tek aşamalı | Faz sonu, canlıya alma | Plan, faz sonu, canlıya alma, RET |
 | Karar konseyi | Veritabanı ve auth kararı | Veritabanı ve auth kararı | Tüm tek yönlü kararlar |
 

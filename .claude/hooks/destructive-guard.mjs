@@ -240,7 +240,7 @@ export function scopeIssue(command, dir, root) {
 
 // Commands denied/asked in Claude Code via .claude/settings.json → permissions. Codex and Antigravity have no such
 // list; this is its counterpart (applied only on those tools, Claude's behavior does not change).
-// Old flags (--plan-ekle, --onayla) stay until 3.16.0. (?<!commit-) keeps only commit-gate.mjs --approve out of the gate rule.
+// Old flags (--plan-ekle, --onayla) stay until 3.17.0. (?<!commit-) keeps only commit-gate.mjs --approve out of the gate rule.
 const PERMISSION_EQUIVALENT = [
   ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'rm -rf ile toplu silme'],
   ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'Klasör toplu siliniyor'],
@@ -248,6 +248,7 @@ const PERMISSION_EQUIVALENT = [
   ['deny', /\bgit\s+push\b[^;&|]*\s(--force\S*|-\w*f\w*|\+\S+)(?=\s|$)/i, 'git push --force ile uzak geçmiş eziliyor'],
   ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, '.env veya secrets/ dosyasına erişiliyor (AI okumaz, yazmaz)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
+  ['ask', /tools\.mjs['"]?\s+['"]?--commands\b/i, 'Paylaşılan .claude/settings.json → skillOverrides değişiyor (komut listesi)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--(plan-add|plan-ekle)\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
   ['ask', /(?<!commit-)gate\.mjs['"]?\s+['"]?--(approve|onayla)\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked

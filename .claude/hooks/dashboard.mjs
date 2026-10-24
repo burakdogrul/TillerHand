@@ -8,11 +8,11 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readStatus, readText, sections, findSection, tally, tableRows } from './status-read.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
-import { packageStatus } from './tools.mjs';
+import { packageStatus, commandMode } from './tools.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
-// --sessiz: the flag before 3.15.0 (remove in 3.16.0)
+// --sessiz: the flag before 3.15.0 (remove in 3.17.0)
 const quiet = args.includes('--quiet') || args.includes('--sessiz');
 // Running as a hook (--quiet), an error must not break Claude's flow
 if (quiet) process.on('uncaughtException', () => process.exit(0));
@@ -130,6 +130,9 @@ if (overdue.length) addAlert('info', `Kaldırma tarihi geçen ${overdue.length} 
 if (fb.newCount) addAlert('info', `${fb.newCount} işlenmemiş kullanıcı geri bildirimi var.`, '/user-feedback');
 const enabledPackages = (() => { try { return packageStatus(root).filter((p) => p.enabled).map((p) => p.name); } catch { return []; } })();
 if (enabledPackages.length) addAlert('info', `Açık bağlam paketleri: ${enabledPackages.join(', ')}. Her oturumda skill listesine yük ekler.`, 'Kullanmıyorsan /tools kapat <paket>');
+const cmdMode = (() => { try { return commandMode(root).mode; } catch { return 'light'; } })();
+if (cmdMode !== 'full' && /^Tam\b/.test(a['Profil'] ?? '')) addAlert('info', 'Profil Tam ama komut listesi hafif: seyrek komutların açıklaması bağlamda yok.', '/tools komutlar tam');
+else if (cmdMode !== 'light' && !/^Tam\b/.test(a['Profil'] ?? '')) addAlert('info', `Komut listesi ${cmdMode === 'full' ? 'tam' : 'karışık'}: seyrek komutların açıklaması her oturumda bağlama giriyor (~1.100 token).`, 'Profil Tam değilse /tools komutlar hafif');
 if (assets.codeMapDays > 30) addAlert('info', `İnsan için kod haritası (Understand-Anything) ${assets.codeMapDays} gündür güncellenmedi.`, '/understand (sadece değişenleri okur; yayin paketi)');
 if (context?.percent >= 70 && Date.now() - context.readAt < 3600e3) addAlert('warn', `Bağlam %${context.percent} dolu; yanıt kalitesi düşebilir.`, '/wrap-up ve /clear');
 for (const r of Object.values(findings.latest)) if (r.critical > 0) addAlert('warn', `${FINDING_KINDS[r.kind] ?? r.kind} bulgu raporunda ${r.critical} kritik bulgu var (sağlık ${r.health}/100).`, `docs/findings/${r.kind}/latest.md`);

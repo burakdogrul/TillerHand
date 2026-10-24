@@ -71,7 +71,7 @@ function approve(note) {
   console.log(`Commit kapısı açıldı (${files.length} dosya). Not: ${note}`);
 }
 
-// State files before 3.15.0 used Turkish keys; read both (remove in 3.16.0)
+// State files before 3.15.0 used Turkish keys; read both (remove in 3.17.0)
 const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
 const OLD_STATUS = { 'geçti': 'passed', 'kaldı': 'failed', 'tanımsız': 'unset', 'atlandı': 'skipped' };
 function readGate() {
@@ -103,7 +103,7 @@ function hook() {
   }
   // The gate command approval gives the commands in AGENTS.md permission to run: the user is asked (also covers spellings the permission list misses).
   // (?<!commit-) keeps only commit-gate.mjs --approve out (a renamed copy like x-gate.mjs still matches); both the raw and
-  // unquoted text are tested (unquote drops the backslashes of .claude\hooks\gate.mjs). --onayla: flag before 3.15.0 (remove in 3.16.0).
+  // unquoted text are tested (unquote drops the backslashes of .claude\hooks\gate.mjs). --onayla: flag before 3.15.0 (remove in 3.17.0).
   if ([command, open].some((c) => /(?<!commit-)gate\.mjs\b[^;&|\n]*--(approve|onayla)\b/i.test(c))) {
     // The prompt reads AGENTS.md now: a chain, an env variable, a node flag or a redirect must not change it after the
     // prompt and get another list approved. Only the exact spelling is accepted.

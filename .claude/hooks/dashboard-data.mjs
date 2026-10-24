@@ -267,7 +267,7 @@ export function githubStatus(root, now = Date.now()) {
   return data;
 }
 
-// yuzde, okundu: keys before 3.15.0 (remove in 3.16.0)
+// yuzde, okundu: keys before 3.15.0 (remove in 3.17.0)
 export function readContext(root) {
   try {
     const c = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'context.json'), 'utf8'));

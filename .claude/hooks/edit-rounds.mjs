@@ -15,7 +15,7 @@ export const isCodeFile = (rel) => CODE.test(rel);
 
 const statePath = (root) => path.join(root, '.claude', 'state', 'edit-rounds.json');
 // The file may have been broken by hand or by another tool: only fields in the expected shape are taken.
-// Keys before 3.15.0 (oturum, sayac, bekleyen) are still read; remove in 3.16.0.
+// Keys before 3.15.0 (oturum, sayac, bekleyen) are still read; remove in 3.17.0.
 function readState(root) {
   let d;
   try { d = JSON.parse(fs.readFileSync(statePath(root), 'utf8')); } catch { return {}; }
