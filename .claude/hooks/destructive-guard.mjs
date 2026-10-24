@@ -25,13 +25,17 @@ const PROD_DB = /\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis|rediss):\/\/[^\s'"
 const PROD_ISARET = /\b(--prod(uction)?\b|NODE_ENV=production|ENV=production|DATABASE_URL_PROD|PROD_DATABASE_URL)\b/;
 
 // Prod sırlarını ajanın makinesine çekmek: yerel ortam ve AI sadece dev projesine bağlanır (dev/prod ayrımı)
-const PROD_SIRRI = /\bvercel(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)prod(uction)?\b)/i;
+// vc: Vercel CLI'nin kısa adı
+const PROD_SIRRI = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)prod(uction)?\b)/i;
+// Ortam düz development/preview değilse (değişken, $(...), özel ortam) hangi sırların çekileceği bilinemez: sorulur
+const BELIRSIZ_ORTAM = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)(?!['"]?(development|preview)['"]?(\s|$))\S)/i;
 
 const ONAYLI = [
   // Tırnaklı yazımı tirnaksiz() açar; burada sadece kabuğun gördüğü hal
-  [/\bvercel\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'Prod ortamına deploy'],
+  [/\b(vercel|vc)\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'Prod ortamına deploy'],
   // Alt komut bayraklardan sonra da gelebilir: vercel --scope ekip promote <url>
-  [/\bvercel(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
+  [/\b(vercel|vc)(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
+  [BELIRSIZ_ORTAM, 'Ortam değişkenleri çekiliyor ama ortam düz development/preview değil (değişken veya özel ortam: prod olabilir)'],
   [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify\s+deploy\b[^;]*--prod/i, 'Sunucuya deploy'],
   [/\beas\s+(submit|update\b[^;]*--branch\s+production)/i, 'Mağazaya gönderim veya prod OTA güncellemesi'],
   [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'Ana dala doğrudan push'],
@@ -73,7 +77,7 @@ function izinTek(komut) {
 // Neden: satır sonu \, $'\x2d..', pro$()d, ha${X}rd, `..` gibi yazımlar metinden tam çözülemez (kullanıcı kararı 2026-10-23).
 const GIZLEME = /\\\r?\n|\$'|\$\(|`|\$\{|\$[@*]/;
 const KORUNAN = [
-  /\bvercel\b.*\b(prod|production|promote|rollback)\b/, /\b(drop|truncate)\b/, /\breset\b.*\bhard\b/,
+  /\b(vercel|vc)\b.*\b(prod|production|promote|rollback)\b/, /\b(vercel|vc)\b.*\bpull\b/, /\b(drop|truncate)\b/, /\breset\b.*\bhard\b/,
   /\bpush\b.*(\s-f\b|force)/, /\brm\b.*\s-[a-z]*(rf|fr)/, /\b(db|migrate)\s+reset\b/,
 ];
 const kacisCoz = (m, e) => /^x/.test(e) ? String.fromCharCode(parseInt(e.slice(1), 16)) : /^u/.test(e) ? String.fromCharCode(parseInt(e.slice(1), 16))

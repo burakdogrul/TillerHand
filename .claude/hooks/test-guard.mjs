@@ -31,14 +31,19 @@ export function zayiflatma(once, sonra) {
 function hook() {
   const g = girdiOku();
   if (!g) process.exit(0);
-  for (const d of g.dosyalar) {
-    const tam = path.resolve(g.dizin, d.yol);
+  const adBul = (yol) => {
+    const tam = path.resolve(g.dizin, yol);
     const rel = path.relative(g.kok, tam);
-    const ad = rel.startsWith('..') || path.isAbsolute(rel) ? tam : rel;
-    if (!d.yol || !testDosyasi(ad)) continue;
+    return [tam, rel.startsWith('..') || path.isAbsolute(rel) ? tam : rel];
+  };
+  for (const d of g.dosyalar) {
+    const [tam, ad] = adBul(d.yol);
+    // Codex Move: test, test olmayan yola taşınırsa test silinmiş olur
+    const tasima = d.kaynak && testDosyasi(adBul(d.kaynak)[1]) && !testDosyasi(ad);
+    if (!d.yol || (!tasima && !testDosyasi(ad))) continue;
     let once = d.once;
     if (once === undefined) { try { once = fs.readFileSync(tam, 'utf8'); } catch { once = ''; } }
-    const neden = d.sil ? 'test dosyası siliniyor' : zayiflatma(once, d.sonra ?? d.metin);
+    const neden = d.sil ? 'test dosyası siliniyor' : tasima ? `test dosyası test olmayan yola taşınıyor (${d.kaynak})` : zayiflatma(once, d.sonra ?? d.metin);
     if (neden) {
       kararVer(g.arac, 'ask', `Test koruması: ${ad.split(path.sep).join('/')} içinde ${neden}. Testi geçirmek için testi zayıflatmak yasak (AGENTS.md kural 7). ` +
         'Gerekçe gerçekse (yanlış test, değişen kabul kriteri) kullanıcıya söyle ve onayını al; değilse kodu düzelt.');

@@ -42,7 +42,7 @@ test('F-07 400 satırı aşan dosya yakalanır, 400 satır geçer', () => {
 });
 
 test('F-07 lizard sabit sürüm ve eşiklerle çağrılır', () => {
-  assert.deepEqual(lizardArgumanlari(['src/a.ts']), ['-C', '15', '-L', '80', '-w', 'src/a.ts']);
+  assert.deepEqual(lizardArgumanlari(['src/a.ts']), ['-C', '15', '-L', '80', '-w', '--', 'src/a.ts']);
 });
 
 test('F-07 değişen dosyalar: base varsa fark, yoksa veya sıfırsa tüm depo', () => {
@@ -68,4 +68,16 @@ test('F-07 --check: değişen kod dosyası yoksa geçer, uzun dosya CI\'ı kırm
   const r2 = spawnSync(process.execPath, [BETIK, '--check', '--base', base2], { cwd: p, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p, LIZARD: 'olmayan-lizard-komutu' } });
   assert.equal(r2.status, 1);
   assert.match(r2.stderr, /src\/dev\.ts.*450 satır/);
+});
+
+test('F-07 alt klasördeki build/out/vendor ölçülür; Türkçe yol düşmez; base ve dosya adı bayrak sayılmaz', () => {
+  assert.deepEqual(secilenler(['src/features/build/x.ts', 'app/out/y.ts', 'build/a.js', 'out/b.js', 'vendor/c.js']), ['src/features/build/x.ts', 'app/out/y.ts']);
+  assert.deepEqual(lizardArgumanlari(['-x.ts']).slice(-2), ['--', '-x.ts'], 'dosyalar -- sonrasında');
+  const base = sh('git rev-parse HEAD');
+  yaz('src/ödeme.ts', 'export const c = 3;\n');
+  sh('git add src/ödeme.ts && git commit -qm tr');
+  assert.deepEqual(degisenler(p, base), ['src/ödeme.ts'], 'fark');
+  assert.ok(degisenler(p, '').includes('src/ödeme.ts'), 'tüm depo');
+  assert.ok(degisenler(p, '--output=kotu.txt').includes('src/ödeme.ts'), 'bayrak gibi base: tüm depo');
+  assert.ok(!fs.existsSync(path.join(p, 'kotu.txt')), 'git bayrağı çalışmaz');
 });

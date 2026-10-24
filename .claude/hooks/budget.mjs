@@ -14,7 +14,8 @@ import { testDosyasi } from './test-guard.mjs';
 export const BUTCE = { karmasiklik: 15, fonksiyon: 80, dosya: 400 };
 const LIZARD = ['pipx', 'run', 'lizard==1.24.1'];
 const KOD = /\.(m?[jt]sx?|cjs|py)$/i;
-const HARIC = /(^|\/)(node_modules|dist|build|out|\.next|\.expo|coverage|vendor|\.venv|migrations|alembic|\.claude|\.codex|\.agents)\/|\.d\.ts$|\.(gen|generated|min)\.[cm]?[jt]sx?$/i;
+// build/out/vendor sadece kökte: alt klasörde aynı adlı özellik klasörü ölçümden kaçmasın
+const HARIC = /(^|\/)(node_modules|dist|\.next|\.expo|coverage|\.venv|migrations|alembic|\.claude|\.codex|\.agents)\/|^(build|out|vendor)\/|\.d\.ts$|\.(gen|generated|min)\.[cm]?[jt]sx?$/i;
 
 export const secilenler = (dosyalar) => dosyalar.filter((f) => KOD.test(f) && !HARIC.test(f) && !testDosyasi(f));
 
@@ -27,14 +28,15 @@ export function uzunDosyalar(kok, dosyalar) {
     .filter(({ satir }) => satir > BUTCE.dosya);
 }
 
-export const lizardArgumanlari = (dosyalar) => ['-C', String(BUTCE.karmasiklik), '-L', String(BUTCE.fonksiyon), '-w', ...dosyalar];
+export const lizardArgumanlari = (dosyalar) => ['-C', String(BUTCE.karmasiklik), '-L', String(BUTCE.fonksiyon), '-w', '--', ...dosyalar];
 
 export function degisenler(kok, base) {
-  const git = (...a) => execFileSync('git', a, { cwd: kok, encoding: 'utf8' }).split('\n').filter(Boolean);
+  // -z: Türkçe veya boşluklu yollar tırnaklanıp kaçışlanmasın; --end-of-options: base bayrak sayılmasın
+  const git = (...a) => execFileSync('git', a, { cwd: kok, encoding: 'utf8' }).split('\0').filter(Boolean);
   let liste;
   // base bilinmiyorsa (yeni dal, force-push sonrası klonda olmayan commit) tüm depo ölçülür
-  try { liste = !base || /^0+$/.test(base) ? git('ls-files') : git('diff', '--name-only', '--diff-filter=AMR', base, 'HEAD'); }
-  catch { console.warn(`base (${base}) bulunamadı; tüm depo ölçülüyor.`); liste = git('ls-files'); }
+  try { liste = !base || /^0+$/.test(base) ? git('ls-files', '-z') : git('diff', '--name-only', '-z', '--diff-filter=AMR', '--end-of-options', base, 'HEAD'); }
+  catch { console.warn(`base (${base}) bulunamadı; tüm depo ölçülüyor.`); liste = git('ls-files', '-z'); }
   return liste.filter((f) => fs.existsSync(path.join(kok, f)));
 }
 

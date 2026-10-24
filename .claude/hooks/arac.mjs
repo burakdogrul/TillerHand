@@ -29,17 +29,20 @@ const BETIK_KOKU = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 export const kokBul = () => process.env.CLAUDE_PROJECT_DIR || BETIK_KOKU;
 
 // Codex yaması: "*** Add File: x" yeni dosya, "*** Update File: x", "*** Move to: y"; "+" satırları eklenen metin,
-// "-" satırları silinen metin (once)
+// "-" satırları silinen metin (once). Add var olan dosyanın üstüne de yazabilir: once tanımsız, betik diske bakar.
+// Move kaydı taşınan dosyanın yolunu da taşır (kaynak).
 export function yamaDosyalari(yama) {
   const dosyalar = [];
   let d = null;
   for (const satir of yama.split(/\r?\n/)) {
     const m = satir.match(/^\s*\*\*\*\s*(Add|Update|Delete) File:\s*(.+)$/) ?? satir.match(/^\s*\*\*\*\s*(Move) to:\s*(.+)$/);
     if (m) {
-      dosyalar.push((d = { yol: m[2].trim(), yeni: m[1] === 'Add' || m[1] === 'Move', metin: '', once: '' }));
+      const kaynak = m[1] === 'Move' ? d?.yol : undefined;
+      dosyalar.push((d = { yol: m[2].trim(), yeni: m[1] === 'Add' || m[1] === 'Move', metin: '', once: m[1] === 'Add' ? undefined : '' }));
       if (m[1] === 'Delete') d.sil = true;
+      if (kaynak) d.kaynak = kaynak;
     } else if (d && satir.startsWith('+')) d.metin += satir.slice(1) + '\n';
-    else if (d && satir.startsWith('-')) d.once += satir.slice(1) + '\n';
+    else if (d && satir.startsWith('-')) d.once = (d.once ?? '') + satir.slice(1) + '\n';
   }
   for (const x of dosyalar) x.sonra = x.metin;
   // Başlık anlaşılmadıysa yamanın tamamı yolsuz tek dosya sayılır: sır taranır, kilit engeller

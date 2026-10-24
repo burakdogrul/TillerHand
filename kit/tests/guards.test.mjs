@@ -99,6 +99,14 @@ test('F-04 kalkan: prod ortam değişkenleri ajanın makinesine çekilemez', () 
   assert.equal(k('vercel env pull --environment "production"'), 'deny', 'tırnaklı');
   assert.equal(k('vercel env pull .env.local'), 'serbest', 'varsayılan: development');
   assert.equal(k('vercel env pull --environment=preview'), 'serbest');
+  assert.equal(k('vercel env pull --environment "development"'), 'serbest', 'tırnaklı development');
+  assert.equal(k('vc env pull --environment=production'), 'deny', 'vc kısa adı');
+  assert.equal(k('vc deploy --prod'), 'ask', 'vc ile prod deploy');
+  assert.equal(k('vc promote https://a.vercel.app'), 'ask');
+  assert.equal(k('vercel env pull --environment=$ORTAM'), 'ask', 'değişkenle ortam');
+  assert.equal(k('vercel pull --environment $(cat ortam)'), 'ask', 'komut ikamesiyle ortam');
+  assert.equal(k('vercel env pull --environment=staging'), 'ask', 'bilinmeyen ortam');
+  assert.equal(k('vercel env pull --environment=pro$()duction'), 'ask', 'gizlenmiş pull');
 });
 
 test('bağlam yüzdesi: durum çubuğu hazır alanı veya token hesabını gösterir', () => {

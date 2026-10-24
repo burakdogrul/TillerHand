@@ -14,16 +14,25 @@ const KOD = /\.(m?[jt]sx?|cjs|py|go|rb|php|java|kt|swift|rs|sql|vue|svelte)$/i;
 export const kodDosyasi = (rel) => KOD.test(rel);
 
 const durumYolu = (kok) => path.join(kok, '.claude', 'state', 'edit-rounds.json');
+// Dosya elle veya başka araçla bozulmuş olabilir: sadece beklenen biçimdeki alanlar alınır
 function durumOku(kok) {
-  try { return JSON.parse(fs.readFileSync(durumYolu(kok), 'utf8')); } catch { return {}; }
+  let d;
+  try { d = JSON.parse(fs.readFileSync(durumYolu(kok), 'utf8')); } catch { return {}; }
+  if (!d || typeof d !== 'object') return {};
+  const sayac = d.sayac && typeof d.sayac === 'object' && !Array.isArray(d.sayac)
+    ? Object.fromEntries(Object.entries(d.sayac).filter(([, n]) => Number.isInteger(n) && n > 0)) : {};
+  const bekleyen = Array.isArray(d.bekleyen) ? d.bekleyen.filter((x) => typeof x === 'string') : [];
+  return { oturum: d.oturum, sayac, bekleyen };
 }
 function durumYaz(kok, d) {
   fs.mkdirSync(path.dirname(durumYolu(kok)), { recursive: true });
   fs.writeFileSync(durumYolu(kok), JSON.stringify(d, null, 2));
 }
 
-const notMetni = (rel, n) => `${rel} bu oturumda ${n}. kez düzenlendi. Tekrarlanan AI düzenlemeleri güvenlik açığı biriktirebilir: ` +
-  `devam etmeden bu dosyada Semgrep çalıştır (\`semgrep scan --config p/default --config p/owasp-top-ten ${rel}\`; kurulu değilse CI'daki semgrep işine bak) ` +
+// AI nottaki komutu çalıştırır: dosya adındaki $( ) veya ` komuta girmesin, ad sadece güvenli karakterlerdeyse yazılır
+const GUVENLI = /^[\p{L}\p{N}_@./+-]+$/u;
+const notMetni = (rel, n) => `${GUVENLI.test(rel) ? rel : 'Adı özel karakter içeren bir dosya'} bu oturumda ${n}. kez düzenlendi. Tekrarlanan AI düzenlemeleri güvenlik açığı biriktirebilir: ` +
+  `devam etmeden bu dosyada Semgrep çalıştır (\`semgrep scan --config p/default --config p/owasp-top-ten -- "${GUVENLI.test(rel) ? rel : '<dosya yolu>'}"\`; kurulu değilse CI'daki semgrep işine bak) ` +
   've değişikliği security-auditor ile gözden geçir. Aynı hatayı 2 denemede çözemediysen dur ve kullanıcıdan yön iste.';
 
 function hook() {
@@ -47,11 +56,11 @@ function hook() {
   process.exit(0);
 }
 
-// Antigravity PreInvocation: bekleyen notları bir kez ver
+// Antigravity PreInvocation: bekleyen notları bir kez ver; sadece notu üreten oturuma (başkasının yazdığı dosya not sokamaz)
 function enjekte() {
   const kok = kokBul();
   const d = durumOku(kok);
-  if (!d.bekleyen?.length) process.exit(0);
+  if (!d.bekleyen?.length || d.oturum !== girdiOku()?.oturum) process.exit(0);
   console.log(JSON.stringify({ injectSteps: d.bekleyen.map((metin) => ({ systemMessage: { systemMessage: metin } })) }));
   durumYaz(kok, { ...d, bekleyen: [] });
   process.exit(0);

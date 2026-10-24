@@ -50,3 +50,21 @@ test('F-05 Antigravity: not PreInvocation\'da bir kez verilir', () => {
   assert.match(not.injectSteps[0].systemMessage.systemMessage, /src\/d\.ts.*5\. kez/);
   assert.equal(calistir({ invocationNum: 4, conversationId: 'c1', workspacePaths: [p] }, ['--inject']), null, 'not bir kez');
 });
+
+test('F-05 notta yol güvenli: özel karakterli ad yazılmaz, Semgrep yolu tırnaklı ve -- sonrasında', () => {
+  const bes = (dosya) => { let n; for (let i = 1; i <= 5; i++) n = duzenle(dosya, 'g1'); return n.hookSpecificOutput.additionalContext; };
+  const kotu = bes('src/$(touch x)`id`.ts');
+  assert.doesNotMatch(kotu, /\$\(|`id`/, 'komut ikamesi nota girmez');
+  assert.match(kotu, /-- "<dosya yolu>"/);
+  assert.match(bes('src/ödeme.ts'), /-- "src\/ödeme\.ts"/, 'Türkçe ad yazılır');
+});
+
+test('F-05 bozuk durum dosyası çökertmez; Antigravity notu sadece aynı oturuma verilir', () => {
+  const durum = path.join(p, '.claude', 'state', 'edit-rounds.json');
+  fs.writeFileSync(durum, JSON.stringify({ oturum: 'b1', sayac: 'x', bekleyen: 'y' }));
+  assert.equal(duzenle('src/e.ts', 'b1'), null);
+  fs.writeFileSync(durum, JSON.stringify({ oturum: 'b1', sayac: { 'src/e.ts': '4' }, bekleyen: [] }));
+  assert.equal(duzenle('src/e.ts', 'b1'), null, 'sayı olmayan sayaç sıfırdan başlar');
+  fs.writeFileSync(durum, JSON.stringify({ oturum: 'c9', sayac: {}, bekleyen: ['yabancı not'] }));
+  assert.equal(calistir({ invocationNum: 1, conversationId: 'baska', workspacePaths: [p] }, ['--inject']), null, 'başka oturumun notu verilmez');
+});

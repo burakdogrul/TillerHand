@@ -80,3 +80,14 @@ test('F-02 hook: Claude sorar, Codex engelleyip sordurur, test dışı dosya ser
   const ag = { toolCall: { name: 'replace_file_content', args: { TargetFile: dosya, TargetContent: "test('a'", ReplacementContent: "test.only('a'" } }, workspacePaths: [p] };
   assert.equal(calistir(ag, { CLAUDE_PROJECT_DIR: '' }).decision, 'ask');
 });
+
+test('F-02 hook: Codex Add File var olan testi ezerse ve test, test olmayan yola taşınırsa sorar', () => {
+  const dosya = path.join(p, 'b.test.ts');
+  fs.writeFileSync(dosya, "test('b', () => {\n  expect(1).toBe(1);\n});\n");
+  const yama = (govde) => ({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: `*** Begin Patch\n${govde}\n*** End Patch` } });
+  const codex = { CLAUDE_PROJECT_DIR: '' };
+  assert.match(calistir(yama("*** Add File: b.test.ts\n+test('b', () => {});"), codex).hookSpecificOutput.permissionDecisionReason, /beklenti/, 'Add File diskteki halle karşılaştırılır');
+  assert.equal(calistir(yama("*** Add File: c.test.ts\n+test('c', () => { expect(1).toBe(1); });"), codex), null, 'yeni test dosyası serbest');
+  assert.match(calistir(yama('*** Update File: b.test.ts\n*** Move to: src/b.ts'), codex).hookSpecificOutput.permissionDecisionReason, /taşınıyor/);
+  assert.equal(calistir(yama('*** Update File: b.test.ts\n*** Move to: tests/b.test.ts'), codex), null, 'testten teste taşıma serbest');
+});
