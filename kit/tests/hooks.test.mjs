@@ -8,7 +8,7 @@ import path from 'node:path';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { limitYaz, limitOku, seviye } from '../../.claude/hooks/usage.mjs';
-import { onayYolu } from '../../.claude/hooks/gate.mjs';
+import { approvalPath } from '../../.claude/hooks/gate.mjs';
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 const KAPI = path.join(HOOKS, 'commit-gate.mjs');
@@ -27,7 +27,7 @@ before(() => {
   yaz('a.js', 'x');
   sh('git add . && git commit -qm init');
 });
-after(() => { fs.rmSync(onayYolu(p), { force: true }); fs.rmSync(p, { recursive: true, force: true }); });
+after(() => { fs.rmSync(approvalPath(p), { force: true }); fs.rmSync(p, { recursive: true, force: true }); });
 
 test('commit kapısı: kurul yoksa geçer (şablonla gelen başkan ve danışman kurul sayılmaz)', () => {
   yaz('.claude/agents/board-chair.md', '---\nname: board-chair\n---\n');
@@ -47,7 +47,7 @@ test('commit kapısı: kurul varsa onaysız kod commit\'i durur, onayla geçer',
   // 3.14.1: boş kapı commit'i açmaz; komutlar kullanıcı onayıyla çalışır
   yaz('AGENTS.md', '## Komutlar\n\n```bash\ntest: node -e "process.exit(0)"\n```\n');
   assert.equal(onayla('board-qa').status, 0);
-  spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--onayla'], { cwd: p, env: env() });
+  spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--approve'], { cwd: p, env: env() });
   spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, env: { ...env(), SEMGREP: 'olmayan-semgrep-komutu' } });
   assert.equal(kapi('git commit -m "feat: x"').status, 0, 'onay ve yeşil kapıdan sonra geçer');
   yaz('a.js', 'z'); // onaydan sonra değişiklik: onay geçersiz

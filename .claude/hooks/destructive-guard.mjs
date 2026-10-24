@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-// Yıkıcı komut ve prod kalkanı (PreToolUse, Bash).
-// Neden: Bir AI ajanı, "dur" denmesine rağmen canlı veritabanını silebildi (Replit, 2025). Komutla (prompt) verilen
-// yasaklar yetmez; koruma ajanın dışında olmalı. Bu hook kararı Claude Code'un izin katmanına bırakır:
-//   deny : veri yok eden komutlar, prod veritabanı adresi içeren komutlar. Gerekirse kullanıcı kendisi çalıştırır.
-//   ask  : prod'a deploy, mağazaya gönderim, geri alınması zor git işlemleri. Kullanıcıya sorulur.
+// Destructive command and prod shield (PreToolUse, Bash).
+// Why: an AI agent deleted a live database despite being told to stop (Replit, 2025). Bans given in the prompt
+// are not enough; the guard must sit outside the agent. This hook leaves the decision to Claude Code's permission layer:
+//   deny : commands that destroy data, commands with a prod database address. If needed, the user runs them.
+//   ask  : prod deploys, store submissions, hard-to-undo git operations. The user is asked.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { girdiOku, kararVer } from './arac.mjs';
-import { testDosyasi, ayarDosyasi } from './test-guard.mjs';
-import { kilitOku, planOku, izinli, kapsamda, gercek, goreli, korumali } from './freeze-guard.mjs';
+import { readInput, decide } from './shared.mjs';
+import { isTestFile, isTestConfig } from './test-guard.mjs';
+import { readLock, readPlan, allowedInLock, inScope, realPath, relPath, protectedRule } from './freeze-guard.mjs';
 
-const YIKICI = [
+const DESTRUCTIVE = [
   [/\bdrop\s+(table|database|schema|index|view|collection)\b/i, 'DROP ile veri yapısı siliniyor'],
   [/\btruncate\s+(table\s+)?\w/i, 'TRUNCATE ile tablo boşaltılıyor'],
   [/\bdelete\s+from\s+[\w."]+\s*(;|"|'|$)/im, 'WHERE koşulu olmayan DELETE: tablodaki tüm satırlar silinir'],
@@ -25,22 +25,22 @@ const YIKICI = [
   [/\bfirebase\s+firestore:delete\b/i, 'Firestore verisi siliniyor'],
 ];
 
-// localhost dışındaki veritabanı adresleri prod (veya paylaşılan ortam) kabul edilir
+// Database addresses other than localhost count as prod (or a shared environment)
 const PROD_DB = /\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis|rediss):\/\/[^\s'"]*@(?!localhost|127\.0\.0\.1|0\.0\.0\.0|db[:/]|postgres[:/]|host\.docker\.internal)[^\s'"/:]+/i;
-const PROD_ISARET = /\b(--prod(uction)?\b|NODE_ENV=production|ENV=production|DATABASE_URL_PROD|PROD_DATABASE_URL)\b/;
+const PROD_MARK = /\b(--prod(uction)?\b|NODE_ENV=production|ENV=production|DATABASE_URL_PROD|PROD_DATABASE_URL)\b/;
 
-// Prod sırlarını ajanın makinesine çekmek: yerel ortam ve AI sadece dev projesine bağlanır (dev/prod ayrımı)
-// vc: Vercel CLI'nin kısa adı
-const PROD_SIRRI = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)prod(uction)?\b)/i;
-// Ortam düz development/preview değilse (değişken, $(...), özel ortam) hangi sırların çekileceği bilinemez: sorulur
-const BELIRSIZ_ORTAM = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)(?!['"]?(development|preview)['"]?(\s|$))\S)/i;
+// Pulling prod secrets onto the agent's machine: the local environment and the AI connect to the dev project only (dev/prod split)
+// vc: short name of the Vercel CLI
+const PROD_SECRET = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)prod(uction)?\b)/i;
+// If the environment is not plain development/preview (a variable, $(...), a custom env), which secrets get pulled is unknown: ask
+const UNCLEAR_ENV = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)(?!['"]?(development|preview)['"]?(\s|$))\S)/i;
 
-const ONAYLI = [
-  // Tırnaklı yazımı tirnaksiz() açar; burada sadece kabuğun gördüğü hal
+const NEEDS_APPROVAL = [
+  // unquote() opens quoted spellings; here only what the shell sees
   [/\b(vercel|vc)\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'Prod ortamına deploy'],
-  // Alt komut bayraklardan sonra da gelebilir: vercel --scope ekip promote <url>
+  // The subcommand can also come after flags: vercel --scope team promote <url>
   [/\b(vercel|vc)(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
-  [BELIRSIZ_ORTAM, 'Ortam değişkenleri çekiliyor ama ortam düz development/preview değil (değişken veya özel ortam: prod olabilir)'],
+  [UNCLEAR_ENV, 'Ortam değişkenleri çekiliyor ama ortam düz development/preview değil (değişken veya özel ortam: prod olabilir)'],
   [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify\s+deploy\b[^;]*--prod/i, 'Sunucuya deploy'],
   [/\beas\s+(submit|update\b[^;]*--branch\s+production)/i, 'Mağazaya gönderim veya prod OTA güncellemesi'],
   [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'Ana dala doğrudan push'],
@@ -48,278 +48,279 @@ const ONAYLI = [
   [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'Migration uygulanıyor (hedef ortamı kontrol et)'],
 ];
 
-// Test koruması dosya araçlarında çalışır; kabukla (sed -i, rm, >, mv, git checkout) test veya test ayar dosyası değiştirmek sorulur.
-// Komut zincirinin her parçası ayrı bakılır: "rm -r node_modules && npx vitest run a.test.ts" testi değiştirmez.
-const YAZAN = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
-const testYolu = (t) => testDosyasi(t) || ayarDosyasi(t) || /(^|[/\\])(tests?|__tests__|e2e|spec)[/\\]?$/i.test(t);
-function testYazimi(komut) {
-  return komut.split(/&&|\|\||[;|\n]/).some((parca) => {
-    const p = parca.replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, '');
-    const hedefler = [...p.matchAll(/>{1,2}\s*([^\s;&|<>]+)/g)].map((m) => m[1]);
-    return hedefler.some(testYolu) || (YAZAN.test(p) && p.split(/\s+/).some(testYolu));
+// The test guard runs on file tools; changing a test or test config file from the shell (sed -i, rm, >, mv, git checkout) is asked.
+// Each part of a command chain is checked alone: "rm -r node_modules && npx vitest run a.test.ts" does not change a test.
+const WRITER = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
+const isTestPath = (t) => isTestFile(t) || isTestConfig(t) || /(^|[/\\])(tests?|__tests__|e2e|spec)[/\\]?$/i.test(t);
+function writesTest(command) {
+  return command.split(/&&|\|\||[;|\n]/).some((part) => {
+    const p = part.replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, '');
+    const targets = [...p.matchAll(/>{1,2}\s*([^\s;&|<>]+)/g)].map((m) => m[1]);
+    return targets.some(isTestPath) || (WRITER.test(p) && p.split(/\s+/).some(isTestPath));
   });
 }
 
-// Kilit ve kapsam kalkanı için yazan komut, komutun ADINA bakılarak bulunur (yoldaki "copy", argümandaki "tee" sayılmaz).
-const YAZAN_AD = /^(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|ln|install|dd|black|set-content|add-content|out-file|new-item|remove-item|move-item|copy-item|clear-content)$/;
-const ONEK = /^(sudo|npx|bunx|pnpx|command|exec|env|nohup|time)$|^\w+=/;
-// 'hedef': argümanlar hedef dosyadır; 'belirsiz': komut hedefini argümanda göstermeden dosya değiştirir
-function yazanTuru(ad, a) {
-  if (YAZAN_AD.test(ad)) return 'hedef';
-  if (ad === 'sed') return a.some((x) => /^(-[a-zA-Z]*i|--in-place)/.test(x)) ? 'hedef' : null;
-  if (ad === 'perl') return a.some((x) => /^-[a-zA-Z]*i/.test(x)) ? 'hedef' : null;
-  if (/^(curl|wget)$/.test(ad)) return a.some((x) => /^(-[a-zA-Z]*[oO]|--output)/.test(x)) ? 'hedef' : null;
-  if (/^(prettier|eslint|biome|ruff)$/.test(ad)) return a.some((x) => /^(--write|--fix|-w|format)$/.test(x)) ? 'hedef' : null;
-  if (/^(rsync|unzip)$/.test(ad)) return 'hedef';
-  if (ad === 'tar') return a.some((x, i) => /^-[a-zA-Z]*x[a-zA-Z]*$|^--extract$/.test(x) || (i === 0 && /^[a-zA-Z]*x[a-zA-Z]*$/.test(x))) ? 'hedef' : null;
-  if (ad === 'find') return a.some((x) => /^-(delete|exec|execdir|ok|okdir|fprint\w*)$/.test(x)) ? 'hedef' : null;
-  if (ad === 'patch') return 'belirsiz';
-  if (ad === 'git') {
-    const [alt, ikinci] = a.filter((x) => !x.startsWith('-'));
-    if (/^(checkout|restore|rm|mv)$/.test(alt)) return 'hedef';
-    if (/^(apply|am|cherry-pick|revert|clean|switch)$/.test(alt) || (alt === 'stash' && !/^(list|show)$/.test(ikinci ?? ''))) return 'belirsiz';
+// For the lock and the scope shield, a writing command is found by the command NAME ("copy" in a path, "tee" in an argument do not count).
+const WRITER_NAME = /^(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|ln|install|dd|black|set-content|add-content|out-file|new-item|remove-item|move-item|copy-item|clear-content)$/;
+const PREFIX = /^(sudo|npx|bunx|pnpx|command|exec|env|nohup|time)$|^\w+=/;
+// 'target': the arguments are target files; 'unclear': the command changes files without showing them in its arguments
+function writerKind(name, a) {
+  if (WRITER_NAME.test(name)) return 'target';
+  if (name === 'sed') return a.some((x) => /^(-[a-zA-Z]*i|--in-place)/.test(x)) ? 'target' : null;
+  if (name === 'perl') return a.some((x) => /^-[a-zA-Z]*i/.test(x)) ? 'target' : null;
+  if (/^(curl|wget)$/.test(name)) return a.some((x) => /^(-[a-zA-Z]*[oO]|--output)/.test(x)) ? 'target' : null;
+  if (/^(prettier|eslint|biome|ruff)$/.test(name)) return a.some((x) => /^(--write|--fix|-w|format)$/.test(x)) ? 'target' : null;
+  if (/^(rsync|unzip)$/.test(name)) return 'target';
+  if (name === 'tar') return a.some((x, i) => /^-[a-zA-Z]*x[a-zA-Z]*$|^--extract$/.test(x) || (i === 0 && /^[a-zA-Z]*x[a-zA-Z]*$/.test(x))) ? 'target' : null;
+  if (name === 'find') return a.some((x) => /^-(delete|exec|execdir|ok|okdir|fprint\w*)$/.test(x)) ? 'target' : null;
+  if (name === 'patch') return 'unclear';
+  if (name === 'git') {
+    const [sub, second] = a.filter((x) => !x.startsWith('-'));
+    if (/^(checkout|restore|rm|mv)$/.test(sub)) return 'target';
+    if (/^(apply|am|cherry-pick|revert|clean|switch)$/.test(sub) || (sub === 'stash' && !/^(list|show)$/.test(second ?? ''))) return 'unclear';
   }
   return null;
 }
 
-const KABUK = /^(bash|sh|zsh|dash|ksh|cmd|powershell|pwsh)$/;
+const SHELL = /^(bash|sh|zsh|dash|ksh|cmd|powershell|pwsh)$/;
 const CD = /^(cd|pushd|chdir|set-location|sl)$/;
 
-// Kabukla değişebilecek dosyalar (kilit ve kapsam kalkanı): yönlendirme hedefleri ve yazan komutun argümanları.
-// Zincirdeki cd/pushd/popd ve alt kabuk izlenir; bash -c / sh -c içi de taranır; Git Bash yolu (/c/...) ve ~ çevrilir;
-// glob hedefi klasörü sayılır. Değişkenli, ters tırnaklı veya süslü parantezli hedef, doğrulanamayan cd ve hedefini
-// göstermeyen komut (git apply, git switch, patch, xargs rm) "belirsiz" döner: kilit veya plan açıkken sorulur.
-// shortcut: sezgisel; cp/copy'nin kaynağı da hedef sayılır (fazladan soru), node -e / python -c içindeki yazım görülmez.
-export function kabukHedefleri(komut, dizin) {
-  const hedefler = [];
-  let belirsiz = null;
-  const bel = (m) => { belirsiz ??= m; };
-  const coz = (t, d = dizin) => {
-    // Yerel UNC (\\?\C:\x, \\.\C:\x, \\localhost\c$\x) sürücü yoluna çevrilir; diğer UNC belirsiz sayılır, hook ağ yoluna dokunmaz
-    // \\?\ ve \\.\ yalnız sürücü harfinden önce düşer; \\?\UNC\ normal UNC'ye döner; GLOBALROOT, pipe vb. belirsiz kalır
+// Files a shell command may change (lock and scope shield): redirect targets and the writing command's arguments.
+// cd/pushd/popd in the chain and subshells are tracked; bash -c / sh -c bodies are scanned too; Git Bash paths (/c/...) and ~ are converted;
+// a glob target counts as its folder. A target with a variable, backtick or brace expansion, an unverifiable cd and a command
+// that does not show its target (git apply, git switch, patch, xargs rm) return "unclear": asked while a lock or plan is active.
+// shortcut: heuristic; the source of cp/copy also counts as a target (an extra question), writes inside node -e / python -c are not seen.
+export function shellTargets(command, dir) {
+  const targets = [];
+  let unclear = null;
+  const markUnclear = (m) => { unclear ??= m; };
+  const resolve = (t, d = dir) => {
+    // Local UNC (\\?\C:\x, \\.\C:\x, \\localhost\c$\x) becomes a drive path; other UNC counts as unclear, the hook does not touch network paths
+    // \\?\ and \\.\ drop only before a drive letter; \\?\UNC\ turns back into plain UNC; GLOBALROOT, pipe etc. stay unclear
     let h = t.replace(/^(\\\\|\/\/)[?.][\\/](?=[a-zA-Z]:)/, '').replace(/^(\\\\|\/\/)[?.][\\/]UNC[\\/]/i, '\\\\')
       .replace(/^(\\\\|\/\/)(localhost|127\.0\.0\.1)[\\/]([a-zA-Z])\$(?=[\\/]|$)/i, '$3:');
-    if (/^(\\\\|\/\/)/.test(h)) return bel(`hedef ağ yolu (${t})`), null;
+    if (/^(\\\\|\/\/)/.test(h)) return markUnclear(`hedef ağ yolu (${t})`), null;
     h = h.replace(/\$\{?PWD\}?/g, d).replace(/^~(?=\/|\\|$)/, os.homedir());
-    if (/[$`]/.test(h)) return bel(`hedef değişken veya komut içeriyor (${t})`), null;
-    if (/\{[^}]*(,|\.\.)[^}]*\}/.test(h)) return bel(`hedef süslü parantez açılımı içeriyor (${t})`), null;
+    if (/[$`]/.test(h)) return markUnclear(`hedef değişken veya komut içeriyor (${t})`), null;
+    if (/\{[^}]*(,|\.\.)[^}]*\}/.test(h)) return markUnclear(`hedef süslü parantez açılımı içeriyor (${t})`), null;
     if (process.platform === 'win32') h = h.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:');
-    let yol = path.resolve(d, h);
-    // Glob: diskte yoksa ilk joker karakterden önceki klasör hedef sayılır (src/*.ts → src, * → bulunulan klasör)
-    if (/[*?[]/.test(h) && !fs.existsSync(yol)) {
-      const once = h.slice(0, h.search(/[*?[]/));
-      yol = path.resolve(d, once.endsWith('/') || once.endsWith('\\') || !once ? once || '.' : path.dirname(once));
+    let p = path.resolve(d, h);
+    // Glob: if missing on disk, the folder before the first wildcard is the target (src/*.ts → src, * → current folder)
+    if (/[*?[]/.test(h) && !fs.existsSync(p)) {
+      const head = h.slice(0, h.search(/[*?[]/));
+      p = path.resolve(d, head.endsWith('/') || head.endsWith('\\') || !head ? head || '.' : path.dirname(head));
     }
-    return yol;
+    return p;
   };
-  const ekle = (t) => { const y = coz(t); if (y) hedefler.push(y); };
-  const altKabuk = [], yigin = [];
-  for (const parca of komut.replace(/>\|/g, '>').split(/&&|\|\||[;|\n]/)) {
-    let p = parca.replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, '').trim();
-    // Alt kabuk ( … ) ve grup { …; }: süslü parantez açılımı ({a,b}) grup sayılmaz
-    const ac = /^(\(|\{\s)/.test(p), kapa = /(\)|(^|\s)\})$/.test(p);
-    if (ac) altKabuk.push(dizin);
+  const add = (t) => { const p = resolve(t); if (p) targets.push(p); };
+  const subshells = [], stack = [];
+  for (const part of command.replace(/>\|/g, '>').split(/&&|\|\||[;|\n]/)) {
+    let p = part.replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, '').trim();
+    // Subshell ( … ) and group { …; }: brace expansion ({a,b}) is not a group
+    const opens = /^(\(|\{\s)/.test(p), closes = /(\)|(^|\s)\})$/.test(p);
+    if (opens) subshells.push(dir);
     p = p.replace(/^(\(|\{\s)\s*/, '').replace(/\s*(\)|(^|\s)\})$/, '');
-    for (const m of p.matchAll(/>{1,2}\s*((?:[^\s;&|<>"']+|"[^"]*"|'[^']*')+)/g)) ekle(m[1].replace(/["']/g, ''));
-    // Kabuk kelimesi: kelime ortasındaki tırnak da kelimeye dahil (o'ther' → other)
-    const ham = [...p.replace(/>{1,2}\s*((?:[^\s;&|<>"']+|"[^"]*"|'[^']*')+)/g, '').matchAll(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)].map((m) => m[0]);
-    const k = ham.map((x) => x.replace(/["']/g, ''));
-    while (k.length && ONEK.test(k[0])) { k.shift(); ham.shift(); while (k[0]?.startsWith('-')) { k.shift(); ham.shift(); } }
-    const ad = path.basename((k[0] ?? '').replace(/^\\/, '')).toLowerCase().replace(/\.(exe|cmd)$/, '');
+    for (const m of p.matchAll(/>{1,2}\s*((?:[^\s;&|<>"']+|"[^"]*"|'[^']*')+)/g)) add(m[1].replace(/["']/g, ''));
+    // Shell word: a quote inside a word is part of it (o'ther' → other)
+    const raw = [...p.replace(/>{1,2}\s*((?:[^\s;&|<>"']+|"[^"]*"|'[^']*')+)/g, '').matchAll(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)].map((m) => m[0]);
+    const k = raw.map((x) => x.replace(/["']/g, ''));
+    while (k.length && PREFIX.test(k[0])) { k.shift(); raw.shift(); while (k[0]?.startsWith('-')) { k.shift(); raw.shift(); } }
+    const name = path.basename((k[0] ?? '').replace(/^\\/, '')).toLowerCase().replace(/\.(exe|cmd)$/, '');
     const a = k.slice(1);
-    const kapat = () => { if (kapa && altKabuk.length) dizin = altKabuk.pop(); };
-    if (CD.test(ad) || ad === 'popd') {
-      const hedef = ad === 'popd' ? yigin.pop() : coz(a.filter((x) => !/^-/.test(x) && !/^\/d$/i.test(x)).pop() ?? '$HOME');
-      if (ad === 'pushd') yigin.push(dizin);
-      if (hedef && fs.existsSync(hedef)) dizin = hedef;
-      else bel(`${ad} hedefi doğrulanamadı (${a.join(' ') || 'ev dizini'}); sonraki komutların klasörü bilinmiyor`);
-      kapat();
+    const close = () => { if (closes && subshells.length) dir = subshells.pop(); };
+    if (CD.test(name) || name === 'popd') {
+      const target = name === 'popd' ? stack.pop() : resolve(a.filter((x) => !/^-/.test(x) && !/^\/d$/i.test(x)).pop() ?? '$HOME');
+      if (name === 'pushd') stack.push(dir);
+      if (target && fs.existsSync(target)) dir = target;
+      else markUnclear(`${name} hedefi doğrulanamadı (${a.join(' ') || 'ev dizini'}); sonraki komutların klasörü bilinmiyor`);
+      close();
       continue;
     }
-    // bash -c "…", cmd /c …, powershell -Command …: içteki komut aynı kurallarla taranır
-    if (KABUK.test(ad)) {
+    // bash -c "…", cmd /c …, powershell -Command …: the inner command is scanned with the same rules
+    if (SHELL.test(name)) {
       const i = a.findIndex((x) => /^(-c|\/c|-command)$/i.test(x));
       if (i > -1) {
-        const ic = kabukHedefleri(ham.slice(i + 2).map((x) => x.replace(/^(["'])([\s\S]*)\1$/, '$2')).join(' '), dizin);
-        hedefler.push(...ic.hedefler);
-        if (ic.belirsiz) bel(ic.belirsiz);
+        const inner = shellTargets(raw.slice(i + 2).map((x) => x.replace(/^(["'])([\s\S]*)\1$/, '$2')).join(' '), dir);
+        targets.push(...inner.targets);
+        if (inner.unclear) markUnclear(inner.unclear);
       }
-      kapat();
+      close();
       continue;
     }
-    if (ad === 'xargs') {
-      const ic = a.filter((x) => !x.startsWith('-'));
-      if (yazanTuru(path.basename(ic[0] ?? '').toLowerCase(), ic.slice(1))) bel(`xargs ${ic[0]} hedef dosyayı göstermiyor`);
-      kapat();
+    if (name === 'xargs') {
+      const inner = a.filter((x) => !x.startsWith('-'));
+      if (writerKind(path.basename(inner[0] ?? '').toLowerCase(), inner.slice(1))) markUnclear(`xargs ${inner[0]} hedef dosyayı göstermiyor`);
+      close();
       continue;
     }
-    const tur = yazanTuru(ad, a);
-    if (tur === 'belirsiz') bel(`${ad} ${a.find((x) => !x.startsWith('-')) ?? ''}`.trim() + ' hedef dosyayı göstermiyor');
-    if (tur === 'hedef') {
-      for (const x of dosyaArgumanlari(ad, a)) {
-        const y = coz(x);
-        if (!y) continue;
-        hedefler.push(y);
-        // git checkout <dal>: yol değilse dal değişimidir, bütün çalışma ağacı değişebilir
-        if (ad === 'git' && !fs.existsSync(y) && !a.slice(0, a.indexOf(x)).includes('--')) bel(`git ${a[0]} ${x}: yol değil (dal olabilir)`);
+    const kind = writerKind(name, a);
+    if (kind === 'unclear') markUnclear(`${name} ${a.find((x) => !x.startsWith('-')) ?? ''}`.trim() + ' hedef dosyayı göstermiyor');
+    if (kind === 'target') {
+      for (const x of fileArgs(name, a)) {
+        const p = resolve(x);
+        if (!p) continue;
+        targets.push(p);
+        // git checkout <branch>: if it is not a path it is a branch switch, the whole working tree may change
+        if (name === 'git' && !fs.existsSync(p) && !a.slice(0, a.indexOf(x)).includes('--')) markUnclear(`git ${a[0]} ${x}: yol değil (dal olabilir)`);
       }
     }
-    kapat();
+    close();
   }
-  return { hedefler, belirsiz };
+  return { targets, unclear };
 }
 
-// Yazan komutun hedef argümanları. sed betiği (-e yoksa ilk argüman) ve -e/-f değeri dosya değildir; dd'de sadece of=,
-// tar'da -C (yoksa bulunulan klasör), unzip'te -d (yoksa bulunulan klasör), rsync'te son argüman, find'da başlangıç klasörleri.
-function dosyaArgumanlari(ad, a) {
-  const deger = (bayrak) => { const i = a.findIndex((x) => bayrak.test(x)); return i > -1 ? a[i + 1] : null; };
-  if (ad === 'dd') return a.filter((x) => x.startsWith('of=')).map((x) => x.slice(3));
-  if (ad === 'tar') return [deger(/^(-C|--directory)$/) ?? '.'];
-  if (ad === 'unzip') return [deger(/^-d$/) ?? '.'];
-  if (ad === 'rsync') return a.filter((x) => !x.startsWith('-')).slice(-1);
-  if (ad === 'find') { const i = a.findIndex((x) => /^[-(!]/.test(x)); const k = a.slice(0, i < 0 ? a.length : i); return k.length ? k : ['.']; }
-  if (ad === 'git') return a.slice(a.findIndex((x) => !x.startsWith('-')) + 1).filter((x) => !x.startsWith('-'));
-  const sonuc = [];
-  let betikAtla = ad === 'sed' && !a.some((x) => /^(-e|--expression|-f|--file)/.test(x));
+// The writing command's target arguments. The sed script (first argument when there is no -e) and -e/-f values are not files; dd only of=,
+// tar -C (else the current folder), unzip -d (else the current folder), rsync the last argument, find the start folders.
+function fileArgs(name, a) {
+  const valueOf = (flag) => { const i = a.findIndex((x) => flag.test(x)); return i > -1 ? a[i + 1] : null; };
+  if (name === 'dd') return a.filter((x) => x.startsWith('of=')).map((x) => x.slice(3));
+  if (name === 'tar') return [valueOf(/^(-C|--directory)$/) ?? '.'];
+  if (name === 'unzip') return [valueOf(/^-d$/) ?? '.'];
+  if (name === 'rsync') return a.filter((x) => !x.startsWith('-')).slice(-1);
+  if (name === 'find') { const i = a.findIndex((x) => /^[-(!]/.test(x)); const k = a.slice(0, i < 0 ? a.length : i); return k.length ? k : ['.']; }
+  if (name === 'git') return a.slice(a.findIndex((x) => !x.startsWith('-')) + 1).filter((x) => !x.startsWith('-'));
+  const result = [];
+  let skipScript = name === 'sed' && !a.some((x) => /^(-e|--expression|-f|--file)/.test(x));
   for (let i = 0; i < a.length; i++) {
     const x = a[i];
-    if (ad === 'sed' && /^(-e|-f)$/.test(x)) { i++; continue; }
+    if (name === 'sed' && /^(-e|-f)$/.test(x)) { i++; continue; }
     if (x.startsWith('-')) {
-      if (/^--output(-document)?=/.test(x)) sonuc.push(x.split('=')[1]);
-      else if (/^(curl|wget)$/.test(ad) && /^-[a-zA-Z]*?[oO].+$/.test(x)) sonuc.push(x.replace(/^-[a-zA-Z]*?[oO]/, '')); // -osrc/a.ts
+      if (/^--output(-document)?=/.test(x)) result.push(x.split('=')[1]);
+      else if (/^(curl|wget)$/.test(name) && /^-[a-zA-Z]*?[oO].+$/.test(x)) result.push(x.replace(/^-[a-zA-Z]*?[oO]/, '')); // -osrc/a.ts
       continue;
     }
-    if (betikAtla) { betikAtla = false; continue; }
-    sonuc.push(x);
+    if (skipScript) { skipScript = false; continue; }
+    result.push(x);
   }
-  return sonuc;
+  return result;
 }
 
-// Kilit veya onaylı plan varken kabukla proje içindeki mevcut bir dosyayı değiştirmek sorulur (dosya araçlarındaki
-// freeze-guard'ın kabuk karşılığı). Yeni dosya ve proje dışı (geçici) dosya serbest; kökü veya üst klasörü hedeflemek sorulur.
-// Kural ve koruma dosyaları (.claude/, .git/, AGENTS.md…; kilit, plan ve onay durumları dahil) kilit/plan olmasa da sorulur, .env engellenir.
+// While a lock or an approved plan is active, changing an existing file inside the project from the shell is asked (the shell
+// counterpart of freeze-guard on file tools). New files and files outside the project (temporary) are free; targeting the root or a parent folder is asked.
+// Rule and guard files (.claude/, .git/, AGENTS.md…; lock, plan and approval states included) are asked even without a lock/plan, .env is denied.
 export const VIBE_KIT = /[\\/]\.vibe-kit([\\/]|$)/i;
-export function kapsamSorunu(komut, dizin, kok) {
-  const { hedefler, belirsiz } = kabukHedefleri(komut, dizin);
-  const gkok = gercek(kok);
-  // Onay klasörü, onu içeren klasör (glob ~/.v* → ~) veya bağ üzerinden gerçek yolu: hepsi sorulur
+export function scopeIssue(command, dir, root) {
+  const { targets, unclear } = shellTargets(command, dir);
+  const groot = realPath(root);
+  // The approval folder, a folder containing it (glob ~/.v* → ~) or its real path through a link: all asked
   const vk = path.join(os.userInfo().homedir, '.vibe-kit');
-  const onayaDokunur = (y) => VIBE_KIT.test(y) || !/^\.\.|^$/.test(path.relative(y, vk)) && !path.isAbsolute(path.relative(y, vk));
-  for (const h of hedefler) {
-    if (onayaDokunur(h) || onayaDokunur(gercek(h))) return { karar: 'ask', neden: `${h}: kapı komut onayı kaydı (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/gate.mjs --onayla kullanılır. Kullanıcı onayı gerekli.` };
-    const rel = goreli(gercek(h), gkok);
-    const k = korumali(rel) ?? korumali(`${rel}/`);
-    if (k) return { karar: k[0], neden: k[0] === 'deny' ? `${rel}: ${k[2]}`
+  const touchesApproval = (y) => VIBE_KIT.test(y) || !/^\.\.|^$/.test(path.relative(y, vk)) && !path.isAbsolute(path.relative(y, vk));
+  for (const h of targets) {
+    if (touchesApproval(h) || touchesApproval(realPath(h))) return { decision: 'ask', reason: `${h}: kapı komut onayı kaydı (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/gate.mjs --approve kullanılır. Kullanıcı onayı gerekli.` };
+    const rel = relPath(realPath(h), groot);
+    const k = protectedRule(rel) ?? protectedRule(`${rel}/`);
+    if (k) return { decision: k[0], reason: k[0] === 'deny' ? `${rel}: ${k[2]}`
       : `${rel}: ${k[2]} Kabuk komutuyla değiştiriliyor; kilit, plan ve onay durumları için ilgili kit komutunu kullan. Kullanıcı onayı gerekli.` };
   }
-  // Hedef çözülemedi ama komut kural/koruma dosyası adını anıyor ($D/AGENTS.md, {AGENTS,X}.md): kilit/plan olmasa da sorulur
-  if (belirsiz && /AGENTS|CLAUDE|\.(claude|git|github|codex|agents|env|mcp)\b|secrets|vibe-kit/i.test(komut)) {
-    return { karar: 'ask', neden: `${belirsiz}; komut kural veya koruma dosyası adını içeriyor (.claude, .git, AGENTS.md…), hedef doğrulanamadı. Kullanıcı onayı gerekli.` };
+  // The target could not be resolved but the command names a rule/guard file ($D/AGENTS.md, {AGENTS,X}.md): asked even without a lock/plan
+  if (unclear && /AGENTS|CLAUDE|\.(claude|git|github|codex|agents|env|mcp)\b|secrets|vibe-kit/i.test(command)) {
+    return { decision: 'ask', reason: `${unclear}; komut kural veya koruma dosyası adını içeriyor (.claude, .git, AGENTS.md…), hedef doğrulanamadı. Kullanıcı onayı gerekli.` };
   }
-  const kilit = kilitOku(kok), plan = planOku(kok);
-  if (!kilit && !plan) return null;
-  const etiket = kilit ? `Düzenleme kilidi (${kilit}/)` : `Kapsam kalkanı (görev ${plan.gorev})`;
-  if (belirsiz) return { karar: 'ask', neden: `${etiket}: ${belirsiz}; hangi dosyaların değişeceği bilinemiyor. Gerekliyse kullanıcıya sor.` };
-  for (const h of hedefler) {
+  const lock = readLock(root), plan = readPlan(root);
+  if (!lock && !plan) return null;
+  const label = lock ? `Düzenleme kilidi (${lock}/)` : `Kapsam kalkanı (görev ${plan.task})`;
+  if (unclear) return { decision: 'ask', reason: `${label}: ${unclear}; hangi dosyaların değişeceği bilinemiyor. Gerekliyse kullanıcıya sor.` };
+  for (const h of targets) {
     if (!fs.existsSync(h)) continue;
-    const yol = gercek(h), ust = path.relative(yol, gkok), rel = goreli(yol, gkok);
-    if (!ust.startsWith('..') && !path.isAbsolute(ust)) {
-      return { karar: 'ask', neden: `${etiket}: komut proje kökünü veya üst klasörünü hedefliyor (${rel || '.'}); kilit/plan dışındaki dosyalar da değişebilir. Gerekliyse kullanıcıya sor.` };
+    const p = realPath(h), up = path.relative(p, groot), rel = relPath(p, groot);
+    if (!up.startsWith('..') && !path.isAbsolute(up)) {
+      return { decision: 'ask', reason: `${label}: komut proje kökünü veya üst klasörünü hedefliyor (${rel || '.'}); kilit/plan dışındaki dosyalar da değişebilir. Gerekliyse kullanıcıya sor.` };
     }
     if (rel.startsWith('..') || path.isAbsolute(rel)) continue;
-    if (kilit && !izinli(yol, kilit, gkok)) {
-      return { karar: 'ask', neden: `Düzenleme kilidi: ${rel} kilit (${kilit}/) dışında ve komut onu değiştirebilir. Gerekliyse kullanıcıya sor.` };
+    if (lock && !allowedInLock(p, lock, groot)) {
+      return { decision: 'ask', reason: `Düzenleme kilidi: ${rel} kilit (${lock}/) dışında ve komut onu değiştirebilir. Gerekliyse kullanıcıya sor.` };
     }
-    if (plan && !kapsamda(fs.statSync(yol).isDirectory() ? `${rel}/` : rel, plan.yollar)) {
-      return { karar: 'ask', neden: `Kapsam kalkanı: ${rel} onaylı planda yok (görev ${plan.gorev}) ve komut onu değiştirebilir. Gerekliyse kullanıcıya sor; ` +
-        'onaylarsa node .claude/hooks/freeze-guard.mjs --plan-ekle <yol>.' };
+    if (plan && !inScope(fs.statSync(p).isDirectory() ? `${rel}/` : rel, plan.paths)) {
+      return { decision: 'ask', reason: `Kapsam kalkanı: ${rel} onaylı planda yok (görev ${plan.task}) ve komut onu değiştirebilir. Gerekliyse kullanıcıya sor; ` +
+        'onaylarsa node .claude/hooks/freeze-guard.mjs --plan-add <yol>.' };
     }
   }
   return null;
 }
 
-// Claude Code'da .claude/settings.json → permissions ile engellenen/sorulan komutlar. Codex ve Antigravity'de
-// bu liste yok; karşılığı burada (sadece o araçlarda uygulanır, Claude'un davranışı değişmez).
-const IZIN_KARSILIGI = [
+// Commands denied/asked in Claude Code via .claude/settings.json → permissions. Codex and Antigravity have no such
+// list; this is its counterpart (applied only on those tools, Claude's behavior does not change).
+// Old flags (--plan-ekle, --onayla) stay until 3.16.0. (?<![\w-]) keeps commit-gate.mjs --approve out of the gate rule.
+const PERMISSION_EQUIVALENT = [
   ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'rm -rf ile toplu silme'],
   ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'Klasör toplu siliniyor'],
   ['deny', /\bgit\s+reset\s+[^;&|]*--hard\b/i, 'git reset --hard ile commit edilmemiş iş siliniyor'],
   ['deny', /\bgit\s+push\b[^;&|]*\s(--force\S*|-\w*f\w*|\+\S+)(?=\s|$)/i, 'git push --force ile uzak geçmiş eziliyor'],
   ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, '.env veya secrets/ dosyasına erişiliyor (AI okumaz, yazmaz)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
-  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-ekle\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
-  ['ask', /gate\.mjs['"]?\s+['"]?--onayla\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
-  // Dosya araçlarındaki KORUMALI kuralının kabuk karşılığı: kural veya koruma dosyasını anan ve yazan/silen komut sorulur
-  // (.git: kapı komut onayı ve git hook'ları orada)
+  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--(plan-add|plan-ekle)\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
+  ['ask', /(?<![\w-])gate\.mjs['"]?\s+['"]?--(approve|onayla)\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
+  // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked
+  // (.git: the gate command approval and git hooks live there)
   ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents|git)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
 ];
 
-// Kabuğun göreceği hal: $'..' açılır, tırnaklar, \ kaçışı ve PowerShell ` kaçışı düşer. Sadece eşleştirme içindir.
-// Neden: --pro""d, pr\omote, $'--prod' kabukta --prod ve promote olur; kuralları tek tek tırnağa göre yazmak atlatılır.
-export const tirnaksiz = (s) => s.replace(/\$'((?:[^'\\]|\\.)*)'/g, '$1').replace(/\\(.)/g, '$1').replace(/[`'"]/g, '');
+// What the shell will see: $'..' is opened, quotes, \ escapes and PowerShell ` escapes drop. For matching only.
+// Why: --pro""d, pr\omote, $'--prod' become --prod and promote in the shell; writing each rule per quoting style can be bypassed.
+export const unquote = (s) => s.replace(/\$'((?:[^'\\]|\\.)*)'/g, '$1').replace(/\\(.)/g, '$1').replace(/[`'"]/g, '');
 
-// Ham ve tırnağı açılmış metinden sıkı olan karar kazanır (deny > ask)
-const SIRA = { deny: 2, ask: 1 };
-const sikisi = (...s) => s.filter(Boolean).sort((a, b) => SIRA[b.karar] - SIRA[a.karar])[0] ?? null;
+// Of the raw and unquoted text, the stricter decision wins (deny > ask)
+const RANK = { deny: 2, ask: 1 };
+const strictest = (...s) => s.filter(Boolean).sort((a, b) => RANK[b.decision] - RANK[a.decision])[0] ?? null;
 
-export function izinKarsiligi(komut) {
-  return sikisi(izinTek(komut), izinTek(tirnaksiz(komut)));
+export function permissionEquivalent(command) {
+  return strictest(permissionOne(command), permissionOne(unquote(command)));
 }
-function izinTek(komut) {
-  const k = komut.replace(/\s+/g, ' ').replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, ''); // hata yönlendirmesi yazma sayılmaz
-  const e = IZIN_KARSILIGI.find(([, re]) => re.test(k));
-  return e ? { karar: e[0], neden: `${e[2]}. ${e[0] === 'deny' ? 'AI bu komutu çalıştıramaz; gerekliyse kullanıcı kendisi çalıştırır.' : 'Kullanıcı onayı gerekli.'}` } : null;
+function permissionOne(command) {
+  const k = command.replace(/\s+/g, ' ').replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, ''); // an error redirect is not a write
+  const e = PERMISSION_EQUIVALENT.find(([, re]) => re.test(k));
+  return e ? { decision: e[0], reason: `${e[2]}. ${e[0] === 'deny' ? 'AI bu komutu çalıştıramaz; gerekliyse kullanıcı kendisi çalıştırır.' : 'Kullanıcı onayı gerekli.'}` } : null;
 }
 
-// Şüpheliyse sor: kabuğu taklit etmek yerine, gizleme işareti varken korunan bir kelime çıkarsa karar "ask".
-// Neden: satır sonu \, $'\x2d..', pro$()d, ha${X}rd, `..` gibi yazımlar metinden tam çözülemez (kullanıcı kararı 2026-10-23).
-const GIZLEME = /\\\r?\n|\$'|\$\(|`|\$\{|\$[@*]/;
-const KORUNAN = [
+// When in doubt, ask: instead of emulating the shell, if a protected word shows up while an obfuscation mark is present, the decision is "ask".
+// Why: spellings like a trailing \, $'\x2d..', pro$()d, ha${X}rd, `..` cannot be fully resolved from text (user decision 2026-10-23).
+const OBFUSCATION = /\\\r?\n|\$'|\$\(|`|\$\{|\$[@*]/;
+const GUARDED = [
   /\b(vercel|vc)\b.*\b(prod|production|promote|rollback)\b/, /\b(vercel|vc)\b.*\bpull\b/, /\b(drop|truncate)\b/, /\breset\b.*\bhard\b/,
   /\bpush\b.*(\s-f\b|force)/, /\brm\b.*\s-[a-z]*(rf|fr)/, /\b(db|migrate)\s+reset\b/,
 ];
-const kacisCoz = (m, e) => /^x/.test(e) ? String.fromCharCode(parseInt(e.slice(1), 16)) : /^u/.test(e) ? String.fromCharCode(parseInt(e.slice(1), 16))
+const unescape = (m, e) => /^x/.test(e) ? String.fromCharCode(parseInt(e.slice(1), 16)) : /^u/.test(e) ? String.fromCharCode(parseInt(e.slice(1), 16))
   : /^[0-7]/.test(e) ? String.fromCharCode(parseInt(e, 8)) : e;
-const gevsek = (s) => s.toLowerCase().replace(/\\\r?\n/g, '').replace(/`[^`]*`|\$\([^)]*\)|\$\{[^}]*\}|\$[@*]/g, '')
-  .replace(/\\(x[0-9a-f]{1,2}|u[0-9a-f]{1,4}|[0-7]{1,3}|.)/g, kacisCoz).replace(/[$'"]/g, '').replace(/\s+/g, ' ');
-function gizlemeTek(komut) {
-  if (!GIZLEME.test(komut)) return null;
-  const g = gevsek(komut);
-  return KORUNAN.some((re) => re.test(g))
-    ? { karar: 'ask', neden: 'Komut gizlenmiş görünüyor (satır sonu \\, $\'..\', $(...), `...` veya ${...}) ve korunan bir işlem içeriyor. Kullanıcı onayı gerekli.' } : null;
+const loosen = (s) => s.toLowerCase().replace(/\\\r?\n/g, '').replace(/`[^`]*`|\$\([^)]*\)|\$\{[^}]*\}|\$[@*]/g, '')
+  .replace(/\\(x[0-9a-f]{1,2}|u[0-9a-f]{1,4}|[0-7]{1,3}|.)/g, unescape).replace(/[$'"]/g, '').replace(/\s+/g, ' ');
+function obfuscationOne(command) {
+  if (!OBFUSCATION.test(command)) return null;
+  const g = loosen(command);
+  return GUARDED.some((re) => re.test(g))
+    ? { decision: 'ask', reason: 'Komut gizlenmiş görünüyor (satır sonu \\, $\'..\', $(...), `...` veya ${...}) ve korunan bir işlem içeriyor. Kullanıcı onayı gerekli.' } : null;
 }
 
-export function degerlendir(komut) {
-  return sikisi(degerlendirTek(komut), degerlendirTek(tirnaksiz(komut)), gizlemeTek(komut));
+export function evaluate(command) {
+  return strictest(evaluateOne(command), evaluateOne(unquote(command)), obfuscationOne(command));
 }
-function degerlendirTek(komut) {
-  const k = komut.replace(/\s+/g, ' ');
-  const prodDb = PROD_DB.test(k) || PROD_ISARET.test(k);
-  if (PROD_SIRRI.test(k)) {
-    return { karar: 'deny', neden: 'Prod ortam değişkenleri (sırlar) bu makineye çekiliyor. Yerel ortam ve AI sadece dev projesine bağlanır; prod değerleri barındırma panelinde kalır. Gerekliyse kullanıcı kendisi çalıştırır.' };
+function evaluateOne(command) {
+  const k = command.replace(/\s+/g, ' ');
+  const prodDb = PROD_DB.test(k) || PROD_MARK.test(k);
+  if (PROD_SECRET.test(k)) {
+    return { decision: 'deny', reason: 'Prod ortam değişkenleri (sırlar) bu makineye çekiliyor. Yerel ortam ve AI sadece dev projesine bağlanır; prod değerleri barındırma panelinde kalır. Gerekliyse kullanıcı kendisi çalıştırır.' };
   }
-  for (const [re, neden] of YIKICI) {
+  for (const [re, reason] of DESTRUCTIVE) {
     if (re.test(k)) {
-      return { karar: 'deny', neden: `${neden}${prodDb ? ' — PROD/uzak veritabanı hedefleniyor' : ''}. AI bu komutu çalıştıramaz. Gerekliyse kullanıcı, önce yedek alıp kendisi çalıştırır (Claude Code'da "! komut" veya kendi terminali).` };
+      return { decision: 'deny', reason: `${reason}${prodDb ? ' — PROD/uzak veritabanı hedefleniyor' : ''}. AI bu komutu çalıştıramaz. Gerekliyse kullanıcı, önce yedek alıp kendisi çalıştırır (Claude Code'da "! komut" veya kendi terminali).` };
     }
   }
-  for (const [re, neden] of ONAYLI) {
-    if (re.test(k)) return { karar: prodDb ? 'deny' : 'ask', neden: `${neden}. Kullanıcı onayı gerekli.${prodDb ? ' Komut prod veritabanı adresi içeriyor; AI çalıştıramaz.' : ''}` };
+  for (const [re, reason] of NEEDS_APPROVAL) {
+    if (re.test(k)) return { decision: prodDb ? 'deny' : 'ask', reason: `${reason}. Kullanıcı onayı gerekli.${prodDb ? ' Komut prod veritabanı adresi içeriyor; AI çalıştıramaz.' : ''}` };
   }
   if (prodDb && /\b(psql|mysql|mongosh|redis-cli|prisma|drizzle-kit|alembic|supabase)\b/i.test(k)) {
-    return { karar: 'ask', neden: 'Komut localhost dışındaki bir veritabanına bağlanıyor (prod olabilir). Kullanıcı onayı gerekli; AI prod erişim bilgisi kullanmamalı.' };
+    return { decision: 'ask', reason: 'Komut localhost dışındaki bir veritabanına bağlanıyor (prod olabilir). Kullanıcı onayı gerekli; AI prod erişim bilgisi kullanmamalı.' };
   }
-  if (testYazimi(k)) {
-    return { karar: 'ask', neden: 'Test dosyası kabuk komutuyla değiştiriliyor, taşınıyor veya siliniyor. Testi geçirmek için testi zayıflatmak yasak (AGENTS.md kural 7); test düzenlemesini dosya aracıyla yap. Kullanıcı onayı gerekli.' };
+  if (writesTest(k)) {
+    return { decision: 'ask', reason: 'Test dosyası kabuk komutuyla değiştiriliyor, taşınıyor veya siliniyor. Testi geçirmek için testi zayıflatmak yasak (AGENTS.md kural 7); test düzenlemesini dosya aracıyla yap. Kullanıcı onayı gerekli.' };
   }
   return null;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const g = girdiOku();
-  // İki listeden sıkı olan kazanır (deny > ask)
-  const sonuclar = g ? [degerlendir(g.komut), g.arac !== 'claude' ? izinKarsiligi(g.komut) : null, kapsamSorunu(g.komut, g.dizin, g.kok)].filter(Boolean) : [];
-  const s = sonuclar.find((x) => x.karar === 'deny') ?? sonuclar[0];
-  if (s) kararVer(g.arac, s.karar, `Kalkan: ${s.neden}`);
+  const g = readInput();
+  // Of the lists, the stricter wins (deny > ask)
+  const results = g ? [evaluate(g.command), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root)].filter(Boolean) : [];
+  const s = results.find((x) => x.decision === 'deny') ?? results[0];
+  if (s) decide(g.tool, s.decision, `Kalkan: ${s.reason}`);
   process.exit(0);
 }

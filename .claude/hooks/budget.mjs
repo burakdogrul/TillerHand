@@ -1,64 +1,64 @@
 #!/usr/bin/env node
-// Karmaşıklık bütçesi: AI kodu büyüdükçe fonksiyonlar uzar ve dallanır; bütçe aşılınca CI kırmızı olur.
+// Complexity budget: as AI code grows, functions get longer and branchier; CI turns red when the budget is exceeded.
 //   node .claude/hooks/budget.mjs --check [--base <commit>]
-//   Sadece base'ten bu yana değişen kod dosyaları ölçülür (base yoksa veya sıfırsa tüm depo). Böylece kite alınan
-//   eski kod dokunulana kadar engellemez. Test, migration, üretilmiş dosyalar ve kit dosyaları hariç.
-//   Fonksiyon karmaşıklığı ve uzunluğu lizard ile (CI'da pipx run, sabit sürüm), dosya uzunluğu bu betikle ölçülür.
-//   LIZARD=<çalıştırılabilir dosya> verilirse pipx yerine o kullanılır (yerelde kurulu lizard).
+//   Only code files changed since base are measured (the whole repo if base is missing or zero). So old code brought
+//   into the kit does not block until it is touched. Tests, migrations, generated files and kit files are excluded.
+//   Function complexity and length via lizard (pipx run in CI, pinned version), file length by this script.
+//   With LIZARD=<executable> that is used instead of pipx (a locally installed lizard).
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { testDosyasi } from './test-guard.mjs';
+import { isTestFile } from './test-guard.mjs';
 
-export const BUTCE = { karmasiklik: 15, fonksiyon: 80, dosya: 400 };
+export const BUDGET = { complexity: 15, function: 80, file: 400 };
 const LIZARD = ['pipx', 'run', 'lizard==1.24.1'];
-const KOD = /\.(m?[jt]sx?|cjs|py)$/i;
-// build/out/vendor sadece kökte: alt klasörde aynı adlı özellik klasörü ölçümden kaçmasın
-const HARIC = /(^|\/)(node_modules|dist|\.next|\.expo|coverage|\.venv|migrations|alembic|\.claude|\.codex|\.agents)\/|^(build|out|vendor)\/|\.d\.ts$|\.(gen|generated|min)\.[cm]?[jt]sx?$/i;
+const CODE = /\.(m?[jt]sx?|cjs|py)$/i;
+// build/out/vendor only at the root: a feature folder with the same name in a subfolder must not escape measurement
+const EXCLUDED = /(^|\/)(node_modules|dist|\.next|\.expo|coverage|\.venv|migrations|alembic|\.claude|\.codex|\.agents)\/|^(build|out|vendor)\/|\.d\.ts$|\.(gen|generated|min)\.[cm]?[jt]sx?$/i;
 
-export const secilenler = (dosyalar) => dosyalar.filter((f) => KOD.test(f) && !HARIC.test(f) && !testDosyasi(f));
+export const selectFiles = (files) => files.filter((f) => CODE.test(f) && !EXCLUDED.test(f) && !isTestFile(f));
 
-export function uzunDosyalar(kok, dosyalar) {
-  return dosyalar
-    .map((dosya) => {
-      const s = fs.readFileSync(path.join(kok, dosya), 'utf8');
-      return { dosya, satir: s.split('\n').length - (s.endsWith('\n') ? 1 : 0) };
+export function longFiles(root, files) {
+  return files
+    .map((file) => {
+      const s = fs.readFileSync(path.join(root, file), 'utf8');
+      return { file, lines: s.split('\n').length - (s.endsWith('\n') ? 1 : 0) };
     })
-    .filter(({ satir }) => satir > BUTCE.dosya);
+    .filter(({ lines }) => lines > BUDGET.file);
 }
 
-export const lizardArgumanlari = (dosyalar) => ['-C', String(BUTCE.karmasiklik), '-L', String(BUTCE.fonksiyon), '-w', '--', ...dosyalar];
+export const lizardArgs = (files) => ['-C', String(BUDGET.complexity), '-L', String(BUDGET.function), '-w', '--', ...files];
 
-export function degisenler(kok, base) {
-  // -z: Türkçe veya boşluklu yollar tırnaklanıp kaçışlanmasın; --end-of-options: base bayrak sayılmasın
-  const git = (...a) => execFileSync('git', a, { cwd: kok, encoding: 'utf8' }).split('\0').filter(Boolean);
-  let liste;
-  // base bilinmiyorsa (yeni dal, force-push sonrası klonda olmayan commit) tüm depo ölçülür
-  try { liste = !base || /^0+$/.test(base) ? git('ls-files', '-z') : git('diff', '--name-only', '-z', '--diff-filter=AMR', '--end-of-options', base, 'HEAD'); }
-  catch { console.warn(`base (${base}) bulunamadı; tüm depo ölçülüyor.`); liste = git('ls-files', '-z'); }
-  return liste.filter((f) => fs.existsSync(path.join(kok, f)));
+export function changedFiles(root, base) {
+  // -z: Turkish or spaced paths are not quoted and escaped; --end-of-options: base is not taken for a flag
+  const git = (...a) => execFileSync('git', a, { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
+  let list;
+  // base unknown (new branch, a commit missing from the clone after force-push): the whole repo is measured
+  try { list = !base || /^0+$/.test(base) ? git('ls-files', '-z') : git('diff', '--name-only', '-z', '--diff-filter=AMR', '--end-of-options', base, 'HEAD'); }
+  catch { console.warn(`base (${base}) bulunamadı; tüm depo ölçülüyor.`); list = git('ls-files', '-z'); }
+  return list.filter((f) => fs.existsSync(path.join(root, f)));
 }
 
-function kontrol() {
-  const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+function check() {
+  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const i = process.argv.indexOf('--base');
-  const dosyalar = secilenler(degisenler(kok, i > 0 ? process.argv[i + 1] : ''));
-  if (!dosyalar.length) { console.log('Karmaşıklık bütçesi: değişen kod dosyası yok.'); return; }
-  let hata = false;
-  for (const { dosya, satir } of uzunDosyalar(kok, dosyalar)) {
-    console.error(`${dosya}: ${satir} satır (bütçe ${BUTCE.dosya}). Dosyayı sorumluluklarına göre böl.`);
-    hata = true;
+  const files = selectFiles(changedFiles(root, i > 0 ? process.argv[i + 1] : ''));
+  if (!files.length) { console.log('Karmaşıklık bütçesi: değişen kod dosyası yok.'); return; }
+  let failed = false;
+  for (const { file, lines } of longFiles(root, files)) {
+    console.error(`${file}: ${lines} satır (bütçe ${BUDGET.file}). Dosyayı sorumluluklarına göre böl.`);
+    failed = true;
   }
-  const [komut, ...onEk] = process.env.LIZARD ? [process.env.LIZARD] : LIZARD;
-  const r = spawnSync(komut, [...onEk, ...lizardArgumanlari(dosyalar)], { cwd: kok, stdio: 'inherit' });
-  if (r.error) { console.error(`lizard çalıştırılamadı (${komut}): ${r.error.code}. CI'da pipx hazır gelir; yerelde: pip install lizard==1.24.1, sonra LIZARD=lizard.`); hata = true; }
-  else if (r.status !== 0) { console.error(`Fonksiyon bütçesi aşıldı (karmaşıklık ${BUTCE.karmasiklik}, uzunluk ${BUTCE.fonksiyon} satır). Fonksiyonu küçük parçalara böl.`); hata = true; }
-  if (hata) process.exit(1);
-  console.log(`Karmaşıklık bütçesi uygun: ${dosyalar.length} dosya.`);
+  const [command, ...prefix] = process.env.LIZARD ? [process.env.LIZARD] : LIZARD;
+  const r = spawnSync(command, [...prefix, ...lizardArgs(files)], { cwd: root, stdio: 'inherit' });
+  if (r.error) { console.error(`lizard çalıştırılamadı (${command}): ${r.error.code}. CI'da pipx hazır gelir; yerelde: pip install lizard==1.24.1, sonra LIZARD=lizard.`); failed = true; }
+  else if (r.status !== 0) { console.error(`Fonksiyon bütçesi aşıldı (karmaşıklık ${BUDGET.complexity}, uzunluk ${BUDGET.function} satır). Fonksiyonu küçük parçalara böl.`); failed = true; }
+  if (failed) process.exit(1);
+  console.log(`Karmaşıklık bütçesi uygun: ${files.length} dosya.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (process.argv.includes('--check')) kontrol();
+  if (process.argv.includes('--check')) check();
   else { console.error('Kullanım: node .claude/hooks/budget.mjs --check [--base <commit>]'); process.exit(1); }
 }
