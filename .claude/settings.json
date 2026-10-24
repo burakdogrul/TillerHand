@@ -21,17 +21,18 @@
       "Bash(node .claude/hooks/commit-gate.mjs --approve:*)",
       "Bash(node .claude/hooks/structure-guard.mjs --check)",
       "Bash(node .claude/hooks/tools.mjs)",
-      "Bash(node .claude/hooks/tools.mjs --gerekli:*)",
-      "Bash(node .claude/hooks/tools.mjs --olc)",
-      "Bash(node .claude/hooks/tools.mjs --kapat:*)"
+      "Bash(node .claude/hooks/tools.mjs --required:*)",
+      "Bash(node .claude/hooks/tools.mjs --measure)",
+      "Bash(node .claude/hooks/tools.mjs --disable:*)"
     ],
     "ask": [
       "Bash(git push:*)",
-      "Bash(node .claude/hooks/tools.mjs --ac:*)",
+      "Bash(node .claude/hooks/tools.mjs --enable:*)",
       "Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)",
       "Bash(node .claude/hooks/gate.mjs --approve)",
       "Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)",
       "Bash(node .claude/hooks/gate.mjs --onayla)",
+      "Bash(node .claude/hooks/tools.mjs --ac:*)",
       "Edit(./CLAUDE.md)",
       "Edit(./AGENTS.md)",
       "Edit(./.codex/**)",
@@ -133,7 +134,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs\" --sessiz",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs\" --quiet",
             "timeout": 20
           },
           {

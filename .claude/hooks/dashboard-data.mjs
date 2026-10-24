@@ -1,272 +1,276 @@
-// dashboard.html için ek veri kaynakları (test edilebilir saf fonksiyonlar + küçük okuyucular).
-// Kabul testleri, hesap son tarihleri, bayraklar, birim ekonomisi, geri bildirim, metrikler, GitHub durumu.
+// Extra data sources for dashboard.html (testable pure functions + small readers).
+// Acceptance tests, account deadlines, flags, unit economics, feedback, metrics, GitHub status.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { oku, bolumler, tabloSatirlari, etiketler } from './status-read.mjs';
+import { readText, sections, tableRows, labels } from './status-read.mjs';
 
-const GUN = 864e5;
-const tarihMi = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s).trim());
-export const kalanGun = (tarih, simdi = Date.now()) => Math.ceil((Date.parse(`${tarih}T00:00:00`) - simdi) / GUN);
+const DAY = 864e5;
+const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s).trim());
+export const daysLeft = (date, now = Date.now()) => Math.ceil((Date.parse(`${date}T00:00:00`) - now) / DAY);
 
-// ---------- kabul testleri ----------
-// Kriter kimliği PRD'de "Ö-01.1", testlerde "Ö-01.1" veya "O_01_1" olabilir; hepsi "O_01_1" anahtarına normalize edilir.
-const KIMLIK = /[ÖO][-_](\d{2})[._](\d+)/g;
-const anahtar = (m1, m2) => `O_${m1}_${m2}`;
+// ---------- acceptance tests ----------
+// A criterion id is "Ö-01.1" in the PRD and "Ö-01.1" or "O_01_1" in tests; all normalize to the key "O_01_1".
+const CRITERION_ID = /[ÖO][-_](\d{2})[._](\d+)/g;
+const key = (m1, m2) => `O_${m1}_${m2}`;
 
-export function prdKriterleri(prdMetni) {
-  return [...prdMetni.matchAll(/^\s*- \[( |x)\]\s*(Ö-(\d{2})\.(\d+))\s*:?\s*(.*)$/gim)]
+export function prdCriteria(prdText) {
+  return [...prdText.matchAll(/^\s*- \[( |x)\]\s*(Ö-(\d{2})\.(\d+))\s*:?\s*(.*)$/gim)]
     .filter((m) => !m[5].startsWith('['))
-    .map((m) => ({ id: m[2], anahtar: anahtar(m[3], m[4]), metin: m[5].trim(), isaretli: m[1].toLowerCase() === 'x' }));
+    .map((m) => ({ id: m[2], key: key(m[3], m[4]), text: m[5].trim(), checked: m[1].toLowerCase() === 'x' }));
 }
 
-const ATLA = new Set(['node_modules', '.git', '.next', 'dist', 'build', '.venv', 'venv', 'coverage', '.expo', 'kit', '.previews', '__pycache__', '.claude']);
-const TEST_DOSYASI = /(\.(test|spec)\.[cm]?[jt]sx?$)|(^test_.*\.py$)|(_test\.py$)|(\.maestro[\\/].*\.ya?ml$)/;
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', '.venv', 'venv', 'coverage', '.expo', 'kit', '.previews', '__pycache__', '.claude']);
+const TEST_FILE = /(\.(test|spec)\.[cm]?[jt]sx?$)|(^test_.*\.py$)|(_test\.py$)|(\.maestro[\\/].*\.ya?ml$)/;
 
-export function testteGecenKimlikler(kok) {
-  const bulunan = new Set();
-  let sayac = 0;
-  (function gez(dir, derinlik) {
-    if (derinlik > 6 || sayac > 3000) return;
-    let girdiler = [];
-    try { girdiler = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-    for (const e of girdiler) {
-      if (ATLA.has(e.name)) continue;
-      const tam = path.join(dir, e.name);
-      if (e.isDirectory()) gez(tam, derinlik + 1);
-      else if (TEST_DOSYASI.test(path.relative(kok, tam)) || TEST_DOSYASI.test(e.name)) {
-        sayac++;
-        for (const m of oku(tam).matchAll(KIMLIK)) bulunan.add(anahtar(m[1], m[2]));
+export function idsInTests(root) {
+  const found = new Set();
+  let tally = 0;
+  (function walk(dir, depth) {
+    if (depth > 6 || tally > 3000) return;
+    let dirEntries = [];
+    try { dirEntries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of dirEntries) {
+      if (SKIP_DIRS.has(e.name)) continue;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) walk(full, depth + 1);
+      else if (TEST_FILE.test(path.relative(root, full)) || TEST_FILE.test(e.name)) {
+        tally++;
+        for (const m of readText(full).matchAll(CRITERION_ID)) found.add(key(m[1], m[2]));
       }
     }
-  })(kok, 0);
-  return bulunan;
+  })(root, 0);
+  return found;
 }
 
-export function junitSonuclari(xmlMetinleri) {
-  const sonuc = new Map();
-  for (const xml of xmlMetinleri) {
+export function junitResults(xmlTexts) {
+  const result = new Map();
+  for (const xml of xmlTexts) {
     for (const m of xml.matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g)) {
-      const ad = (m[1].match(/\bname="([^"]*)"/)?.[1] ?? '') + ' ' + (m[1].match(/\bclassname="([^"]*)"/)?.[1] ?? '');
-      const govde = m[2] ?? '';
-      if (/<skipped/.test(govde)) continue;
-      const kaldi = /<(failure|error)\b/.test(govde);
-      for (const k of ad.matchAll(KIMLIK)) {
-        const a = anahtar(k[1], k[2]);
-        sonuc.set(a, kaldi || sonuc.get(a) === 'kaldi' ? 'kaldi' : 'gecti');
+      const name = (m[1].match(/\bname="([^"]*)"/)?.[1] ?? '') + ' ' + (m[1].match(/\bclassname="([^"]*)"/)?.[1] ?? '');
+      const body = m[2] ?? '';
+      if (/<skipped/.test(body)) continue;
+      const failed = /<(failure|error)\b/.test(body);
+      for (const k of name.matchAll(CRITERION_ID)) {
+        const a = key(k[1], k[2]);
+        result.set(a, failed || result.get(a) === 'failed' ? 'failed' : 'passed');
       }
     }
   }
-  return sonuc;
+  return result;
 }
 
-function junitDosyalari(kok) {
-  const adaylar = [];
+function junitFiles(root) {
+  const candidates = [];
   for (const dir of ['test-results', 'reports', '.']) {
     try {
-      for (const f of fs.readdirSync(path.join(kok, dir))) if (/junit.*\.xml$|\.junit\.xml$|^TEST-.*\.xml$/i.test(f)) adaylar.push(path.join(kok, dir, f));
-    } catch { /* klasör yok */ }
+      for (const f of fs.readdirSync(path.join(root, dir))) if (/junit.*\.xml$|\.junit\.xml$|^TEST-.*\.xml$/i.test(f)) candidates.push(path.join(root, dir, f));
+    } catch { /* no folder */ }
   }
-  return adaylar.map((f) => ({ metin: oku(f), zaman: fs.statSync(f).mtimeMs }));
+  return candidates.map((f) => ({ text: readText(f), time: fs.statSync(f).mtimeMs }));
 }
 
-export function kabulDurumu(kok) {
-  const kriterler = prdKriterleri(oku(path.join(kok, 'docs/product/prd.md')));
-  const testli = testteGecenKimlikler(kok);
-  const raporlar = junitDosyalari(kok);
-  const sonuclar = junitSonuclari(raporlar.map((r) => r.metin));
-  const liste = kriterler.map((k) => ({ ...k, test: testli.has(k.anahtar) || sonuclar.has(k.anahtar), sonuc: sonuclar.get(k.anahtar) ?? null }));
+export function acceptanceStatus(root) {
+  const criteria = prdCriteria(readText(path.join(root, 'docs/product/prd.md')));
+  const tested = idsInTests(root);
+  const reports = junitFiles(root);
+  const results = junitResults(reports.map((r) => r.text));
+  const list = criteria.map((k) => ({ ...k, test: tested.has(k.key) || results.has(k.key), result: results.get(k.key) ?? null }));
   return {
-    liste,
-    raporZamani: raporlar.length ? Math.max(...raporlar.map((r) => r.zaman)) : null,
-    toplam: liste.length,
-    testli: liste.filter((k) => k.test).length,
-    gecen: liste.filter((k) => k.sonuc === 'gecti').length,
-    uyumsuz: liste.filter((k) => k.isaretli && k.sonuc !== 'gecti'),
+    list,
+    reportTime: reports.length ? Math.max(...reports.map((r) => r.time)) : null,
+    total: list.length,
+    tested: list.filter((k) => k.test).length,
+    passing: list.filter((k) => k.result === 'passed').length,
+    mismatched: list.filter((k) => k.checked && k.result !== 'passed'),
   };
 }
 
-// ---------- hesaplar ve bayraklar ----------
-export function hesaplar(metin, simdi = Date.now()) {
-  return tabloSatirlari(bolumler(metin)['Hesaplar'], 8)
-    .filter(([servis]) => servis && !servis.startsWith('['))
-    .map(([servis, amac, sahip, ikiFa, plan, bitis, anahtarYenileme]) => {
-      const tarihler = [['bitiş', bitis], ['anahtar yenileme', anahtarYenileme]].filter(([, t]) => tarihMi(t))
-        .map(([tur, t]) => ({ tur, tarih: t, kalan: kalanGun(t, simdi) }));
-      return { servis, amac, sahip, ikiFa, plan, tarihler, ikiFaYok: /^(hayır|yok|no)$/i.test(ikiFa) };
+// ---------- accounts and flags ----------
+export function accounts(text, now = Date.now()) {
+  return tableRows(sections(text)['Hesaplar'], 8)
+    .filter(([service]) => service && !service.startsWith('['))
+    .map(([service, purpose, owner, twoFactor, plan, expiry, keyRotation]) => {
+      const dates = [['bitiş', expiry], ['anahtar yenileme', keyRotation]].filter(([, t]) => isDate(t))
+        .map(([kind, t]) => ({ kind, date: t, left: daysLeft(t, now) }));
+      return { service, purpose, owner, twoFactor, plan, dates, noTwoFactor: /^(hayır|yok|no)$/i.test(twoFactor) };
     });
 }
 
-// Dev/prod ayrımı ve RLS saldırgan testi: prod ref'i AI'nın MCP ayarında olmamalı; Supabase varsa RLS testi olmalı
-export function ortamUyarilari(kok) {
+// Dev/prod split and the RLS attacker test: the prod ref must not be in the AI's MCP config; with Supabase an RLS test must exist
+export function envWarnings(root) {
   const u = [];
-  const prodRef = tabloSatirlari(bolumler(oku(path.join(kok, 'docs/operations/accounts.md')))['Ortamlar (dev / prod)'], 4)
-    .find(([ortam, , ref]) => ortam === 'prod' && ref && !ref.startsWith('['))?.[2];
-  if (prodRef && oku(path.join(kok, '.mcp.json')).includes(prodRef)) {
-    u.push({ sev: 'kritik', metin: `Prod projesinin ref'i (${prodRef}) .mcp.json'da: AI prod'a bağlanabiliyor.`, eylem: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)' });
+  const prodRef = tableRows(sections(readText(path.join(root, 'docs/operations/accounts.md')))['Ortamlar (dev / prod)'], 4)
+    .find(([environment, , ref]) => environment === 'prod' && ref && !ref.startsWith('['))?.[2];
+  if (prodRef && readText(path.join(root, '.mcp.json')).includes(prodRef)) {
+    u.push({ sev: 'critical', text: `Prod projesinin ref'i (${prodRef}) .mcp.json'da: AI prod'a bağlanabiliyor.`, action: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)' });
   }
-  if (fs.existsSync(path.join(kok, 'supabase/config.toml')) && !fs.existsSync(path.join(kok, 'tests/security/rls.mjs'))) {
-    u.push({ sev: 'uyari', metin: 'Supabase kullanılıyor ama RLS saldırgan testi yok (tests/security/rls.mjs).', eylem: '/kit-update ile şablonu al, tabloları TABLOLAR\'a ekle' });
+  if (fs.existsSync(path.join(root, 'supabase/config.toml')) && !fs.existsSync(path.join(root, 'tests/security/rls.mjs'))) {
+    u.push({ sev: 'warn', text: 'Supabase kullanılıyor ama RLS saldırgan testi yok (tests/security/rls.mjs).', action: '/kit-update ile şablonu al, tabloları TABLOLAR\'a ekle' });
   }
   return u;
 }
 
-export function bayraklar(metin, simdi = Date.now()) {
-  return tabloSatirlari(bolumler(metin)['Bayraklar'], 7).filter(([ad]) => ad)
-    .map(([ad, amac, durum, sahip, eklendi, kaldirma, kapatmaTest]) => ({
-      ad, amac, durum, sahip, eklendi, kaldirma, kapatmaTest,
-      gecikti: tarihMi(kaldirma) && kalanGun(kaldirma, simdi) < 0,
-      testsiz: !/^(evet|✅|var)/i.test(kapatmaTest ?? ''),
+export function flags(text, now = Date.now()) {
+  return tableRows(sections(text)['Bayraklar'], 7).filter(([name]) => name)
+    .map(([name, purpose, state, owner, added, removal, killSwitchTested]) => ({
+      name, purpose, state, owner, added, removal, killSwitchTested,
+      isOverdue: isDate(removal) && daysLeft(removal, now) < 0,
+      untested: !/^(evet|✅|var)/i.test(killSwitchTested ?? ''),
     }));
 }
 
-// ---------- birim ekonomisi ----------
-export function birimEkonomisi(metin) {
-  const e = etiketler(metin);
+// ---------- unit economics ----------
+export function unitEconomics(text) {
+  const e = labels(text);
   const s = (k) => { const v = parseFloat(String(e[k] ?? '').replace(/[^\d.,-]/g, '').replace(',', '.')); return Number.isFinite(v) ? v : 0; };
-  const fiyat = s('Fiyat (kullanıcı başı aylık)');
-  const komisyon = s('Ödeme komisyonu (%)');
-  const sabit = s('Sabit aylık maliyet');
-  const degisken = s('Kullanıcı başı değişken maliyet (aylık)');
-  const hedef = s('Hedef aktif kullanıcı');
-  const ucretsiz = Math.min(99, s('Ücretsiz kullanıcı oranı (%)'));
-  if (!fiyat && !sabit && !degisken) return null;
-  const katki = fiyat * (1 - komisyon / 100) - degisken;
-  // Her ödeyen kullanıcı, ücretsiz kullanıcıların değişken maliyetini de taşır
-  const ucretsizPayi = (ucretsiz / (100 - ucretsiz)) * degisken;
-  const etkinKatki = katki - ucretsizPayi;
-  const odeyen = hedef * (1 - ucretsiz / 100);
-  const gelir = odeyen * fiyat * (1 - komisyon / 100);
-  const maliyet = sabit + hedef * degisken;
+  const price = s('Fiyat (kullanıcı başı aylık)');
+  const commission = s('Ödeme komisyonu (%)');
+  const fixedCost = s('Sabit aylık maliyet');
+  const variableCost = s('Kullanıcı başı değişken maliyet (aylık)');
+  const target = s('Hedef aktif kullanıcı');
+  const freeShare = Math.min(99, s('Ücretsiz kullanıcı oranı (%)'));
+  if (!price && !fixedCost && !variableCost) return null;
+  const margin = price * (1 - commission / 100) - variableCost;
+  // Every paying user also carries the variable cost of the free users
+  const freeCost = (freeShare / (100 - freeShare)) * variableCost;
+  const effectiveMargin = margin - freeCost;
+  const paying = target * (1 - freeShare / 100);
+  const revenue = paying * price * (1 - commission / 100);
+  const cost = fixedCost + target * variableCost;
   return {
-    paraBirimi: e['Para birimi'] || '',
-    fiyat, katki, etkinKatki,
-    basaBas: etkinKatki > 0 ? Math.ceil(sabit / etkinKatki) : null,
-    hedef, gelir, maliyet, kar: gelir - maliyet,
-    degiskenOrani: fiyat ? (degisken / fiyat) * 100 : null,
+    currency: e['Para birimi'] || '',
+    price, margin, effectiveMargin,
+    breakEven: effectiveMargin > 0 ? Math.ceil(fixedCost / effectiveMargin) : null,
+    target, revenue, cost, profit: revenue - cost,
+    variableRatio: price ? (variableCost / price) * 100 : null,
   };
 }
 
-// ---------- geri bildirim ve metrikler ----------
-export function geriBildirim(metin) {
-  const b = bolumler(metin);
-  const kayitlar = tabloSatirlari(b['Gelen kutusu'], 9).map(([no, tarih, kaynak, kullanici, ozet, tur, tema, oncelik, durum]) => ({ no, tarih, ozet, tur, tema, oncelik, durum }));
-  const temalar = tabloSatirlari(b['Temalar'], 3).map(([tema, sayi, ozellik, karar]) => ({ tema, sayi: parseInt(sayi, 10) || 0, ozellik, karar }))
-    .sort((x, y) => y.sayi - x.sayi);
-  return { kayitlar, temalar, yeni: kayitlar.filter((k) => /yeni/i.test(k.durum)).length };
+// ---------- feedback and metrics ----------
+export function feedback(text) {
+  const b = sections(text);
+  const records = tableRows(b['Gelen kutusu'], 9).map(([no, date, source, user, summary, kind, theme, priority, state]) => ({ no, date, summary, kind, theme, priority, state }));
+  const themes = tableRows(b['Temalar'], 3).map(([theme, count, feature, decision]) => ({ theme, count: parseInt(count, 10) || 0, feature, decision }))
+    .sort((x, y) => y.count - x.count);
+  return { records, themes, newCount: records.filter((k) => /yeni/i.test(k.state)).length };
 }
 
-export function metrikler(metin) {
-  return tabloSatirlari(bolumler(metin)['Kayıtlar'], 9)
-    .map(([donem, gorev, sure, limit, duzeltme, geriAlma, kopya, kritik, kabul]) => ({ donem, gorev, sure, limit, duzeltme, geriAlma, kopya, kritik, kabul }));
+export function metrics(text) {
+  return tableRows(sections(text)['Kayıtlar'], 9)
+    .map(([period, taskCount, duration, limit, fixes, reverts, duplicates, critical, acceptance]) => ({ period, taskCount, duration, limit, fixes, reverts, duplicates, critical, acceptance }));
 }
 
-// ---------- bulgu raporları ----------
-export const BULGU_TURLERI = { tech: 'Teknik', business: 'İş', security: 'Güvenlik', ux: 'UX', perf: 'Performans', legal: 'Hukuk' };
-export function bulguRaporlari(metin) {
-  const sayi = (x) => { const n = parseInt(String(x ?? '').trim().replace(/^[^\d-]+/, ''), 10); return Number.isFinite(n) ? n : null; };
-  const satirlar = tabloSatirlari(bolumler(metin)['Raporlar'], 7)
-    .map(([tarih, tur, saglik, onceki, bulgu, kritik, rapor]) => ({
-      tarih, tur: tur.toLowerCase(), saglik: sayi(saglik), onceki: sayi(onceki), bulgu: sayi(bulgu), kritik: sayi(kritik) ?? 0, rapor,
+// ---------- finding reports ----------
+export const FINDING_KINDS = { tech: 'Teknik', business: 'İş', security: 'Güvenlik', ux: 'UX', perf: 'Performans', legal: 'Hukuk' };
+export function findingReports(text) {
+  const count = (x) => { const n = parseInt(String(x ?? '').trim().replace(/^[^\d-]+/, ''), 10); return Number.isFinite(n) ? n : null; };
+  const rows = tableRows(sections(text)['Raporlar'], 7)
+    .map(([date, kind, health, previous, findings, critical, report]) => ({
+      date, kind: kind.toLowerCase(), health: count(health), previous: count(previous), findings: count(findings), critical: count(critical) ?? 0, report,
     }))
-    .filter((r) => r.tarih && r.saglik != null);
-  const son = {};
-  for (const r of satirlar) if (!son[r.tur] || r.tarih >= son[r.tur].tarih) son[r.tur] = r;
-  return { satirlar, son };
+    .filter((r) => r.date && r.health != null);
+  const latest = {};
+  for (const r of rows) if (!latest[r.kind] || r.date >= latest[r.kind].date) latest[r.kind] = r;
+  return { rows, latest };
 }
 
-// ---------- Üretilen varlıklar: marka paketi (logo-design), tanıtım videoları (motion-video), araştırma notları (source-research) ----------
-export function uretimVarliklari(kok) {
-  const liste = (k) => { try { return fs.readdirSync(path.join(kok, k), { withFileTypes: true }); } catch { return []; } };
-  const markaKlasor = ['public/brand', 'assets/brand'].find((k) => liste(k).length) ?? null;
-  const marka = markaKlasor ? liste(markaKlasor).filter((f) => f.isFile()).map((f) => f.name).sort() : [];
-  const videolar = liste('marketing/motion').filter((f) => f.isDirectory()).map((f) => {
+// ---------- Produced assets: brand kit (logo-design), promo videos (motion-video), research notes (source-research) ----------
+export function producedAssets(root) {
+  const list = (k) => { try { return fs.readdirSync(path.join(root, k), { withFileTypes: true }); } catch { return []; } };
+  const brandDir = ['public/brand', 'assets/brand'].find((k) => list(k).length) ?? null;
+  const brand = brandDir ? list(brandDir).filter((f) => f.isFile()).map((f) => f.name).sort() : [];
+  const videos = list('marketing/motion').filter((f) => f.isDirectory()).map((f) => {
     const k = `marketing/motion/${f.name}`;
-    const mp4 = [`${k}/out`, k].flatMap((d) => liste(d).filter((x) => x.isFile() && x.name.endsWith('.mp4')).map((x) => `${d}/${x.name}`))[0] ?? null;
-    return { ad: f.name, mp4 };
+    const mp4 = [`${k}/out`, k].flatMap((d) => list(d).filter((x) => x.isFile() && x.name.endsWith('.mp4')).map((x) => `${d}/${x.name}`))[0] ?? null;
+    return { name: f.name, mp4 };
   });
-  const arastirma = liste('docs/research')
+  const research = list('docs/research')
     .filter((f) => f.isFile() && f.name.endsWith('.md') && f.name !== 'README.md')
     .map((f) => {
-      const dosya = `docs/research/${f.name}`;
-      const baslik = oku(path.join(kok, dosya)).match(/^#\s+(.+)$/m)?.[1] ?? f.name.replace(/\.md$/, '');
-      return { dosya, baslik };
+      const file = `docs/research/${f.name}`;
+      const title = readText(path.join(root, file)).match(/^#\s+(.+)$/m)?.[1] ?? f.name.replace(/\.md$/, '');
+      return { file, title };
     })
-    .sort((x, y) => y.dosya.localeCompare(x.dosya));
-  let kodHaritasiGun = null;
-  try { kodHaritasiGun = Math.floor((Date.now() - fs.statSync(path.join(kok, '.ua/knowledge-graph.json')).mtimeMs) / 864e5); } catch {}
-  return { markaKlasor, marka, markaRehberi: fs.existsSync(path.join(kok, 'docs/design/brand.md')), videolar, arastirma, kodHaritasiGun };
+    .sort((x, y) => y.file.localeCompare(x.file));
+  let codeMapDays = null;
+  try { codeMapDays = Math.floor((Date.now() - fs.statSync(path.join(root, '.ua/knowledge-graph.json')).mtimeMs) / 864e5); } catch {}
+  return { brandDir, brand, brandGuide: fs.existsSync(path.join(root, 'docs/design/brand.md')), videos, research, codeMapDays };
 }
 
-// ---------- Harcama alarmları (docs/operations/spend-alarms.md) ----------
-export function harcamaAlarmlari(metin, simdi = Date.now()) {
-  return tabloSatirlari(bolumler(metin)['Alarmlar'], 6).filter(([servis]) => servis)
-    .map(([servis, tur, tutar, esikler, nereden, kontrol]) => ({
-      servis, tur, tutar, esikler, nereden, kontrol,
-      ayarsiz: !/\d/.test(tutar ?? ''),
-      eski: tarihMi(kontrol) ? kalanGun(kontrol, simdi) < -35 : true,
+// ---------- Spend alarms (docs/operations/spend-alarms.md) ----------
+export function spendAlarms(text, now = Date.now()) {
+  return tableRows(sections(text)['Alarmlar'], 6).filter(([service]) => service)
+    .map(([service, kind, amount, thresholds, where, lastCheck]) => ({
+      service, kind, amount, thresholds, where, lastCheck,
+      unset: !/\d/.test(amount ?? ''),
+      stale: isDate(lastCheck) ? daysLeft(lastCheck, now) < -35 : true,
     }));
 }
 
-// ---------- Konsey tutanakları (docs/workflow/council/*.md; council.mjs ve board-chair yazar) ----------
-export function konseyTutanaklari(kok) {
-  const klasor = path.join(kok, 'docs', 'workflow', 'council');
-  let dosyalar = [];
-  try { dosyalar = fs.readdirSync(klasor).filter((f) => f.endsWith('.md') && f !== 'README.md'); } catch { return []; }
-  return dosyalar.map((f) => {
-    const metin = oku(path.join(klasor, f));
+// ---------- Council minutes (docs/workflow/council/*.md; written by council.mjs and board-chair) ----------
+export function councilMinutes(root) {
+  const folder = path.join(root, 'docs', 'workflow', 'council');
+  let files = [];
+  try { files = fs.readdirSync(folder).filter((f) => f.endsWith('.md') && f !== 'README.md'); } catch { return []; }
+  return files.map((f) => {
+    const text = readText(path.join(folder, f));
     const a = {};
-    for (const [, k, v] of metin.matchAll(/\*\*([^*:]+):\*\*\s*([^·\n]*)/g)) a[k.trim()] ??= v.trim();
-    const siralama = tabloSatirlari(bolumler(metin)['3. Toplu sıralama'], 3).filter(([g]) => /^[A-Z]$/.test(g));
-    const kimlik = Object.fromEntries([...(bolumler(metin)['Kimlikler'] ?? '').matchAll(/([A-Z])\s*=\s*([^·\n]+)/g)].map((m) => [m[1], m[2].trim()]));
+    for (const [, k, v] of text.matchAll(/\*\*([^*:]+):\*\*\s*([^·\n]*)/g)) a[k.trim()] ??= v.trim();
+    const ranking = tableRows(sections(text)['3. Toplu sıralama'], 3).filter(([g]) => /^[A-Z]$/.test(g));
+    const idsByLetter = Object.fromEntries([...(sections(text)['Kimlikler'] ?? '').matchAll(/([A-Z])\s*=\s*([^·\n]+)/g)].map((m) => [m[1], m[2].trim()]));
     return {
-      dosya: `docs/workflow/council/${f}`,
-      konu: metin.match(/^#\s+Konsey:\s*(.+)$/m)?.[1] ?? f.replace(/\.md$/, ''),
-      tarih: a['Tarih'] ?? f.slice(0, 10),
-      tur: a['Tür'] ?? '-',
-      karar: a['Karar'] || a['Öneri'] || null,
-      uzlasma: a['Uzlaşma']?.match(/\d+/) ? Number(a['Uzlaşma'].match(/\d+/)[0]) : null,
-      tartismali: Number(a['Tartışmalı'] ?? 0) || 0,
-      elenen: Number(a['Elenen'] ?? 0) || 0,
-      siralama: siralama.map(([g, ort]) => ({ gorus: g, kim: kimlik[g] ?? null, ortalama: ort })),
+      file: `docs/workflow/council/${f}`,
+      topic: text.match(/^#\s+Konsey:\s*(.+)$/m)?.[1] ?? f.replace(/\.md$/, ''),
+      date: a['Tarih'] ?? f.slice(0, 10),
+      kind: a['Tür'] ?? '-',
+      decision: a['Karar'] || a['Öneri'] || null,
+      consensus: a['Uzlaşma']?.match(/\d+/) ? Number(a['Uzlaşma'].match(/\d+/)[0]) : null,
+      disputed: Number(a['Tartışmalı'] ?? 0) || 0,
+      eliminated: Number(a['Elenen'] ?? 0) || 0,
+      ranking: ranking.map(([g, avg]) => ({ opinion: g, who: idsByLetter[g] ?? null, average: avg })),
     };
-  }).sort((x, y) => y.tarih.localeCompare(x.tarih) || y.dosya.localeCompare(x.dosya));
+  }).sort((x, y) => y.date.localeCompare(x.date) || y.file.localeCompare(x.file));
 }
 
-// ---------- Token ve maliyet (ccusage; cost.mjs yazar) ----------
-// Claude Code transcript klasör adı: proje yolundaki harf/rakam dışı her karakter "-" olur
-export const ccusageProjeAdi = (kok) => path.resolve(kok).replace(/[^a-zA-Z0-9]/g, '-');
-export function maliyetOzeti(veri) {
-  const gunler = Object.values(veri?.projects ?? {}).flat().concat(veri?.daily ?? [])
-    .map((g) => ({ tarih: g.date ?? g.period, token: g.totalTokens ?? 0, maliyet: g.totalCost ?? 0, cikti: g.outputTokens ?? 0 }))
-    .filter((g) => g.tarih)
-    .sort((a, b) => a.tarih.localeCompare(b.tarih));
-  const toplam = gunler.reduce((t, g) => ({ token: t.token + g.token, maliyet: t.maliyet + g.maliyet }), { token: 0, maliyet: 0 });
-  return { gunler, toplam };
+// ---------- Tokens and cost (ccusage; written by cost.mjs) ----------
+// Claude Code transcript folder name: every non letter/digit character in the project path becomes "-"
+export const ccusageProjectName = (root) => path.resolve(root).replace(/[^a-zA-Z0-9]/g, '-');
+export function costSummary(data) {
+  const days = Object.values(data?.projects ?? {}).flat().concat(data?.daily ?? [])
+    .map((g) => ({ date: g.date ?? g.period, token: g.totalTokens ?? 0, cost: g.totalCost ?? 0, output: g.outputTokens ?? 0 }))
+    .filter((g) => g.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const total = days.reduce((t, g) => ({ token: t.token + g.token, cost: t.cost + g.cost }), { token: 0, cost: 0 });
+  return { days, total };
 }
 
-// ---------- GitHub (gh varsa, 5 dk önbellek) ----------
-export function ghDurumu(kok, simdi = Date.now()) {
-  const dosya = path.join(kok, '.claude', 'state', 'github-cache.json');
+// ---------- GitHub (if gh exists, 5 min cache) ----------
+export function githubStatus(root, now = Date.now()) {
+  const file = path.join(root, '.claude', 'state', 'github-cache.json');
   try {
-    const o = JSON.parse(fs.readFileSync(dosya, 'utf8'));
-    if (simdi - o.zaman < 5 * 60e3) return o.veri;
-  } catch { /* önbellek yok */ }
-  const gh = (...a) => JSON.parse(execFileSync('gh', a, { cwd: kok, encoding: 'utf8', timeout: 8000, stdio: ['ignore', 'pipe', 'ignore'] }));
-  let veri = null;
+    const o = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (now - o.time < 5 * 60e3) return o.data;
+  } catch { /* no cache */ }
+  const gh = (...a) => JSON.parse(execFileSync('gh', a, { cwd: root, encoding: 'utf8', timeout: 8000, stdio: ['ignore', 'pipe', 'ignore'] }));
+  let data = null;
   try {
-    veri = {
-      calismalar: gh('run', 'list', '--limit', '8', '--json', 'workflowName,conclusion,status,headBranch,createdAt,url'),
-      prlar: gh('pr', 'list', '--limit', '10', '--json', 'number,title,isDraft,url,headRefName'),
-      canliIzleme: gh('issue', 'list', '--label', 'live-monitoring', '--state', 'open', '--json', 'number,title,url'),
+    data = {
+      runs: gh('run', 'list', '--limit', '8', '--json', 'workflowName,conclusion,status,headBranch,createdAt,url'),
+      prs: gh('pr', 'list', '--limit', '10', '--json', 'number,title,isDraft,url,headRefName'),
+      liveMonitoring: gh('issue', 'list', '--label', 'live-monitoring', '--state', 'open', '--json', 'number,title,url'),
     };
   } catch {
-    veri = null; // gh yok, giriş yapılmamış veya uzak depo yok
+    data = null; // no gh, not logged in, or no remote
   }
-  try { fs.mkdirSync(path.dirname(dosya), { recursive: true }); fs.writeFileSync(dosya, JSON.stringify({ zaman: simdi, veri })); } catch { /* sessiz */ }
-  return veri;
+  try { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify({ time: now, data })); } catch { /* sessiz */ }
+  return data;
 }
 
-export function baglamOku(kok) {
-  try { return JSON.parse(fs.readFileSync(path.join(kok, '.claude', 'state', 'context.json'), 'utf8')); } catch { return null; }
+// yuzde, okundu: keys before 3.15.0 (remove in 3.16.0)
+export function readContext(root) {
+  try {
+    const c = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'context.json'), 'utf8'));
+    return { percent: c.percent ?? c.yuzde, readAt: c.readAt ?? c.okundu };
+  } catch { return null; }
 }

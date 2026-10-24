@@ -130,7 +130,7 @@ Var olan projede: `/adopt`. Kit başka bir yerde duruyorsa: `node <kit>/kit/kit.
 <details>
 <summary><b>Skill plugin'lerini kurmak</b></summary>
 
-Proje ayarı eklentileri açar ama indirmez. `/start` onayınla hepsini proje kapsamında kurar (`node .claude/hooks/plugins-sync.mjs --kur`); ardından `/reload-plugins`. Elle kurmak istersen:
+Proje ayarı eklentileri açar ama indirmez. `/start` onayınla hepsini proje kapsamında kurar (`node .claude/hooks/plugins-sync.mjs --install`); ardından `/reload-plugins`. Elle kurmak istersen:
 
 ```
 /plugin marketplace add juliusbrussee/caveman

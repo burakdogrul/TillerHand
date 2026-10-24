@@ -26,8 +26,8 @@ test('motion-video: SKILL.md içindeki kapalı formlu yay, diferansiyel denklemi
       const ivme = (ileri.v - geri.v) / dt;
       assert.ok(Math.abs(ivme + 2 * zeta * omega * a.v + omega * omega * a.y) < 0.05 * omega * omega, `ODE (ζ=${zeta}, t=${t})`);
     }
-    const bas = yay(y0, v0, omega, zeta, 0);
-    assert.ok(Math.abs(bas.y - y0) < 1e-12 && Math.abs(bas.v - v0) < 1e-9, 'başlangıç koşulları');
+    const startPct = yay(y0, v0, omega, zeta, 0);
+    assert.ok(Math.abs(startPct.y - y0) < 1e-12 && Math.abs(startPct.v - v0) < 1e-9, 'başlangıç koşulları');
     const Ts = 4 / (zeta * omega);
     assert.ok(Math.abs(yay(y0, v0, omega, zeta, Ts * 1.5).y) < 0.03 * Math.max(Math.abs(y0), 1), 'oturma süresinde hedefe yakın');
   }
@@ -36,12 +36,12 @@ test('motion-video: SKILL.md içindeki kapalı formlu yay, diferansiyel denklemi
 test('bildirim: kısa işte ve KIT_NOTIFY=off iken bildirim yok, hata yok', () => {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'bildirim-'));
   fs.mkdirSync(path.join(p, '.claude', 'state'), { recursive: true });
-  fs.writeFileSync(path.join(p, '.claude/state/reminder.json'), JSON.stringify({ tur: Date.now() }));
-  const calistir = (arg, env = {}) => spawnSync(process.execPath, [path.join(KOK, '.claude/hooks/notify.mjs'), ...arg], {
+  fs.writeFileSync(path.join(p, '.claude/state/reminder.json'), JSON.stringify({ turnAt: Date.now() }));
+  const run = (arg, env = {}) => spawnSync(process.execPath, [path.join(KOK, '.claude/hooks/notify.mjs'), ...arg], {
     input: '{}', encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p, ...env }, timeout: 10000,
   });
-  assert.equal(calistir(['--stop']).status, 0, 'eşik altı sessiz çıkar');
-  assert.equal(calistir([], { KIT_NOTIFY: 'off' }).status, 0);
+  assert.equal(run(['--stop']).status, 0, 'eşik altı sessiz çıkar');
+  assert.equal(run([], { KIT_NOTIFY: 'off' }).status, 0);
   fs.rmSync(p, { recursive: true, force: true });
 });
 
@@ -65,7 +65,7 @@ test('ayarlar 3.2: resmi eklentiler, kota ayarı, kilit hook\'u, tipe özel ekle
   assert.equal(s.env.ENABLE_STOP_REVIEW, '0', 'tur sonu güvenlik incelemesi kotadan yer, kapalı gelir');
   assert.ok(s.hooks.PreToolUse.some((m) => m.matcher === 'Write|Edit|MultiEdit|NotebookEdit' && m.hooks.some((h) => h.command.includes('freeze-guard.mjs'))));
   // 3.13: test koruması ve düzenleme turu sayacı üç araçta kayıtlı
-  const kayitli = (olaylar, olay, betik) => JSON.stringify(olaylar[olay] ?? []).includes(betik);
+  const kayitli = (olaylar, olay, script) => JSON.stringify(olaylar[olay] ?? []).includes(script);
   assert.ok(kayitli(s.hooks, 'PreToolUse', 'test-guard.mjs') && kayitli(s.hooks, 'PostToolUse', 'edit-rounds.mjs'), 'Claude');
   const cx = JSON.parse(fs.readFileSync(path.join(KOK, 'kit/tools/codex/.codex/hooks.json'), 'utf8')).hooks;
   assert.ok(kayitli(cx, 'PreToolUse', 'test-guard.mjs') && kayitli(cx, 'PostToolUse', 'edit-rounds.mjs'), 'Codex');
@@ -91,7 +91,7 @@ test('ayarlar 3.11: tarayıcı MCP\'leri katalogda, ajan Playwright CLI kullanı
   for (const s of ['@playwright/mcp@0.0.83', 'chrome-devtools-mcp@1.10.1', '--scope local', 'figma-remote-mcp', 'supabase-dev']) assert.ok(katalog.includes(s), `katalog: ${s}`);
   assert.ok(!/@latest\b/.test(katalog), 'katalogda @latest yok');
   const izin = JSON.parse(fs.readFileSync(path.join(KOK, 'kit/templates/web-saas/.claude/settings.merge.json'), 'utf8')).permissions.allow;
-  for (const alt of ['open', 'snapshot', 'console', 'requests', 'screenshot']) assert.ok(izin.includes(`Bash(npx -y @playwright/cli@0.1.22 ${alt}:*)`), `Playwright CLI ${alt} izinli`);
+  for (const sub of ['open', 'snapshot', 'console', 'requests', 'screenshot']) assert.ok(izin.includes(`Bash(npx -y @playwright/cli@0.1.22 ${sub}:*)`), `Playwright CLI ${sub} izinli`);
   // Sayfada kod çalıştıran alt komutlar (eval, run-code) izinli değil, sorulur
   assert.ok(!izin.some((r) => /@playwright\/cli@[\d.]+(:\*|\s+(eval|run-code))/.test(r)), 'geniş veya kod çalıştıran Playwright CLI izni yok');
   for (const t of ['web-saas', 'mobile']) {
@@ -102,50 +102,50 @@ test('ayarlar 3.11: tarayıcı MCP\'leri katalogda, ajan Playwright CLI kullanı
 });
 
 test('ayarlar 3.12: rea, Understand-Anything, design-md, three.js sabit sürümle ve uyarıyla', () => {
-  const oku = (p) => fs.readFileSync(path.join(KOK, p), 'utf8');
-  assert.ok(oku('docs/workflow/mcp-catalog.md').includes('rea-agents@6.2.0'), 'katalog: rea sabit sürüm');
+  const readText = (p) => fs.readFileSync(path.join(KOK, p), 'utf8');
+  assert.ok(readText('docs/workflow/mcp-catalog.md').includes('rea-agents@6.2.0'), 'katalog: rea sabit sürüm');
   for (const k of ['research', 'adopt']) {
-    const md = oku(`.claude/commands/${k}.md`);
+    const md = readText(`.claude/commands/${k}.md`);
     assert.match(md, /\brea\b/, `/${k}: rea`);
     assert.match(md, /yetkili/, `/${k}: yetki uyarısı`);
   }
-  for (const k of ['release', 'handoff', 'adopt']) assert.match(oku(`.claude/commands/${k}.md`), /\/understand/, `/${k}: Understand-Anything`);
-  const komutlar = fs.readdirSync(path.join(KOK, '.claude/commands')).map((f) => oku(`.claude/commands/${f}`)).join('\n');
+  for (const k of ['release', 'handoff', 'adopt']) assert.match(readText(`.claude/commands/${k}.md`), /\/understand/, `/${k}: Understand-Anything`);
+  const komutlar = fs.readdirSync(path.join(KOK, '.claude/commands')).map((f) => readText(`.claude/commands/${f}`)).join('\n');
   assert.ok(!/\/understand[^\n`]*--auto-update/.test(komutlar), 'UA --auto-update komutlarda kullanılmaz');
-  const design = oku('.claude/commands/design.md');
+  const design = readText('.claude/commands/design.md');
   assert.ok(design.includes('awesome-design-md/3b605329240ce735b510037cca322f1831fdd7f8/'), '/design: design-md sabit commit');
   assert.match(design, /takli[dt]/, '/design: marka taklidi yok');
-  const start = oku('.claude/commands/start.md');
+  const start = readText('.claude/commands/start.md');
   for (const s of ['threejs-fundamentals', 'threejs-performance', 'threejs-react-three-fiber']) assert.ok(start.includes(s), `/start: ${s}`);
   assert.ok(start.includes('threejs-skills/0e181866f095b5f06d005133876e926515390d95/'), '/start: three.js skill\'leri sabit commit');
-  const motion = oku('.claude/skills/ui-motion/SKILL.md');
+  const motion = readText('.claude/skills/ui-motion/SKILL.md');
   for (const s of ['React Three Fiber', 'dispose', 'WebGL', 'GSAP']) assert.ok(motion.includes(s), `ui-motion: ${s}`);
-  for (const l of ['perf', 'ux']) assert.match(oku(`.claude/findings/lenses/${l}.md`), /WebGL/, `${l} lens: WebGL`);
+  for (const l of ['perf', 'ux']) assert.match(readText(`.claude/findings/lenses/${l}.md`), /WebGL/, `${l} lens: WebGL`);
 });
 
 test('eklenti eşitleme: kurulu olmayanı ve kapalıyı bulur, başka projedeki kurulumu saymaz', async () => {
-  const { eksikler } = await import('../../.claude/hooks/plugins-sync.mjs');
-  const kok = path.resolve(os.tmpdir(), 'proje-a');
-  const kurulu = [
+  const { missingPlugins } = await import('../../.claude/hooks/plugins-sync.mjs');
+  const root = path.resolve(os.tmpdir(), 'proje-a');
+  const installed = [
     { id: 'caveman@caveman', scope: 'user' },
-    { id: 'hookify@claude-plugins-official', scope: 'project', projectPath: kok.toUpperCase() },
+    { id: 'hookify@claude-plugins-official', scope: 'project', projectPath: root.toUpperCase() },
     { id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'proje-b') },
   ];
-  const acik = { 'caveman@caveman': true, 'hookify@claude-plugins-official': true, 'fp-check@trailofbits': true, 'remotion@remotion': false };
-  assert.deepEqual(eksikler(acik, kurulu, kok), [{ id: 'fp-check@trailofbits', etkin: true }, { id: 'remotion@remotion', etkin: false }]);
+  const enabled = { 'caveman@caveman': true, 'hookify@claude-plugins-official': true, 'fp-check@trailofbits': true, 'remotion@remotion': false };
+  assert.deepEqual(missingPlugins(enabled, installed, root), [{ id: 'fp-check@trailofbits', enabled: true }, { id: 'remotion@remotion', enabled: false }]);
 });
 
 test('eklenti eşitleme: yerelde kapatılan eklenti eksik sayılmaz, bilgi olarak bildirilir', async () => {
-  const { eksikler, kapalilar } = await import('../../.claude/hooks/plugins-sync.mjs');
-  const kok = path.resolve(os.tmpdir(), 'proje-a');
-  const kurulu = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: kok, enabled: false }];
-  const acik = { 'fp-check@trailofbits': true, 'remotion@remotion': false };
-  assert.deepEqual(eksikler({ 'fp-check@trailofbits': true }, kurulu, kok), [], 'kurulu: yeniden kurulmaz, tercih ezilmez');
-  assert.deepEqual(kapalilar(acik, kurulu, kok), ['fp-check@trailofbits']);
-  assert.deepEqual(kapalilar({ 'fp-check@trailofbits': false }, kurulu, kok), [], 'ayarda zaten kapalıysa bilgi yok');
+  const { missingPlugins, disabledHere } = await import('../../.claude/hooks/plugins-sync.mjs');
+  const root = path.resolve(os.tmpdir(), 'proje-a');
+  const installed = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: root, enabled: false }];
+  const enabled = { 'fp-check@trailofbits': true, 'remotion@remotion': false };
+  assert.deepEqual(missingPlugins({ 'fp-check@trailofbits': true }, installed, root), [], 'kurulu: yeniden kurulmaz, tercih ezilmez');
+  assert.deepEqual(disabledHere(enabled, installed, root), ['fp-check@trailofbits']);
+  assert.deepEqual(disabledHere({ 'fp-check@trailofbits': false }, installed, root), [], 'ayarda zaten kapalıysa bilgi yok');
   const baskaProje = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'proje-b'), enabled: false }];
-  assert.deepEqual(kapalilar(acik, baskaProje, kok), [], 'başka projedeki kapalı kayıt bu projeyi ilgilendirmez');
-  assert.deepEqual(eksikler({ 'fp-check@trailofbits': true }, baskaProje, kok), [{ id: 'fp-check@trailofbits', etkin: true }], 'burada kurulu değil: kurulacaklar listesinde');
+  assert.deepEqual(disabledHere(enabled, baskaProje, root), [], 'başka projedeki kapalı kayıt bu projeyi ilgilendirmez');
+  assert.deepEqual(missingPlugins({ 'fp-check@trailofbits': true }, baskaProje, root), [{ id: 'fp-check@trailofbits', enabled: true }], 'burada kurulu değil: kurulacaklar listesinde');
 });
 
 test('ayarlar: her hook ve durum çubuğu komutu gerçekten çalışır (tırnak, yol, modül hatası yok)', () => {

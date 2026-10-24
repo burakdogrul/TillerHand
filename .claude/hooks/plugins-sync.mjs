@@ -1,70 +1,73 @@
 #!/usr/bin/env node
-// Proje ayarındaki (.claude/settings.json → enabledPlugins) eklentileri kurulum kaydıyla eşitler.
-//   node .claude/hooks/plugins-sync.mjs          eksikleri listeler, kurmaz
-//   node .claude/hooks/plugins-sync.mjs --kur    listeyi kurar (önce kullanıcıya sorulmuş olmalı)
-// Neden: Ayar dosyası eklentiyi açar ama indirmez. Kurulmamış her eklenti "not cached" veya
-// "enabled in project settings but isn't installed" yükleme hatası verir ve skill'leri gelmez.
-// false olanlar da kurulur ve sonra kapatılır; yoksa aynı hata onlar için de çıkar.
-// /start (ortam adımı) ve /kit-update önce listeler, kullanıcı onaylarsa --kur ile çalıştırır. Eklenti kodu (hook) senin yetkinle çalışır.
+// Brings the plugins in the project settings (.claude/settings.json → enabledPlugins) in line with the install record.
+//   node .claude/hooks/plugins-sync.mjs            lists the missing ones, does not install
+//   node .claude/hooks/plugins-sync.mjs --install  installs the list (the user must have been asked first)
+// Why: the settings file enables a plugin but does not download it. Every plugin not installed gives a "not cached" or
+// "enabled in project settings but isn't installed" load error and its skills do not arrive.
+// Plugins set to false are installed too and then disabled; otherwise the same error shows for them.
+// /start (environment step) and /kit-update list first and run --install if the user approves. Plugin code (hooks) runs with your rights.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-// Windows yolları büyük/küçük harf duyarsız; diğer sistemlerde duyarlı
+// Windows paths are case-insensitive; other systems are case-sensitive
 const norm = (p) => (process.platform === 'win32' ? path.resolve(p).toLowerCase() : path.resolve(p));
-const ayni = (a, b) => norm(a) === norm(b);
+const samePath = (a, b) => norm(a) === norm(b);
 
-// Bu projede kurulu sayılan kayıt: kullanıcı kapsamında veya bu projenin kapsamında (başka projeninki sayılmaz)
-const buradaKurulu = (p, id, kok) => p.id === id && (p.scope === 'user' || (p.scope === 'project' && p.projectPath && ayni(p.projectPath, kok)));
+// A record that counts as installed for this project: user scope or this project's scope (another project's does not count)
+const installedHere = (p, id, root) => p.id === id && (p.scope === 'user' || (p.scope === 'project' && p.projectPath && samePath(p.projectPath, root)));
 
-export function eksikler(acik, kurulu, kok) {
-  return Object.entries(acik ?? {})
-    .filter(([id]) => !kurulu.some((p) => buradaKurulu(p, id, kok)))
-    .map(([id, etkin]) => ({ id, etkin: etkin !== false }));
+export function missingPlugins(wanted, installed, root) {
+  return Object.entries(wanted ?? {})
+    .filter(([id]) => !installed.some((p) => installedHere(p, id, root)))
+    .map(([id, enabled]) => ({ id, enabled: enabled !== false }));
 }
 
-// Proje ayarında açık, kurulu ama bu makinede kapalı (settings.local.json veya /plugin ile kişisel tercih).
-// Hata değildir, Claude Code bilerek yüklemez; betik kişisel tercihi ezmez, sadece söyler.
-// `enabled` alanı CLI'ın çalıştığı klasöre göre hesaplanır; betik proje kökünde çalıştırır.
-export function kapalilar(acik, kurulu, kok) {
-  return Object.entries(acik ?? {})
-    .filter(([id, etkin]) => etkin !== false && kurulu.some((p) => buradaKurulu(p, id, kok) && p.enabled === false))
+// Enabled in the project settings, installed, but disabled on this machine (settings.local.json or /plugin as a personal choice).
+// Not an error, Claude Code skips it on purpose; the script does not override the personal choice, it only reports it.
+// The `enabled` field is computed for the folder the CLI runs in; the script runs it at the project root.
+export function disabledHere(wanted, installed, root) {
+  return Object.entries(wanted ?? {})
+    .filter(([id, enabled]) => enabled !== false && installed.some((p) => installedHere(p, id, root) && p.enabled === false))
     .map(([id]) => id);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  // Kabuk yok: argümanlar doğrudan claude'a gider (claude tek dosyalık çalıştırılabilir, Windows'ta .exe)
-  const calistir = (...arg) => execFileSync('claude', arg, { cwd: kok, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000 });
-  const neden = (h) => (h.stderr || h.stdout || h.message || '').toString().trim().split('\n')[0];
-  let acik;
-  try { acik = JSON.parse(fs.readFileSync(path.join(kok, '.claude', 'settings.json'), 'utf8')).enabledPlugins; } catch (h) {
+  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  // No shell: arguments go straight to claude (claude is a single-file executable, .exe on Windows)
+  const run = (...arg) => execFileSync('claude', arg, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000 });
+  const reason = (h) => (h.stderr || h.stdout || h.message || '').toString().trim().split('\n')[0];
+  // --kur: the flag before 3.15.0; still accepted with a warning, remove in 3.16.0
+  if (process.argv.includes('--kur')) console.error("Uyarı: --kur eski bayrak; yenisi --install. 3.16.0'da kalkacak.");
+  const install = process.argv.includes('--install') || process.argv.includes('--kur');
+  let wanted;
+  try { wanted = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf8')).enabledPlugins; } catch (h) {
     console.error(`.claude/settings.json okunamadı: ${h.message}`);
     process.exit(1);
   }
-  let kurulu;
-  try { kurulu = JSON.parse(calistir('plugin', 'list', '--json')); } catch (h) {
-    console.error(`claude CLI çalışmadı (${neden(h)}). Eklentileri /plugin ile elle kur.`);
+  let installed;
+  try { installed = JSON.parse(run('plugin', 'list', '--json')); } catch (h) {
+    console.error(`claude CLI çalışmadı (${reason(h)}). Eklentileri /plugin ile elle kur.`);
     process.exit(1);
   }
-  const kapali = kapalilar(acik, kurulu, kok);
-  if (kapali.length) console.log(`Bilgi: kurulu ama bu makinede kapalı (kişisel tercih, değiştirilmedi): ${kapali.join(', ')}. Açmak için /plugin → Installed.`);
-  const liste = eksikler(acik, kurulu, kok);
-  if (!liste.length) { console.log('Eklentiler eşit: proje ayarındaki her eklenti kurulu.'); process.exit(0); }
-  if (!process.argv.includes('--kur')) {
-    console.log(`Kurulu olmayan ${liste.length} eklenti:\n${liste.map((e) => `  ${e.id}${e.etkin ? '' : ' (kurulup kapatılacak)'}`).join('\n')}\nKurmak için kullanıcıya sor, onaylarsa: node .claude/hooks/plugins-sync.mjs --kur`);
+  const off = disabledHere(wanted, installed, root);
+  if (off.length) console.log(`Bilgi: kurulu ama bu makinede kapalı (kişisel tercih, değiştirilmedi): ${off.join(', ')}. Açmak için /plugin → Installed.`);
+  const list = missingPlugins(wanted, installed, root);
+  if (!list.length) { console.log('Eklentiler eşit: proje ayarındaki her eklenti kurulu.'); process.exit(0); }
+  if (!install) {
+    console.log(`Kurulu olmayan ${list.length} eklenti:\n${list.map((e) => `  ${e.id}${e.enabled ? '' : ' (kurulup kapatılacak)'}`).join('\n')}\nKurmak için kullanıcıya sor, onaylarsa: node .claude/hooks/plugins-sync.mjs --install`);
     process.exit(0);
   }
-  let hata = 0;
-  for (const { id, etkin } of liste) {
-    if (!/^[\w.-]+@[\w.-]+$/.test(id)) { console.error(`atlandı (geçersiz ad): ${id}`); hata++; continue; }
+  let failures = 0;
+  for (const { id, enabled } of list) {
+    if (!/^[\w.-]+@[\w.-]+$/.test(id)) { console.error(`atlandı (geçersiz ad): ${id}`); failures++; continue; }
     try {
-      calistir('plugin', 'install', id, '--scope', 'project');
-      if (!etkin) calistir('plugin', 'disable', id, '--scope', 'project');
-      console.log(`kuruldu${etkin ? '' : ' (kapalı)'}: ${id}`);
-    } catch (h) { console.error(`kurulamadı: ${id} · ${neden(h)}`); hata++; }
+      run('plugin', 'install', id, '--scope', 'project');
+      if (!enabled) run('plugin', 'disable', id, '--scope', 'project');
+      console.log(`kuruldu${enabled ? '' : ' (kapalı)'}: ${id}`);
+    } catch (h) { console.error(`kurulamadı: ${id} · ${reason(h)}`); failures++; }
   }
-  console.log(`${liste.length - hata}/${liste.length} eklenti kuruldu. Bu oturumda etkinleştirmek için /reload-plugins.`);
-  process.exit(hata ? 1 : 0);
+  console.log(`${list.length - failures}/${list.length} eklenti kuruldu. Bu oturumda etkinleştirmek için /reload-plugins.`);
+  process.exit(failures ? 1 : 0);
 }

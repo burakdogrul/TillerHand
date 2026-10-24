@@ -1,108 +1,108 @@
-// Proje durumunu dokümanlardan okur. statusline, session-start ve durum-panosu kullanır.
-// Okunan biçimler: docs/workflow/progress.md'deki **Etiket:** satırları ve ## bölümleri, docs/product/roadmap.md'deki
-// "## Faz" başlıkları altındaki onay kutuları, docs/decisions/log.md "Karar günlüğü" ve docs/workflow/board.md tabloları.
-// Hızlı kalmalı: durum çubuğu her yenilemede çağırır (git ve ağır okumalar dashboard.mjs'de).
+// Reads the project state from the docs. Used by statusline, session-start and the dashboard.
+// Formats read: **Label:** lines and ## sections in docs/workflow/progress.md, checkboxes under "## Faz" headings
+// in docs/product/roadmap.md, the "Karar günlüğü" in docs/decisions/log.md and the docs/workflow/board.md tables.
+// Must stay fast: the status line calls it on every refresh (git and heavy reads are in dashboard.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const oku = (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '');
+export const readText = (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '');
 
-export function bolumler(metin, seviye = '## ') {
-  const sonuc = {};
-  const re = new RegExp(`^${seviye}`, 'm');
-  for (const parca of metin.split(re).slice(1)) {
-    const [baslik, ...govde] = parca.split('\n');
-    sonuc[baslik.trim()] = govde.join('\n');
+export function sections(text, level = '## ') {
+  const result = {};
+  const re = new RegExp(`^${level}`, 'm');
+  for (const part of text.split(re).slice(1)) {
+    const [title, ...body] = part.split('\n');
+    result[title.trim()] = body.join('\n');
   }
-  return sonuc;
+  return result;
 }
 
-export const bolumBul = (b, onEk) => Object.entries(b).find(([k]) => k.startsWith(onEk))?.[1] ?? '';
+export const findSection = (b, prefix) => Object.entries(b).find(([k]) => k.startsWith(prefix))?.[1] ?? '';
 
-export function sayac(metin) {
-  const bitti = (metin.match(/^\s*- \[x\]/gim) ?? []).length;
-  const kalan = (metin.match(/^\s*- \[ \]/gm) ?? []).length;
-  return { bitti, toplam: bitti + kalan };
+export function tally(text) {
+  const done = (text.match(/^\s*- \[x\]/gim) ?? []).length;
+  const left = (text.match(/^\s*- \[ \]/gm) ?? []).length;
+  return { done, total: done + left };
 }
 
-// Markdown tablosunun veri satırları (başlık ve ayırıcı hariç)
-export const tabloSatirlari = (govde = '', enAz = 2) =>
-  govde.split('\n')
+// Data rows of a Markdown table (header and separator excluded)
+export const tableRows = (body = '', minCols = 2) =>
+  body.split('\n')
     .filter((s) => s.trim().startsWith('|') && !/^\s*\|\s*:?-/.test(s))
     .map((s) => s.trim().split('|').slice(1, -1).map((c) => c.trim()))
-    .filter((c) => c.length >= enAz)
+    .filter((c) => c.length >= minCols)
     .slice(1)
     .filter((c) => c.some(Boolean));
 
-export const etiketler = (metin) => {
+export const labels = (text) => {
   const a = {};
-  for (const [, k, v] of metin.matchAll(/^\*\*(.+?):\*\*\s*(.*)$/gm)) a[k.trim()] = v.trim();
+  for (const [, k, v] of text.matchAll(/^\*\*(.+?):\*\*\s*(.*)$/gm)) a[k.trim()] = v.trim();
   return a;
 };
 
-const satirlar = (b) => (b ?? '').split('\n').map((s) => s.trim())
+const rows = (b) => (b ?? '').split('\n').map((s) => s.trim())
   .filter((s) => /^([-*]|\d+\.)\s+\S/.test(s)).map((s) => s.replace(/^([-*]|\d+\.)\s+/, '').replace(/^\[[ x]\]\s*/i, ''));
 
-export function durumOku(kok) {
-  const d = (f) => path.join(kok, f);
-  const ilerleme = oku(d('docs/workflow/progress.md'));
-  const alanlar = etiketler(ilerleme);
-  const ib = bolumler(ilerleme);
+export function readStatus(root) {
+  const d = (f) => path.join(root, f);
+  const progress = readText(d('docs/workflow/progress.md'));
+  const fields = labels(progress);
+  const progressSections = sections(progress);
 
-  const yol = bolumler(oku(d('docs/product/roadmap.md')));
-  const fazlar = Object.entries(yol)
+  const roadmap = sections(readText(d('docs/product/roadmap.md')));
+  const phases = Object.entries(roadmap)
     .filter(([b]) => /^Faz \d/.test(b))
-    .map(([ad, govde]) => ({
-      ad, ...sayac(govde),
-      gorevler: govde.split('\n').map((s) => s.match(/^\s*- \[( |x)\]\s*(.+)$/i)).filter(Boolean)
-        .map(([, x, metin]) => ({ bitti: x.toLowerCase() === 'x', metin })),
+    .map(([name, body]) => ({
+      name, ...tally(body),
+      tasks: body.split('\n').map((s) => s.match(/^\s*- \[( |x)\]\s*(.+)$/i)).filter(Boolean)
+        .map(([, x, text]) => ({ done: x.toLowerCase() === 'x', text })),
     }));
-  const gorev = fazlar.reduce((a, f) => ({ bitti: a.bitti + f.bitti, toplam: a.toplam + f.toplam }), { bitti: 0, toplam: 0 });
+  const taskCount = phases.reduce((a, f) => ({ done: a.done + f.done, total: a.total + f.total }), { done: 0, total: 0 });
 
-  // 8 sütun (Kapı ile, kit 2.3+) veya eski 7 sütun
-  const kararlar = tabloSatirlari(bolumler(oku(d('docs/decisions/log.md')))['Karar günlüğü'], 7)
+  // 8 columns (with Kapı, kit 2.3+) or the old 7 columns
+  const decisions = tableRows(sections(readText(d('docs/decisions/log.md')))['Karar günlüğü'], 7)
     .map((c) => (c.length >= 8 ? c : [...c.slice(0, 6), '', c[6]]))
-    .map(([no, tarih, asama, konu, soru, secilen, kapi, veren]) => ({ no, tarih, asama, konu, soru, secilen, kapi, veren }));
+    .map(([no, date, stage, topic, question, chosen, door, decidedBy]) => ({ no, date, stage, topic, question, chosen, door, decidedBy }));
 
-  const listeler = [
+  const checklists = [
     ['Güvenlik', 'docs/security/checklist.md'], ['Canlıya alma', 'docs/operations/release-checklist.md'], ['Yasal / KVKK', 'docs/legal/privacy-kvkk.md'],
     ['AI', 'docs/ai/guide.md'], ['Lansman', 'docs/product/launch.md'],
-  ].filter(([, f]) => fs.existsSync(d(f))).map(([ad, f]) => ({ ad, dosya: f, ...sayac(oku(d(f))) }));
+  ].filter(([, f]) => fs.existsSync(d(f))).map(([name, f]) => ({ name, file: f, ...tally(readText(d(f))) }));
 
   let kit = null;
-  try { kit = JSON.parse(oku(d('.kit.json'))); } catch { /* kurulmamış */ }
+  try { kit = JSON.parse(readText(d('.kit.json'))); } catch { /* not set up */ }
 
-  const kurulMetni = oku(d('docs/workflow/board.md'));
-  const ka = etiketler(kurulMetni);
-  const kb = bolumler(kurulMetni);
-  const kurul = {
-    durum: ka['Durum'] ?? 'kurulmadı',
-    commitDenetimi: ka['Commit denetimi'] ?? 'açık',
-    uyeler: tabloSatirlari(kb['Üyeler'], 5).map(([uye, ajan, model, odak, toplantilar]) => ({ uye, ajan, model, odak, toplantilar })),
-    toplantilar: tabloSatirlari(kb['Toplantı günlüğü'], 8)
-      .map(([no, tarih, tur, kapsam, katilan, sonuc, kritik, karar]) => ({ no, tarih, tur, kapsam, katilan, sonuc, kritik, karar })),
+  const boardText = readText(d('docs/workflow/board.md'));
+  const boardLabels = labels(boardText);
+  const boardSections = sections(boardText);
+  const board = {
+    state: boardLabels['Durum'] ?? 'kurulmadı',
+    commitReview: boardLabels['Commit denetimi'] ?? 'açık',
+    members: tableRows(boardSections['Üyeler'], 5).map(([member, agent, model, focus, meetings]) => ({ member, agent, model, focus, meetings })),
+    meetings: tableRows(boardSections['Toplantı günlüğü'], 8)
+      .map(([no, date, kind, scope, attendees, result, critical, decision]) => ({ no, date, kind, scope, attendees, result, critical, decision })),
   };
 
-  const baslik = (f) => oku(d(f)).match(/^# (.+)$/m)?.[1].trim();
+  const title = (f) => readText(d(f)).match(/^# (.+)$/m)?.[1].trim();
   return {
-    // Proje adı AGENTS.md'de; 3.9.0 öncesi projelerde CLAUDE.md'de (güncelleme AGENTS.md'yi yer tutucuyla ekler)
-    proje: [baslik('AGENTS.md'), baslik('CLAUDE.md')].find((a) => a && a !== '[PROJE ADI]') ?? baslik('AGENTS.md') ?? 'Proje',
-    // type: null = init ile kuruldu, tip henüz seçilmedi (/start veya /adopt bekliyor)
-    kurulu: !!kit && kit.type !== null,
-    kitBekliyor: kit ? kit.type === null : fs.existsSync(d('kit/kit.mjs')),
+    // The project name is in AGENTS.md; in projects before 3.9.0 in CLAUDE.md (the update adds AGENTS.md with a placeholder)
+    project: [title('AGENTS.md'), title('CLAUDE.md')].find((a) => a && a !== '[PROJE ADI]') ?? title('AGENTS.md') ?? 'Proje',
+    // type: null = set up by init, no type chosen yet (waiting for /start or /adopt)
+    installed: !!kit && kit.type !== null,
+    kitPending: kit ? kit.type === null : fs.existsSync(d('kit/kit.mjs')),
     kit,
-    alanlar,
-    durum: (ib['Şu anki durum'] ?? '').split('\n').filter((s) => s.trim() && !s.startsWith('>')).join(' ').trim(),
-    sonOturum: satirlar(ib['Son oturumda yapılanlar']),
-    siradaki: satirlar(ib['Sıradaki adım']),
-    bekleyen: satirlar(ib['Bekleyen kararlar']),
-    sorunlar: satirlar(ib['Açık sorunlar / bloklayıcılar']),
-    kaldigiYer: satirlar(bolumBul(ib, 'Kaldığı yer')),
-    devirBekliyor: /^\*\*Durum:\*\*\s*bekliyor/im.test(oku(d('docs/workflow/handoff.md'))),
-    fazlar,
-    gorev,
-    kararlar,
-    listeler,
-    kurul,
+    fields,
+    state: (progressSections['Şu anki durum'] ?? '').split('\n').filter((s) => s.trim() && !s.startsWith('>')).join(' ').trim(),
+    lastSession: rows(progressSections['Son oturumda yapılanlar']),
+    next: rows(progressSections['Sıradaki adım']),
+    pending: rows(progressSections['Bekleyen kararlar']),
+    issues: rows(progressSections['Açık sorunlar / bloklayıcılar']),
+    leftOff: rows(findSection(progressSections, 'Kaldığı yer')),
+    handoffPending: /^\*\*Durum:\*\*\s*bekliyor/im.test(readText(d('docs/workflow/handoff.md'))),
+    phases,
+    taskCount,
+    decisions,
+    checklists,
+    board,
   };
 }

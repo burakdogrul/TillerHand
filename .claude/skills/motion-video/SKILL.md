@@ -22,7 +22,7 @@ Kontrol et, eksikse kullanıcıya kurulum komutunu ver (kurulum kullanıcının 
 | ffmpeg | `ffmpeg -version` | Windows: `winget install Gyan.FFmpeg` · macOS: `brew install ffmpeg` · Linux: paket yöneticisi |
 
 **Remotion seçeneği:** Proje React kullanıyorsa ve altyazı, ses miksajı veya çok sahneli bir video gerekiyorsa Remotion daha uygun olabilir. Bunu karar olarak sor:
-- Remotion'ın resmi plugin'i `.claude/settings.json`'da tanımlı ama kapalı. Seçilirse `node .claude/hooks/tools.mjs --ac video` ile bu makinede açılır (`/tools`; onay istenir) ve `/remotion-best-practices` kullanılır.
+- Remotion'ın resmi plugin'i `.claude/settings.json`'da tanımlı ama kapalı. Seçilirse `node .claude/hooks/tools.mjs --enable video` ile bu makinede açılır (`/tools`; onay istenir) ve `/remotion-best-practices` kullanılır.
 - Remotion büyük şirketler için ücretli lisans ister. Kullanıcıya kendi durumunu remotion.dev'deki lisans sayfasından doğrulamasını söyle.
 
 ## 1. Girdiler (önce sor)

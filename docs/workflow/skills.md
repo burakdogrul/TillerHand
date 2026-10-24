@@ -51,7 +51,7 @@
 
 ## Bağlam paketleri
 
-Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skill listesi bağlamın %1'iyle sınırlıdır; taşınca az kullanılan skill'lerin açıklaması düşer ve Claude onları tanımaz. Plugin içindeki skill'ler tek tek kapatılamaz. Bu yüzden eklentiler **çekirdek** ve **paket** olarak ayrılır. Paketler `.claude/settings.json`'da kapalı gelir; ilgili komut ilk adımda `node .claude/hooks/tools.mjs --gerekli <paket>` ile bakar, kapalıysa maliyetiyle birlikte açmayı sorar. Açma sadece bu makineyi etkiler (`.claude/settings.local.json`). Yönetim: `/tools`. Tanımlar: `.claude/hooks/tools.mjs` → `PAKETLER`.
+Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skill listesi bağlamın %1'iyle sınırlıdır; taşınca az kullanılan skill'lerin açıklaması düşer ve Claude onları tanımaz. Plugin içindeki skill'ler tek tek kapatılamaz. Bu yüzden eklentiler **çekirdek** ve **paket** olarak ayrılır. Paketler `.claude/settings.json`'da kapalı gelir; ilgili komut ilk adımda `node .claude/hooks/tools.mjs --required <paket>` ile bakar, kapalıysa maliyetiyle birlikte açmayı sorar. Açma sadece bu makineyi etkiler (`.claude/settings.local.json`). Yönetim: `/tools`. Tanımlar: `.claude/hooks/tools.mjs` → `PAKETLER`.
 
 | Paket | Eklentiler | Açan komut |
 |---|---|---|

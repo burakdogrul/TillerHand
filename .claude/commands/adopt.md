@@ -73,7 +73,7 @@ Ortak kurallar `AGENTS.md`'de (Claude Code, Codex, Antigravity okur); `CLAUDE.md
 
 Adım 0'da seçilen bulgu raporlarını çalıştır (`/findings-all <türler>` veya tek tek). Kritik ve yüksek bulguları Adım 8'deki yol haritasına aday olarak al.
 
-**İnsan için kod haritası (isteğe bağlı):** Kullanıcı kodu kendisi de görsel olarak keşfetmek isterse Understand-Anything öner (`yayin` paketi: `node .claude/hooks/tools.mjs --gerekli yayin`). `/understand` ilk çalıştırmada bütün kodu okur, büyük projede pahalıdır: maliyeti söyle ve sor. Türkçe çıktı yok; `--language en` kullan. Sonra `/understand-dashboard`. Kod haritası (codebase-memory-mcp) ajan içindir, bu insan içindir; biri diğerinin yerine geçmez.
+**İnsan için kod haritası (isteğe bağlı):** Kullanıcı kodu kendisi de görsel olarak keşfetmek isterse Understand-Anything öner (`yayin` paketi: `node .claude/hooks/tools.mjs --required yayin`). `/understand` ilk çalıştırmada bütün kodu okur, büyük projede pahalıdır: maliyeti söyle ve sor. Türkçe çıktı yok; `--language en` kullan. Sonra `/understand-dashboard`. Kod haritası (codebase-memory-mcp) ajan içindir, bu insan içindir; biri diğerinin yerine geçmez.
 
 ## Adım 7: Kurul ve tasarım (isteğe bağlı)
 

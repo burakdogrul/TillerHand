@@ -1,76 +1,79 @@
 #!/usr/bin/env node
-// Çalışan noktalar ve güvenli geri dönüş (/rollback). Git bilmeyen kullanıcı için:
-//   node .claude/hooks/checkpoint.mjs --save "G-012 bitti, testler yeşil"   şu anki commit'i "çalışan nokta" olarak etiketle
-//   node .claude/hooks/checkpoint.mjs --list [--json]                        çalışan noktalar + son commit'ler
-//   node .claude/hooks/checkpoint.mjs --restore <etiket|commit> --evet       o hale dön
-// Geri dönüş geçmişi silmez: kaydedilmemiş iş önce stash'e alınır, dosyalar hedef hale getirilir ve
-// YENİ bir commit atılır. Bu yüzden geri dönüş de geri alınabilir. reset --hard kullanılmaz.
+// Working points and safe rollback (/rollback). For a user who does not know git:
+//   node .claude/hooks/checkpoint.mjs --save "G-012 bitti, testler yeşil"   tag the current commit as a "working point"
+//   node .claude/hooks/checkpoint.mjs --list [--json]                        working points + recent commits
+//   node .claude/hooks/checkpoint.mjs --restore <tag|commit> --yes           go back to that state
+// Rollback does not delete history: unsaved work is stashed first, files are set to the target state and
+// a NEW commit is made. So a rollback can be undone too. reset --hard is not used.
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-const ONEK = 'calisan/';
+// Tag prefix in users' repos: it stays as it is, existing tags must keep matching
+const TAG_PREFIX = 'calisan/';
 
-export function git(kok, ...arg) {
-  return execFileSync('git', arg, { cwd: kok, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+export function git(root, ...arg) {
+  return execFileSync('git', arg, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
-const zamanDamgasi = (d = new Date()) => d.toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
+const timestamp = (d = new Date()) => d.toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
 
-export function kaydet(kok, not = '') {
-  if (git(kok, 'status', '--porcelain')) throw new Error('Kaydedilmemiş değişiklik var; çalışan nokta sadece commit edilmiş hale konur. Önce commit et.');
-  const etiket = `${ONEK}${zamanDamgasi()}`;
-  git(kok, 'tag', '-a', etiket, '-m', not || 'çalışan nokta');
-  return etiket;
+export function saveCheckpoint(root, note = '') {
+  if (git(root, 'status', '--porcelain')) throw new Error('Kaydedilmemiş değişiklik var; çalışan nokta sadece commit edilmiş hale konur. Önce commit et.');
+  const label = `${TAG_PREFIX}${timestamp()}`;
+  git(root, 'tag', '-a', label, '-m', note || 'çalışan nokta');
+  return label;
 }
 
-export function listele(kok, n = 10) {
-  const noktalar = git(kok, 'for-each-ref', '--sort=-creatordate', `--count=${n}`, '--format=%(refname:short)%09%(creatordate:short)%09%(contents:subject)%09%(*objectname:short)', `refs/tags/${ONEK}`)
-    .split('\n').filter(Boolean).map((s) => { const [etiket, tarih, not, commit] = s.split('\t'); return { etiket, tarih, not, commit }; });
-  const commitler = git(kok, 'log', `-${n}`, '--format=%h%x09%ad%x09%s', '--date=format:%Y-%m-%d %H:%M')
-    .split('\n').filter(Boolean).map((s) => { const [commit, tarih, mesaj] = s.split('\t'); return { commit, tarih, mesaj }; });
-  return { noktalar, commitler };
+export function listCheckpoints(root, n = 10) {
+  const points = git(root, 'for-each-ref', '--sort=-creatordate', `--count=${n}`, '--format=%(refname:short)%09%(creatordate:short)%09%(contents:subject)%09%(*objectname:short)', `refs/tags/${TAG_PREFIX}`)
+    .split('\n').filter(Boolean).map((s) => { const [label, date, note, commit] = s.split('\t'); return { label, date, note, commit }; });
+  const commits = git(root, 'log', `-${n}`, '--format=%h%x09%ad%x09%s', '--date=format:%Y-%m-%d %H:%M')
+    .split('\n').filter(Boolean).map((s) => { const [commit, date, message] = s.split('\t'); return { commit, date, message }; });
+  return { points, commits };
 }
 
-export function geriDon(kok, hedef) {
-  const sha = git(kok, 'rev-parse', '--verify', `${hedef}^{commit}`);
-  const kisa = sha.slice(0, 7);
-  let saklanan = null;
-  if (git(kok, 'status', '--porcelain')) {
-    saklanan = `geri-alma öncesi ${new Date().toISOString().slice(0, 16)}`;
-    git(kok, 'stash', 'push', '--include-untracked', '-m', saklanan);
+export function restore(root, target) {
+  const sha = git(root, 'rev-parse', '--verify', `${target}^{commit}`);
+  const short = sha.slice(0, 7);
+  let stashed = null;
+  if (git(root, 'status', '--porcelain')) {
+    stashed = `geri-alma öncesi ${new Date().toISOString().slice(0, 16)}`;
+    git(root, 'stash', 'push', '--include-untracked', '-m', stashed);
   }
-  // Takip edilen dosyalar hedef haline gelir; hedefte olmayanlar silinir. .gitignore'daki dosyalar (.env) dokunulmaz.
-  git(kok, 'restore', `--source=${sha}`, '--staged', '--worktree', '--', '.');
-  if (!git(kok, 'status', '--porcelain')) return { degisti: false, saklanan, hedef: kisa };
-  git(kok, 'commit', '-m', `revert: ${hedef} (${kisa}) haline dönüldü`);
-  return { degisti: true, saklanan, hedef: kisa, yeni: git(kok, 'rev-parse', '--short', 'HEAD') };
+  // Tracked files take the target state; files not in the target are deleted. Files in .gitignore (.env) are not touched.
+  git(root, 'restore', `--source=${sha}`, '--staged', '--worktree', '--', '.');
+  if (!git(root, 'status', '--porcelain')) return { changed: false, stashed, target: short };
+  git(root, 'commit', '-m', `revert: ${target} (${short}) haline dönüldü`);
+  return { changed: true, stashed, target: short, newCommit: git(root, 'rev-parse', '--short', 'HEAD') };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const arg = process.argv.slice(2);
-  // Modu SADECE ilk argüman belirler: izin listesi önekle eşleşir ("--list:*", "--save:*"),
-  // sonraya eklenen "--restore ... --evet" onaysız geri dönüşe yol açmasın.
-  const mod = arg[0];
+  // ONLY the first argument sets the mode: the permission list matches by prefix ("--list:*", "--save:*"),
+  // so a trailing "--restore ... --yes" must not lead to an unapproved rollback.
+  const mode = arg[0];
   try {
-    if (mod === '--save') {
-      console.log(`Çalışan nokta kaydedildi: ${kaydet(kok, arg[1] ?? '')}`);
-    } else if (mod === '--restore') {
-      const hedef = arg[1];
-      if (!hedef || hedef.startsWith('--') || arg[2] !== '--evet') {
-        console.error('Geri dönüş onay ister: node .claude/hooks/checkpoint.mjs --restore <etiket|commit> --evet');
+    if (mode === '--save') {
+      console.log(`Çalışan nokta kaydedildi: ${saveCheckpoint(root, arg[1] ?? '')}`);
+    } else if (mode === '--restore') {
+      const target = arg[1];
+      // --evet: the flag before 3.15.0; still accepted with a warning, remove in 3.16.0
+      if (arg[2] === '--evet') console.error("Uyarı: --evet eski bayrak; yenisi --yes. 3.16.0'da kalkacak.");
+      if (!target || target.startsWith('--') || (arg[2] !== '--yes' && arg[2] !== '--evet')) {
+        console.error('Geri dönüş onay ister: node .claude/hooks/checkpoint.mjs --restore <etiket|commit> --yes');
         process.exit(1);
       }
-      const r = geriDon(kok, hedef);
-      if (r.saklanan) console.log(`Kaydedilmemiş işin saklandı: "${r.saklanan}" (geri getirmek: git stash pop)`);
-      console.log(r.degisti ? `${r.hedef} haline dönüldü, yeni commit: ${r.yeni}. Bunu da geri almak için: /rollback ile bir önceki commit'i seç.` : `Dosyalar zaten ${r.hedef} ile aynı; değişiklik yok.`);
+      const r = restore(root, target);
+      if (r.stashed) console.log(`Kaydedilmemiş işin saklandı: "${r.stashed}" (geri getirmek: git stash pop)`);
+      console.log(r.changed ? `${r.target} haline dönüldü, yeni commit: ${r.newCommit}. Bunu da geri almak için: /rollback ile bir önceki commit'i seç.` : `Dosyalar zaten ${r.target} ile aynı; değişiklik yok.`);
     } else {
-      const { noktalar, commitler } = listele(kok);
-      if (arg.includes('--json')) { console.log(JSON.stringify({ noktalar, commitler })); process.exit(0); }
+      const { points, commits } = listCheckpoints(root);
+      if (arg.includes('--json')) { console.log(JSON.stringify({ points, commits })); process.exit(0); }
       console.log('Çalışan noktalar:');
-      console.log(noktalar.length ? noktalar.map((p) => `  ${p.etiket}  ${p.tarih}  ${p.not}`).join('\n') : '  (yok; /build ve /wrap-up testler yeşilken kaydeder)');
+      console.log(points.length ? points.map((p) => `  ${p.label}  ${p.date}  ${p.note}`).join('\n') : '  (yok; /build ve /wrap-up testler yeşilken kaydeder)');
       console.log('Son commit\'ler:');
-      console.log(commitler.map((c) => `  ${c.commit}  ${c.tarih}  ${c.mesaj}`).join('\n'));
+      console.log(commits.map((c) => `  ${c.commit}  ${c.date}  ${c.message}`).join('\n'));
     }
   } catch (h) {
     console.error((h.stderr || h.message).toString().trim().split('\n')[0]);

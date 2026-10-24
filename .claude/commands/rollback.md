@@ -19,7 +19,7 @@ Kullanıcı git bilmiyor olabilir. Her şeyi sade Türkçe anlat; git terimini k
    - Kaydedilmemiş iş varsa önce saklanır (`git stash`); sonra geri getirilebilir.
    - `.env` gibi git'e girmeyen dosyalara dokunulmaz.
    - Bu geri dönüş de `/rollback` ile geri alınabilir.
-4. Kullanıcı açıkça onaylarsa `node .claude/hooks/checkpoint.mjs --restore <hedef> --evet` çalıştır.
+4. Kullanıcı açıkça onaylarsa `node .claude/hooks/checkpoint.mjs --restore <hedef> --yes` çalıştır.
 5. Projenin test komutunu çalıştır (`AGENTS.md` → Komutlar). Sonucu göster: Çalışan hale gerçekten dönüldü mü?
 6. `docs/workflow/progress.md` → "Son oturumda yapılanlar" ve "Dikkat" bölümlerine geri dönüşü yaz: hangi noktaya dönüldü, neden, saklanan iş.
 7. Bitince kısa rapor ver:

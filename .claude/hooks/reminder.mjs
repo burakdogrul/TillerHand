@@ -1,31 +1,32 @@
 #!/usr/bin/env node
-// UserPromptSubmit hook'u: Uzun oturumlarda temel kuralları düzenli aralıklarla hatırlatır (bağlam çürümesine karşı)
-// ve bağlam doluluğu yüksekse oturumu kapatmayı önerir. stdout, kullanıcının mesajına bağlam olarak eklenir.
-// Kısa tutulur: her hatırlatma token harcar.
+// UserPromptSubmit hook: in long sessions it repeats the core rules at regular intervals (against context rot)
+// and suggests closing the session when the context is very full. stdout is added to the user's message as context.
+// Kept short: every reminder costs tokens.
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const ARALIK = 12; // her 12 mesajda bir
-const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const sayacDosyasi = path.join(kok, '.claude', 'state', 'reminder.json');
+export const INTERVAL = 12; // every 12 messages
+const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const counterFile = path.join(root, '.claude', 'state', 'reminder.json');
 
-let veri = { oturum: '', sayi: 0 };
-let oturum = '';
-try { oturum = JSON.parse(fs.readFileSync(0, 'utf8')).session_id ?? ''; } catch { /* girdi yok */ }
-try { veri = JSON.parse(fs.readFileSync(sayacDosyasi, 'utf8')); } catch { /* ilk çalışma */ }
-if (veri.oturum !== oturum) veri = { oturum, sayi: 0 };
-veri.sayi++;
-veri.tur = Date.now(); // notify.mjs uzun işlerin süresini buradan hesaplar
-try { fs.mkdirSync(path.dirname(sayacDosyasi), { recursive: true }); fs.writeFileSync(sayacDosyasi, JSON.stringify(veri)); } catch { /* yazılamazsa sessiz geç */ }
+let data = { session: '', count: 0 };
+let session = '';
+try { session = JSON.parse(fs.readFileSync(0, 'utf8')).session_id ?? ''; } catch { /* no input */ }
+try { data = JSON.parse(fs.readFileSync(counterFile, 'utf8')); } catch { /* first run */ }
+if (data.session !== session) data = { session, count: 0 };
+data.count++;
+data.turnAt = Date.now(); // notify.mjs computes the length of long jobs from this
+try { fs.mkdirSync(path.dirname(counterFile), { recursive: true }); fs.writeFileSync(counterFile, JSON.stringify(data)); } catch { /* not writable: skip silently */ }
 
-const notlar = [];
-if (veri.sayi % ARALIK === 0) {
-  notlar.push('[Kit hatırlatma] Kararları AskUserQuestion ile sor (önerilen ilk sırada). Kapsamı genişletme. Kurul ve limit kurallarına uy. Her cevabın sonuna durum bloğu ekle.');
+const notes = [];
+if (data.count % INTERVAL === 0) {
+  notes.push('[Kit hatırlatma] Kararları AskUserQuestion ile sor (önerilen ilk sırada). Kapsamı genişletme. Kurul ve limit kurallarına uy. Her cevabın sonuna durum bloğu ekle.');
 }
 try {
-  const b = JSON.parse(fs.readFileSync(path.join(kok, '.claude', 'state', 'context.json'), 'utf8'));
-  if (b.yuzde >= 70) notlar.push(`[Kit] Bağlam %${b.yuzde} dolu: yanıt kalitesi düşebilir. Mevcut adımı bitir, kullanıcıya /wrap-up ve ardından /clear öner.`);
-  else if (b.yuzde >= 50 && veri.sayi % 4 === 0) notlar.push(`[Kit] Bağlam %${b.yuzde}: uygun bir noktada /wrap-up + /clear önermeyi düşün.`);
-} catch { /* bağlam bilgisi yok */ }
+  const b = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'context.json'), 'utf8'));
+  const percent = b.percent ?? b.yuzde; // yuzde: key before 3.15.0 (remove in 3.16.0)
+  if (percent >= 70) notes.push(`[Kit] Bağlam %${percent} dolu: yanıt kalitesi düşebilir. Mevcut adımı bitir, kullanıcıya /wrap-up ve ardından /clear öner.`);
+  else if (percent >= 50 && data.count % 4 === 0) notes.push(`[Kit] Bağlam %${percent}: uygun bir noktada /wrap-up + /clear önermeyi düşün.`);
+} catch { /* no context info */ }
 
-if (notlar.length) console.log(notlar.join('\n'));
+if (notes.length) console.log(notes.join('\n'));
