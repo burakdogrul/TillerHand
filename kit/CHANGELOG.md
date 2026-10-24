@@ -5,6 +5,9 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+### Düzeltilen
+- `kit.mjs init` kişisel `CLAUDE.local.md` dosyasını projeye kopyalamaz (yerel bir klasörden kurulumda taşınıyordu).
+
 ## [3.14.4] - 2026-10-24
 
 ### Değişen

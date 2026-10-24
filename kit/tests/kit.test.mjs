@@ -117,8 +117,10 @@ test('init: kit ayrı klasörde kalır, proje kendi klasöründe kurulur', () =>
   fs.mkdirSync(oyun);
   fs.cpSync(klonla('oyun-kit'), path.join(oyun, 'git_repo'), { recursive: true });
   const kitMjs = path.join(oyun, 'git_repo', 'kit', 'kit.mjs');
+  fs.writeFileSync(path.join(oyun, 'git_repo', 'CLAUDE.local.md'), 'kişisel not'); // yerel klasörden kurulum
   const r = node(kitMjs, 'init', '--project', oyun);
   assert.equal(r.status, 0, r.stderr);
+  assert.ok(!fs.existsSync(path.join(oyun, 'CLAUDE.local.md')), 'kişisel CLAUDE.local.md projeye kopyalanmaz');
   for (const f of ['CLAUDE.md', 'README.md', '.claude/commands/start.md', '.claude/commands/adopt.md', 'docs/workflow/progress.md', '.git']) {
     assert.ok(fs.existsSync(path.join(oyun, f)), `${f} kuruldu`);
   }

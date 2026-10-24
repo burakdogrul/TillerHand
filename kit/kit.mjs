@@ -30,7 +30,8 @@ const TIPLER = fs.readdirSync(SABLON).filter((d) => d !== 'addons');
 const EKLER = fs.readdirSync(path.join(SABLON, 'addons'));
 const ARACLAR = ['claude', 'codex', 'antigravity'];
 // Ortak katmana dahil olmayan kök girdileri (kitin kendisi, üretilen ve geçici dosyalar)
-const ORTAK_HARIC = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable']);
+// CLAUDE.local.md kişiseldir (.gitignore'da); yerel bir klasörden kurulumda projeye taşınmasın
+const ORTAK_HARIC = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md']);
 // Sadece kit reposunda anlamlı, projeye taşınmayan dosyalar
 const SADECE_KIT = ['.github/workflows/kit-tests.yml'];
 
