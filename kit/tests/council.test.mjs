@@ -1,10 +1,10 @@
-// Çalıştır: node --test "kit/tests/*.test.mjs"
-// Konsey sayımı: anonim sıralama, bulgu oyları, karar konseyi oy dağılımı, tutanağa yazma.
+// Run: node --test "kit/tests/*.test.mjs"
+// Council tally: anonymous ranking, finding votes, decision council vote split, writing into the minutes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRanking, parseBallots, countVotes, writeMinutes } from '../../.claude/hooks/council.mjs';
 
-const TOPLANTI = `# Konsey: plan · G-012 kayıt formu
+const MEETING = `# Konsey: plan · G-012 kayıt formu
 **Tarih:** 2026-10-12 · **Tür:** plan
 
 ## 1. İlk görüşler
@@ -49,40 +49,40 @@ SIRALAMA:
 **Karar:** KOŞULLU ONAY
 `;
 
-test('konsey: sıralama ve oy ayıklama (Karpathy biçimi, Türkçe)', () => {
+test('council: ranking and vote parsing (Karpathy format, Turkish)', () => {
   assert.deepEqual(parseRanking('Görüş A iyi.\nSIRALAMA:\n1. Görüş C\n2. Görüş A\n'), ['C', 'A']);
-  assert.deepEqual(parseRanking('Görüş B, Görüş A\'dan iyi'), [], 'SIRALAMA yoksa düzyazıdan sıra çıkarılmaz');
-  assert.deepEqual(parseRanking('SIRALAMA:\n1. **Görüş B**\n2. Görüş A'), ['B', 'A'], 'kalın yazım');
+  assert.deepEqual(parseRanking('Görüş B, Görüş A\'dan iyi'), [], 'without SIRALAMA no order is guessed from prose');
+  assert.deepEqual(parseRanking('SIRALAMA:\n1. **Görüş B**\n2. Görüş A'), ['B', 'A'], 'bold text');
   const s = countVotes('## 1. İlk görüşler\n### Görüş A\nÖNERİ: $& planı\n### Görüş B\nÖNERİ: $$ 25/ay\n## 2. Çapraz inceleme\n### İnceleyen: A\nGörüş B iyi.\n### İnceleyen: B\nSIRALAMA:\n1. Görüş A\n## 4. Başkan kararı\n');
   assert.deepEqual(s.invalid, ['A']);
-  const yazilan = writeMinutes('## 4. Başkan kararı\n', s);
-  assert.match(yazilan, /\| \$& planı \| 1 \|[\s\S]*\| \$\$ 25\/ay \| 1 \|/, '$ dizileri olduğu gibi yazılır');
-  assert.equal(writeMinutes(yazilan, s), yazilan);
+  const written = writeMinutes('## 4. Başkan kararı\n', s);
+  assert.match(written, /\| \$& planı \| 1 \|[\s\S]*\| \$\$ 25\/ay \| 1 \|/, '$ sequences are written as they are');
+  assert.equal(writeMinutes(written, s), written);
   assert.deepEqual(parseBallots('OYLAR:\nA1: doğru\n- B2 = ABARTILI\nSIRALAMA:\n1. Görüş A'), { A1: 'DOĞRU', B2: 'ABARTILI' });
 });
 
-test('konsey: toplu sıralama, tartışmalı kritik bulgu, uzlaşma', () => {
-  const s = countVotes(TOPLANTI);
+test('council: aggregate ranking, disputed critical finding, consensus', () => {
+  const s = countVotes(MEETING);
   assert.equal(s.reviewerCount, 3);
   assert.deepEqual(s.ranking.map((r) => [r.opinion, r.average, r.votes]), [['B', 1, 2], ['A', 1.5, 2], ['C', 2, 2]]);
   const a1 = s.findings.find((f) => f.id === 'A1');
   assert.equal(a1.severity, 'KRİTİK');
   assert.equal(a1.disputed, true);
   assert.equal(s.findings.find((f) => f.id === 'B1').disputed, false);
-  assert.equal(s.consensus, 60, '5 oydan 3 doğru');
-  const yazilan = writeMinutes(TOPLANTI, s);
-  assert.match(yazilan, /## 3\. Toplu sıralama[\s\S]*\| A1 \| KRİTİK \| 0 \| 1 \| 1 \| tartışmalı · kullanıcıya sor \|[\s\S]*## 4\. Başkan kararı/);
-  assert.equal(writeMinutes(yazilan, s), yazilan, 'tekrar çalıştırmak bölümü çoğaltmaz');
+  assert.equal(s.consensus, 60, '3 of 5 votes correct');
+  const written = writeMinutes(MEETING, s);
+  assert.match(written, /## 3\. Toplu sıralama[\s\S]*\| A1 \| KRİTİK \| 0 \| 1 \| 1 \| tartışmalı · kullanıcıya sor \|[\s\S]*## 4\. Başkan kararı/);
+  assert.equal(writeMinutes(written, s), written, 'running again does not duplicate the section');
 });
 
-test('konsey: karar konseyinde seçenek oyları uzlaşmayı belirler', () => {
+test('council: in a decision council the option votes set the consensus', () => {
   const text = `## 1. İlk görüşler\n### Görüş A\nÖNERİ: Supabase\n### Görüş B\nÖNERİ: Supabase\n### Görüş C\nÖNERİ: Neon\n## 2. Çapraz inceleme\n### İnceleyen: A\nSIRALAMA:\n1. Görüş B\n2. Görüş C\n`;
   const s = countVotes(text);
   assert.deepEqual(s.options, [{ option: 'Supabase', votes: 2 }, { option: 'Neon', votes: 1 }]);
   assert.equal(s.consensus, 67);
 });
 
-test('konsey: pano tutanağı okur (karar, uzlaşma, kimlikli sıralama); ajanlar tanımlı', async () => {
+test('council: the dashboard reads the minutes (decision, consensus, ranking with ids); agents are defined', async () => {
   const fs = await import('node:fs');
   const os = await import('node:os');
   const path = await import('node:path');
@@ -90,8 +90,8 @@ test('konsey: pano tutanağı okur (karar, uzlaşma, kimlikli sıralama); ajanla
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'konsey-'));
   assert.deepEqual(councilMinutes(p), []);
   fs.mkdirSync(path.join(p, 'docs/workflow/council'), { recursive: true });
-  const s = countVotes(TOPLANTI);
-  const minutes = `${writeMinutes(TOPLANTI, s).replace('**Karar:** KOŞULLU ONAY', '**Karar:** KOŞULLU ONAY\n**Elenen:** 1')}\n## Kimlikler\nA = board-architect (sonnet) · B = security-auditor (sonnet) · C = board-product (haiku)\n`;
+  const s = countVotes(MEETING);
+  const minutes = `${writeMinutes(MEETING, s).replace('**Karar:** KOŞULLU ONAY', '**Karar:** KOŞULLU ONAY\n**Elenen:** 1')}\n## Kimlikler\nA = board-architect (sonnet) · B = security-auditor (sonnet) · C = board-product (haiku)\n`;
   fs.writeFileSync(path.join(p, 'docs/workflow/council/2026-10-12-plan-kayit.md'), minutes);
   const [k] = councilMinutes(p);
   assert.equal(k.topic, 'plan · G-012 kayıt formu');
