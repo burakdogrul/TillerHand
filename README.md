@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.13.1-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.14.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -32,7 +32,7 @@
 | 🏛️ **Uzman kurulu** | Ürün, Mimar, Güvenlik, UX, KVKK, QA ve diğer üyeler planı, görevi, her commit'i ve fazı denetler. |
 | 🔎 **Bulgu raporları** | `/findings-tech`, `-business`, `-security`, `-ux`, `-perf`, `-legal`: En önemli 20 bulgu, puanlı ve düzeltme yöntemli. |
 | 🗂️ **Korunan yapı** | Özellik bazlı klasör haritası; harita dışı yazım sorulur, dağınıklık engellenir, CI denetler. |
-| 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, düzenleme kilidi, test koruması, düzenleme turu sayacı, commit kapısı, yazarken güvenlik incelemesi. |
+| 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, düzenleme kilidi, kapsam kalkanı, test koruması, düzenleme turu sayacı, deterministik kapı, commit kapısı, yazarken güvenlik incelemesi. |
 | 📊 **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit. |
 | ⏱️ **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur; işler limite göre planlanır. Limit sadece uyarı verir (%90, %95, %99), işi durdurmaz. |
 | 🌐 **Doğru kaynak** | Değişebilen bilgi birincil kaynaktan doğrulanır (kaynak ve tarihle); kütüphane dokümanı Context7'den güncel gelir. |
@@ -339,9 +339,9 @@ Yapı dört yerde korunur: yazım anında hook, her PR'da CI (`structure` işi),
 ```mermaid
 flowchart TB
     T["Claude bir araç çağırıyor"] --> W{"Dosya yazma mı?"}
-    W -->|evet| SG["Sır engeli<br/>Yapı koruyucu<br/>Yapılandırma onayı<br/>Düzenleme kilidi<br/>Test koruması"]
+    W -->|evet| SG["Sır engeli<br/>Yapı koruyucu<br/>Yapılandırma onayı<br/>Düzenleme kilidi<br/>Kapsam kalkanı<br/>Test koruması"]
     W -->|hayır| B{"Komut mu?"}
-    B -->|evet| BG["Yıkıcı komut kalkanı<br/>Paket kapısı<br/>Commit kapısı (kurul)"]
+    B -->|evet| BG["Yıkıcı komut kalkanı<br/>Paket kapısı<br/>Commit kapısı (kurul + kapı)"]
     SG --> P["Claude Code izin katmanı<br/>izin ver · sor · engelle"]
     BG --> P
     P --> CI["Push → CI<br/>lint · test · build · Semgrep · kopya kod · karmaşıklık · RLS saldırısı · yapı · sır taraması"]
@@ -354,8 +354,10 @@ flowchart TB
 | Yıkıcı komut kalkanı | `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset` ve prod ortam değişkenlerini makineye çekmek (Vercel `env pull`, prod hedefli) engellenir; prod deploy ve uzak veritabanı işlemleri sorulur |
 | Yapı koruyucu | Harita dışı yeni dosya sorulur, dağınıklık dosyaları engellenir |
 | Yapılandırma onayı | `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.codex/`, `.mcp.json` ve iş akışı dosyaları onayın olmadan değişmez |
-| Commit kapısı | Kurul denetimi olmadan commit atılmaz |
+| Deterministik kapı | `gate.mjs --run`: AGENTS.md'deki lint, tip kontrolü ve test ile Semgrep çalışır; çıktı kurul üyelerine girdi olur, kırmızı kontrol RET sayılır |
+| Commit kapısı | Kurul denetimi ve aynı değişiklikler için yeşil kapı olmadan commit atılmaz; ara commit için kullanıcı "atlandı" der |
 | Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazabilir |
+| Kapsam kalkanı | `/plan-task` onayından sonra planın dosya listesi kaydedilir; plan açıkken listede olmayan mevcut dosyaya yazım sorulur, listeye ekleme onaya bağlı. Yeni dosya ve `docs/` serbest, plansız iş sessiz |
 | Test koruması | Test dosyasında beklenti silinir veya yoruma alınırsa, `.skip`/`.only`/`skipIf` eklenirse, beklenti gevşetilirse (`toBeTruthy`, matcher'sız `expect`) ya da test dosyası silinir veya taşınırsa sorulur. Test ayarında kapsamı daraltan değişiklik (`include`/`exclude`, `passWithNoTests`, test script'i) ve test dosyasına yazan kabuk komutu (`sed -i`, `rm`, `>`) da sorulur |
 | Düzenleme turu sayacı | Aynı kod dosyası bir oturumda 5., 10. kez düzenlenince AI'ya Semgrep ve güvenlik incelemesi hatırlatılır |
 | Dev/prod ayrımı | Yerel ortam ve AI (salt-okunur MCP dahil) sadece dev projesine bağlanır; prod sırları barındırma panelinde kalır, `/release` kontrol eder |

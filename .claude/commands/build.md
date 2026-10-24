@@ -23,7 +23,7 @@ Boşsa `docs/workflow/progress.md` → "Sıradaki adım" veya `docs/product/road
    - Kritik akışa dokunuyorsan (`docs/quality/test-plan.md`) test ekle.
    - Yeni ortam değişkeni → `.env.example`.
    - Yeni paket → kilit dosyası commit'e girer. Yeni sistem bağımlılığı (veritabanı, ffmpeg vb.) veya kurulum adımı → `README.md` → Gereksinimler / Kurulum.
-4. Doğrula: lint, tip kontrolü, ilgili testler. Kırmızı varsa düzelt. Aynı hatada 2 denemede çözemezsen dur ve bana durumu anlat.
+4. Doğrula: `node .claude/hooks/gate.mjs --run` (lint, tip kontrolü, test, Semgrep; görev sonu ve commit toplantısı bu çıktıyı kullanır). Kırmızı varsa düzelt. Aynı hatada 2 denemede çözemezsen dur ve bana durumu anlat.
 5. **Kanıt üret.** "Çalışıyor olmalı" yetmez; çalıştığını göster. Yöntem `docs/architecture/stack.md` → "Doğrulama" bölümünde:
    - Arayüz değişikliği → uygulamayı çalıştır, ilgili ekranı aç, ana senaryoyu ve bir hata senaryosunu dene, ekran görüntüsü al.
    - API/iş mantığı → gerçek istek at veya testi çalıştır; isteği ve yanıtı göster.
@@ -31,7 +31,7 @@ Boşsa `docs/workflow/progress.md` → "Sıradaki adım" veya `docs/product/road
 6. Arayüz değiştiyse `impeccable:impeccable` → `critique` çalıştır; önemli bulguları düzeltip düzeltmeyeceğimi sor.
 6b. **Görev sonu kurul toplantısı** (`.claude/board/rules.md`; kurul kurulduysa): Değişikliğe ilgili en fazla 3 üye. RET varsa görev bitmez; bulguyu ve seçenekleri sor. Toplantıyı `docs/workflow/board.md` günlüğüne yaz.
 7. `AGENTS.md` → "Bitti tanımı" listesini tek tek kontrol et.
-8. `docs/product/roadmap.md`'de görevi işaretle; PRD'de sadece testi yeşil olan kriterleri işaretle. Testleri JUnit raporuyla çalıştır (`docs/architecture/stack.md` → Kabul testleri) ki pano güncellensin. Limiti tekrar oku ve `docs/workflow/cost-log.md`'ye satır ekle (başlangıç/bitiş 5 saatlik %, süre dk).
+8. Kapsam kalkanını kapat: `node .claude/hooks/freeze-guard.mjs --plan-bitir`. `docs/product/roadmap.md`'de görevi işaretle; PRD'de sadece testi yeşil olan kriterleri işaretle. Testleri JUnit raporuyla çalıştır (`docs/architecture/stack.md` → Kabul testleri) ki pano güncellensin. Limiti tekrar oku ve `docs/workflow/cost-log.md`'ye satır ekle (başlangıç/bitiş 5 saatlik %, süre dk).
 9. Rapor ver:
    - Ne yapıldı (2-3 satır)
    - Bu görevde alınan kararlar (kullanıcı / otomatik)

@@ -39,3 +39,5 @@ Bu adımda **kod yazma**, sadece plan çıkar.
 7. **Kurul plan toplantısı** (`.claude/board/rules.md` §2-4; kurul kurulduysa): `board-product`, `board-architect` ve plana ilgili üyeler planı denetler. Sentezi plana "Kurul görüşü" olarak ekle. RET varsa planı düzeltmeden onaya sunma. Üyelerin sorulmasını istediği kararları sor.
 
 Planı onaylatmak için AskUserQuestion kullan: "Onayla / Şunu değiştir / Görevi böl". Onayımı bekle. Onaydan sonra `/build` ile uygulanacak.
+
+8. **Onaydan sonra kapsam kalkanını aç:** `node .claude/hooks/freeze-guard.mjs --plan-kaydet <görev kodu> <dosya...>` ("Dokunulacak dosyalar"daki yollar; bütün bir klasör için sonuna `/`). Plan aktifken listede olmayan mevcut dosyaya yazım kullanıcıya sorulur; yeni dosyalar ve `docs/` serbest. Uygularken listede olmayan bir dosya gerekirse kullanıcıya sor, onaylarsa `--plan-ekle <yol>`.

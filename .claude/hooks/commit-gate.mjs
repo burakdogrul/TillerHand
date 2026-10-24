@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Commit kapısı: AI'nın her `git commit`'inden önce hafif kurul denetimi yapılmasını zorunlu kılar.
+// Commit kapısı: AI'nın her `git commit`'inden önce hafif kurul denetimi ve yeşil deterministik kapı (gate.mjs) ister.
 //   PreToolUse (Bash) hook'u: denetim onayı yoksa commit'i çıkış kodu 2 ile durdurur ve ne yapılacağını söyler.
 //   node .claude/hooks/commit-gate.mjs --approve "<katılan üyeler veya not>"   onayı mevcut değişikliklere bağlar.
 // Muaf: kurul kurulmamışsa, docs/workflow/board.md'de "Commit denetimi: kapalı" ise, sadece dokümantasyon değiştiyse.
@@ -9,16 +9,42 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { kokBul } from './arac.mjs';
+import { tirnaksiz } from './destructive-guard.mjs';
 
-const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+// Alt klasörden çağrılsa da proje kökü (betiğin yeri): onay ve kapı yanlış yere yazılmasın
+const kok = kokBul();
 const onayDosyasi = path.join(kok, '.claude', 'state', 'commit-approval.json');
 const git = (k) => execSync(`git ${k}`, { cwd: kok, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
 
-// Commit'e girecek değişiklikler: sahnelenmiş + izlenen dosyalardaki sahnelenmemiş (git commit -a için)
+// Commit'e girecek değişiklikler: sahnelenmiş, izlenen dosyalardaki sahnelenmemiş (git commit -a) ve izlenmeyen yeni
+// dosyalar (git add -A && git commit). -z: Türkçe veya boşluklu yollar tırnaklanıp kaçışlanmasın
 export function degisiklikler() {
-  const dosyalar = [...new Set([...git('diff --cached --name-only').split('\n'), ...git('diff --name-only').split('\n')].filter(Boolean))];
-  const imza = crypto.createHash('sha256').update(git('diff --cached') + '\0' + git('diff')).digest('hex');
-  return { dosyalar, imza };
+  // .claude/state/ (onay, kapı sonucu) imzaya girmez: .gitignore'da olmasa da onay yazmak imzayı değiştirmesin
+  const yeni = git('ls-files --others --exclude-standard -z').split('\0').filter((f) => f && !f.startsWith('.claude/state/'));
+  const dosyalar = [...new Set([...git('diff --cached --name-only -z').split('\0'), ...git('diff --name-only -z').split('\0'), ...yeni].filter(Boolean))];
+  const h = crypto.createHash('sha256').update(git('diff --cached') + '\0' + git('diff'));
+  for (const f of yeni) {
+    h.update(`\0${f}\0`);
+    try { h.update(fs.readFileSync(path.join(kok, f))); } catch { /* okunamayan dosya: adı yeter */ }
+  }
+  return { dosyalar, imza: h.digest('hex') };
+}
+
+// git'in genel seçenekleri commit'ten önce gelebilir: git --no-pager commit, git -C x commit, git --git-dir=x commit
+const COMMIT = /\bgit\b(?:\s+(?:-[cC]\s+\S+|--?[\w-]+(?:=\S+)?))*\s+commit\b/;
+
+// Hook komut çalışmadan önceki hali görür: commit'ten önce dosya değiştirebilen her şey denetimi boşa çıkarır.
+// İzinli: commit tek başına, önünde "git add" ve "cd". Heredoc ve $(cat <<'EOF' … EOF) mesajı komut sayılmaz.
+export function zincirSorunu(komut) {
+  const k = komut.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, '<<HEREDOC')
+    .replace(/\$\(\s*cat\s+<<HEREDOC\s*\)/g, 'MESAJ')
+    .replace(/'[^']*'/g, "''")
+    .replace(/"((?:[^"\\]|\\.)*)"/g, (m, ic) => (/\$\(|`/.test(ic) ? m : '""'))
+    .replace(/\d*>&\d+/g, '');
+  if (/\$\(|`/.test(k)) return 'komutta ikame var ($(...) veya `...`)';
+  const parcalar = k.split(/&&|\|\||[;|&\n]/).map((s) => s.trim()).filter(Boolean);
+  return parcalar.every((s) => COMMIT.test(s) || /^git\s+add\b/.test(s) || /^cd\b/.test(s)) ? null : 'commit başka komutlarla zincirli';
 }
 
 export const sadeceDokuman = (dosyalar) => dosyalar.every((f) => /\.(md|txt)$/i.test(f) || f.startsWith('docs/'));
@@ -51,8 +77,21 @@ function hook() {
   } catch {
     process.exit(0);
   }
-  if (!/\bgit\b(?:\s+-[cC]\s+\S+)*\s+commit\b/.test(komut)) process.exit(0);
+  // "atlandı" onayı kapıyı ve kurulu aşar: kullanıcıya sorulur (AI kendi başına yazamasın)
+  const acik = tirnaksiz(komut);
+  if (/commit-gate\.mjs\b[^;&|\n]*--approve\s+atlandı/i.test(acik)) {
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
+      permissionDecisionReason: 'Commit kapısı: "atlandı" onayı kurul denetimini ve deterministik kapıyı aşar. Sadece kullanıcı açıkça isterse onayla.' } }));
+    process.exit(0);
+  }
+  if (!COMMIT.test(komut) && !COMMIT.test(acik)) process.exit(0);
   if (!kurulVar() || denetimKapali()) process.exit(0);
+  const zincir = zincirSorunu(komut);
+  if (zincir) {
+    process.stderr.write(`Commit durduruldu: ${zincir}. Kapı komut çalışmadan önceki değişiklikleri denetler; commit'i tek başına ` +
+      '(veya yalnızca "git add … && git commit" ile) çalıştır. Push ve diğer komutları ayrı çalıştır.\n');
+    process.exit(2);
+  }
 
   let d;
   try {
@@ -68,10 +107,28 @@ function hook() {
   } catch {
     // onay yok
   }
-  if (onay?.imza === d.imza) process.exit(0);
+  // Deterministik kapı (gate.mjs) aynı değişiklikler için yeşil olmalı; kullanıcı "atlandı" derse aranmaz
+  let kapi = null;
+  try {
+    kapi = JSON.parse(fs.readFileSync(path.join(kok, '.claude', 'state', 'gate.json'), 'utf8'));
+  } catch {
+    // kapı çalışmadı
+  }
+  const atlandi = /^atlandı/i.test(String(onay?.not ?? ''));
+  if (onay?.imza === d.imza && (atlandi || (kapi?.imza === d.imza && kapi.gecti === true))) process.exit(0);
+  if (onay?.imza === d.imza) {
+    const kalan = kapi?.imza === d.imza ? (kapi.kontroller ?? []).filter((k) => k.durum === 'kaldı').map((k) => k.ad) : null;
+    process.stderr.write(kalan
+      ? `Commit durduruldu: deterministik kapı kırmızı (${kalan.join(', ') || 'kaldı'}). Düzelt, node .claude/hooks/gate.mjs --run ile tekrar çalıştır, sonra onayla.\n` +
+        'Kullanıcı ara commit (WIP) için açıkça isterse --approve "atlandı: kullanıcı isteği" kullan.\n'
+      : 'Commit durduruldu: bu değişiklikler için deterministik kapı çalışmadı (ya da sonrasında değişiklik oldu). ' +
+        'node .claude/hooks/gate.mjs --run çalıştır; kırmızı yoksa kurul onayını yenile ve commit\'i tekrar dene.\n');
+    process.exit(2);
+  }
 
   process.stderr.write(
     `Commit durduruldu: Bu değişiklikler için kurul denetimi yapılmadı (${d.dosyalar.length} dosya).\n` +
+      '0. node .claude/hooks/gate.mjs --run ile deterministik kapıyı (lint, tip, test, Semgrep) çalıştır; çıktısını üyelere ver.\n' +
       '1. .claude/board/rules.md §3\'e göre değişen dosyalara ilgili en fazla 2 kurul üyesini model "haiku" ile, sadece diff üzerinde çalıştır.\n' +
       '2. RET yoksa: node .claude/hooks/commit-gate.mjs --approve "<katılan üyeler>" ve commit\'i tekrar dene.\n' +
       '3. RET varsa commit atma; bulguyu ve seçenekleri kullanıcıya sor.\n' +

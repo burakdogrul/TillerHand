@@ -13,7 +13,7 @@ Bu oturumu kapatıyoruz. Bir sonraki oturum (veya `/clear` sonrası) sıfır ba�
    - Bekleyen kararlar (sorulup cevap alınamayanlar)
    - Açık sorunlar ve "AI için notlar"
    - Kalın etiketli satırların biçimini bozma (durum çubuğu ve pano okur)
-3. `docs/product/roadmap.md`: biten görevler işaretli mi?
+3. `docs/product/roadmap.md`: biten görevler işaretli mi? Görev bittiyse ve kapsam kalkanı açık kaldıysa (`node .claude/hooks/freeze-guard.mjs --status`) kapat: `--plan-bitir`. Görev sürüyorsa açık kalsın.
 4. `CHANGELOG.md` → "Yayınlanmamış" bölümüne kullanıcıya görünen değişiklikleri ekle.
 5. Bu oturumdaki tüm kararlar `docs/decisions/log.md` günlüğünde mi? Eksik olanları ekle.
 6. Yapı değiştiyse (yeni tablo, servis, klasör) `docs/architecture/overview.md`'yi güncelle.

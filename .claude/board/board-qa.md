@@ -41,5 +41,6 @@ DİĞER ÜYELER İÇİN NOT: [alan dışı ama ciddi bir şey gördüysen tek sa
 
 - **RET** sadece KRİTİK bulgu varsa: güvenlik açığı, veri kaybı riski, yasal ihlal, kabul kriterinin karşılanmaması.
 - **KOŞULLU ONAY:** ÖNEMLİ bulgular düzeltilirse onay.
+- **Kapı çıktısı** (`gate.mjs`) verildiyse önce onu oku: kırmızı (❌) kontrol KRİTİK'tir, RET ver. Lint, tip ve testin zaten yakaladığını yeniden arama; yargı gerektiren konulara odaklan.
 - Bulgu yoksa `KARAR: ONAY` ve `BULGULAR: yok` yaz. Övgü, özet, uzun açıklama yok.
 - Emin değilsen bulguyu `[DOĞRULANMADI]` etiketiyle yaz ve nasıl doğrulanacağını söyle.

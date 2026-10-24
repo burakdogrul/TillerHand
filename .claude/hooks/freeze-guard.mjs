@@ -6,13 +6,20 @@
 //   settings.json yok; olmazsa AI kilidi, hook'ları ve kuralları kendisi değiştirebilir.
 //   node .claude/hooks/freeze-guard.mjs --set <klasör>   kilitle
 //   node .claude/hooks/freeze-guard.mjs --off            kilidi kaldır
-//   node .claude/hooks/freeze-guard.mjs --status         durumu yaz
+//   node .claude/hooks/freeze-guard.mjs --status         durumu yaz (kilit ve plan)
+// Kapsam kalkanı (F-06): /plan-task onayından sonra planın dosya listesi kaydedilir; plan aktifken listede olmayan
+// MEVCUT dosyaya yazım sorulur (ask). Yeni dosyaya yapı koruyucu bakar; docs/, CHANGELOG.md serbest. Plan yoksa sessiz.
+// Durum: .claude/state/plan.json → { "gorev": "G-012", "yollar": ["src/a.ts", "src/features/fatura/"] } (/ ile biten: klasör)
+//   node .claude/hooks/freeze-guard.mjs --plan-kaydet <görev> <yol...>   plan yokken kaydet (sorusuz)
+//   node .claude/hooks/freeze-guard.mjs --plan-ekle <yol...>             listeyi genişlet (kullanıcı onayıyla)
+//   node .claude/hooks/freeze-guard.mjs --plan-bitir                     görev bitince kapat
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { girdiOku, kararVer } from './arac.mjs';
+import { girdiOku, kararVer, kokBul } from './arac.mjs';
 
-const kok = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+// Alt klasörden çağrılsa da proje kökü: kilit ve plan hook'un okuduğu yere yazılsın; yollar köke göre
+const kok = kokBul();
 const durumYolu = (dizin = kok) => path.join(dizin, '.claude', 'state', 'freeze.json');
 const DURUM = durumYolu();
 // Kilit varken de yazılması gereken kit dosyaları (ilerleme notu, hook durumları)
@@ -38,6 +45,45 @@ function kilitOku(dizin = kok) {
   try { return JSON.parse(fs.readFileSync(durumYolu(dizin), 'utf8')).dir || null; } catch { return null; }
 }
 
+const planYolu = (dizin = kok) => path.join(dizin, '.claude', 'state', 'plan.json');
+const PLAN_SERBEST = ['docs/', 'CHANGELOG.md', ...SERBEST];
+export const kapsamda = (rel, yollar) => [...PLAN_SERBEST, ...yollar].some((y) => rel === y || (y.endsWith('/') && rel.startsWith(y)));
+
+// Bozuk veya elle değiştirilmiş dosya: plan yok sayılır
+function planOku(dizin = kok) {
+  try {
+    const p = JSON.parse(fs.readFileSync(planYolu(dizin), 'utf8'));
+    return typeof p?.gorev === 'string' && Array.isArray(p.yollar) ? { gorev: p.gorev, yollar: p.yollar.filter((y) => typeof y === 'string') } : null;
+  } catch { return null; }
+}
+const planYaz = (p) => {
+  fs.mkdirSync(path.dirname(planYolu()), { recursive: true });
+  fs.writeFileSync(planYolu(), JSON.stringify({ ...p, tarih: new Date().toISOString() }, null, 2));
+};
+// Proje içi göreli yol; sondaki / klasör demektir. Proje dışı veya kökün kendisi: null
+function planYolNormal(y) {
+  const r = goreli(y, kok);
+  return !r || r.startsWith('..') || path.isAbsolute(r) ? null : r + (/[\\/]$/.test(y) ? '/' : '');
+}
+
+function planAyarla(mod, argumanlar) {
+  const mevcut = planOku();
+  if (mod === '--plan-bitir') {
+    fs.rmSync(planYolu(), { force: true });
+    return console.log(mevcut ? `Kapsam kalkanı kapandı (${mevcut.gorev}).` : 'Aktif plan yok.');
+  }
+  const [gorev, ...yollar] = mod === '--plan-kaydet' ? argumanlar : [null, ...argumanlar];
+  const hata = (m) => { console.error(m); process.exit(1); };
+  if (mod === '--plan-kaydet' && mevcut) hata(`Plan aktif (${mevcut.gorev}). Kapsamı genişletmek kullanıcı onayıyla --plan-ekle; görev bittiyse önce --plan-bitir.`);
+  if (mod === '--plan-ekle' && !mevcut) hata('Aktif plan yok; önce --plan-kaydet <görev> <yol...>.');
+  if ((mod === '--plan-kaydet' && !gorev) || !yollar.length) hata(`Kullanım: ${mod === '--plan-kaydet' ? '--plan-kaydet <görev> <yol...>' : '--plan-ekle <yol...>'}`);
+  const normal = yollar.map(planYolNormal);
+  if (normal.includes(null)) hata(`Proje dışındaki yol plana eklenmez: ${yollar[normal.indexOf(null)]}`);
+  const plan = mevcut ? { gorev: mevcut.gorev, yollar: [...new Set([...mevcut.yollar, ...normal])] } : { gorev, yollar: [...new Set(normal)] };
+  planYaz(plan);
+  console.log(`Kapsam kalkanı: ${plan.gorev} · ${plan.yollar.length} yol. Liste dışı mevcut dosyaya yazım sorulur.`);
+}
+
 // Modu SADECE ilk argüman belirler (izin listesi önekle eşleşir: "--set:*" ve "--status" onaysız, "--off" onaylı).
 // Kilit ajanı sınırlar: açık kilit onaysız kaldırılamaz ve genişletilemez, sadece daraltılabilir.
 function ayarla() {
@@ -56,9 +102,13 @@ function ayarla() {
     fs.mkdirSync(path.dirname(DURUM), { recursive: true });
     fs.writeFileSync(DURUM, JSON.stringify({ dir, tarih: new Date().toISOString() }, null, 2));
     console.log(`Düzenleme kilidi: sadece ${dir}/ (kaldırmak için /freeze off)`);
+  } else if (mod?.startsWith('--plan-')) {
+    planAyarla(mod, process.argv.slice(3));
   } else {
     const k = kilitOku();
+    const p = planOku();
     console.log(k ? `Düzenleme kilidi açık: ${k}/` : 'Düzenleme kilidi yok.');
+    console.log(p ? `Kapsam kalkanı: ${p.gorev} · ${p.yollar.length} yol (${p.yollar.join(', ')})` : 'Aktif plan yok.');
   }
 }
 
@@ -79,12 +129,19 @@ function hook() {
     }
   }
   const kilit = kilitOku(g.kok);
-  if (!kilit) process.exit(0);
-  const disari = yollar.find((yol) => !izinli(yol, kilit, g.kok));
+  const disari = kilit && yollar.find((yol) => !izinli(yol, kilit, g.kok));
   if (disari) kararVer(g.arac, 'deny', `Düzenleme kilidi: sadece ${kilit}/ değiştirilebilir. Bu dosya gerekiyorsa kullanıcıya sor; kilidi kaldırmak için /freeze off.`);
+  const plan = planOku(g.kok);
+  for (const [i, yol] of (plan ? yollar : []).entries()) {
+    const rel = goreli(yol, g.kok);
+    // Yeni dosya sorulmaz (yapı koruyucu bakar); silme ve var olanın üstüne yazma sorulur
+    if (kapsamda(rel, plan.yollar) || !(g.dosyalar[i].sil || fs.existsSync(yol))) continue;
+    kararVer(g.arac, 'ask', `Kapsam kalkanı: ${rel || '(yol bilinmiyor)'} onaylı planda yok (görev ${plan.gorev}). Gerekliyse kullanıcıya sor; ` +
+      `onaylarsa node .claude/hooks/freeze-guard.mjs --plan-ekle <yol>. Görev bittiyse --plan-bitir.`);
+  }
   process.exit(0);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  ['--set', '--off', '--status'].includes(process.argv[2]) ? ayarla() : hook();
+  ['--set', '--off', '--status', '--plan-kaydet', '--plan-ekle', '--plan-bitir'].includes(process.argv[2]) ? ayarla() : hook();
 }

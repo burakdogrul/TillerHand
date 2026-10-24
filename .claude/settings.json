@@ -11,6 +11,9 @@
       "Bash(node .claude/hooks/cost.mjs)",
       "Bash(node .claude/hooks/freeze-guard.mjs --set:*)",
       "Bash(node .claude/hooks/freeze-guard.mjs --status)",
+      "Bash(node .claude/hooks/freeze-guard.mjs --plan-kaydet:*)",
+      "Bash(node .claude/hooks/freeze-guard.mjs --plan-bitir)",
+      "Bash(node .claude/hooks/gate.mjs --run)",
       "Bash(node .claude/hooks/checkpoint.mjs --list:*)",
       "Bash(node .claude/hooks/checkpoint.mjs --save:*)",
       "Bash(node kit/kit.mjs install:*)",
@@ -25,6 +28,7 @@
     "ask": [
       "Bash(git push:*)",
       "Bash(node .claude/hooks/tools.mjs --ac:*)",
+      "Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)",
       "Edit(./CLAUDE.md)",
       "Edit(./AGENTS.md)",
       "Edit(./.codex/**)",

@@ -5,6 +5,25 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.14.0] - 2026-10-24
+
+### Eklenen
+- **Deterministik kapı (`gate.mjs --run`):** AGENTS.md → Komutlar'daki `lint`, `tip kontrol` ve `test` komutları ile (kuruluysa) değişen kod dosyalarında Semgrep çalışır. Sonuç `.claude/state/gate.json`'a değişiklik imzasıyla yazılır. Yeşil kontrolün çıktısı yazılmaz, kırmızının son 30 satırı yazılır. Boş komut "tanımsız" sayılır; hiçbir kontrol çalışmadıysa uyarı verir. Commit, görev sonu ve faz sonu toplantısından önce çalışır, çıktısı kurul üyelerine girdi olur. Üyeler kırmızı kontrolde RET verir, lint/tip/test'in yakaladığını yeniden aramaz. `/build` doğrulama adımı da bunu kullanır.
+- **Kapsam kalkanı (`freeze-guard.mjs --plan-kaydet / --plan-ekle / --plan-bitir`):** `/plan-task` onayından sonra planın dosya listesi kaydedilir. Plan açıkken listede olmayan mevcut dosyaya yazım (Claude Code, Codex, Antigravity) sorulur. Listeye dosya eklemek onaya bağlı; yeni dosya, `docs/` ve `CHANGELOG.md` serbest. Plan yoksa sessiz. `/build` sonunda ve `/wrap-up`'ta kapanır. Kilit ve plan, alt klasörden çağrılsa da proje köküne yazılır; tırnaklı `'--plan-ekle'` / `'--off'` da Codex ve Antigravity'de sorulur.
+
+### Değişen
+- **Commit kapısı:** Kurul onayına ek olarak aynı değişiklikler için yeşil kapı ister. Kapı kırmızı, eski veya hiç çalışmamışsa commit durur. Kullanıcı ara commit için açıkça isterse `--approve "atlandı: kullanıcı isteği"`. İzlenmeyen yeni dosyalar da imzaya girer (`git add -A && git commit` ile yalnız yeni dosya içeren commit artık denetimsiz geçmez). `git --no-pager commit`, `git -C x commit` gibi yazımlar yakalanır. Commit tek başına ya da yalnızca `cd` / `git add` ile zincirlenebilir: `sed … && git commit`, `$(...)` içeren komut ve `git commit && git push` durdurulur (push ayrı komut). Heredoc ve `$(cat <<'EOF' … EOF)` mesajı serbest. `--approve "atlandı…"` her yazımda kullanıcıya sorulur. Değişen dosya listesi `git -z` ile okunur (Türkçe yollar doğru); `.claude/state/` imzaya girmez.
+- `.claude/board/rules.md` §4, kurul üye şablonları, `/plan-task`, `/build`, `/wrap-up`, `.claude/settings.json` izinleri (`gate.mjs --run`, `--plan-kaydet`, `--plan-bitir` sorusuz; `--plan-ekle` sorulur), README ve `kit/guide.html` güncellendi.
+- **Elle uyarla:** Kurulu projede `.claude/agents/board-*.md` dosyaları projeye aittir: her birinin "Çıktı" bölümüne kapı satırını `.claude/board/board-<rol>.md`'den kopyala. `AGENTS.md` → Komutlar'da `lint`, `tip kontrol`, `test` satırları dolu olmalı. `settings.json`'ı değiştirdiysen yeni izin satırlarını `.kit-new`'den al.
+
+### Bilinen sınır
+- Kapı sadece Claude Code'un commit kapısında zorunlu; Codex ve Antigravity'de komutla çalıştırılır.
+- Kapsam kalkanı AI'nın planı kapatıp yeniden kaydetmesini engellemez; bu AGENTS.md'deki "hook atlatma yasak" kuralına dayanır.
+- Kapı, komutlar boşsa ve Semgrep kurulu değilse uyarıyla yeşil döner; commit'i durdurmaz.
+- AGENTS.md → Komutlar onaysız çalışır: güvenilmeyen depodan (klon, PR) gelen komutu çalıştırmadan önce AGENTS.md'yi oku.
+- Kapsam kalkanı sadece dosya araçlarında: kabukla (`sed -i`, `mv`, `cp`) plan dışı dosyaya yazmak sorulmaz (test dosyası hariç); sembolik bağlar çözülmez; `docs/` altındaki kod (Docusaurus vb.) serbest sayılır.
+- Kapı çalışırken dosya değiştiren komut (`lint --fix`, anlık görüntü güncellemesi) imzayı değiştirir; kapı tekrar çalıştırılmalı.
+
 ## [3.13.1] - 2026-10-24
 
 ### Değişen

@@ -44,7 +44,8 @@ Kurulda olmayan bir üyeyi çağırma; ilgili alan kurulda yoksa durum bloğunda
 ## 4. Toplantı nasıl yapılır
 
 1. **Limit kontrolü** (`docs/workflow/usage-limits.md`): Seviye sarıysa üye sayısını yarıya indir; kırmızıysa kullanıcıya sor (kurulu hafiflet seçeneği dahil).
-2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu ve kabul kriterleri. Commit toplantısında `model: "haiku"` ver.
+1b. **Deterministik kapı** (commit, görev sonu, faz sonu; plan toplantısında yok): `node .claude/hooks/gate.mjs --run`. AGENTS.md → Komutlar'daki lint, tip kontrolü ve test ile Semgrep çalışır; sonuç değişiklik imzasıyla saklanır. Kırmızıysa commit kapısı açılmaz: önce düzelt. Kullanıcı ara commit için açıkça isterse `--approve "atlandı: kullanıcı isteği"`.
+2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu, kabul kriterleri ve kapı çıktısı (varsa). Commit toplantısında `model: "haiku"` ver.
 2b. **Konsey toplantısıysa** (§2) `.claude/board/council.md` aşama 1-4'ü uygula. Sentezi başkanın kararından kur; görüş ayrılığı satırına azınlık görüşünü yaz.
 3. **Sentezle** (ana ajan; konseyde başkanın kararına göre):
 
