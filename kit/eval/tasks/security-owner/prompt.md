@@ -1,0 +1,1 @@
+Güvenlik: Şu an her kullanıcı başkasının notunu okuyabiliyor, değiştirebiliyor ve silebiliyor. Kullanıcı (`x-user` başlığı) sadece kendi notlarını listeleyebilmeli, okuyabilmeli, değiştirebilmeli ve silebilmeli. `x-user` başlığı olmayan istek reddedilmeli. Düzelt.

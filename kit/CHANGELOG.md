@@ -5,6 +5,12 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.16.1] - 2026-10-24
+
+### Yeni
+- **Kit değerlendirmesi** (`kit/eval/`): Aynı görevi kitli ve kitsiz çalıştırıp gizli testlerle puanlar: kabul ve saldırgan testleri, regresyon, eklenen test, maliyet, süre, token. İçinde küçük bir not API'si ve üç görev var (hata, 3+ dosyalık özellik, IDOR). Çalıştırmak: `node kit/eval/run.mjs`. Kiti geliştirenler içindir, projelere kopyalanmaz.
+- İlk ölçüm (Sonnet, n=1): iki koşul da gizli testlerin hepsini geçti. Kit testi koddan önce yazdı ve 11 test ekledi, kitsiz 3 test ekledi. Kitin bedeli ~2,3 kat maliyet ve ~1,7 kat süre. Sonuç: `kit/eval/results/2026-10-24-v3.16.0-sonnet.md`.
+
 ## [3.16.0] - 2026-10-24
 
 ### Yeni

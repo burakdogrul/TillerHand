@@ -1,0 +1,170 @@
+[
+  {
+    "task": "bug-sort",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 2,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 4,
+      "fail": 0
+    },
+    "testsAdded": 1,
+    "codeFiles": 2,
+    "codeLines": 11,
+    "otherFiles": 0,
+    "error": null,
+    "costUsd": 0.27184139999999996,
+    "durationS": 33,
+    "turns": 13,
+    "tokens": 313572,
+    "outputTokens": 2581,
+    "summary": "**Kök neden:** `src/features/notes/server/store.js` içindeki `list()` sıralama fonksiyonu `a.createdAt < b.createdAt` yani boolean döndürüyordu. `sort` sayı bekler. `true` 1, `false` 0 olarak okunur ve hiçbir zaman negatif çıkmaz. Bu yüzden sıra tutarsız kalıyordu.\n\n**Düzeltme:** Karşılaştırma artık `(a < b) - (a > b)` ile sayı döndürüyor ve `createdAt` azalan sıralanıyor. Listeyi önce `reverse()` ediyorum, çünkü sort kararlı. Aynı zaman damgasındaki notlarda sonradan eklenen önce geliyor.\n\n**Test:** `tests/notes.test.mjs` içine \"GET /notes returns newest first\" ekledim. Test, karışık `createdAt` ile 5 not ekleyip sırayı kontrol ediyor. Düzeltmeden önce kırmızıydı. Düzeltmeden sonra `npm test` çıktısı: 4 test, 4 geçti, 0 kaldı.\n\n**Benzer riskli yerler:**\n- Başka `.sort(` çağrısı aramadım. `src/` altında yalnızca bu store ve route dosyaları var.\n- `POST /notes` istemcinin verdiği `createdAt` değerini doğrulamadan kabul ediyor. İstemci ISO dışı bir biçim gönderirse metin karşılaştırması yanlış sıralar. Kapsam dışı olduğu için dokunmadım. Gerekirse ayrı görev olarak ele alınabilir.\n- `GET /notes` `x-user` ile süzmüyor, herkesin notunu döndürüyor. Bu ayrı bir konu ve dokunmadım.\n\nCommit atılmadı. `/freeze` gerekmedi, çünkü düzeltme tek dosyada.\n\n── Durum ──────────────────────\nAşama: Faz 1 · Görev: hata düzeltme (bitti) · Soru modu: kapalı · Limit: bilinmiyor\nYapıldı: kırmızı test, düzeltme, yeşil · Kurul: kurulmadı · Otomatik kararlar: düzeltme yolu = comparator düzeltmesi (tek "
+  },
+  {
+    "task": "bug-sort",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 2,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 3,
+      "fail": 0
+    },
+    "testsAdded": 0,
+    "codeFiles": 1,
+    "codeLines": 5,
+    "otherFiles": 0,
+    "error": null,
+    "costUsd": 0.07002520000000001,
+    "durationS": 19,
+    "turns": 6,
+    "tokens": 148382,
+    "outputTokens": 1108,
+    "summary": "Hata düzeldi: `GET /notes` artık en yeni notu önce döndürüyor. Sıralamayı doğrulayan yeni bir test eklemedim. Mevcut 3 test geçiyor, ama bunlar sıralamayı kapsamıyor. Düzeltmeyi ayrıca çalıştırıp denemedim.\n\n**Neden:** `src/features/notes/server/store.js` içindeki `list()` fonksiyonunda `sort` karşılaştırıcısı sayı yerine boolean (`a.createdAt < b.createdAt`) döndürüyordu. `true` 1'e, `false` 0'a çevrilir ve hiçbir zaman negatif olmaz. Bu yüzden sıralama tutarsız çıkıyordu.\n\n**Düzeltme:** Karşılaştırıcı artık `createdAt` değerine göre azalan sırada -1/1 döndürüyor. Zaman damgaları eşitse `id` büyük olan, yani sonra eklenen not önce geliyor.\n\nCommit atmadım."
+  },
+  {
+    "task": "feature-tags",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 6,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 11,
+      "fail": 0
+    },
+    "testsAdded": 8,
+    "codeFiles": 4,
+    "codeLines": 119,
+    "otherFiles": 0,
+    "error": null,
+    "costUsd": 0.33402319999999996,
+    "durationS": 83,
+    "turns": 21,
+    "tokens": 583797,
+    "outputTokens": 10558,
+    "summary": "Etiket özelliği tamam. Dört kural da çalışıyor ve `npm test` yeşil: 11 test, 8'i yeni (`ETK-*`). Yeni testleri koddan önce yazdım, 7'si kırmızıydı. Lint ve tip kontrol komutları tanımsız, Semgrep kurulu değil, bu yüzden kapıda atlandılar.\n\n**Ne yapıldı**\n- Yeni `tags.js` doğrulama ve normalizasyonu yapıyor: kırpma, `toLocaleLowerCase('tr')`, tekrar atma (ilk görülme sırası korunur), en fazla 5 etiket, 1-20 karakter.\n- `POST /notes` ve `PATCH /notes/:id` `tags` alanını kabul ediyor. Etiketsiz not `tags: []` ile dönüyor. `PATCH` etiketleri değiştiriyor, `tags` gelmezse eskiler kalıyor. Geçersiz `tags` 400 döndürüyor ve not değişmiyor.\n- `GET /notes?tag=` filtreliyor, sorgu da Türkçe kurallarıyla küçük harfe çevriliyor.\n- `GET /tags` sadece `x-user` kullanıcısının notlarını sayıyor: sayıya göre azalan, eşitlikte Türkçe alfabetik.\n\n**Otomatik kararlar**\n- **Etiket sayısı:** 5 sınırı, tekrarlar atılmadan önce gelen dizinin uzunluğuna uygulanıyor. `[\"a\",\"A\",\"a\",\"a\",\"a\",\"a\"]` 400 alır.\n- **Uzunluk:** karakter sayısı kod noktasıyla sayılıyor, UTF-16 birimiyle değil.\n- **`GET /tags` ve `x-user`:** başlık yoksa 401 dönüyor. Spec bu durumu söylemiyordu. Başlıksız oluşturulan notların sahibi `undefined`, yani başlıksız istek onların etiketlerini görürdü.\n- **`PATCH` ile `tags: []`:** etiketleri temizliyor.\n\n**Kanıt:** test çıktısı `pass 11 / fail 0`, `gate.mjs --run` YEŞİL. Servisi ayrıca elle çalıştırıp curl atmadım. Testler gerçek HTTP sunucusuna `fetch` ile istek atıyor.\n\n**Şüpheli, b"
+  },
+  {
+    "task": "feature-tags",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 6,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 4,
+      "fail": 0
+    },
+    "testsAdded": 1,
+    "codeFiles": 4,
+    "codeLines": 78,
+    "otherFiles": 0,
+    "error": null,
+    "costUsd": 0.1686502,
+    "durationS": 48,
+    "turns": 20,
+    "tokens": 303476,
+    "outputTokens": 6107,
+    "summary": "Notlara etiket özelliği tamam; 4 testin hepsi geçiyor. Commit atmadım.\n\n- **Etiket kuralları:** `src/features/notes/server/tags.js` dosyasını ekledim. `POST /notes` ve `PATCH /notes/:id` artık `tags` alanını kabul ediyor. Etiketler kırpılıyor, Türkçe kurallarıyla küçük harfe çevriliyor ve tekrarlar atılıyor; ilk görülme sırası korunuyor. Dizi olmayan değer, metin olmayan öğe, 1-20 karakter dışındaki etiket ve 5'ten fazla etiket 400 dönüyor. Etiketsiz not `tags: []` ile dönüyor. `PATCH`'te `tags` eskisinin yerine geçiyor.\n- **Filtre:** `GET /notes?tag=` büyük/küçük harf duyarsız çalışıyor; `İŞ` ile arama `iş` etiketini buluyor.\n- **Sayım:** `GET /tags`, `x-user` kullanıcısının notlarındaki etiketleri `[{tag, count}]` olarak döndürüyor. Sıralama sayıya göre azalan; eşitlikte Türkçe alfabetik (`ı`, `i`'den önce gelir).\n- **Test:** `tests/notes.test.mjs` içine normalizasyon, doğrulama, `PATCH`, filtre ve sayımı kapsayan bir test ekledim.\n\nİki karar şartnamede açık değildi, ben şöyle seçtim:\n- 5 etiket sınırını tekrarlar atılmadan önceki dizi uzunluğuna uyguluyorum. `['a','a','a','a','a','a']` 400 dönüyor.\n- `GET /notes?tag=` mevcut davranışı koruyor ve sadece etikete göre süzüyor; kullanıcıya göre kısıtlamıyor. Mevcut `GET /notes` zaten tüm notları döndürüyordu. Kullanıcıyla sınırlamak isterseniz tek satırlık bir değişiklik.\n\nMevcut `store.list()` sıralaması da hatalı: karşılaştırıcı sayı yerine boolean döndürüyor. Bu işin kapsamı dışında olduğu için dokunmadım."
+  },
+  {
+    "task": "security-owner",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "codeFiles": 2,
+    "codeLines": 30,
+    "otherFiles": 0,
+    "error": null,
+    "costUsd": 0.2546852,
+    "durationS": 51,
+    "turns": 18,
+    "tokens": 565032,
+    "outputTokens": 5191,
+    "summary": "Düzeltildi: kullanıcı yalnızca kendi notlarını listeler, okur, değiştirir ve siler. `x-user` başlığı olmayan istek 401 alır. `npm test` 5/5 yeşil; kapı (`gate.mjs --run`) YEŞİL, ama lint, tip kontrolü ve Semgrep çalışmadı (tanımsız veya kurulu değil).\n\n**Değişiklik** (`src/features/notes/server/routes.js`)\n- Başlık yoksa veya boşsa her `/notes` isteği 401 döner.\n- Liste yalnızca istek sahibinin notlarını döner.\n- GET, PATCH ve DELETE başkasının notu için 404 döner. Var olmayan not da 404 verdiği için not id'leri sızmaz.\n- PATCH'te `owner` alanı zaten değiştirilemiyor.\n\n**Testler** (`tests/notes.test.mjs`): 2 saldırgan testi ekledim, `Ö-sec.1` ve `Ö-sec.2`. Düzeltmeden önce ikisi kırmızıydı (beklenen 401, geldi 200; beklenen 404, geldi 200). Düzeltmeden sonra yeşil.\n\n**Otomatik kararlar**\n- Başkasının notu için 403 yerine 404 seçtim.\n- Başlıksız istek için 401 seçtim.\n\n**Not:** Test dosyasına kabuk komutuyla yazmak hook'a takıldı, `Edit` ile ekledim. Testleri zayıflatmadım.\n\n**Kontrol edemediklerim ve açık sorunlar** (kapsam dışı, `progress.md` \"Açık sorunlar\"a yazmadım)\n- `store.list()` içindeki sıralama `sort((a,b) => a.createdAt < b.createdAt)` boolean döndürüyor, bu yüzden \"en yeni önce\" sırası güvenilir değil.\n- `x-user` değerine güveniyoruz. Kimlik doğrulama bu servisin önündeki katmanda olmalı, yoksa başlık sahtelenebilir.\n- `roadmap.md` ve `cost-log.md` güncellemesini yapmadım.\n\n**Önerilen commit:** `fix: notları x-user sahipliğine bağla, başlıksız isteği 401 ile redde"
+  },
+  {
+    "task": "security-owner",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "codeFiles": 2,
+    "codeLines": 25,
+    "otherFiles": 0,
+    "error": null,
+    "costUsd": 0.1295476,
+    "durationS": 31,
+    "turns": 15,
+    "tokens": 244465,
+    "outputTokens": 3956,
+    "summary": "Artık her kullanıcı yalnızca kendi notlarını listeleyebiliyor, okuyabiliyor, değiştirebiliyor ve silebiliyor; `x-user` başlığı olmayan istekler reddediliyor. Testlerin hepsi geçti (5/5). Commit atmadım.\n\nDeğişiklikler `src/features/notes/server/routes.js` içinde:\n- **Başlık kontrolü:** `x-user` yoksa ya da boşsa tüm `/notes` istekleri 401 döner.\n- **Listeleme:** `GET /notes` yalnızca isteği yapan kullanıcının notlarını döner.\n- **Okuma, güncelleme, silme:** Not başkasına aitse 404 döner. Böylece başka birinin notunun var olup olmadığı da sızmıyor.\n\n`tests/notes.test.mjs` dosyasına iki test ekledim. Biri başlıksız isteklerin 401 aldığını doğruluyor. Diğeri ikinci bir kullanıcının listeleme, okuma, değiştirme ve silme denemelerinin başarısız olduğunu, not sahibinin ise notuna erişmeye devam ettiğini doğruluyor.\n\n`node --test tests` (klasör olarak) hata veriyor, ama o komut bu projede zaten çalışmıyor. `node --test tests/notes.test.mjs` ile çalıştırınca testler geçiyor.\n\nİstemediğiniz için dokunmadığım bir sorun var: `store.js` içindeki `list()` sıralaması `a.createdAt < b.createdAt` ile boolean döndürüyor, bu yüzden \"en yeni önce\" sıralaması güvenilir değil. Ayrıca `POST` isteği istemcinin `createdAt` değerini olduğu gibi kabul ediyor."
+  }
+]
