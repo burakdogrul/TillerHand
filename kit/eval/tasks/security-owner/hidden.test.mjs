@@ -28,16 +28,17 @@ test('security-owner: another user cannot read, change or delete a note', async 
 
 test('security-owner: the list holds only the caller\'s notes', async () => {
   const a = (await call('POST', '/notes', 'zeynep', { title: 'z1' })).json;
-  await call('POST', '/notes', 'can', { title: 'c1' });
+  const c = (await call('POST', '/notes', 'can', { title: 'c1' })).json;
   const list = (await call('GET', '/notes', 'zeynep')).json;
   assert.ok(list.some((x) => x.id === a.id));
-  assert.ok(list.every((x) => x.owner === 'zeynep'), 'no other user\'s note');
+  assert.ok(!list.some((x) => x.id === c.id), 'no other user\'s note');
 });
 
+// Checked through access, not an owner field: the response does not have to expose one
 test('security-owner: the owner cannot be set or changed through the body', async () => {
   const n = (await call('POST', '/notes', 'ayse', { title: 'x', owner: 'mert' })).json;
-  assert.equal(n.owner, 'ayse');
+  assert.ok(denied((await call('GET', `/notes/${n.id}`, 'mert')).status), 'owner in the body is ignored');
   await call('PATCH', `/notes/${n.id}`, 'ayse', { owner: 'mert' });
-  assert.equal((await call('GET', `/notes/${n.id}`, 'ayse')).json.owner, 'ayse');
-  assert.ok(denied((await call('GET', `/notes/${n.id}`, 'mert')).status));
+  assert.ok(denied((await call('GET', `/notes/${n.id}`, 'mert')).status), 'owner in a PATCH is ignored');
+  assert.equal((await call('GET', `/notes/${n.id}`, 'ayse')).status, 200);
 });

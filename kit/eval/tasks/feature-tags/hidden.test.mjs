@@ -38,9 +38,10 @@ test('feature-tags: ?tag filters case-insensitively', async () => {
 });
 
 test('feature-tags: /tags counts only the caller\'s notes, sorted by count then name', async () => {
-  for (const tags of [['ev', 'zz'], ['ev', 'aa'], ['ev'], ['aa']]) await call('POST', '/notes', 'mert', { title: 't', tags });
+  // zz is seen before mm and both are used once: insertion order would put zz first
+  for (const tags of [['ev', 'zz'], ['ev', 'aa'], ['ev', 'mm'], ['aa']]) await call('POST', '/notes', 'mert', { title: 't', tags });
   await call('POST', '/notes', 'zeynep', { title: 't', tags: ['ev', 'gizli'] });
   const r = await call('GET', '/tags', 'mert');
   assert.equal(r.status, 200);
-  assert.deepEqual(r.json, [{ tag: 'ev', count: 3 }, { tag: 'aa', count: 2 }, { tag: 'zz', count: 1 }]);
+  assert.deepEqual(r.json, [{ tag: 'ev', count: 3 }, { tag: 'aa', count: 2 }, { tag: 'mm', count: 1 }, { tag: 'zz', count: 1 }]);
 });

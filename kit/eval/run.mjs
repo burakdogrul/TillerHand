@@ -6,10 +6,12 @@
 // leave (stack, AGENTS.md → Komutlar, question mode off, gate approval). Both run `claude -p` with the same model, the
 // same allowed tools and only project settings (user plugins and hooks stay out of the plain run).
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { approvalPath } from '../../.claude/hooks/gate.mjs';
 
 const EVAL = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(EVAL, '..', '..');
@@ -17,7 +19,18 @@ const FIXTURE = path.join(EVAL, 'fixture');
 const TASKS_DIR = path.join(EVAL, 'tasks');
 const VERSION = fs.readFileSync(path.join(REPO, 'kit', 'VERSION'), 'utf8').trim();
 const TIMEOUT_MS = 30 * 60 * 1000;
-const ALLOWED = ['Read', 'Edit', 'Write', 'Glob', 'Grep', 'Bash(node:*)', 'Bash(npm:*)', 'Bash(git:*)', 'Agent', 'Skill', 'TodoWrite'];
+const BUDGET_USD = '2'; // per run; the most expensive run of the first round cost $0.33
+const PORT_BASE = 3100;
+// Reads and writes inside the run folder; Bash only for project code, the kit's hooks and read-only git.
+// Not a security boundary: the agent's own code runs through npm test. It closes the easy ways out of the folder
+// (`node -e`, `..`, `git --output`, `npm --prefix`), so an accidental write elsewhere is unlikely.
+// Read rules also cover Glob and Grep.
+const ALLOWED = ['Read(./**)', 'Edit(./**)', 'Write(./**)', 'Agent', 'Skill', 'TodoWrite',
+  'Bash(npm test *)', 'Bash(npm start *)', 'Bash(node --test *)', 'Bash(node src/*)', 'Bash(node tests/*)', 'Bash(node .claude/hooks/*)',
+  'Bash(git status *)', 'Bash(git diff *)', 'Bash(git log *)', 'Bash(git show *)'];
+// Deny wins over allow. .git/ and .claude/ are the kit's ask rules (refused headless): the same for both conditions.
+const DENIED = ['Bash(node *..*)', 'Bash(git * --output*)', 'Bash(git * --no-index*)', 'Bash(npm * --prefix*)', 'Bash(npm * --script-shell*)',
+  'Edit(./.git/**)', 'Edit(./.claude/**)'];
 const HEADLESS = 'Bu otomatik bir değerlendirme koşusu: kullanıcı yok, soru soramazsın ve onay bekleyemezsin. ' +
   'Karar gereken yerde en iyi seçeneği seç ve devam et. İş bitince dur. Commit atma.';
 const KIT_HEADLESS = ' Soru modu kapalı (hepsi): plan onayı ve karar soruları için önerileni seç ve "otomatik" diye kaydet.';
@@ -44,9 +57,11 @@ const keep = args.includes('--keep') || dry;
 for (const t of tasks) if (!allTasks.includes(t)) throw new Error(`Bilinmeyen görev: ${t}. Seçenekler: ${allTasks.join(', ')}`);
 for (const c of conds) if (c !== 'kit' && c !== 'plain') throw new Error(`Bilinmeyen koşul: ${c} (kit, plain)`);
 
+// A child of node --test inherits NODE_TEST_CONTEXT and would report to the parent instead of printing its summary
+const childEnv = (extra = {}) => { const e = { ...process.env, ...extra }; delete e.NODE_TEST_CONTEXT; return e; };
 const run = (cmd, a, cwd, env = {}) => {
-  const r = spawnSync(cmd, a, { cwd, encoding: 'utf8', env: { ...process.env, ...env }, timeout: 120000 });
-  if (r.status !== 0) throw new Error(`${cmd} ${a.join(' ')} (${cwd}): ${r.stderr || r.stdout}`);
+  const r = spawnSync(cmd, a, { cwd, encoding: 'utf8', env: childEnv(env), timeout: 120000 });
+  if (r.status !== 0) throw new Error(`${cmd} ${a.join(' ')} (${cwd}): ${r.stderr || r.stdout || r.error?.message || `exit ${r.status}`}`);
   return r.stdout;
 };
 const git = (dir, ...a) => run('git', ['-c', 'user.name=eval', '-c', 'user.email=eval@example.invalid', ...a], dir);
@@ -67,14 +82,13 @@ function setupKit(dir) {
   run(process.execPath, [path.join(dir, '.claude', 'hooks', 'gate.mjs'), '--approve'], dir, { CLAUDE_PROJECT_DIR: dir });
 }
 
-function prepare(task, cond) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `kit-eval-${task}-${cond}-`));
+function prepare(dir, cond) {
   fs.cpSync(FIXTURE, dir, { recursive: true });
   if (cond === 'kit') setupKit(dir);
   if (!fs.existsSync(path.join(dir, '.git'))) git(dir, 'init', '-q');
   git(dir, 'add', '-A');
   git(dir, 'commit', '-q', '--no-verify', '-m', 'base');
-  return dir;
+  return git(dir, 'rev-parse', 'HEAD').trim();
 }
 
 function prompt(task, cond) {
@@ -84,31 +98,80 @@ function prompt(task, cond) {
   return `${kitCommand} ${text}\n\n${HEADLESS}${KIT_HEADLESS}`;
 }
 
-function claude(dir, text) {
+// stream-json output: the result event (same fields as --output-format json), the init event and the tool calls in order.
+// testFirst: the first write to a test file came before the first write to other code under src/ (null if either is missing).
+const isTest = (f) => /\.test\.m?[jt]sx?$|(^|\/)__tests__\//.test(f);
+export function parseStream(text, dir) {
+  const events = text.split('\n').flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+  const uses = events.filter((e) => e.type === 'assistant').flatMap((e) => e.message?.content ?? []).filter((c) => c.type === 'tool_use');
+  // The agent may write the real path of the temp folder (macOS /private/var, Windows long names)
+  const roots = [dir];
+  try { roots.push(fs.realpathSync.native(dir)); } catch { /* not on disk (tests) */ }
+  const rel = (f) => roots.map((r) => path.relative(r, path.resolve(r, f))).find((r) => !r.startsWith('..') && !path.isAbsolute(r))?.replaceAll('\\', '/') ?? '';
+  const writes = uses.filter((u) => ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(u.name) && u.input?.file_path).map((u) => rel(u.input.file_path));
+  const firstTest = writes.findIndex(isTest);
+  const firstCode = writes.findIndex((f) => f.startsWith('src/') && !isTest(f));
+  return {
+    json: events.findLast((e) => e.type === 'result') ?? null,
+    init: events.find((e) => e.type === 'system' && e.subtype === 'init') ?? null,
+    testFirst: firstTest === -1 || firstCode === -1 ? null : firstTest < firstCode,
+    gateRan: uses.some((u) => u.name === 'Bash' && /gate\.mjs\s+--run/.test(u.input?.command ?? '')),
+  };
+}
+
+function claude(dir, text, port) {
   return new Promise((resolve) => {
     const started = Date.now();
-    const p = spawn('claude', ['-p', '--model', model, '--output-format', 'json', '--no-session-persistence',
-      '--setting-sources', 'project,local', '--allowedTools', ...ALLOWED], { cwd: dir, env: { ...process.env, KIT_NOTIFY: 'off', CLAUDE_PROJECT_DIR: dir } });
+    const p = spawn('claude', ['-p', '--model', model, '--output-format', 'stream-json', '--verbose', '--no-session-persistence',
+      '--max-budget-usd', BUDGET_USD, '--setting-sources', 'project,local', '--allowedTools', ...ALLOWED, '--disallowedTools', ...DENIED],
+    { cwd: dir, env: childEnv({ KIT_NOTIFY: 'off', CLAUDE_PROJECT_DIR: dir, PORT: String(port) }) });
     let out = '', err = '';
+    const done = (code) => { clearTimeout(timer); resolve({ code, ...parseStream(out, dir), stream: out, err: err.slice(-2000), wallMs: Date.now() - started }); };
     p.stdout.on('data', (d) => { out += d; });
     p.stderr.on('data', (d) => { err += d; });
+    p.on('error', (e) => { err += e.message; done(null); }); // e.g. claude not on PATH: the row records it, the run goes on
     const timer = setTimeout(() => p.kill(), TIMEOUT_MS);
-    p.on('close', (code) => {
-      clearTimeout(timer);
-      let json = null;
-      try { json = JSON.parse(out); } catch { /* reported below */ }
-      resolve({ code, json, err: err.slice(-2000), wallMs: Date.now() - started });
-    });
+    p.on('close', done);
     p.stdin.end(text);
   });
 }
 
-// node --test summary lines: "ℹ pass 3" / "ℹ fail 0"
+// A port nobody listens on, so killPort after the run cannot hit a process of the user's
+const portFree = (port) => new Promise((resolve) => {
+  const s = net.createServer().once('error', () => resolve(false)).once('listening', () => s.close(() => resolve(true)));
+  s.listen(port);
+});
+async function freePort(start) {
+  for (let p = start; p < start + 10; p++) if (await portFree(p)) return p;
+  throw new Error(`${start}-${start + 9} arası portların hepsi dolu`);
+}
+
+// shortcut: only a server on the run's PORT is stopped; one the agent started on a hard-coded port stays up
+function killPort(port) {
+  if (process.platform === 'win32') {
+    // TCP rows of both IPv4 and IPv6; netstat's state column is localized, a listening socket has a :0 foreign address
+    const lines = (spawnSync('netstat', ['-ano'], { encoding: 'utf8' }).stdout ?? '').split('\n').map((l) => l.trim().split(/\s+/));
+    const pids = new Set(lines.filter((c) => c[0] === 'TCP' && c[1]?.endsWith(`:${port}`) && /:0$/.test(c[2] ?? '')).map((c) => c.at(-1)));
+    for (const pid of pids) if (/^\d+$/.test(pid) && pid !== '0') spawnSync('taskkill', ['/PID', pid, '/T', '/F']);
+  } else {
+    const pids = (spawnSync('lsof', ['-ti', `tcp:${port}`, '-sTCP:LISTEN'], { encoding: 'utf8' }).stdout ?? '').split('\n').filter(Boolean);
+    for (const pid of pids) try { process.kill(Number(pid)); } catch { /* already gone */ }
+  }
+}
+
+// node --test summary lines: "ℹ pass 3" / "ℹ fail 0" (spec reporter; set explicitly, the default differs off a TTY)
 export function tally(output) {
   const n = (k) => Number(output.match(new RegExp(`^ℹ ${k} (\\d+)`, 'm'))?.[1] ?? 0);
   return { pass: n('pass'), fail: n('fail') };
 }
-const nodeTest = (dir, files) => tally(spawnSync(process.execPath, ['--test', ...files], { cwd: dir, encoding: 'utf8', timeout: 120000 }).stdout ?? '');
+const nodeTestOut = (dir, files) => spawnSync(process.execPath, ['--test', '--test-reporter=spec', ...files], { cwd: dir, env: childEnv(), encoding: 'utf8', timeout: 120000 }).stdout ?? '';
+const nodeTest = (dir, files) => tally(nodeTestOut(dir, files));
+// Test names from spec lines "✔ name (1.2ms)"; a file that cannot load shows up as a failed "test" named after the file
+const testNames = (output) => {
+  const names = { pass: new Set(), fail: new Set() };
+  for (const [, mark, name] of output.matchAll(/^\s*(✔|✖) (.+) \([\d.]+m?s\)\s*$/gm)) names[mark === '✔' ? 'pass' : 'fail'].add(name);
+  return names;
+};
 const countTests = (dir) => {
   const root = path.join(dir, 'tests');
   if (!fs.existsSync(root)) return 0;
@@ -116,11 +179,30 @@ const countTests = (dir) => {
   return files.reduce((s, f) => s + (fs.readFileSync(path.join(root, f), 'utf8').match(/^\s*test\(/gm) ?? []).length, 0);
 };
 
-function score(task, dir) {
+// The agent's tests run against its code and against the unchanged fixture. A test that passes on its code and does not
+// pass on the fixture catches the bug (or the missing feature); a test red on both is broken and does not count.
+// shortcut: tests are matched by name; two tests with the same name in different files count once.
+export function caughtTests(dir, ownOutput = nodeTestOut(dir, ['tests/**/*.test.mjs'])) {
+  if (!fs.existsSync(path.join(dir, 'tests'))) return 0;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-eval-caught-'));
+  try {
+    fs.cpSync(FIXTURE, tmp, { recursive: true });
+    fs.cpSync(path.join(dir, 'tests'), path.join(tmp, 'tests'), { recursive: true, filter: (src) => !src.includes('__hidden__') });
+    const before = testNames(nodeTestOut(tmp, ['tests/**/*.test.mjs']));
+    return [...testNames(ownOutput).pass].filter((n) => !before.pass.has(n)).length;
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+function score(task, dir, base) {
   // The agent's own suite first, before the hidden files are in tests/
-  const own = nodeTest(dir, ['tests/**/*.test.mjs']); // node expands the glob itself; same as the fixture's npm test
+  const ownOutput = nodeTestOut(dir, ['tests/**/*.test.mjs']); // node expands the glob itself; same as the fixture's npm test
+  const own = tally(ownOutput);
+  const caught = caughtTests(dir, ownOutput);
   git(dir, 'add', '-A');
-  const changed = git(dir, 'diff', '--cached', '--numstat', 'HEAD').trim().split('\n').filter(Boolean)
+  // Against the base commit, so a commit by the agent still counts as a change
+  const changed = git(dir, 'diff', '--cached', '--numstat', base).trim().split('\n').filter(Boolean)
     .map((l) => { const [add, del, file] = l.split('\t'); return { file, add: Number(add) || 0, del: Number(del) || 0 }; });
   const code = changed.filter((c) => /^(src|tests)\/|^package\.json$/.test(c.file));
   const hidden = path.join(dir, 'tests', '__hidden__');
@@ -134,53 +216,98 @@ function score(task, dir) {
     visible: nodeTest(dir, [path.join('tests', '__hidden__', 'visible.test.mjs')]),
     own,
     testsAdded: countTests(dir) - countTests(FIXTURE),
+    testsCaught: caught,
     codeFiles: code.length,
     codeLines: code.reduce((s, c) => s + c.add + c.del, 0),
     otherFiles: changed.length - code.length,
   };
 }
 
-async function one(task, cond) {
-  const dir = prepare(task, cond);
-  const res = dry ? null : await claude(dir, prompt(task, cond));
-  const s = score(task, dir);
-  const j = res?.json;
-  const u = j?.usage ?? {};
-  const row = {
-    task, cond, model, dir: keep ? dir : null, ...s,
-    error: res && (res.code !== 0 || !j || j.is_error) ? (j?.result ?? res.err ?? `exit ${res.code}`).slice(0, 500) : null,
-    costUsd: j?.total_cost_usd ?? null, durationS: j ? Math.round(j.duration_ms / 1000) : res ? Math.round(res.wallMs / 1000) : null,
-    turns: j?.num_turns ?? null,
-    tokens: j ? (u.input_tokens ?? 0) + (u.output_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) : null,
-    outputTokens: u.output_tokens ?? null,
-    summary: j?.result?.slice(0, 1500) ?? null,
-  };
-  if (!keep) fs.rmSync(dir, { recursive: true, force: true });
-  console.log(`${task} · ${cond}${keep ? ` (${dir})` : ''}: gizli ${s.hidden.pass}/${s.hidden.pass + s.hidden.fail} · görünür ${s.visible.pass}/${s.visible.pass + s.visible.fail} · $${row.costUsd ?? '-'} · ${row.durationS ?? '-'} sn${row.error ? ` · HATA: ${row.error.slice(0, 120)}` : ''}`);
+// Results are committed: the temp folder and the home folder (user name) are masked in free text
+export function scrub(text, dir) {
+  if (!text) return text;
+  const pairs = [[dir, '<tmp>'], [os.tmpdir(), '<tmp>'], [os.homedir(), '~']].flatMap(([p, to]) => [[p, to], [p.replaceAll('\\', '/'), to]]);
+  return pairs.reduce((s, [p, to]) => s.replaceAll(p, to), text);
+}
+
+async function one(task, cond, portStart) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `kit-eval-${task}-${cond}-`));
+  const approval = approvalPath(dir); // resolved while the folder exists
+  const row = { task, cond, model, dir: keep ? dir : null };
+  let port = null;
+  try {
+    const base = prepare(dir, cond);
+    if (!dry) port = await freePort(portStart);
+    const res = dry ? null : await claude(dir, prompt(task, cond), port);
+    const s = score(task, dir, base);
+    if (keep && res) fs.writeFileSync(path.join(dir, 'eval-stream.jsonl'), res.stream); // after scoring: not part of the diff
+    const j = res?.json;
+    const u = j?.usage ?? {};
+    const failed = res && (res.code !== 0 || !j || j.is_error);
+    Object.assign(row, s, {
+      error: failed ? scrub(j?.result || (j?.subtype !== 'success' && j?.subtype) || res.err || `exit ${res.code}`, dir).slice(0, 500)
+        : s.hidden.pass + s.hidden.fail === 0 ? 'gizli testler çalışmadı (0/0)' : null,
+      costUsd: j?.total_cost_usd ?? null, durationS: j ? Math.round(j.duration_ms / 1000) : res ? Math.round(res.wallMs / 1000) : null,
+      turns: j?.num_turns ?? null,
+      tokens: j ? (u.input_tokens ?? 0) + (u.output_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) : null,
+      outputTokens: u.output_tokens ?? null,
+      testFirst: res?.testFirst ?? null, gateRan: res && cond === 'kit' ? res.gateRan : null, // plain has no gate
+      claudeVersion: res?.init?.claude_code_version ?? null,
+      plugins: res?.init?.plugins?.map((p) => p.name) ?? null,
+      summary: scrub(j?.result, dir)?.slice(0, 1500) ?? null,
+    });
+  } catch (e) {
+    row.error = scrub(`düzenek hatası: ${e.message}`, dir).slice(0, 500);
+  } finally {
+    // Cleanup must not reject: a locked folder (a server still running in it on Windows) would stop the other tasks
+    try {
+      if (port) killPort(port);
+      fs.rmSync(approval, { force: true });
+      if (!keep) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    } catch (e) {
+      row.cleanup = scrub(`temizlenemedi: ${e.message}`, dir).slice(0, 300);
+    }
+  }
+  const t = (x) => (x ? `${x.pass}/${x.pass + x.fail}` : '-');
+  console.log(`${task} · ${cond}${keep ? ` (${dir})` : ''}: gizli ${t(row.hidden)} · görünür ${t(row.visible)} · $${row.costUsd ?? '-'} · ${row.durationS ?? '-'} sn${row.error ? ` · HATA: ${row.error.slice(0, 120)}` : ''}`);
   return row;
 }
 
-function report(rows) {
-  const pct = (t) => (t.pass + t.fail ? `${t.pass}/${t.pass + t.fail}` : '-');
+function report(rows, meta) {
+  const pct = (t) => (t && t.pass + t.fail ? `${t.pass}/${t.pass + t.fail}` : '-');
+  const yn = (v) => (v === true ? 'evet' : v === false ? 'hayır' : '-');
   const lines = [`# Kit değerlendirmesi · ${VERSION} · ${model} · ${new Date().toISOString().slice(0, 10)}`, '',
-    '| Görev | Koşul | Gizli test | Görünür test | Kendi testleri | Eklenen test | Kod dosyası / satır | Diğer dosya | Maliyet ($) | Süre (sn) | Tur | Token |',
-    '|---|---|---|---|---|---|---|---|---:|---:|---:|---:|',
-    ...rows.map((r) => `| ${r.task} | ${r.cond} | ${pct(r.hidden)} | ${pct(r.visible)} | ${pct(r.own)} | ${r.testsAdded} | ${r.codeFiles} / ${r.codeLines} | ${r.otherFiles} | ${r.costUsd?.toFixed(2) ?? '-'} | ${r.durationS ?? '-'} | ${r.turns ?? '-'} | ${r.tokens ?? '-'} |`),
+    `Claude Code ${meta.claude} · Node ${meta.node}`, '', ...meta.plugins.map(([cond, list]) => `- Eklentiler (${cond}): ${list}`), '',
+    '| Görev | Koşul | Gizli test | Görünür test | Kendi testleri | Eklenen test | Hatayı yakalayan | Önce test | Kapı | Kod dosyası / satır | Diğer dosya | Maliyet ($) | Süre (sn) | Tur | Token |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---:|---:|---:|---:|',
+    ...rows.map((r) => `| ${r.task} | ${r.cond} | ${pct(r.hidden)} | ${pct(r.visible)} | ${pct(r.own)} | ${r.testsAdded ?? '-'} | ${r.testsCaught ?? '-'} | ${yn(r.testFirst)} | ${yn(r.gateRan)} | ${r.codeFiles ?? '-'} / ${r.codeLines ?? '-'} | ${r.otherFiles ?? '-'} | ${r.costUsd?.toFixed(2) ?? '-'} | ${r.durationS ?? '-'} | ${r.turns ?? '-'} | ${r.tokens ?? '-'} |`),
     '', ...rows.filter((r) => r.error).map((r) => `- ${r.task} · ${r.cond} hata: ${r.error}`)];
   return lines.join('\n') + '\n';
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(process.argv[1]).replaceAll('\\', '/').replace(/^([A-Za-z]:)/, '/$1')}`).href) {
-  const rows = [];
-  for (const task of tasks) rows.push(...await Promise.all(conds.map((c) => one(task, c)))); // both conditions of a task run side by side
-  const md = report(rows);
-  if (dry) { console.log(md); process.exit(0); }
+  const stamp = new Date().toISOString().slice(0, 16).replace('T', '-').replace(':', '');
+  const name = `${stamp}-v${VERSION}-${model}`;
   const dir = path.join(EVAL, 'results');
-  fs.mkdirSync(dir, { recursive: true });
-  const name = `${new Date().toISOString().slice(0, 10)}-v${VERSION}-${model}`;
   // The temp folder path holds the user name: printed above with --keep, not written to the repo
-  fs.writeFileSync(path.join(dir, `${name}.json`), JSON.stringify(rows.map(({ dir: _, ...r }) => r), null, 2) + '\n');
+  const json = (rows) => JSON.stringify(rows.map(({ dir: _, ...r }) => r), null, 2) + '\n';
+  // Outside the repo, so a crash does not leave a file to commit by mistake
+  const partial = path.join(os.tmpdir(), `kit-eval-${name}.partial.json`);
+  if (!dry) console.log(`Ara sonuç: ${partial}`);
+  const rows = [];
+  for (const task of tasks) {
+    // Both conditions of a task run side by side, each from its own port range
+    rows.push(...await Promise.all(conds.map((c, i) => one(task, c, PORT_BASE + i * 10))));
+    if (!dry) fs.writeFileSync(partial, json(rows)); // a crash or Ctrl+C later keeps the finished rows
+  }
+  const versionOut = spawnSync('claude', ['--version'], { encoding: 'utf8' }).stdout?.trim();
+  const plugins = conds.map((c) => [c, [...new Set(rows.filter((r) => r.cond === c).flatMap((r) => r.plugins ?? []))].join(', ') || '-']);
+  const md = report(rows, { claude: versionOut || '-', node: process.version, plugins });
+  if (dry) { console.log(md); process.exit(0); }
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, `${name}.json`), json(rows));
   fs.writeFileSync(path.join(dir, `${name}.md`), md);
+  fs.rmSync(partial, { force: true });
   console.log(md);
   console.log(`Sonuç: kit/eval/results/${name}.md`);
 }

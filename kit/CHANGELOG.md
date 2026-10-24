@@ -5,6 +5,26 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.16.3] - 2026-10-25
+
+### Düzeltilen
+- **Değerlendirme düzeneği** (`kit/eval/`, kiti geliştirenler için; projelere kopyalanmaz):
+  - Boş hata çıktısında hata kayboluyordu; artık çıkış kodu yazılır. Gizli testlerden hiçbiri çalışmazsa (0/0) satır hata sayılır.
+  - Değişiklik başlangıç commit'ine göre ölçülür: ajan commit atsa da sayılır.
+  - Test özeti her Node sürümünde aynı biçimde okunur (`--test-reporter=spec`).
+  - Koşu başına 2 dolar üst sınır var. `claude` bulunamazsa düzenek çökmez. Bir görev ya da temizliği çökerse diğerleri sürer. Her görev bitince geçici klasöre ara sonuç yazılır.
+  - Her koşul boş bir `PORT` alır. Koşu bitince o porttan dinleyen süreç kapanır (IPv4 ve IPv6) ve kapı onay kaydı silinir. Port önceden dolu olsaydı kullanıcının süreci kapanabilirdi; artık önce boş olduğu denetleniyor.
+  - Sonuç dosyasının adında saat var, aynı gün ikinci koşu ilkini ezmez. Rapor Claude Code ve Node sürümünü ve koşul başına yüklenen eklentileri yazar. Hata ve özet metinlerinde geçici klasör ve kullanıcı klasörü maskelenir.
+  - İzinler daraldı. Okuma ve yazma koşu klasöründe kalır. Bash'te test, başlatma, proje ve kit betikleri ile salt okunur git çalışır. `..`, `git --output`, `npm --prefix` ve `node -e` gibi klasör dışına çıkış yolları yasak. İki koşulda da `.git/` ve `.claude/` düzenlenemez. Bu bir güvenlik sınırı değildir; README bunu anlatıyor.
+- **Görevler:** `security-owner` metni 401'i açıkça söyler, test yanıtta `owner` alanı aramaz. `bug-sort` metni istemcinin `createdAt` gönderebileceğini söyler. `feature-tags` testi `/tags`'te eşitlikte alfabetik sırayı da sınar. Her görevin referans çözümü var; gizli testlerin onunla yeşile döndüğü testle denetlenir.
+
+### Yeni
+- **Ölçüm:** Rapora üç yeni sütun eklendi:
+  - "Hatayı yakalayan test": ajanın kodunda geçen ama değiştirilmemiş kodda geçmeyen test. Bozuk test sayılmaz.
+  - "Önce test": transkriptten, test dosyası koddan önce mi yazıldı.
+  - "Kapı çalıştı mı".
+- `--keep` transkripti koşu klasörüne bırakır.
+
 ## [3.16.2] - 2026-10-25
 
 ### Düzeltilen

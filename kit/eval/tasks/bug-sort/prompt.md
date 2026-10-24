@@ -1,1 +1,1 @@
-Hata: `GET /notes` en yeni notu önce döndürmeli, ama birkaç not eklenince sıra karışık geliyor. Hatayı düzelt.
+Hata: `GET /notes` en yeni notu önce döndürmeli, ama birkaç not eklenince sıra karışık geliyor. Hatayı düzelt. (İstemci `POST /notes`'ta `createdAt` alanını ISO tarih olarak gönderebilir; göndermezse sunucu o anı yazar.)
