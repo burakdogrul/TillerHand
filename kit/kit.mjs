@@ -97,6 +97,24 @@ export function merge(a, b) {
   return b;
 }
 
+// settings.json belongs to the project and is not replaced on update, but the kit's permission rules must reach it:
+// missing allow/ask/deny rules are added (the project's own rules stay), and hook flags renamed in 3.15.0 are rewritten
+// so the old and new hook entries do not both run.
+export function migrateSettings(projectSettings, kitSettings) {
+  const s = structuredClone(projectSettings);
+  for (const k of ['allow', 'ask', 'deny']) {
+    const have = new Set(s.permissions?.[k] ?? []);
+    const add = (kitSettings.permissions?.[k] ?? []).filter((r) => !have.has(r));
+    if (add.length) (s.permissions ??= {})[k] = [...(s.permissions[k] ?? []), ...add];
+  }
+  for (const groups of Object.values(s.hooks ?? {})) {
+    for (const h of (Array.isArray(groups) ? groups : []).flatMap((g) => g?.hooks ?? [])) {
+      if (typeof h?.command === 'string') h.command = h.command.replace(/(dashboard\.mjs"?)\s+--sessiz\b/, '$1 --quiet');
+    }
+  }
+  return s;
+}
+
 function applyPatch(projectDir, { kind, target, source }) {
   const filePath = path.join(projectDir, target);
   if (kind === 'merge') {
@@ -318,6 +336,13 @@ function update({ project, addons: newAddons, tool }) {
     if (!fs.existsSync(target)) {
       if (rel in record) continue; // the user deleted it on purpose, do not bring it back
       copy(source, target); record[rel] = kitHash; report.added.push(rel);
+      continue;
+    }
+    if (rel === '.claude/settings.json') {
+      let local;
+      try { local = JSON.parse(read(target)); } catch { report.conflicts.push(`${rel} (geçerli JSON değil, izinler eklenmedi)`); continue; }
+      const next = migrateSettings(local, JSON.parse(read(source)));
+      if (JSON.stringify(next) !== JSON.stringify(local)) { fs.writeFileSync(target, JSON.stringify(next, null, 2) + '\n'); report.updated.push(`${rel} (izin kuralları)`); }
       continue;
     }
     if (!isKitOwned(rel)) continue;

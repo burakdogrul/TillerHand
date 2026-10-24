@@ -8,7 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { merge } from '../kit.mjs';
+import { merge, migrateSettings } from '../kit.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const KIT_MJS = path.join(REPO, 'kit', 'kit.mjs');
@@ -208,4 +208,18 @@ test('status line and dashboard: before and after setup', () => {
   const html = read(path.join(p, 'dashboard.html'));
   assert.ok(html.includes('Next.js') && html.includes('step now'), 'the dashboard shows the decision and the active phase');
   assert.ok(html.includes('Dikkat gerektirenler') && (html.match(/role="tab"/g) ?? []).length === 10, 'dashboard: alert area and 10 tabs');
+});
+
+test('3.15.0 update settings migration: missing kit permission rules are added, project rules stay, the old dashboard flag is rewritten', () => {
+  const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
+  const stop = (flag) => ({ Stop: [{ hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs" ${flag}` }] }] });
+  const old = { permissions: { allow: ['Bash(npm test)'], ask: ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)'] }, hooks: stop('--sessiz') };
+  const s = migrateSettings(old, kit);
+  assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'new ask rule added');
+  assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'));
+  assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)'), 'old rule kept');
+  assert.equal(s.permissions.allow[0], 'Bash(npm test)', 'project rule kept first');
+  assert.deepEqual(s.hooks, stop('--quiet'));
+  assert.deepEqual(migrateSettings(s, kit), s, 'running again changes nothing');
+  assert.deepEqual(old.hooks, stop('--sessiz'), 'the input is not mutated');
 });

@@ -5,8 +5,31 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.15.0] - 2026-10-24
+
+Kitin kodu İngilizceye geçti. Kullanıcıya ve AI'ya giden mesajlar, belgeler ve komutlar Türkçe kalıyor; davranış değişmedi.
+
+### Değişen
+- **Kod İngilizce:** Hook'ların, `kit.mjs`'in, şablon betiklerinin ve testlerin adları ve yorumları İngilizce. `.claude/hooks/arac.mjs` artık `shared.mjs`.
+- **Yeni bayraklar:**
+  - `freeze-guard.mjs`: `--plan-save`, `--plan-add`, `--plan-end` (eskiden `--plan-kaydet`, `--plan-ekle`, `--plan-bitir`)
+  - `gate.mjs`: `--approve` (eskiden `--onayla`)
+  - `tools.mjs`: `--enable`, `--disable`, `--required`, `--measure` (eskiden `--ac`, `--kapat`, `--gerekli`, `--olc`)
+  - `plugins-sync.mjs`: `--install` (eskiden `--kur`)
+  - `checkpoint.mjs`: `--restore <hedef> --yes` (eskiden `--evet`)
+  - `dashboard.mjs`: `--quiet` (eskiden `--sessiz`)
+
+  Eski bayraklar 3.16.0'a kadar çalışır ve kullanılınca uyarı yazar. Onay isteyen eski bayraklar (`--plan-ekle`, `--onayla`, `--ac`) yine sorulur.
+- **Durum dosyaları:** `.claude/state/` altındaki dosyaların anahtarları İngilizce. Eski anahtarlı dosyalar 3.16.0'a kadar okunur. Kapı komut onayı artık `~/.vibe-kit/gate-approval/` altında; eski `kapi-onayi/` klasöründeki onay da geçerli sayılır.
+- **Güncelleme izin kurallarını ekler:** `/kit-update`, kitin `settings.json` izin satırlarından projede eksik olanları ekler; projenin kendi satırları kalır. Stop hook'undaki `dashboard.mjs --sessiz` satırı `--quiet` olur, pano ve bildirim iki kez çalışmaz.
+- **RLS şablonu:** `tests/security/rls.mjs` içinde `TABLOLAR` yerine `TABLES`, `HERKESE_ACIK` yerine `PUBLIC_TABLES`; tablo kaydı `{ name, owner, sample, key }`. Kurulu projelerin kendi `rls.mjs` dosyası değişmez.
+
 ### Düzeltilen
 - `kit.mjs init` kişisel `CLAUDE.local.md` dosyasını projeye kopyalamaz (yerel bir klasörden kurulumda taşınıyordu).
+
+### Elle uyarla
+- `.claude/hooks/arac.mjs` kitten kaldırıldı. Güncelleme raporunda "Kitten kaldırılmış" altında görünür; silebilirsin. Kendi betiğin bu dosyadan içe aktarıyorsa `shared.mjs` ve yeni adları kullan.
+- Kendi `rls.mjs` dosyanı yeni şablona geçirmek istersen tablo kayıtlarındaki alanları yeniden adlandır (`ad` → `name`, `sahip` → `owner`, `ornek` → `sample`, `anahtar` → `key`).
 
 ## [3.14.4] - 2026-10-24
 

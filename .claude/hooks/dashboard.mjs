@@ -460,7 +460,7 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
 <script>
 (function () {
   var tabs = document.querySelectorAll('.tab');
-  function goster(id) {
+  function show(id) {
     tabs.forEach(function (t) {
       var on = t.dataset.id === id;
       t.setAttribute('aria-selected', on);
@@ -468,16 +468,16 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
     });
   }
   tabs.forEach(function (t, i) {
-    t.addEventListener('click', function () { goster(t.dataset.id); history.replaceState(null, '', '#' + t.dataset.id); });
+    t.addEventListener('click', function () { show(t.dataset.id); history.replaceState(null, '', '#' + t.dataset.id); });
     t.addEventListener('keydown', function (ev) {
       var j = ev.key === 'ArrowRight' ? i + 1 : ev.key === 'ArrowLeft' ? i - 1 : -1;
       if (j < 0) return;
       var n = tabs[(j + tabs.length) % tabs.length]; n.focus(); n.click();
     });
   });
-  function hashten() { var h = location.hash.slice(1); if (h && document.getElementById('p-' + h)) goster(h); }
-  hashten();
-  window.addEventListener('hashchange', hashten);
+  function fromHash() { var h = location.hash.slice(1); if (h && document.getElementById('p-' + h)) show(h); }
+  fromHash();
+  window.addEventListener('hashchange', fromHash);
 
   document.querySelectorAll('.filters .chip').forEach(function (c) {
     c.addEventListener('click', function () {
@@ -495,11 +495,11 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
     el.addEventListener('mouseleave', function () { tip.style.opacity = 0; });
   });
 
-  var oto = document.getElementById('oto'), zaman;
-  try { oto.checked = localStorage.getItem('durum-oto') !== '0'; } catch (er) {}
-  function kur() { clearTimeout(zaman); if (oto.checked) zaman = setTimeout(function () { location.reload(); }, 30000); }
-  oto.addEventListener('change', function () { try { localStorage.setItem('durum-oto', oto.checked ? '1' : '0'); } catch (er) {} kur(); });
-  kur();
+  var auto = document.getElementById('oto'), timer;
+  try { auto.checked = localStorage.getItem('durum-oto') !== '0'; } catch (er) {}
+  function schedule() { clearTimeout(timer); if (auto.checked) timer = setTimeout(function () { location.reload(); }, 30000); }
+  auto.addEventListener('change', function () { try { localStorage.setItem('durum-oto', auto.checked ? '1' : '0'); } catch (er) {} schedule(); });
+  schedule();
 })();
 </script>
 </body></html>
