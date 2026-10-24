@@ -5,6 +5,13 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.18.1] - 2026-10-25
+
+### Düzeltilen
+- **Değerlendirme düzeneği:**
+  - Plan limiti dolunca düzenek kalan koşuları boşuna denemiyor. Duruyor, biten koşuları yazıyor ve hangi görevlerin kaldığını söylüyor (çıkış kodu 2).
+  - Sonuç dosyası adı saniyeye kadar gidiyor. Aynı dakikada biten görevler artık birbirinin dosyasını ezmiyor.
+
 ## [3.18.0] - 2026-10-25
 
 ### Yeni

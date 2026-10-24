@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { tally, parseStream, caughtTests, scrub, mutantsKilled, summary } from '../eval/run.mjs';
+import { tally, parseStream, caughtTests, scrub, mutantsKilled, summary, limitHit } from '../eval/run.mjs';
 
 const EVAL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'eval');
 const tasks = fs.readdirSync(path.join(EVAL, 'tasks')).filter((d) => fs.statSync(path.join(EVAL, 'tasks', d)).isDirectory());
@@ -102,6 +102,12 @@ test('eval: summary groups repeated runs by task and condition', () => {
   assert.ok(Math.abs(s[0].costAvg - 0.3) < 1e-9);
   assert.equal(s[0].killedAvg, 1.5);
   assert.deepEqual([s[1].hiddenAvg, s[1].hiddenMin, s[1].mutantTotal], [0.5, 0, 2], 'a run without a result counts as 0; the total comes from a scored run');
+});
+
+test('eval: limitHit recognizes the plan limit message, not other errors', () => {
+  assert.equal(limitHit({ error: "You've hit your session limit · resets 3:10am (Europe/Istanbul)" }), true);
+  assert.equal(limitHit({ error: "You've hit your weekly limit · resets Oct 31" }), true);
+  for (const error of [null, undefined, 'error_max_budget_usd', 'düzenek hatası: rate limit in test']) assert.equal(limitHit({ error }), false, String(error));
 });
 
 test('eval: tally reads the node --test summary', () => {

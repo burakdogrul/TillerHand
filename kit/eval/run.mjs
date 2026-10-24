@@ -324,6 +324,9 @@ function finish(task, { cond, dir, approval, base, port, res = null, row }) {
   return row;
 }
 
+// Claude Code's message when the plan's session or weekly limit is reached ("You've hit your session limit · resets ...")
+export const limitHit = (row) => /\bhit your \w+ limit\b/i.test(row.error ?? '');
+
 // Repeated runs of the same task and condition: the hidden-test share as mean and range. A run that was scored counts
 // with its real share even if Claude reported an error (budget cap); a run with no hidden result counts as 0.
 export function summary(rows) {
@@ -364,7 +367,8 @@ function report(rows, meta) {
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(process.argv[1]).replaceAll('\\', '/').replace(/^([A-Za-z]:)/, '/$1')}`).href) {
-  const stamp = new Date().toISOString().slice(0, 16).replace('T', '-').replace(':', '');
+  // To the second: runs of separate tasks one after the other finish within the same minute
+  const stamp = new Date().toISOString().slice(0, 19).replace('T', '-').replaceAll(':', '');
   const name = `${stamp}-v${VERSION}-${model}`;
   const dir = path.join(EVAL, 'results');
   // The temp folder path holds the user name: printed above with --keep, not written to the repo
@@ -373,11 +377,23 @@ if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(proces
   const partial = path.join(os.tmpdir(), `kit-eval-${name}.partial.json`);
   if (!dry) console.log(`Ara sonuç: ${partial}`);
   const rows = [];
-  for (const task of tasks) {
+  let stopped = null;
+  run: for (const task of tasks) {
     for (let rep = 1; rep <= repeat; rep++) {
-      rows.push(...(await pair(task)).map((r) => ({ ...r, rep })));
+      const done = (await pair(task)).map((r) => ({ ...r, rep }));
+      // The plan limit ends every later run within a second: stop, keep what finished, say what is left
+      if (done.some(limitHit)) {
+        rows.push(...done.filter((r) => !limitHit(r)));
+        stopped = `${task} (tekrar ${rep}'den itibaren)${tasks.slice(tasks.indexOf(task) + 1).map((t) => `, ${t}`).join('')}`;
+        break run;
+      }
+      rows.push(...done);
       if (!dry) fs.writeFileSync(partial, json(rows)); // a crash or Ctrl+C later keeps the finished rows
     }
+  }
+  if (stopped) {
+    console.error(`Limit doldu, koşu durdu. Kalan: ${stopped}. Limit sıfırlanınca kalan görevleri yeniden koş.`);
+    if (!rows.length) process.exit(2);
   }
   const versionOut = spawnSync('claude', ['--version'], { encoding: 'utf8' }).stdout?.trim();
   const plugins = conds.map((c) => [c, [...new Set(rows.filter((r) => r.cond === c).flatMap((r) => r.plugins ?? []))].join(', ') || '-']);
@@ -389,4 +405,5 @@ if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(proces
   fs.rmSync(partial, { force: true });
   console.log(md);
   console.log(`Sonuç: kit/eval/results/${name}.md`);
+  if (stopped) process.exit(2);
 }
