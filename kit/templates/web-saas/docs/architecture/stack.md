@@ -95,7 +95,7 @@ supabase/migrations/            # veritabanı değişiklikleri SADECE burada
 - `NEXT_PUBLIC_` ön ekli değişkenler tarayıcıya gider. Sır asla `NEXT_PUBLIC_` olmaz.
 - Supabase `service_role` anahtarı sadece sunucuda ve sadece gerçekten gerekiyorsa (RLS'i atlar).
 - DB şema değişikliği sadece migration dosyasıyla (`npx supabase migration new [ad]`). Panelden veya MCP'den elle DDL yok; `supabase-dev` MCP'si dev'de veri denemek içindir.
-- Her yeni tabloda RLS açık, politikası yazılı ve tablo `tests/security/rls.mjs` → `TABLOLAR` listesinde (CI'daki `rls` işi kayıtsız tabloda kırmızı olur).
+- Her yeni tabloda RLS açık, politikası yazılı ve tablo `tests/security/rls.mjs` → `TABLES` listesinde (CI'daki `rls` işi kayıtsız tabloda kırmızı olur).
 - Her sayfada `loading.tsx` / boş durum / `error.tsx` düşün.
 - Görseller `next/image`, linkler `next/link`.
 - Metinler Türkçe; tarih/para `Intl` ile `tr-TR`.

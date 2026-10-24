@@ -89,7 +89,7 @@ app.config.ts  eas.json
 - `EXPO_PUBLIC_` ön ekli değişkenler pakete gömülür; sadece herkese açık değerler.
 - Paket eklerken `npx expo install` kullan.
 - Supabase seçildiyse DB şema değişikliği sadece migration dosyasıyla: `npx -y supabase@2.120.0 migration new [ad]` (`supabase/migrations/`). Panelden veya MCP'den elle DDL yok.
-- Supabase seçildiyse her yeni tabloda RLS açık, politikası yazılı ve tablo `tests/security/rls.mjs` → `TABLOLAR` listesinde (CI'daki `rls` işi anonim ve ikinci kullanıcıyla saldırır; kayıtsız tabloda kırmızı olur).
+- Supabase seçildiyse her yeni tabloda RLS açık, politikası yazılı ve tablo `tests/security/rls.mjs` → `TABLES` listesinde (CI'daki `rls` işi anonim ve ikinci kullanıcıyla saldırır; kayıtsız tabloda kırmızı olur).
 - Her ekranda: yükleniyor, boş, hata, **çevrimdışı** durumu.
 - İzin istemeden önce neden gerektiğini kullanıcıya göster; izin metinleri (`infoPlist`) Türkçe ve açıklayıcı.
 - Klavye ekranı kapatmasın (`KeyboardAvoidingView`), güvenli alan (`SafeAreaView`) kullan.

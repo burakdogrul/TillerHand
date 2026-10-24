@@ -106,7 +106,7 @@ export function envWarnings(root) {
     u.push({ sev: 'critical', text: `Prod projesinin ref'i (${prodRef}) .mcp.json'da: AI prod'a bağlanabiliyor.`, action: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)' });
   }
   if (fs.existsSync(path.join(root, 'supabase/config.toml')) && !fs.existsSync(path.join(root, 'tests/security/rls.mjs'))) {
-    u.push({ sev: 'warn', text: 'Supabase kullanılıyor ama RLS saldırgan testi yok (tests/security/rls.mjs).', action: '/kit-update ile şablonu al, tabloları TABLOLAR\'a ekle' });
+    u.push({ sev: 'warn', text: 'Supabase kullanılıyor ama RLS saldırgan testi yok (tests/security/rls.mjs).', action: '/kit-update ile şablonu al, tabloları TABLES\'a ekle' });
   }
   return u;
 }

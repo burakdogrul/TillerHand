@@ -16,7 +16,7 @@ Kaynak listeler: `docs/operations/release-checklist.md`, `docs/architecture/stac
    - Lint, tip kontrolü, testler, build (`AGENTS.md` → Komutlar)
    - Bağımlılık açık taraması ve Semgrep (`docs/security/checklist.md` §9)
    - Kabul testleri: MVP kriterlerinin tamamı yeşil mi (JUnit raporu)? Saldırgan testleri var mı?
-   - **RLS saldırgan testi (engelleyici):** Supabase kullanılıyorsa (`supabase/config.toml` var) `tests/security/rls.mjs` duruyor ve son CI'daki `rls` işi yeşil mi? Test yoksa, kırmızıysa veya `TABLOLAR` listesi boşken public tablo varsa ❌.
+   - **RLS saldırgan testi (engelleyici):** Supabase kullanılıyorsa (`supabase/config.toml` var) `tests/security/rls.mjs` duruyor ve son CI'daki `rls` işi yeşil mi? Test yoksa, kırmızıysa veya `TABLES` listesi boşken public tablo varsa ❌.
    - **Dev/prod ayrımı (engelleyici):** `docs/operations/accounts.md` → Ortamlar'daki prod ref'i `.mcp.json`, `.claude/`, `.codex/`, `.agents/` veya kodda geçiyor mu (`git grep -n "<prod ref>" -- . ":!docs/operations/accounts.md"`)? Geçiyorsa ❌; prod satırı boşsa 👤. Yerel `.env.local`'in dev projesine bağlı olduğunu kullanıcıya sor (👤; AI `.env` dosyalarını okumaz).
    - `docs/operations/accounts.md` eksiksiz mi, 30 gün içinde dolan tarih var mı? `docs/operations/feature-flags.md`'de riskli özellikler bayrakta mı?
    - `docs/product/unit-economics.md`: katkı payı pozitif mi?

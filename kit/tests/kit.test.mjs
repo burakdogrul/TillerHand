@@ -8,7 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { birlestir } from '../kit.mjs';
+import { merge } from '../kit.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const KIT_MJS = path.join(REPO, 'kit', 'kit.mjs');
@@ -33,7 +33,7 @@ before(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-test-')); });
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 test('birlestir: nesneleri derin, dizileri tekrarsız birleştirir', () => {
-  assert.deepEqual(birlestir({ a: [1, 2], b: { c: 1 } }, { a: [2, 3], b: { d: 2 } }), { a: [1, 2, 3], b: { c: 1, d: 2 } });
+  assert.deepEqual(merge({ a: [1, 2], b: { c: 1 } }, { a: [2, 3], b: { d: 2 } }), { a: [1, 2, 3], b: { c: 1, d: 2 } });
 });
 
 test('kur: web-saas + ai', () => {

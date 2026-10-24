@@ -54,9 +54,9 @@ test('F-01 3.13.1 RLS testi: CI\'da DB_URL yoksa atlamaz, değişikliği satır�
   assert.notEqual(ci.status, 0);
   assert.match(ci.stdout + ci.stderr, /DB_URL yok/);
   const rls = oku(`kit/templates/web-saas/${RLS}`);
-  assert.match(rls, /assert\.deepEqual\(\(await admin\.from\(ad\)\.select\(\)\.eq\(anahtar, id\)\.single\(\)\)\.data, satir/);
+  assert.match(rls, /assert\.deepEqual\(\(await admin\.from\(name\)\.select\(\)\.eq\(key, id\)\.single\(\)\)\.data, row/);
   assert.match(rls, /SECURITY DEFINER/);
-  assert.ok(rls.includes('update({ ...ornek(), [sahip]: b.id })'), 'güncelleme satırdan farklı değer yazar');
+  assert.ok(rls.includes('update({ ...sample(), [owner]: b.id })'), 'güncelleme satırdan farklı değer yazar');
 });
 
 test('F-01 3.13.1 CI şablonları: GITHUB_TOKEN salt okunur, supabase status çıktısı eval edilmez', () => {

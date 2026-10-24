@@ -8,7 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseInput, decisionText, patchFiles } from '../../.claude/hooks/shared.mjs';
-import { komuttanSkill } from '../kit.mjs';
+import { commandToSkill } from '../kit.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const HOOKS = path.join(REPO, '.claude', 'hooks');
@@ -125,7 +125,7 @@ test('session start: Codex additionalContext, Antigravity injectSteps', () => {
 });
 
 test('command -> skill: name, description and body', () => {
-  const s = komuttanSkill('build', '---\ndescription: Görevi uygular: test eder.\nargument-hint: [görev kodu]\n---\n\nGörev: $ARGUMENTS\n');
+  const s = commandToSkill('build', '---\ndescription: Görevi uygular: test eder.\nargument-hint: [görev kodu]\n---\n\nGörev: $ARGUMENTS\n');
   assert.match(s, /^---\nname: build\ndescription: "Görevi uygular: test eder."\n---\n/);
   assert.match(s, /Beklenen: \[görev kodu\]/);
   assert.match(s, /Görev: \$ARGUMENTS\n$/);
