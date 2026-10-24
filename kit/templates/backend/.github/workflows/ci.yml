@@ -43,6 +43,17 @@ jobs:
       - name: Klasör yapısı (.claude/structure.json)
         run: node .claude/hooks/structure-guard.mjs --check
 
+  karmasiklik:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # base commit'iyle karşılaştırmak için
+      - name: Karmaşıklık bütçesi (değişen dosyalar; fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node .claude/hooks/budget.mjs --check --base "$BASE"
+
   semgrep:
     runs-on: ubuntu-latest
     container:

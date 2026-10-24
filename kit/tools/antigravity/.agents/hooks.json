@@ -11,9 +11,23 @@
         "hooks": [
           { "type": "command", "command": "node .claude/hooks/guard-secrets.mjs" },
           { "type": "command", "command": "node .claude/hooks/freeze-guard.mjs" },
-          { "type": "command", "command": "node .claude/hooks/structure-guard.mjs" }
+          { "type": "command", "command": "node .claude/hooks/structure-guard.mjs" },
+          { "type": "command", "command": "node .claude/hooks/test-guard.mjs" }
         ]
       }
+    ]
+  },
+  "kit-duzenleme-turu": {
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/edit-rounds.mjs" }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      { "type": "command", "command": "node .claude/hooks/edit-rounds.mjs --inject" }
     ]
   },
   "kit-okuma-korumasi": {

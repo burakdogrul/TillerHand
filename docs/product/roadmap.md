@@ -19,11 +19,13 @@
 - [ ] G-010: [Auth: kayıt / giriş / çıkış] — kabul: [...]
 - [ ] G-011: [Ana veri modeli + migration] — kabul: [...]
 - [ ] G-012: [Ana özellik Ö-01] — kabul: [PRD'deki kriterler]
+- [ ] G-019: Refactor turu (faz sonu) — kabul: `node .claude/hooks/budget.mjs --check` tüm depoda temiz; tekrar eden ve kullanılmayan kod temizlendi; testler yeşil
 
 ## Faz 2 — MVP tamamlama
 
 - [ ] G-020: [Ö-02] — kabul: [...]
 - [ ] G-021: Boş / hata / yükleniyor durumları tüm ekranlarda — kabul: [...]
+- [ ] G-029: Refactor turu (faz sonu) — kabul: `node .claude/hooks/budget.mjs --check` tüm depoda temiz; tekrar eden ve kullanılmayan kod temizlendi; testler yeşil
 
 ## Faz 3 — Canlıya hazırlık
 

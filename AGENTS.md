@@ -33,7 +33,7 @@ Kit Claude Code için yazıldı; bu iki araçta şu karşılıklar geçerli:
 - **Komutlar** (`/start`, `/build`…) `.agents/skills/` altında skill olarak durur: Codex'te `$start` ya da `/skills`, Antigravity'de `/start`. Kaynakları `.claude/commands/`; skill kopyaları kit güncellemesinde yeniden üretilir, düzenleme kaynakta yapılır.
 - **AskUserQuestion** geçen her yerde: Antigravity'de `ask_question` aracı. Seçenekli soru aracı yoksa (Codex) seçenekleri numaralı liste olarak yaz, önerileni ilk sıraya koy ve "(Önerilen)" diye işaretle, cevabı bekle. Karar yine kullanıcınındır.
 - **Alt ajanlar** (kurul üyeleri, konsey, inceleme ajanları `.claude/agents/`): Çalıştıramıyorsan ilgili tanımı oku, o rolle kendin değerlendir ve raporda "tek model" diye belirt.
-- **Korumalar** (sır engeli, yıkıcı komut kalkanı, yapı koruyucu, düzenleme kilidi, paket kapısı ve Claude Code izin listesinin karşılığı) hook olarak çalışır: Codex `.codex/hooks.json`, Antigravity `.agents/hooks.json`. Kural ve koruma dosyalarına (`AGENTS.md`, `.claude/`, `.codex/`, `.agents/hooks.json`) yazma onaya bağlıdır. Engellenen işlemi başka yoldan (örneğin kabuk komutuyla) yapmaya çalışma; nedenini kullanıcıya söyle.
+- **Korumalar** (sır engeli, yıkıcı komut kalkanı, yapı koruyucu, düzenleme kilidi, test koruması, düzenleme turu sayacı, paket kapısı ve Claude Code izin listesinin karşılığı) hook olarak çalışır: Codex `.codex/hooks.json`, Antigravity `.agents/hooks.json`. Kural ve koruma dosyalarına (`AGENTS.md`, `.claude/`, `.codex/`, `.agents/hooks.json`) yazma onaya bağlıdır. Engellenen işlemi başka yoldan (örneğin kabuk komutuyla) yapmaya çalışma; nedenini kullanıcıya söyle.
 - Claude Code eklentilerine ait skill'ler (adı `eklenti:skill` biçiminde) bu araçlarda yok: o adımı atla. Limit okuma ve durum çubuğu da yok: durum bloğunda limit "-" kalır.
 
 ## Gerektiğinde oku
@@ -76,7 +76,7 @@ build:       [ ]
 
 - `.env` dosyalarını okuma, yazma, içeriğini ekrana basma. Sırrı koda, loga veya istemci tarafına koyma.
 - Onay almadan (soru modundan bağımsız): veri silme/sıfırlama, `git push --force`, `git reset --hard`, toplu dosya silme, prod deploy, para harcatan işlem.
-- Testi geçirmek için testi silme veya zayıflatma. Var olmayan API veya paket uydurma.
+- Testi geçirmek için testi silme veya zayıflatma (test koruması hook'u sorar). Var olmayan API veya paket uydurma.
 - Hook'ları (sır engeli, commit kapısı) atlatmaya çalışma. Kullanıcı adına karar verip sonradan bildirme.
 
 ## Git

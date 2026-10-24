@@ -89,6 +89,7 @@ app.config.ts  eas.json
 - `EXPO_PUBLIC_` ön ekli değişkenler pakete gömülür; sadece herkese açık değerler.
 - Paket eklerken `npx expo install` kullan.
 - Supabase seçildiyse DB şema değişikliği sadece migration dosyasıyla: `npx -y supabase@2.120.0 migration new [ad]` (`supabase/migrations/`). Panelden veya MCP'den elle DDL yok.
+- Supabase seçildiyse her yeni tabloda RLS açık, politikası yazılı ve tablo `tests/security/rls.mjs` → `TABLOLAR` listesinde (CI'daki `rls` işi anonim ve ikinci kullanıcıyla saldırır; kayıtsız tabloda kırmızı olur).
 - Her ekranda: yükleniyor, boş, hata, **çevrimdışı** durumu.
 - İzin istemeden önce neden gerektiğini kullanıcıya göster; izin metinleri (`infoPlist`) Türkçe ve açıklayıcı.
 - Klavye ekranı kapatmasın (`KeyboardAvoidingView`), güvenli alan (`SafeAreaView`) kullan.
@@ -108,9 +109,9 @@ app.config.ts  eas.json
 |---|---|---|
 | Claude hook'ları | Sır yazımını engeller; düzenlenen dosyayı Prettier ile biçimlendirir | Hazır (`.claude/settings.json`). Prettier projede kurulu olmalı |
 | Pre-commit | lint-staged (ESLint + Prettier) + sır taraması | `npm i -D husky lint-staged prettier` → `npm pkg set scripts.prepare="husky"` → `npx husky` |
-| CI (+ Semgrep, kopya kod) | Lint, tip, test, expo-doctor, açık taraması, gitleaks | `.github/workflows/ci.yml` hazır |
+| CI (+ Semgrep, kopya kod, karmaşıklık bütçesi) | Lint, tip, test, expo-doctor, açık taraması, gitleaks, değişen dosyalarda karmaşıklık bütçesi (fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır; `node .claude/hooks/budget.mjs --check`) | `.github/workflows/ci.yml` hazır |
 | Dependabot | Haftalık küçük güncellemeler (Expo SDK paketleri hariç) | `.github/dependabot.yml` hazır |
-| MCP | Supabase (salt-okunur), Sentry · gerektiğinde: Supabase dev (`docs/workflow/mcp-catalog.md`) | `.mcp.json`: `PROJE_REF`'i doldur (salt-okunur, prod olabilir). Yazma yetkili Supabase MCP sadece **geliştirme** projesine (`supabase-dev`) |
+| MCP | Supabase (salt-okunur), Sentry · gerektiğinde: Supabase dev (`docs/workflow/mcp-catalog.md`) | `.mcp.json`: `DEV_REF`'i doldur (salt-okunur, **geliştirme** projesi; prod ref'i AI ortamına yazılmaz). Yazma yetkili Supabase MCP sadece **geliştirme** projesine (`supabase-dev`) |
 
 ## Kabul testleri ve özellik bayrakları
 

@@ -14,7 +14,8 @@
         "hooks": [
           { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/guard-secrets.mjs\"", "commandWindows": "node .claude/hooks/guard-secrets.mjs" },
           { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/freeze-guard.mjs\"", "commandWindows": "node .claude/hooks/freeze-guard.mjs" },
-          { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/structure-guard.mjs\"", "commandWindows": "node .claude/hooks/structure-guard.mjs" }
+          { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/structure-guard.mjs\"", "commandWindows": "node .claude/hooks/structure-guard.mjs" },
+          { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/test-guard.mjs\"", "commandWindows": "node .claude/hooks/test-guard.mjs" }
         ]
       },
       {
@@ -23,6 +24,14 @@
           { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/guard-secrets.mjs\"", "commandWindows": "node .claude/hooks/guard-secrets.mjs" },
           { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/destructive-guard.mjs\"", "commandWindows": "node .claude/hooks/destructive-guard.mjs" },
           { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/package-gate.mjs\"", "commandWindows": "node .claude/hooks/package-gate.mjs", "timeout": 30 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          { "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/edit-rounds.mjs\"", "commandWindows": "node .claude/hooks/edit-rounds.mjs" }
         ]
       }
     ]

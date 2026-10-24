@@ -18,7 +18,8 @@
 
 - [ ] Yetki kontrolü **sunucuda** (veya DB kuralında) yapılıyor; arayüzde butonu gizlemek yetki değildir.
 - [ ] Her veri sorgusu "bu kayıt bu kullanıcıya mı ait?" kontrolünü içeriyor (IDOR koruması).
-- [ ] DB satır seviyesi güvenlik (RLS vb.) kullanılıyorsa **her tabloda açık** ve politikaları test edildi.
+- [ ] DB satır seviyesi güvenlik (RLS vb.) kullanılıyorsa **her tabloda açık** ve politikaları saldırgan testiyle doğrulandı (Supabase: `tests/security/rls.mjs`, CI `rls` işi; anonim ve ikinci kullanıcı okuyamıyor, yazamıyor, silemiyor).
+- [ ] Dev/prod ayrımı: yerel ortam ve AI (MCP dahil) sadece dev projesine bağlı; prod sırları sadece barındırma panelinde (`docs/operations/accounts.md` → Ortamlar).
 - [ ] Admin işlemleri ayrı rol ile korunuyor.
 - [ ] Şifre sıfırlama, e-posta doğrulama, oturum süresi hazır bir auth sağlayıcısından geliyor (kendin yazma).
 - [ ] Giriş ve şifre sıfırlama uçlarında hız sınırı (rate limit) var.

@@ -24,6 +24,9 @@ const YIKICI = [
 const PROD_DB = /\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis|rediss):\/\/[^\s'"]*@(?!localhost|127\.0\.0\.1|0\.0\.0\.0|db[:/]|postgres[:/]|host\.docker\.internal)[^\s'"/:]+/i;
 const PROD_ISARET = /\b(--prod(uction)?\b|NODE_ENV=production|ENV=production|DATABASE_URL_PROD|PROD_DATABASE_URL)\b/;
 
+// Prod sırlarını ajanın makinesine çekmek: yerel ortam ve AI sadece dev projesine bağlanır (dev/prod ayrımı)
+const PROD_SIRRI = /\bvercel(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)prod(uction)?\b)/i;
+
 const ONAYLI = [
   // Tırnaklı yazımı tirnaksiz() açar; burada sadece kabuğun gördüğü hal
   [/\bvercel\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'Prod ortamına deploy'],
@@ -90,6 +93,9 @@ export function degerlendir(komut) {
 function degerlendirTek(komut) {
   const k = komut.replace(/\s+/g, ' ');
   const prodDb = PROD_DB.test(k) || PROD_ISARET.test(k);
+  if (PROD_SIRRI.test(k)) {
+    return { karar: 'deny', neden: 'Prod ortam değişkenleri (sırlar) bu makineye çekiliyor. Yerel ortam ve AI sadece dev projesine bağlanır; prod değerleri barındırma panelinde kalır. Gerekliyse kullanıcı kendisi çalıştırır.' };
+  }
   for (const [re, neden] of YIKICI) {
     if (re.test(k)) {
       return { karar: 'deny', neden: `${neden}${prodDb ? ' — PROD/uzak veritabanı hedefleniyor' : ''}. AI bu komutu çalıştıramaz. Gerekliyse kullanıcı, önce yedek alıp kendisi çalıştırır (Claude Code'da "! komut" veya kendi terminali).` };

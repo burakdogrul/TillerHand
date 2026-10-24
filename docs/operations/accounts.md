@@ -21,6 +21,16 @@
 | [AI sağlayıcı] | | | | | | [YYYY-AA-GG] | Harcama limiti: |
 | [Apple / Google geliştirici] | Mağaza | | | | [YYYY-AA-GG] | | Yıllık üyelik |
 
+## Ortamlar (dev / prod)
+
+> Proje ref'i ve URL sır değildir; anahtarlar yine buraya yazılmaz. `/release` bu tabloyu okur: prod ref'i
+> `.mcp.json`'da, `.claude/`'da veya kodda geçerse yayını engeller.
+
+| Ortam | Servis | Proje ref / URL | Kim bağlanır |
+|---|---|---|---|
+| dev | [Supabase] | [dev ref] | Yerel ortam, AI (MCP salt-okunur ve `supabase-dev`), CI dışındaki denemeler |
+| prod | [Supabase] | [prod ref] | Sadece barındırma (Vercel / EAS ortam değişkenleri). AI ve yerel ortam bağlanmaz |
+
 ## Kurallar
 
 - Her yeni dış servis eklendiğinde (`/start` Adım 5, yeni entegrasyon) bu tabloya satır eklenir.

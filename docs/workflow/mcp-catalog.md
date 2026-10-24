@@ -8,7 +8,7 @@
 | Ne | Tip | Not |
 |---|---|---|
 | Context7 | hepsi | Güncel kütüphane dokümanı |
-| Supabase (salt okunur), Sentry | web, mobil · backend'de Sentry | `PROJE_REF` /start'ta doldurulur. Prod projesine bağlanabilir, sadece okur |
+| Supabase (salt okunur), Sentry | web, mobil · backend'de Sentry | `DEV_REF` /start'ta doldurulur: **geliştirme** projesi, sadece okur. Prod ref'i AI ortamına (.mcp.json, .env.local) yazılmaz; prod'a bakmak gerekirse kullanıcı paneli açar |
 | Maestro | mobil | Mobil E2E (`.maestro/*.yaml`). Maestro CLI kurulu olmalı: `curl -fsSL "https://get.maestro.mobile.dev" \| bash` (Windows: WSL veya docs.maestro.dev) |
 | Expo | mobil | `expo@expo-plugins` eklentisiyle gelir: EAS build, iş akışları, TestFlight çökme kayıtları. Bağlanmak için `/mcp` → Expo hesabıyla giriş. Simülatör ve ekran görüntüsü için SDK 54+ ve `npx expo install expo-mcp --dev` |
 

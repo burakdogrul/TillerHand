@@ -5,7 +5,24 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { prdKriterleri, junitSonuclari, kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, kalanGun } from '../../.claude/hooks/dashboard-data.mjs';
+import { prdKriterleri, junitSonuclari, kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, kalanGun, ortamUyarilari } from '../../.claude/hooks/dashboard-data.mjs';
+
+test('ortam (3.13): prod ref .mcp.json\'da kritik, Supabase varken RLS testi yoksa uyarı', () => {
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'ortam-'));
+  const yaz = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); fs.writeFileSync(path.join(p, f), s); };
+  assert.deepEqual(ortamUyarilari(p), [], 'Supabase ve kayıt yok');
+  yaz('docs/operations/accounts.md', '## Ortamlar (dev / prod)\n\n| Ortam | Servis | Proje ref / URL | Kim bağlanır |\n|---|---|---|---|\n| dev | Supabase | devref111 | yerel |\n| prod | Supabase | prodref999 | barındırma |\n');
+  yaz('.mcp.json', '{"url":"https://mcp.supabase.com/mcp?project_ref=devref111&read_only=true"}');
+  yaz('supabase/config.toml', 'project_id = "x"');
+  assert.deepEqual(ortamUyarilari(p).map((u) => u.sev), ['uyari'], 'RLS testi yok');
+  yaz('tests/security/rls.mjs', '//');
+  assert.deepEqual(ortamUyarilari(p), []);
+  yaz('.mcp.json', '{"url":"https://mcp.supabase.com/mcp?project_ref=prodref999&read_only=true"}');
+  assert.equal(ortamUyarilari(p)[0].sev, 'kritik');
+  yaz('docs/operations/accounts.md', '## Ortamlar (dev / prod)\n\n| Ortam | Servis | Proje ref / URL | Kim bağlanır |\n|---|---|---|---|\n| prod | [Supabase] | [prod ref] | x |\n');
+  assert.deepEqual(ortamUyarilari(p), [], 'şablon satırı yok sayılır');
+  fs.rmSync(p, { recursive: true, force: true });
+});
 
 test('kabul: PRD kriterleri kimlikle okunur, şablon satırları atlanır', () => {
   const prd = '- [x] Ö-01.1: Zorunlu alan boşsa kaydedilmez\n- [ ] Ö-01.2: PDF indirilir\n- [ ] Ö-02.1: [Gözlemlenebilir davranış]\n- [ ] kimliksiz madde';

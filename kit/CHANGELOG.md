@@ -5,6 +5,27 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+## [3.13.0] - 2026-10-24
+
+### Eklenen
+- **Test koruması (`test-guard.mjs`, Claude Code, Codex, Antigravity):** Test dosyasında beklenti (`expect`/`assert`) silinir veya yoruma alınırsa, `.skip`/`.only`/`xit`/`@pytest.mark.skip` eklenirse, beklenti gevşetilirse (`toBeTruthy`, `toBeDefined`, `expect.anything`, `assert True`) ya da test dosyası silinirse kullanıcıya sorulur. Write ile dosyanın tamamını ezmek diskteki halle karşılaştırılır. Codex'te onay penceresi olmadığı için engellenir ve AI'ya "kullanıcıya sor" denir.
+- **Düzenleme turu sayacı (`edit-rounds.mjs`):** Aynı kod dosyası bir oturumda 5., 10., ... kez düzenlenince AI'ya Semgrep ve `security-auditor` hatırlatılır; iş engellenmez. Claude ve Codex'te PostToolUse notu, Antigravity'de PreInvocation `injectSteps` ile.
+- **Karmaşıklık bütçesi (`budget.mjs`, CI `karmasiklik` işi, üç şablon):** PR'da değişen kod dosyalarında fonksiyon karmaşıklığı 15, fonksiyon 80 satır (lizard 1.24.1, `pipx run`), dosya 400 satır aşılırsa CI kırmızı. Test, migration, üretilmiş ve kit dosyaları hariç. Kite alınan eski kod dokunulana kadar engellemez. `/start` her fazın sonuna "Refactor turu" görevi koyar.
+- **RLS saldırgan testi (web ve mobil şablon, `tests/security/rls.mjs`, CI `rls` işi):** CI içinde boş bir yerel Supabase açılır; anonim ve ikinci kullanıcı, birinci kullanıcının satırını okumayı, güncellemeyi, silmeyi ve onun adına yazmayı dener. RLS'i kapalı veya teste kayıtsız public tablo varsa kırmızı. Sır gerekmez; yerel olmayan URL'ye karşı çalışmayı reddeder. Dosya adı `.test.mjs` değil: Vitest/Jest ortamsız toplamasın. `/release`'de engelleyici.
+- Pano: prod ref'i `.mcp.json`'da geçerse kritik, Supabase varken RLS testi yoksa uyarı.
+
+### Değişen
+- **Dev/prod ayrımı:** Şablonlardaki salt-okunur Supabase MCP artık `DEV_REF`'e bağlanır (önce prod olabiliyordu). `.env.example` "yerel = dev, prod sadece barındırma panelinde" der. `docs/operations/accounts.md`'ye "Ortamlar (dev / prod)" tablosu. `/release` prod ref'inin repoda ve AI ayarlarında geçmediğini kontrol eder, `.env.local`'in dev'e bağlı olduğunu kullanıcıya sorar.
+- Kalkan: prod ortam değişkenlerini makineye çekmek (`vercel env pull` / `vercel pull`, prod hedefli) engellenir.
+- `arac.mjs` → `cozumle` düzenlenen parçanın önceki ve sonraki halini (`once`/`sonra`), silmeyi ve oturum kimliğini de verir.
+- `AGENTS.md`, `docs/quality/test-plan.md`, `docs/security/checklist.md`, şablon `stack.md`'leri, `docs/workflow/mcp-catalog.md`, README, `kit/guide.html` ve pano güncellendi.
+- **Elle uyarla:** Kurulu projede `.mcp.json` Supabase satırı prod ref'ine bağlıysa dev ref'i ile değiştir. Değiştirdiğin `ci.yml` için `/kit-update` `.kit-new` bırakır: `karmasiklik` ve `rls` işlerini kendi dosyana al. `docs/operations/accounts.md`'ye Ortamlar tablosunu, `docs/product/roadmap.md`'ye faz sonu refactor görevlerini ekle. Supabase'li projede `tests/security/rls.mjs` → `TABLOLAR`'a mevcut tabloları yaz.
+
+### Bilinen sınır
+- Test koruması ve kalkan metne bakar: kabuk komutuyla (`sed`, heredoc) test dosyası değiştirmek test korumasına takılmaz; Claude Code'da her kabuk komutu zaten onaya gelir. Kalkan, belge yazan bir heredoc içinde geçen örnek komutu da yakalayabilir.
+- Antigravity'de PostToolUse çıktı taşımaz; düzenleme turu notu bir sonraki model çağrısında gelir.
+- RLS testi kit içinde Docker'sız doğrulandı (yerel olmayan URL reddi, ortam yok hatası); gerçek `supabase start` ile uçtan uca çalıştırma ilk kullanan projede CI'da görülecek.
+
 ## [3.12.0] - 2026-10-23
 
 ### Eklenen

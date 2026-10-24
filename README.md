@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.12.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.13.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -32,7 +32,7 @@
 | 🏛️ **Uzman kurulu** | Ürün, Mimar, Güvenlik, UX, KVKK, QA ve diğer üyeler planı, görevi, her commit'i ve fazı denetler. |
 | 🔎 **Bulgu raporları** | `/findings-tech`, `-business`, `-security`, `-ux`, `-perf`, `-legal`: En önemli 20 bulgu, puanlı ve düzeltme yöntemli. |
 | 🗂️ **Korunan yapı** | Özellik bazlı klasör haritası; harita dışı yazım sorulur, dağınıklık engellenir, CI denetler. |
-| 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, düzenleme kilidi, commit kapısı, yazarken güvenlik incelemesi. |
+| 🛡️ **Koruma katmanları** | Sır engeli, paket kapısı, yıkıcı komut kalkanı, yapılandırma onayı, düzenleme kilidi, test koruması, düzenleme turu sayacı, commit kapısı, yazarken güvenlik incelemesi. |
 | 📊 **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit. |
 | ⏱️ **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur; işler limite göre planlanır. Limit sadece uyarı verir (%90, %95, %99), işi durdurmaz. |
 | 🌐 **Doğru kaynak** | Değişebilen bilgi birincil kaynaktan doğrulanır (kaynak ve tarihle); kütüphane dokümanı Context7'den güncel gelir. |
@@ -339,23 +339,27 @@ Yapı dört yerde korunur: yazım anında hook, her PR'da CI (`structure` işi),
 ```mermaid
 flowchart TB
     T["Claude bir araç çağırıyor"] --> W{"Dosya yazma mı?"}
-    W -->|evet| SG["Sır engeli<br/>Yapı koruyucu<br/>Yapılandırma onayı<br/>Düzenleme kilidi"]
+    W -->|evet| SG["Sır engeli<br/>Yapı koruyucu<br/>Yapılandırma onayı<br/>Düzenleme kilidi<br/>Test koruması"]
     W -->|hayır| B{"Komut mu?"}
     B -->|evet| BG["Yıkıcı komut kalkanı<br/>Paket kapısı<br/>Commit kapısı (kurul)"]
     SG --> P["Claude Code izin katmanı<br/>izin ver · sor · engelle"]
     BG --> P
-    P --> CI["Push → CI<br/>lint · test · build · Semgrep · kopya kod · yapı · sır taraması"]
+    P --> CI["Push → CI<br/>lint · test · build · Semgrep · kopya kod · karmaşıklık · RLS saldırısı · yapı · sır taraması"]
 ```
 
 | Katman | Ne yapar |
 |---|---|
 | Sır engeli | Koda yazılan API anahtarı engellenir |
 | Paket kapısı | Paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur |
-| Yıkıcı komut kalkanı | `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset` engellenir; prod deploy ve uzak veritabanı işlemleri sorulur |
+| Yıkıcı komut kalkanı | `DROP`, `TRUNCATE`, koşulsuz `DELETE`, `db reset` ve prod ortam değişkenlerini makineye çekmek (Vercel `env pull`, prod hedefli) engellenir; prod deploy ve uzak veritabanı işlemleri sorulur |
 | Yapı koruyucu | Harita dışı yeni dosya sorulur, dağınıklık dosyaları engellenir |
 | Yapılandırma onayı | `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.codex/`, `.mcp.json` ve iş akışı dosyaları onayın olmadan değişmez |
 | Commit kapısı | Kurul denetimi olmadan commit atılmaz |
 | Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazabilir |
+| Test koruması | Test dosyasında beklenti silinir veya yoruma alınırsa, `.skip`/`.only` eklenirse, beklenti gevşetilirse (`toBeTruthy`) ya da test dosyası silinirse sorulur |
+| Düzenleme turu sayacı | Aynı kod dosyası bir oturumda 5., 10. kez düzenlenince AI'ya Semgrep ve güvenlik incelemesi hatırlatılır |
+| Dev/prod ayrımı | Yerel ortam ve AI (salt-okunur MCP dahil) sadece dev projesine bağlanır; prod sırları barındırma panelinde kalır, `/release` kontrol eder |
+| CI bütçeleri | Değişen dosyalarda fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır (lizard); Supabase varsa yerel Supabase'e karşı RLS saldırgan testi |
 | Güvenlik incelemesi | `security-guidance` (Anthropic): yazarken riskli kalıp uyarısı, commit'te ayrı modelle inceleme. Tur sonu incelemesi kota için kapalı gelir |
 
 ## 📊 Kontrol paneli ve raporlama

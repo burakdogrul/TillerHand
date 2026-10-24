@@ -50,6 +50,8 @@ AI kodunun yaklaşık yarısında güvenlik açığı bulunuyor (Veracode, 2025)
 
 Test adları `SALDIRI:` önekiyle başlar. `security-auditor` ajanı eksik saldırgan testlerini KRİTİK sayar.
 
+**Supabase kullanılıyorsa** veritabanı katmanının saldırgan testi hazır gelir: `tests/security/rls.mjs`. Anonim ve ikinci kullanıcı, birinci kullanıcının satırını okumayı, güncellemeyi, silmeyi ve onun adına yazmayı dener; RLS'i kapalı veya teste kayıtsız public tablo varsa kırmızı olur. Sadece yerel Supabase'e karşı çalışır (CI `rls` işi, sır gerekmez). Her yeni tablo `TABLOLAR` listesine eklenir. Uygulama katmanındaki (server action, route handler) testler yine yukarıdaki tabloya göre ayrıca yazılır.
+
 ## 2. Kurallar
 
 - **Her hata düzeltmesi bir regresyon testiyle gelir.** Önce hatayı gösteren test kırmızı olur, sonra düzeltme ile yeşile döner.

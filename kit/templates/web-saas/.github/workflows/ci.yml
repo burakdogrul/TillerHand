@@ -47,6 +47,40 @@ jobs:
       - name: Klasör yapısı (.claude/structure.json)
         run: node .claude/hooks/structure-guard.mjs --check
 
+  karmasiklik:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # base commit'iyle karşılaştırmak için
+      - name: Karmaşıklık bütçesi (değişen dosyalar; fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node .claude/hooks/budget.mjs --check --base "$BASE"
+
+  # RLS saldırgan testi: CI içinde boş bir yerel Supabase açılır, migration'lar uygulanır. Sır gerekmez; dev ve prod'a dokunmaz.
+  # Supabase kullanılmıyorsa (supabase/config.toml yoksa) adımlar atlanır.
+  rls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        if: hashFiles('supabase/config.toml') != ''
+        with:
+          node-version: 22
+          cache: npm
+      - if: hashFiles('supabase/config.toml') != ''
+        run: npm ci
+      - name: Yerel Supabase
+        if: hashFiles('supabase/config.toml') != ''
+        run: npx -y supabase@2.120.0 start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,supavisor,postgres-meta
+      - name: RLS saldırgan testi (anonim ve ikinci kullanıcı)
+        if: hashFiles('supabase/config.toml') != ''
+        run: |
+          eval "$(npx -y supabase@2.120.0 status -o env)"
+          export API_URL ANON_KEY SERVICE_ROLE_KEY DB_URL PUBLISHABLE_KEY SECRET_KEY
+          node --test tests/security/rls.mjs
+
   semgrep:
     runs-on: ubuntu-latest
     container:

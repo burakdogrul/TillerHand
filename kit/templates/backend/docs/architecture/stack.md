@@ -106,7 +106,7 @@ Dockerfile  pyproject.toml  uv.lock
 |---|---|---|
 | Claude hook'ları | Sır yazımını engeller; `.py` dosyasını Ruff ile biçimlendirir ve lint hatasını AI'ya geri bildirir | Hazır (`.claude/settings.json`). Node.js gerekir |
 | Pre-commit | Ruff + sır taraması, commit öncesi | `uvx pre-commit install` (bir kez) |
-| CI (+ Semgrep, kopya kod) | Lint, format, migration, test, açık taraması, Docker build, gitleaks | `.github/workflows/ci.yml` hazır; GitHub'a push et |
+| CI (+ Semgrep, kopya kod, karmaşıklık bütçesi) | Lint, format, migration, test, açık taraması, Docker build, gitleaks, değişen dosyalarda karmaşıklık bütçesi (fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır; `node .claude/hooks/budget.mjs --check`) | `.github/workflows/ci.yml` hazır; GitHub'a push et |
 | Dependabot | Haftalık bağımlılık PR'ları | `.github/dependabot.yml` hazır |
 | MCP | Sentry'deki hataları okuma (`/maintain`) | `.mcp.json` hazır; ilk kullanımda Sentry'ye giriş yap |
 

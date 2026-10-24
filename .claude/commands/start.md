@@ -135,7 +135,7 @@ Pahalı adım: önce maliyeti söyle ve derinliğe göre sor (yukarıdaki "Pahal
 
 ## Adım 8: Yol haritası → `docs/product/roadmap.md`
 
-1. MVP özelliklerini tek oturumluk görevlere böl; Faz 0'daki kurulum görevlerini koru. Her özelliğin ilk görevi "kabul testlerini yaz (kırmızı)" olsun (`docs/quality/test-plan.md` §1a). Ödeme, AI, toplu bildirim ve veri silen özellikler için bayrak görevi ekle (`docs/operations/feature-flags.md`).
+1. MVP özelliklerini tek oturumluk görevlere böl; Faz 0'daki kurulum görevlerini koru. Her özelliğin ilk görevi "kabul testlerini yaz (kırmızı)" olsun (`docs/quality/test-plan.md` §1a). Ödeme, AI, toplu bildirim ve veri silen özellikler için bayrak görevi ekle (`docs/operations/feature-flags.md`). Faz 1'den itibaren her fazın son görevi "Refactor turu" olsun (karmaşıklık bütçesi tüm depoda temiz: `node .claude/hooks/budget.mjs --check`).
 2. Sor: "Faz 1'de önce hangi özellikle başlayalım?" (öneri: en riskli veya en değerli olan).
 3. Sor: "Lansman hedefi ne?" (tarih / özellik tamamlanınca / sadece kişisel kullanım). Kişisel kullanımsa `docs/product/launch.md`'yi silmeyi öner.
 4. Yol haritasını özetle ve onay al.

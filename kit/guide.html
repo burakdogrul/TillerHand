@@ -159,7 +159,7 @@ html { scroll-behavior: smooth; }
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">Claude Code · Codex · Antigravity · v3.12</p>
+  <p class="eyebrow">Claude Code · Codex · Antigravity · v3.13</p>
   <h1>Vibe Coding Kit</h1>
   <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
   <nav class="toc" aria-label="İçindekiler">
@@ -558,10 +558,10 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <table>
       <thead><tr><th>Ne zaman</th><th>Katman</th><th>Ne yakalar</th></tr></thead>
       <tbody>
-        <tr><td>AI dosya yazarken</td><td>Sır engeli · yapı koruyucu · yapılandırma onayı · düzenleme kilidi · güvenlik kalıpları</td><td>Koda yazılan API anahtarı engellenir; /freeze açıkken kilitli klasör dışına yazılmaz; riskli kalıpta (service_role istemcide, kişisel veri logu, innerHTML) uyarı; harita dışı yeni dosya sorulur, dağınıklık (*.bak, *-old.*, kopya) engellenir; CLAUDE.md, AGENTS.md, .claude/, .codex/, .mcp.json, iş akışı değişikliği sorulur</td></tr>
-        <tr><td>AI komut çalıştırırken</td><td>Yıkıcı komut kalkanı · paket kapısı · commit kapısı</td><td>DROP, TRUNCATE, koşulsuz DELETE, db reset engellenir; prod deploy sorulur; uydurma, çok yeni veya az kullanılan paket engellenir veya sorulur; kurul denetimi olmadan commit yok</td></tr>
+        <tr><td>AI dosya yazarken</td><td>Sır engeli · yapı koruyucu · yapılandırma onayı · düzenleme kilidi · test koruması · düzenleme turu sayacı · güvenlik kalıpları</td><td>Koda yazılan API anahtarı engellenir; /freeze açıkken kilitli klasör dışına yazılmaz; riskli kalıpta (service_role istemcide, kişisel veri logu, innerHTML) uyarı; harita dışı yeni dosya sorulur, dağınıklık (*.bak, *-old.*, kopya) engellenir; CLAUDE.md, AGENTS.md, .claude/, .codex/, .mcp.json, iş akışı değişikliği sorulur; testte beklenti silmek veya yoruma almak, .skip/.only, gevşek beklenti ve test dosyası silmek sorulur; aynı kod dosyası 5. kez düzenlenince Semgrep ve güvenlik incelemesi hatırlatılır</td></tr>
+        <tr><td>AI komut çalıştırırken</td><td>Yıkıcı komut kalkanı · paket kapısı · commit kapısı</td><td>DROP, TRUNCATE, koşulsuz DELETE, db reset ve prod ortam değişkenlerini makineye çekmek engellenir; prod deploy sorulur; uydurma, çok yeni veya az kullanılan paket engellenir veya sorulur; kurul denetimi olmadan commit yok</td></tr>
         <tr><td>Commit anında</td><td>Pre-commit · security-guidance</td><td>Sahnelenmiş değişikliklerde sır, lint, format; ayrı bir model değişikliği çevresiyle birlikte güvenlik açısından inceler</td></tr>
-        <tr><td>Push ve PR</td><td>GitHub Actions</td><td>Lint, tip, test, build, Semgrep, kopya kod, klasör yapısı, bağımlılık açıkları, tüm geçmişte sır taraması</td></tr>
+        <tr><td>Push ve PR</td><td>GitHub Actions</td><td>Lint, tip, test, build, Semgrep, kopya kod, klasör yapısı, bağımlılık açıkları, tüm geçmişte sır taraması; değişen dosyalarda karmaşıklık bütçesi (fonksiyon 15 karmaşıklık / 80 satır, dosya 400 satır); Supabase varsa CI içinde yerel Supabase'e karşı RLS saldırgan testi (anonim ve ikinci kullanıcı)</td></tr>
         <tr><td>Canlıda</td><td>Canlı izleme · bulut ajanları (isteğe bağlı)</td><td>Saatlik kritik akış testi; kırmızı CI'a düzeltme önerisi; haftalık bakım raporu</td></tr>
         <tr><td>Her hafta</td><td>Dependabot</td><td>Eskiyen bağımlılıklar; majörler planlı</td></tr>
       </tbody>
@@ -663,7 +663,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
       <tbody>
         <tr><td>Kurallar</td><td>CLAUDE.md (AGENTS.md'yi içe alır)</td><td>AGENTS.md</td><td>AGENTS.md</td></tr>
         <tr><td>Komutlar</td><td class="f">/start, /build…</td><td>Skill: <code>$start</code> ya da <code>/skills</code></td><td>Skill: <code>/start</code></td></tr>
-        <tr><td>Korumalar: sır, kalkan, yapı, kilit, paket</td><td>.claude/settings.json</td><td>.codex/hooks.json</td><td>.agents/hooks.json</td></tr>
+        <tr><td>Korumalar: sır, kalkan, yapı, kilit, test, düzenleme turu, paket</td><td>.claude/settings.json</td><td>.codex/hooks.json</td><td>.agents/hooks.json</td></tr>
         <tr><td>"Sor" kararı (main'e push, harita dışı dosya)</td><td>Onay penceresi</td><td>Engellenir; AI sana sorar, onaylarsan işlemi sen yaparsın</td><td>Onay penceresi</td></tr>
         <tr><td>İzin listesi: rm -rf, reset --hard, push --force, .env; kural ve koruma dosyalarına yazma</td><td>settings.json izinleri</td><td>Hook: engellenir</td><td>Hook: engellenir veya sorulur</td></tr>
         <tr><td>Seçenekli sorular</td><td>AskUserQuestion</td><td>Numaralı düz metin</td><td>ask_question</td></tr>
@@ -722,7 +722,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.12.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.13.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

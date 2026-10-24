@@ -64,6 +64,13 @@ test('ayarlar 3.2: resmi eklentiler, kota ayarı, kilit hook\'u, tipe özel ekle
   for (const e of ['claude-security', 'session-report']) assert.equal(s.enabledPlugins[`${e}@claude-plugins-official`], false, `${e} pakette, varsayılan kapalı`);
   assert.equal(s.env.ENABLE_STOP_REVIEW, '0', 'tur sonu güvenlik incelemesi kotadan yer, kapalı gelir');
   assert.ok(s.hooks.PreToolUse.some((m) => m.matcher === 'Write|Edit|MultiEdit' && m.hooks.some((h) => h.command.includes('freeze-guard.mjs'))));
+  // 3.13: test koruması ve düzenleme turu sayacı üç araçta kayıtlı
+  const kayitli = (olaylar, olay, betik) => JSON.stringify(olaylar[olay] ?? []).includes(betik);
+  assert.ok(kayitli(s.hooks, 'PreToolUse', 'test-guard.mjs') && kayitli(s.hooks, 'PostToolUse', 'edit-rounds.mjs'), 'Claude');
+  const cx = JSON.parse(fs.readFileSync(path.join(KOK, 'kit/tools/codex/.codex/hooks.json'), 'utf8')).hooks;
+  assert.ok(kayitli(cx, 'PreToolUse', 'test-guard.mjs') && kayitli(cx, 'PostToolUse', 'edit-rounds.mjs'), 'Codex');
+  const ag = Object.values(JSON.parse(fs.readFileSync(path.join(KOK, 'kit/tools/antigravity/.agents/hooks.json'), 'utf8')));
+  assert.ok(ag.some((h) => kayitli(h, 'PreToolUse', 'test-guard.mjs')) && ag.some((h) => kayitli(h, 'PostToolUse', 'edit-rounds.mjs') && kayitli(h, 'PreInvocation', 'edit-rounds.mjs --inject')), 'Antigravity');
   JSON.parse(fs.readFileSync(path.join(KOK, '.claude/security-patterns.json'), 'utf8')).patterns.forEach((p) => new RegExp(p.regex));
   const beklenen = { 'web-saas': 'typescript-lsp', mobile: 'typescript-lsp', backend: 'pyright-lsp' };
   for (const [t, lsp] of Object.entries(beklenen)) {

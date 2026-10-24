@@ -95,7 +95,7 @@ supabase/migrations/            # veritabanı değişiklikleri SADECE burada
 - `NEXT_PUBLIC_` ön ekli değişkenler tarayıcıya gider. Sır asla `NEXT_PUBLIC_` olmaz.
 - Supabase `service_role` anahtarı sadece sunucuda ve sadece gerçekten gerekiyorsa (RLS'i atlar).
 - DB şema değişikliği sadece migration dosyasıyla (`npx supabase migration new [ad]`). Panelden veya MCP'den elle DDL yok; `supabase-dev` MCP'si dev'de veri denemek içindir.
-- Her yeni tabloda RLS açık ve politikası yazılı.
+- Her yeni tabloda RLS açık, politikası yazılı ve tablo `tests/security/rls.mjs` → `TABLOLAR` listesinde (CI'daki `rls` işi kayıtsız tabloda kırmızı olur).
 - Her sayfada `loading.tsx` / boş durum / `error.tsx` düşün.
 - Görseller `next/image`, linkler `next/link`.
 - Metinler Türkçe; tarih/para `Intl` ile `tr-TR`.
@@ -113,9 +113,9 @@ supabase/migrations/            # veritabanı değişiklikleri SADECE burada
 |---|---|---|
 | Claude hook'ları | Sır yazımını engeller; düzenlenen dosyayı Prettier ile biçimlendirir | Hazır (`.claude/settings.json`). Prettier projede kurulu olmalı |
 | Pre-commit | lint-staged (ESLint + Prettier) + sır taraması | `npm i -D husky lint-staged prettier` → `npm pkg set scripts.prepare="husky"` → `npx husky` |
-| CI (+ Semgrep, kopya kod) | Lint, tip, test, build, açık taraması, gitleaks | `.github/workflows/ci.yml` hazır. GitHub > Settings > Variables'a `NEXT_PUBLIC_*` değerlerini ekle |
+| CI (+ Semgrep, kopya kod, karmaşıklık bütçesi) | Lint, tip, test, build, açık taraması, gitleaks, değişen dosyalarda karmaşıklık bütçesi (fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır; `node .claude/hooks/budget.mjs --check`) | `.github/workflows/ci.yml` hazır. GitHub > Settings > Variables'a `NEXT_PUBLIC_*` değerlerini ekle |
 | Dependabot | Haftalık küçük güncellemeler tek PR'da | `.github/dependabot.yml` hazır |
-| MCP | Supabase (salt-okunur), Sentry, Context7 · gerektiğinde: Playwright, Chrome DevTools, Supabase dev (`docs/workflow/mcp-catalog.md`) | `.mcp.json`: `PROJE_REF`'i doldur (salt-okunur, prod olabilir). Yazma yetkili Supabase MCP sadece **geliştirme** projesine (`supabase-dev`) |
+| MCP | Supabase (salt-okunur), Sentry, Context7 · gerektiğinde: Playwright, Chrome DevTools, Supabase dev (`docs/workflow/mcp-catalog.md`) | `.mcp.json`: `DEV_REF`'i doldur (salt-okunur, **geliştirme** projesi; prod ref'i AI ortamına yazılmaz). Yazma yetkili Supabase MCP sadece **geliştirme** projesine (`supabase-dev`) |
 
 ## Kabul testleri ve özellik bayrakları
 
@@ -141,8 +141,8 @@ npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-resul
 
 ## Güvenlik (ek)
 
-- [ ] Tüm tablolarda RLS açık: `select tablename, rowsecurity from pg_tables where schemaname='public';`
-- [ ] Başka kullanıcının ID'siyle istek atınca veri dönmüyor (elle dene).
+- [ ] Tüm tablolarda RLS açık ve her tablo saldırgan testinde: `tests/security/rls.mjs` (CI `rls` işi yeşil). Yerelde: `npx -y supabase@2.120.0 start`, sonra dosyanın başındaki komutlar.
+- [ ] Başka kullanıcı ve anonim, kullanıcının satırını okuyamıyor, değiştiremiyor, silemiyor (aynı test).
 - [ ] Güvenlik başlıkları (CSP, X-Frame-Options vb.) `next.config` veya middleware'de.
 - [ ] Auth uçlarında rate limit (Supabase ayarları + gerekiyorsa Upstash).
 

@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { durumOku, oku, bolumler, bolumBul, sayac, tabloSatirlari } from './status-read.mjs';
 import { limitOku, ozet, seviye, ESIKLER } from './usage.mjs';
 import { paketDurumu } from './tools.mjs';
-import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari, maliyetOzeti, konseyTutanaklari, harcamaAlarmlari } from './dashboard-data.mjs';
+import { kabulDurumu, hesaplar, bayraklar, birimEkonomisi, geriBildirim, metrikler, ghDurumu, baglamOku, bulguRaporlari, BULGU_TURLERI, uretimVarliklari, maliyetOzeti, konseyTutanaklari, harcamaAlarmlari, ortamUyarilari } from './dashboard-data.mjs';
 
 const argumanlar = process.argv.slice(2);
 const sessiz = argumanlar.includes('--sessiz');
@@ -120,6 +120,7 @@ for (const h of hesapListesi) for (const t of h.tarihler) {
   else if (t.kalan <= 30) ekle('uyari', `${h.servis}: ${t.tur} ${t.kalan} gün sonra (${t.tarih}).`, 'Yenile veya otomatik yenilemeyi aç');
 }
 for (const h of hesapListesi.filter((x) => x.ikiFaYok)) ekle('uyari', `${h.servis} hesabında 2FA yok.`, 'docs/operations/accounts.md');
+for (const o of ortamUyarilari(kok)) ekle(o.sev, o.metin, o.eylem);
 for (const al of alarmListesi.filter((x) => x.ayarsiz)) ekle('uyari', `${al.servis}: harcama tavanı veya uyarısı ayarlanmadı.`, 'docs/operations/spend-alarms.md');
 if (ekonomi && ekonomi.katki < 0) ekle('kritik', `Birim ekonomisi negatif: her ödeyen kullanıcı ${Math.abs(ekonomi.katki).toFixed(1)} ${ekonomi.paraBirimi} zarar ettiriyor.`, 'Fiyat veya maliyet kararı (/plan-task)');
 for (const k of kabul.uyumsuz.slice(0, 3)) ekle('uyari', `${k.id} PRD'de tamam işaretli ama kabul testi ${k.sonuc === 'kaldi' ? 'kırmızı' : k.test ? 'sonuçsuz' : 'yok'}.`, 'Testi çalıştır veya işareti kaldır');

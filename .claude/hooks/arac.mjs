@@ -28,30 +28,46 @@ const metinler = (x) => (metinMi(x) ? [x] : x && typeof x === 'object' ? Object.
 const BETIK_KOKU = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const kokBul = () => process.env.CLAUDE_PROJECT_DIR || BETIK_KOKU;
 
-// Codex yaması: "*** Add File: x" yeni dosya, "*** Update File: x", "*** Move to: y"; "+" satırları eklenen metin
+// Codex yaması: "*** Add File: x" yeni dosya, "*** Update File: x", "*** Move to: y"; "+" satırları eklenen metin,
+// "-" satırları silinen metin (once)
 export function yamaDosyalari(yama) {
   const dosyalar = [];
   let d = null;
   for (const satir of yama.split(/\r?\n/)) {
     const m = satir.match(/^\s*\*\*\*\s*(Add|Update|Delete) File:\s*(.+)$/) ?? satir.match(/^\s*\*\*\*\s*(Move) to:\s*(.+)$/);
-    if (m) dosyalar.push((d = { yol: m[2].trim(), yeni: m[1] === 'Add' || m[1] === 'Move', metin: '' }));
-    else if (d && satir.startsWith('+')) d.metin += satir.slice(1) + '\n';
+    if (m) {
+      dosyalar.push((d = { yol: m[2].trim(), yeni: m[1] === 'Add' || m[1] === 'Move', metin: '', once: '' }));
+      if (m[1] === 'Delete') d.sil = true;
+    } else if (d && satir.startsWith('+')) d.metin += satir.slice(1) + '\n';
+    else if (d && satir.startsWith('-')) d.once += satir.slice(1) + '\n';
   }
+  for (const x of dosyalar) x.sonra = x.metin;
   // Başlık anlaşılmadıysa yamanın tamamı yolsuz tek dosya sayılır: sır taranır, kilit engeller
   return dosyalar.length || !yama.trim() ? dosyalar : [{ yol: '', metin: yama }];
 }
 
-// Döndürür: { arac, kok, dizin, komut, dosyalar: [{ yol, metin, yeni? }], okunan: [yol] }. okunan: Antigravity okuma araçları. yeni bilinmiyorsa tanımsız (betik diske bakar).
+// Döndürür: { arac, kok, dizin, oturum, komut, dosyalar: [{ yol, metin, yeni?, once?, sonra?, sil? }], okunan: [yol] }. okunan: Antigravity okuma araçları. yeni bilinmiyorsa tanımsız (betik diske bakar).
 // dizin: göreli yolların çözüleceği klasör (Codex yamasında oturumun cwd'si).
+// metin: taranacak bütün yazılan metin. once/sonra: düzenlenen parçanın önceki ve sonraki hali (once tanımsızsa tam yazım: betik diske bakar).
 export function cozumle(g) {
   const arac = aracBul(g);
   const kok = kokBul();
-  const sonuc = { arac, kok, dizin: metinMi(g.cwd) ? g.cwd : kok, komut: '', dosyalar: [], okunan: [] };
+  const oturum = String(g.session_id ?? g.conversationId ?? '');
+  const sonuc = { arac, kok, dizin: metinMi(g.cwd) ? g.cwd : kok, oturum, komut: '', dosyalar: [], okunan: [] };
   if (arac === 'antigravity') {
     const { name, args = {} } = g.toolCall ?? {};
     if (name === 'run_command') sonuc.komut = metinMi(args.CommandLine) ? args.CommandLine : JSON.stringify(args);
     // İçerik alanı adından bağımsız: tüm argümanlar taranır
-    if (AG_YAZMA.includes(name)) sonuc.dosyalar.push({ yol: metinMi(args.TargetFile) ? args.TargetFile : '', metin: JSON.stringify(args) });
+    if (AG_YAZMA.includes(name)) {
+      const parcalar = Array.isArray(args.ReplacementChunks) ? args.ReplacementChunks : [args];
+      const birlestir = (alan) => parcalar.map((c) => (metinMi(c?.[alan]) ? c[alan] : '')).join('\n');
+      const tam = name === 'write_to_file';
+      sonuc.dosyalar.push({
+        yol: metinMi(args.TargetFile) ? args.TargetFile : '', metin: JSON.stringify(args),
+        once: tam ? undefined : birlestir('TargetContent'),
+        sonra: tam ? (metinMi(args.CodeContent) ? args.CodeContent : '') : birlestir('ReplacementContent'),
+      });
+    }
     // Okuma: araç adından bağımsız, argümanlardaki her metin olası yol sayılır (bilinmeyen okuma aracı da kapsanır)
     sonuc.okunan = metinler(args);
     return sonuc;
@@ -64,7 +80,9 @@ export function cozumle(g) {
     const metin = metinMi(t.content) ? t.content
       : metinMi(t.new_string) ? t.new_string
       : Array.isArray(t.edits) ? t.edits.map((e) => e?.new_string ?? '').join('\n') : '';
-    sonuc.dosyalar.push({ yol: String(t.file_path), metin });
+    const once = metinMi(t.old_string) ? t.old_string
+      : Array.isArray(t.edits) ? t.edits.map((e) => e?.old_string ?? '').join('\n') : undefined;
+    sonuc.dosyalar.push({ yol: String(t.file_path), metin, once, sonra: metin });
   }
   return sonuc;
 }

@@ -97,6 +97,20 @@ export function hesaplar(metin, simdi = Date.now()) {
     });
 }
 
+// Dev/prod ayrımı ve RLS saldırgan testi: prod ref'i AI'nın MCP ayarında olmamalı; Supabase varsa RLS testi olmalı
+export function ortamUyarilari(kok) {
+  const u = [];
+  const prodRef = tabloSatirlari(bolumler(oku(path.join(kok, 'docs/operations/accounts.md')))['Ortamlar (dev / prod)'], 4)
+    .find(([ortam, , ref]) => ortam === 'prod' && ref && !ref.startsWith('['))?.[2];
+  if (prodRef && oku(path.join(kok, '.mcp.json')).includes(prodRef)) {
+    u.push({ sev: 'kritik', metin: `Prod projesinin ref'i (${prodRef}) .mcp.json'da: AI prod'a bağlanabiliyor.`, eylem: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)' });
+  }
+  if (fs.existsSync(path.join(kok, 'supabase/config.toml')) && !fs.existsSync(path.join(kok, 'tests/security/rls.mjs'))) {
+    u.push({ sev: 'uyari', metin: 'Supabase kullanılıyor ama RLS saldırgan testi yok (tests/security/rls.mjs).', eylem: '/kit-update ile şablonu al, tabloları TABLOLAR\'a ekle' });
+  }
+  return u;
+}
+
 export function bayraklar(metin, simdi = Date.now()) {
   return tabloSatirlari(bolumler(metin)['Bayraklar'], 7).filter(([ad]) => ad)
     .map(([ad, amac, durum, sahip, eklendi, kaldirma, kapatmaTest]) => ({

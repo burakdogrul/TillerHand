@@ -90,6 +90,17 @@ test('kalkan: yıkıcı komutlar engellenir, normal komutlar geçer', () => {
   assert.equal(k('git push origin ozellik/fatura'), 'serbest');
 });
 
+test('F-04 kalkan: prod ortam değişkenleri ajanın makinesine çekilemez', () => {
+  const k = (s) => degerlendir(s)?.karar ?? 'serbest';
+  assert.equal(k('vercel env pull .env.local --environment=production'), 'deny');
+  assert.equal(k('npx -y vercel@63.1.1 env pull --environment production'), 'deny');
+  assert.equal(k('vercel pull --yes --environment=prod'), 'deny');
+  assert.equal(k('vercel --environment production env pull'), 'deny', 'bayrak alt komuttan önce');
+  assert.equal(k('vercel env pull --environment "production"'), 'deny', 'tırnaklı');
+  assert.equal(k('vercel env pull .env.local'), 'serbest', 'varsayılan: development');
+  assert.equal(k('vercel env pull --environment=preview'), 'serbest');
+});
+
 test('bağlam yüzdesi: durum çubuğu hazır alanı veya token hesabını gösterir', () => {
   const cubuk = (cw) => spawnSync(process.execPath, [path.join(HOOKS, 'statusline.mjs')], {
     input: JSON.stringify({ workspace: { project_dir: os.tmpdir() }, context_window: cw }), encoding: 'utf8',
