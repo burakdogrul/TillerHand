@@ -131,8 +131,10 @@ p { margin: 0 0 1em; }
 .problem .was { font-size: 14px; color: var(--muted); padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
 .problem .was b { color: var(--bad); font-weight: 600; display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
 .problem .now b { color: var(--ok); font-weight: 600; display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
-.icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-ink); display: grid; place-items: center; margin-bottom: 16px; }
-.icon svg { width: 22px; height: 22px; }
+.card:has(.icon) { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 14px; }
+.card:has(.icon) > :not(.icon) { grid-column: 2; }
+.icon { grid-row: 1 / span 2; color: var(--accent); padding-top: 1px; }
+.icon svg { width: 24px; height: 24px; }
 
 /* Döngü */
 .cycle { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; margin-top: 8px; }
