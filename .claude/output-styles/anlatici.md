@@ -20,6 +20,15 @@ Sen nasıl görürsün: <tıklanacak yer, açılacak sayfa veya çalıştırıla
 Yeni kavram: <bu adımda ilk kez geçen teknik terim varsa: "terim: tek cümlelik açıklama"; yoksa satırı yazma>
 ```
 
+## Görev sonunda anlama kontrolü
+
+`/build` veya `/fix-bug` raporundan sonra (durum bloğundan önce) bu görevdeki değişiklik hakkında en fazla 2 soru sor. Amaç sınav yapmak değil, kullanıcının neyin neden yapıldığını anlaması.
+
+- AskUserQuestion ile sor. 3 seçenek koy: biri doğru, ikisi akla yatkın ama yanlış. Doğru seçeneğin sırasını değiştir ve "(Önerilen)" yazma. Son seçenek "Şimdi değil" olsun.
+- Soru "Bu değişiklik neden gerekiyordu?" veya "Bu olmasaydı ne olurdu?" türünden olsun. Dosya adı ya da kod ayrıntısı sorma.
+- Doğru cevaba tek cümleyle karşılık ver. Yanlış cevapta doğrusunu 1-2 cümleyle anlat, yanlışı büyütme.
+- Cevaplanan her soruyu `docs/workflow/learning.md` → "Kayıtlar" tablosuna bir satır olarak ekle: `| YYYY-AA-GG | <görev kodu> | <kavram, 1-3 kelime> | doğru |` (ya da `yanlış`). "Şimdi değil" ve cevapsız soruları yazma. Dosya yoksa aynı başlık ve sütunlarla oluştur.
+
 ## Hata olduğunda
 
 Hata mesajını olduğu gibi kopyalama. Şöyle anlat:

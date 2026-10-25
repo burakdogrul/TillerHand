@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { prdCriteria, junitResults, acceptanceStatus, accounts, flags, unitEconomics, feedback, daysLeft, envWarnings } from '../../.claude/hooks/dashboard-data.mjs';
+import { prdCriteria, junitResults, acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, daysLeft, envWarnings } from '../../.claude/hooks/dashboard-data.mjs';
 
 test('environment (3.13): prod ref in .mcp.json is critical, Supabase without an RLS test is a warning', () => {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'ortam-'));
@@ -76,6 +76,15 @@ test('unit economics: margin, break-even, free user share', () => {
   assert.equal(e.breakEven, Math.ceil(1500 / 150));
   assert.equal(Math.round(e.profit), Math.round(50 * 190 - (1500 + 100 * 20)));
   assert.equal(unitEconomics('**Fiyat (kullanıcı başı aylık):** 0'), null, 'empty input');
+});
+
+test('Ö-22.3 learning: right/wrong counts and the most missed concepts; an empty log gives no card', () => {
+  const table = '| Tarih | Görev | Kavram | Sonuç |\n|---|---|---|---|\n';
+  const l = learning(`## Kayıtlar\n\n${table}| 2026-10-25 | G-01 | doğrulama | doğru |\n| 2026-10-25 | G-01 | API | yanlış |\n| 2026-10-26 | G-02 | API | Yanlış |\n| 2026-10-26 | G-02 | migration | yanlış |\n| 2026-10-26 | G-02 | RLS | Şimdi değil |\n`);
+  assert.deepEqual([l.right, l.wrong], [1, 3]);
+  assert.deepEqual(l.missed.map((m) => [m.concept, m.count]), [['API', 2], ['migration', 1]]);
+  assert.equal(learning(`## Kayıtlar\n\n${table}`), null);
+  assert.equal(learning(''), null, 'no file: no card');
 });
 
 test('feedback: new count and theme order', () => {

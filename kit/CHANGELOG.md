@@ -3,6 +3,18 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.19.0] - 2026-10-25
+
+### Yeni
+- **Canlı önizleme** (`.claude/hooks/preview.mjs`). `/build` arayüz görevinde dev sunucuyu açar, adres yanıt verene kadar bekler, Playwright CLI ile masaüstü (1440) ve mobil (390) ekran görüntüsü alır, `.previews/<görev>/`'e yazar ve sunucuyu alt süreçleriyle birlikte kapatır. Zaten açık bir sunucu varsa onu kullanır ve kapatmaz. Mobil (Expo) projede adım atlanır, ekranı telefonda kontrol etmek istenir. Pano önizlemeler listesinde ekran görüntülerini de gösterir.
+  - Elle uyarla: `AGENTS.md` → Komutlar'a `önizleme:` satırı ekle (örnek: `önizleme:    http://localhost:3000`). Adres yalnız yerel olabilir (localhost, 127.0.0.1, [::1]).
+  - Tarayıcı aracı proje klasöründe değil geçici bir klasörde çalışır; depodan gelen bir Playwright ayar dosyası veya `.npmrc` kullanılmaz.
+- **Anlama kontrolü** (anlatıcı mod). `/build` ve `/fix-bug` raporundan sonra değişikliğin nedeni üzerine en fazla 2 seçenekli soru gelir; cevaplamak zorunlu değil. Cevaplar `docs/workflow/learning.md`'ye yazılır, pano "Ürün ve teknik" sekmesinde doğru/yanlış sayısını ve sık yanılan kavramları gösterir. Anlatıcı mod kapalıyken soru yok.
+  - Elle uyarla: anlatıcı mod dosyası projeye aittir, güncelleme ona dokunmaz. Kullanıyorsan kitteki `.claude/output-styles/anlatici.md` → "Görev sonunda anlama kontrolü" bölümünü kendi dosyana kopyala.
+
+### Değişen
+- **Kapı komut onayı `geliştirme:` ve `önizleme:` satırlarını da kapsıyor.** Önizleme onaysız bir komutu çalıştırmaz, onaysız bir adresi açmaz. Bu iki satırdan biri her değiştiğinde (güncellemeden sonraki ilk kapı dahil) komut onayı yeniden istenir.
+
 ## [3.18.3] - 2026-10-25
 
 ### Düzeltilen

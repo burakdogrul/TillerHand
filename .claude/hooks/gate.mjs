@@ -21,14 +21,16 @@ import { findRoot } from './shared.mjs';
 
 // Keys of the AGENTS.md → Komutlar block (Turkish template text, matched as written)
 const CHECKS = ['lint', 'tip kontrol', 'test'];
+// The approval also covers the dev command and the preview address: preview.mjs runs the one and opens the other
+const APPROVED = [...CHECKS, 'geliştirme', 'önizleme'];
 const TIMEOUT = 10 * 60 * 1000;
 const BUFFER = 64 * 1024 * 1024;
 const tail = (s) => s.trimEnd().split(/\r?\n/).slice(-30).join('\n');
 
 // Only the "## Komutlar" section is read: a "test:" line elsewhere must not count as a command
-export function readCommands(md) {
+export function readCommands(md, names = CHECKS) {
   const section = md.match(/^## Komutlar[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
-  return CHECKS.map((name) => {
+  return names.map((name) => {
     const value = section.match(new RegExp(`^${name}:[ \\t]*(.*?)[ \\t\\r]*$`, 'm'))?.[1];
     return { name, command: value && !/^\[.*\]$/.test(value) ? value : null };
   });
@@ -45,16 +47,17 @@ export function approvalPath(root) {
 const digest = (list) => crypto.createHash('sha256').update(JSON.stringify(list.map((k) => [k.name, k.command]))).digest('hex');
 export const commandList = (list) => list.filter((k) => k.command).map((k) => `- ${k.name}: ${k.command}`).join('\n');
 export const readAgents = (root) => { try { return fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'); } catch { return ''; } };
+export const approvedCommands = (root) => readCommands(readAgents(root), APPROVED);
 
 export function approve(root) {
-  const list = readCommands(readAgents(root));
+  const list = approvedCommands(root);
   const file = approvalPath(root);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify({ digest: digest(list), commands: list, date: new Date().toISOString() }, null, 2));
   return `Kapı komutları onaylandı:\n${commandList(list) || '(tanımlı komut yok)'}`;
 }
 
-function isApproved(root, list) {
+export function isApproved(root, list = approvedCommands(root)) {
   if (!list.some((k) => k.command)) return true; // nothing to run
   try { return JSON.parse(fs.readFileSync(approvalPath(root), 'utf8')).digest === digest(list); } catch { return false; }
 }
@@ -92,6 +95,9 @@ function semgrep(root, files) {
   return { name, status: 'failed', sec, output: tail(`${r.error ? `${r.error.message}\n` : ''}${r.stdout ?? ''}${r.stderr ?? ''}`) };
 }
 
+export const approvalNeeded = (list) => `komut onayı gerekli\nAGENTS.md → Komutlar yeni veya değişmiş; bu komutlar onaysız çalışmaz:\n${commandList(list)}\n` +
+  'Komutları kullanıcıya göster ve sor. Onaylarsa: node .claude/hooks/gate.mjs --approve, sonra komutu tekrar çalıştır.';
+
 // Status label and mark shown to the user
 export const STATUS_LABEL = { passed: 'geçti', failed: 'kaldı', unset: 'tanımsız', skipped: 'atlandı' };
 const MARK = { passed: '✅', failed: '❌', unset: '⚪', skipped: '⚪' };
@@ -101,12 +107,9 @@ const line = (k) => `${MARK[k.status]} ${k.name}${k.sec != null ? ` (${k.sec} sn
 export function runGate(root) {
   let signature = null, files = [];
   try { ({ signature, files } = changes()); } catch { /* not a git repo: the commands still run */ }
-  const list = readCommands(readAgents(root));
-  if (!isApproved(root, list)) {
-    return { passed: false, text: `## Kapı · komut onayı gerekli\nAGENTS.md → Komutlar yeni veya değişmiş; kapı bu komutları onaysız çalıştırmaz:\n${commandList(list)}\n` +
-      'Komutları kullanıcıya göster ve sor. Onaylarsa: node .claude/hooks/gate.mjs --approve, sonra kapıyı tekrar çalıştır.' };
-  }
-  const checks = [...list.map((k) => check(root, k)), semgrep(root, files)];
+  const list = approvedCommands(root);
+  if (!isApproved(root, list)) return { passed: false, text: `## Kapı · ${approvalNeeded(list)}` };
+  const checks = [...list.filter((k) => CHECKS.includes(k.name)).map((k) => check(root, k)), semgrep(root, files)];
   const empty = !checks.some((k) => k.status === 'passed');
   const passed = !empty && checks.every((k) => k.status !== 'failed');
   const file = path.join(root, '.claude', 'state', 'gate.json');

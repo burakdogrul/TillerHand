@@ -11,7 +11,7 @@ import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { findRoot } from './shared.mjs';
 import { unquote } from './destructive-guard.mjs';
-import { readCommands, commandList, readAgents } from './gate.mjs'; // circular import: used at run time only
+import { approvedCommands, commandList } from './gate.mjs'; // circular import: used at run time only
 
 // Project root (the script's location) even when called from a subfolder: approval and gate must not be written elsewhere
 const root = findRoot();
@@ -109,7 +109,7 @@ function hook() {
         permissionDecisionReason: 'Kapı komut onayı sadece tam bu yazımla, tek başına çalıştırılır (zincir, ortam değişkeni, bayrak, yönlendirme yok): node .claude/hooks/gate.mjs --approve' } }));
       process.exit(0);
     }
-    const list = commandList(readCommands(readAgents(root))) || '(tanımlı komut yok)';
+    const list = commandList(approvedCommands(root)) || '(tanımlı komut yok)';
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
       permissionDecisionReason: `Kapı komut onayı: AGENTS.md → Komutlar'daki şu komutlar bundan sonra her kapıda çalışır:\n${list}\nGüvendiğin komutlarsa onayla.` } }));
     process.exit(0);

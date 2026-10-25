@@ -542,7 +542,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <article class="type"><h3>Mobil test ve servisler</h3><p class="stack">Maestro · Expo MCP · servis kataloğu</p><ul><li>Kabul testleri cihazda/simülatörde</li><li>EAS build, TestFlight çökme kayıtları</li><li>GitHub, Stripe, PostHog, Figma: servis seçilince; Vercel CLI ile önizleme ve onaylı prod deploy</li></ul></article>
     <article class="type"><h3>Ölçüm ve maliyet</h3><p class="stack">Playwright CLI · Chrome DevTools MCP · ccusage · session-report</p><ul><li>Konsol, ağ ve ekran görüntüsü CLI ile; performans izi gerektiğinde MCP ile</li><li>Proje başına token ve maliyet panoda</li><li>En pahalı istekler raporu</li></ul></article>
     <article class="type"><h3>Geri alma</h3><p class="stack">/rollback · checkpoint.mjs</p><ul><li>Testler yeşilken çalışan nokta kaydedilir (/build, /wrap-up)</li><li>Geri dönüş yeni bir commit'tir, geçmiş silinmez</li><li>Yarım iş saklanır, .env'e dokunulmaz</li></ul></article>
-    <article class="type"><h3>Anlatıcı mod</h3><p class="stack">output style: anlatici</p><ul><li>Her adımdan sonra: ne yaptım, neden, nasıl görürsün</li><li>Hatalar sade dille, yeni kavramlar tek cümleyle</li><li>/start sorar; kişisel ayar</li></ul></article>
+    <article class="type"><h3>Anlatıcı mod</h3><p class="stack">output style: anlatici</p><ul><li>Her adımdan sonra: ne yaptım, neden, nasıl görürsün</li><li>Hatalar sade dille, yeni kavramlar tek cümleyle</li><li>Görev sonunda en fazla 2 anlama sorusu; cevaplar panoda öğrenme kartı</li><li>/start sorar; kişisel ayar</li></ul></article>
     <article class="type"><h3>Harcama alarmı</h3><p class="stack">spend-alarms.md · pano</p><ul><li>Sağlayıcı tavanı ve %50/%80 uyarısı</li><li>Kodda kullanıcı kotası, günlük bütçe, otomatik kapatma</li><li>/release ve /maintain kontrol eder</li></ul></article>
     <article class="type"><h3>Öğrenen kurallar</h3><p class="stack">hookify · claude-md-management</p><ul><li>Tekrarlayan düzeltme hook kuralı olur</li><li>CLAUDE.md güncel tutulur</li><li>/retro ve /wrap-up önerir</li></ul></article>
     <article class="type"><h3>Bildirim</h3><p class="stack">notify.mjs</p><ul><li>Soru veya onay beklerken</li><li>Uzun iş bitince</li><li>Windows, macOS, Linux</li></ul></article>
@@ -625,7 +625,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
         <tr><td class="f">/start [fikir]</td><td>Dokuz adımlı sihirbaz: fikir, tip, kurulum, teknoloji, mimari, kurul, tasarım, yol haritası</td></tr>
         <tr><td class="f">/adopt</td><td>Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, AGENTS.md ve CLAUDE.md'yi yeniden yazar, kritik akış testleri ve özellik özellik taşıma ile uyum yol haritası</td></tr>
         <tr><td class="f">/plan-task [görev]</td><td>Karar noktalarını sorar, plan çıkarır, onay alır</td></tr>
-        <tr><td class="f">/build [görev]</td><td>Uygular; yeni karar çıkarsa durur; kanıt üretir; sıradaki adımı sorar</td></tr>
+        <tr><td class="f">/build [görev]</td><td>Uygular; yeni karar çıkarsa durur; kanıt üretir (arayüzde masaüstü ve mobil ekran görüntüsü); sıradaki adımı sorar</td></tr>
         <tr><td class="f">/design [kapsam]</td><td>Görsel önizlemeli tasarım kararları ve uygulama</td></tr>
         <tr><td class="f">/review-changes [aralık]</td><td>code-reviewer + security-auditor + ponytail-review; düzeltilecekleri çoklu seçimle sorar</td></tr>
         <tr><td class="f">/fix-bug [belirti]</td><td>diagnosing-bugs döngüsü: yeniden üret, kanıtla, kırmızı test, düzelt, kapı</td></tr>
@@ -724,7 +724,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
 </section>
 
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.18.3 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <p>Kaynak: <code>github.com/burakdogrul/vibecoding</code> · Kit 3.19.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
 </footer>
 
 </div>

@@ -14,6 +14,7 @@
       "Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)",
       "Bash(node .claude/hooks/freeze-guard.mjs --plan-end)",
       "Bash(node .claude/hooks/gate.mjs --run)",
+      "Bash(node .claude/hooks/preview.mjs:*)",
       "Bash(node .claude/hooks/checkpoint.mjs --list:*)",
       "Bash(node .claude/hooks/checkpoint.mjs --save:*)",
       "Bash(node kit/kit.mjs install:*)",

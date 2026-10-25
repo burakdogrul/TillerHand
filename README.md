@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.18.3-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.19.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -38,7 +38,7 @@
 | 🌐 **Doğru kaynak** | Değişebilen bilgi birincil kaynaktan doğrulanır (kaynak ve tarihle); kütüphane dokümanı Context7'den güncel gelir. |
 | 🎨 **Logo ve video** | SVG logo ve marka paketi; kod ile üretilen, 120 BPM ritimli tanıtım videosu. |
 | ↩️ **Geri alma** | `/rollback`: Son çalışan hale güvenle döner. Geçmiş silinmez, yarım iş saklanır. |
-| 🗣️ **Anlatıcı mod** | Her değişikliği ve hatayı yazılım bilmeyen birine anlatır gibi sade Türkçe açıklar. |
+| 🗣️ **Anlatıcı mod** | Her değişikliği ve hatayı yazılım bilmeyen birine anlatır gibi sade Türkçe açıklar. Görev sonunda 1-2 kısa soruyla neyin neden yapıldığını sorar; cevaplar panoda öğrenme kartında görünür. |
 | 💸 **Harcama alarmı** | Canlıdaki ürünün ücretli servislerine tavan ve uyarı; uygulama içinde kullanıcı kotası ve günlük bütçe. |
 | 🔔 **Bildirim** | Claude soru sorduğunda veya uzun işi bitirdiğinde masaüstü bildirimi. |
 | 🪶 **Az token** | Açılışta yaklaşık 1.900 token; dokümanlar gerektiğinde okunur; kod haritası desteği. |
@@ -382,7 +382,7 @@ flowchart TB
 | `/start [fikir]` | 9 adımlı başlangıç sihirbazı |
 | `/adopt` | Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, AGENTS.md ve CLAUDE.md'yi yeniden yazar, uyum yol haritası çıkarır |
 | `/plan-task [görev]` | Karar noktalarını sorar, kurul görüşüyle plan çıkarır |
-| `/build [görev]` | Önce kabul testleri, sonra uygulama; kanıt ve kurul denetimi |
+| `/build [görev]` | Önce kabul testleri, sonra uygulama; kanıt (arayüzde masaüstü ve mobil ekran görüntüsü) ve kurul denetimi |
 | `/design [kapsam]` | Görsel önizlemeli tasarım kararları |
 | `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |
 | `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme, kapı |
@@ -450,7 +450,8 @@ Kit Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve
 | **Canlıya alma** | **Vercel CLI**: önizleme deploy'u ve kanıt, sonra onayla prod | `--prod`, `promote`, `rollback` her zaman sorulur |
 | **Veritabanı değişikliği** | Supabase CLI migration; MCP prod'da salt-okunur, yazma sadece dev projesinde | Panelden veya MCP'den elle DDL yok |
 | **Bildirim** | `notify.mjs`: soru veya onay beklerken ve 90 sn'den uzun iş bitince | Kapatmak: `KIT_NOTIFY=off` |
-| **Anlatıcı mod** | `.claude/output-styles/anlatici.md`: Her adımdan sonra "Ne yaptım / Neden / Sen nasıl görürsün / Yeni kavram" bloğu, hatalar sade dille | `/start` sorar; `.claude/settings.local.json` → `outputStyle` |
+| **Anlatıcı mod** | `.claude/output-styles/anlatici.md`: Her adımdan sonra "Ne yaptım / Neden / Sen nasıl görürsün / Yeni kavram" bloğu, hatalar sade dille. `/build` ve `/fix-bug` sonunda en fazla 2 anlama sorusu; cevaplar `docs/workflow/learning.md`'ye, özet panoya | `/start` sorar; `.claude/settings.local.json` → `outputStyle` |
+| **Canlı önizleme** | `preview.mjs`: `/build` arayüz görevinde dev sunucuyu açar, Playwright CLI ile masaüstü (1440) ve mobil (390) ekran görüntüsü alır, `.previews/<görev>/`'e yazar, sunucuyu kapatır. Adres `AGENTS.md` → `önizleme:` | Dev komutu ve adres kapı onayıyla; adres yalnız yerel; tarayıcı geçici klasörde çalışır; mobil projede atlanır |
 | **Geri alma** | `checkpoint.mjs`: `/build` ve `/wrap-up` testler yeşilken çalışan nokta kaydeder; `/rollback` geçmişi silmeden döner | `reset --hard` kullanılmaz |
 | **Harcama alarmı** | `docs/operations/spend-alarms.md`: sağlayıcı tavanları (Anthropic, OpenAI, Vercel, Supabase, Google Cloud), uygulama içi kota ve bütçe, panoda kart | `/release` ve `/maintain` kontrol eder |
 | **Bağlam paketleri** | Çekirdek eklentiler hep açık; tasarım, güvenlik, yayın ve video paketleri kapalı gelir. `/design`, `/findings-security`, `/release` gerektiğinde açmayı sorar; `/tools` durumu gösterir ve ölçer. Hafif ve Standart profilde 18 seyrek komut listede sadece adıyla durur | Skill listesi bağlamın %1'iyle sınırlı: taşınca skill'ler kaçırılır. Açma sadece senin makineni etkiler |

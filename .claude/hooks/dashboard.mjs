@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { readStatus, readText, sections, findSection, tally, tableRows } from './status-read.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
-import { acceptanceStatus, accounts, flags, unitEconomics, feedback, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings } from './dashboard-data.mjs';
+import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
 const quiet = args.includes('--quiet');
@@ -76,7 +76,7 @@ try { const c = JSON.parse(fs.readFileSync(file('.claude/state/cost.json'), 'utf
 let previews = [];
 try {
   previews = fs.readdirSync(file('.previews'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => {
-    const html = fs.readdirSync(file(`.previews/${e.name}`)).filter((f) => f.endsWith('.html'));
+    const html = fs.readdirSync(file(`.previews/${e.name}`)).filter((f) => /\.(html|png)$/.test(f));
     return { name: e.name, files: html };
   }).sort((x, y) => x.name.localeCompare(y.name));
 } catch { /* no previews */ }
@@ -87,6 +87,7 @@ const flagList = flags(readText(file('docs/operations/feature-flags.md')));
 const alarmList = spendAlarms(readText(file('docs/operations/spend-alarms.md')));
 const economics = unitEconomics(readText(file('docs/product/unit-economics.md')));
 const fb = feedback(readText(file('docs/product/feedback.md')));
+const learnt = learning(readText(file('docs/workflow/learning.md')));
 const metricRecords = metrics(readText(file('docs/quality/metrics.md')));
 const github = d.installed ? githubStatus(root) : null;
 const context = readContext(root);
@@ -263,12 +264,13 @@ const product = `
 <div class="grid2">
   <section class="card"><h3>Teknoloji</h3>${stack.length && !stack.every((s) => !s.choice) ? `<dl class="dl">${stack.map((s) => `<dt>${e(s.layer)}</dt><dd>${md(s.choice || '-')}</dd>`).join('')}</dl>` : empty('Stack seçilmedi.')}</section>
   <section class="card"><h3>Tasarım</h3>${designDirection.length ? `<dl class="dl">${designDirection.map((t) => `<dt>${e(t.area)}</dt><dd>${md(t.choice)}</dd>`).join('')}</dl>` : empty('Tasarım yönü seçilmedi.', '/design genel')}
-    ${previews.length ? `<h4>Önizlemeler</h4><ul class="links">${previews.map((o) => `<li><b>${e(o.name)}</b> ${o.files.map((f) => `<a href=".previews/${encodeURIComponent(o.name)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f.replace('.html', ''))}</a>`).join(' ')}</li>`).join('')}</ul>` : ''}</section>
+    ${previews.length ? `<h4>Önizlemeler</h4><ul class="links">${previews.map((o) => `<li><b>${e(o.name)}</b> ${o.files.map((f) => `<a href=".previews/${encodeURIComponent(o.name)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f.replace(/\.html$/, ''))}</a>`).join(' ')}</li>`).join('')}</ul>` : ''}</section>
 </div>
 <div class="grid2">
   <section class="card"><h3>Birim ekonomisi</h3>${economics ? `<div class="kpis mini">${kpi('Katkı payı', `${economics.margin.toFixed(1)} ${e(economics.currency)}`, 'ödeyen kullanıcı başı / ay')}${kpi('Başa baş', economics.breakEven ?? '—', economics.breakEven ? 'ödeyen kullanıcı' : 'katkı negatif')}${kpi(`Hedefte (${economics.target} kullanıcı)`, `${economics.profit >= 0 ? '+' : ''}${Math.round(economics.profit)} ${e(economics.currency)}`, 'aylık kâr / zarar')}${economics.variableRatio != null ? kpi('Değişken / fiyat', `%${Math.round(economics.variableRatio)}`, economics.variableRatio > 30 ? badge('warn', '%30 üstü') : '') : ''}</div>` : empty('Girdiler boş.', 'docs/product/unit-economics.md')}</section>
   <section class="card"><h3>Kullanıcı geri bildirimi</h3>${fb.records.length ? `<div class="kpis mini">${kpi('Toplam', fb.records.length)}${kpi('Yeni', fb.newCount)}${kpi('Planlandı', fb.records.filter((k) => /planland/i.test(k.state)).length)}</div>${fb.themes.length ? `<h4>Öne çıkan temalar</h4><div class="rows">${fb.themes.slice(0, 5).map((t) => `<div class="row"><span>${md(t.theme)}</span>${progressBar(t.count, fb.themes[0].count)}<span class="num muted">${t.count}</span></div>`).join('')}</div>` : ''}` : empty('Henüz geri bildirim yok.', '/user-feedback')}</section>
 </div>
+${learnt ? `<section class="card"><h3>Öğrenme · anlama kontrolü</h3><div class="kpis mini">${kpi('Doğru', learnt.right)}${kpi('Yanlış', learnt.wrong)}${kpi('Başarı', `%${percent(learnt.right, learnt.right + learnt.wrong)}`)}</div>${learnt.missed.length ? `<h4>Sık yanılan kavramlar</h4><div class="rows">${learnt.missed.slice(0, 5).map((m) => `<div class="row"><span>${md(m.concept)}</span>${progressBar(m.count, learnt.missed[0].count)}<span class="num muted">${m.count}</span></div>`).join('')}</div>` : ''}</section>` : ''}
 <div class="grid2">
   <section class="card"><h3>Marka paketi</h3>${assets.brand.length ? `<p class="muted small"><code>${e(assets.brandDir)}</code> · ${assets.brand.length} dosya${assets.brandGuide ? ' · <a href="docs/design/brand.md" target="_blank" rel="noopener">kullanım kuralları</a>' : ''}</p><ul class="links">${assets.brand.map((f) => `<li><a href="${e(assets.brandDir)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f)}</a></li>`).join('')}</ul>` : empty('Logo henüz yok.', 'logo-design')}</section>
   <section class="card"><h3>Tanıtım ve araştırma</h3><h4>Videolar</h4>${assets.videos.length ? `<ul class="links">${assets.videos.map((v) => `<li><b>${e(v.name)}</b> ${v.mp4 ? `<a href="${v.mp4.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">mp4</a>` : badge('info', 'render yok')}</li>`).join('')}</ul>` : empty('Video yok.', 'motion-video')}

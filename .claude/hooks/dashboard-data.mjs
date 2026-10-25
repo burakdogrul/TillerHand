@@ -156,6 +156,18 @@ export function feedback(text) {
   return { records, themes, newCount: records.filter((k) => /yeni/i.test(k.state)).length };
 }
 
+// Comprehension check answers (F-22, narrator mode); null without rows so the card is left out
+export function learning(text) {
+  // Only "doğru" / "yanlış" rows count; a skipped or malformed answer is not a wrong one
+  const rows = tableRows(sections(text)['Kayıtlar'], 4).filter(([, , , result]) => /^(doğru|yanlış)/i.test(result))
+    .map(([date, task, concept, result]) => ({ concept, right: /^doğru/i.test(result) }));
+  if (!rows.length) return null;
+  const missed = new Map();
+  for (const r of rows) if (!r.right) missed.set(r.concept, (missed.get(r.concept) ?? 0) + 1);
+  return { right: rows.filter((r) => r.right).length, wrong: rows.filter((r) => !r.right).length,
+    missed: [...missed].map(([concept, count]) => ({ concept, count })).sort((x, y) => y.count - x.count) };
+}
+
 export function metrics(text) {
   return tableRows(sections(text)['Kayıtlar'], 9)
     .map(([period, taskCount, duration, limit, fixes, reverts, duplicates, critical, acceptance]) => ({ period, taskCount, duration, limit, fixes, reverts, duplicates, critical, acceptance }));

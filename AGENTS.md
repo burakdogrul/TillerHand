@@ -59,6 +59,7 @@ Kit Claude Code için yazıldı; bu iki araçta şu karşılıklar geçerli:
 ```bash
 # /start seçilen stack'e göre doldurur
 geliştirme:  [ ]
+önizleme:    [ ]
 test:        [ ]
 lint:        [ ]
 tip kontrol: [ ]
