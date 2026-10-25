@@ -265,7 +265,7 @@ const RANK = { deny: 2, ask: 1 };
 const strictest = (...s) => s.filter(Boolean).sort((a, b) => RANK[b.decision] - RANK[a.decision])[0] ?? null;
 
 export function permissionEquivalent(command) {
-  return strictest(permissionOne(command), permissionOne(unquote(command)));
+  return strictest(permissionOne(command), permissionOne(unquote(command)), permissionOne(blankQuoted(command)));
 }
 function permissionOne(command) {
   const k = command.replace(/\s+/g, ' ').replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, ''); // an error redirect is not a write
@@ -291,8 +291,10 @@ function obfuscationOne(command) {
     ? { decision: 'ask', reason: 'Komut gizlenmiş görünüyor (satır sonu \\, $\'..\', $(...), `...` veya ${...}) ve korunan bir işlem içeriyor. Kullanıcı onayı gerekli.' } : null;
 }
 
+// Separators inside quotes turned into spaces: a quoted & or | ("a & b") must not split a command so its later flags escape the rules
+const blankQuoted = (s) => s.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => q.replace(/[;&|\n]/g, ' '));
 export function evaluate(command) {
-  return strictest(evaluateOne(command), evaluateOne(unquote(command)), obfuscationOne(command));
+  return strictest(evaluateOne(command), evaluateOne(unquote(command)), evaluateOne(blankQuoted(command)), obfuscationOne(command));
 }
 function evaluateOne(command) {
   const k = command.replace(/\s+/g, ' ');

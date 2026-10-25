@@ -65,6 +65,12 @@ test('shield: destructive commands are denied, normal commands pass', () => {
   assert.equal(k('eas update:rollback'), 'ask', 'OTA rollback');
   assert.equal(k('eas deploy --prod'), 'ask', 'EAS Hosting prod');
   assert.equal(k('eas update --message "a & b | c" --channel production'), 'ask', '& or | inside a quoted message');
+  // A quoted & or | does not end the command for any rule
+  assert.equal(k('vercel deploy --meta "a&b" --prod'), 'ask');
+  assert.equal(k("vercel --scope 'x|y' rollback"), 'ask');
+  assert.equal(permissionEquivalent('rm "a&b" -rf build')?.decision, 'deny', 'Codex/Antigravity list too');
+  assert.equal(permissionEquivalent('git push origin "a|b" --force')?.decision, 'deny');
+  assert.equal(k('git commit -m "a & b" && npm test'), 'free', 'an ordinary chain stays free');
   assert.equal(k('eas deploy --message "x & y" --prod'), 'ask');
   assert.equal(k('eas update --branch preview --message x'), 'free');
   assert.equal(k('npx -y vercel@63.1.1 deploy'), 'free', 'preview deploy');
