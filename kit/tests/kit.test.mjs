@@ -127,6 +127,7 @@ test('init: the kit stays in its own folder, the project is set up in its folder
   const r = node(kitMjs, 'init', '--project', game);
   assert.equal(r.status, 0, r.stderr);
   assert.ok(!fs.existsSync(path.join(game, 'CLAUDE.local.md')), 'the personal CLAUDE.local.md is not copied into the project');
+  assert.ok(!fs.existsSync(path.join(game, 'LICENSE')), "the kit's license is not the project's license");
   for (const f of personal) assert.ok(!fs.existsSync(path.join(game, f)), `${f} is not copied into the project`);
   for (const f of ['CLAUDE.md', 'README.md', '.claude/commands/start.md', '.claude/commands/adopt.md', 'docs/workflow/progress.md', '.git']) {
     assert.ok(fs.existsSync(path.join(game, f)), `${f} kuruldu`);
