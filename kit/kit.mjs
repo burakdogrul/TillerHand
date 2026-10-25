@@ -383,6 +383,8 @@ function update({ project, addons: newAddons, tool }) {
 
   const { copies, patches } = layers(ROOT, layerNames(j.type, allAddons));
   const report = { added: [], updated: [], conflicts: [], removed: [] };
+  const addedAddons = newAddons.filter((e) => !oldAddons.includes(e)).map((e) => `addons/${e}`);
+  const fromAddedAddon = (source) => addedAddons.some((a) => source.startsWith(path.join(TEMPLATES, a) + path.sep));
 
   for (const [rel, source] of copies) {
     const target = path.join(project, rel);
@@ -405,6 +407,13 @@ function update({ project, addons: newAddons, tool }) {
       }
       continue;
     }
+    // A newly added addon meets a project file of the same name: same as install, the kit's copy waits as .kit-new
+    if (!(rel in record) && fromAddedAddon(source)) {
+      const before = report.conflicts.length;
+      safeCopy(project, rel, source, report.conflicts);
+      if (report.conflicts.length === before) record[rel] = hash(target);
+      continue;
+    }
     if (!isKitOwned(rel)) continue;
     const localHash = hash(target);
     if (localHash === kitHash) { record[rel] = kitHash; continue; }
@@ -413,7 +422,6 @@ function update({ project, addons: newAddons, tool }) {
     else { copy(source, target + '.kit-new'); report.conflicts.push(rel); } // both changed: do not touch the user's
   }
   // append/merge only from newly added addons (old ones were applied at install; do not touch project files again)
-  const addedAddons = newAddons.filter((e) => !oldAddons.includes(e)).map((e) => `addons/${e}`);
   for (const p of patches) if (addedAddons.some((a) => p.layer === a || p.layer.startsWith(`${a}/types/`))) applyPatch(project, p);
   for (const rel of Object.keys(record)) if (!copies.has(rel) && isKitOwned(rel)) report.removed.push(rel);
   const tools = tool.length ? validateTools(tool) : (j.tool ?? ['claude']);

@@ -61,6 +61,23 @@ test('Ö-26.1 an existing project gets the addon with update --addons tr; a seco
   }
 });
 
+test('Ö-26.1 an addon added later never overwrites or silently skips the project\'s own file of the same name', () => {
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'tr-own-'));
+  try {
+    for (const args of [['init', '--project', p], ['install', '--type', 'web-saas', '--project', p]]) assert.equal(run(process.execPath, [KIT, ...args]).status, 0);
+    const own = path.join(p, 'src/lib/payments/webhook-signature.ts');
+    fs.mkdirSync(path.dirname(own), { recursive: true });
+    fs.writeFileSync(own, '// projenin kendi kodu\n');
+    const r = run(process.execPath, [KIT, 'update', '--project', p, '--addons', 'tr']);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(fs.readFileSync(own, 'utf8'), '// projenin kendi kodu\n', 'the project file is untouched');
+    assert.ok(exists(p, 'src/lib/payments/webhook-signature.ts.kit-new'), 'the kit version waits next to it');
+    assert.match(r.stdout, /webhook-signature\.ts/, 'and the report names it');
+  } finally {
+    fs.rmSync(p, { recursive: true, force: true });
+  }
+});
+
 test('Ö-26.1 the payment attack test is red without the signature check and green with it (web-saas)', () => {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'tr-web-'));
   try {

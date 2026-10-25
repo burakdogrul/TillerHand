@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.25.1] - 2026-10-25
+
+### Düzeltilen
+- **`/kit-update` ile sonradan eklenen bir ek, projede aynı adla duran dosyayı sessizce atlamıyor.** Projenin dosyasına dokunulmaz, kitinki yanına `.kit-new` olarak konur ve raporda çakışma olarak görünür; ilk kurulumdaki davranışla aynı. Önceden ek kurulmuş sanılıyordu.
+
 ## [3.25.0] - 2026-10-25
 
 ### Yeni
