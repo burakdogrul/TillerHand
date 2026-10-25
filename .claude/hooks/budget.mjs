@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { isTestFile } from './test-guard.mjs';
-import { isMain } from './shared.mjs';
+import { findRoot, isMain } from './shared.mjs';
 
 export const BUDGET = { complexity: 15, function: 80, file: 400 };
 const LIZARD = ['pipx', 'run', 'lizard==1.24.1'];
@@ -41,7 +41,7 @@ export function changedFiles(root, base) {
 }
 
 function check() {
-  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const root = findRoot();
   const i = process.argv.indexOf('--base');
   const files = selectFiles(changedFiles(root, i > 0 ? process.argv[i + 1] : ''));
   if (!files.length) { console.log('Karmaşıklık bütçesi: değişen kod dosyası yok.'); return; }

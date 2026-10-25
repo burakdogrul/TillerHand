@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { isMain } from './shared.mjs';
+import { findRoot, isMain } from './shared.mjs';
 
 export const THRESHOLD_SEC = 90;
 
@@ -21,7 +21,7 @@ export function winCommand(title, message) {
 if (isMain(import.meta.url)) main();
 
 function main() {
-  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const root = findRoot();
 
   let input = {};
   try { input = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { /* no input */ }

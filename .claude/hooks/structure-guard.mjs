@@ -7,9 +7,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readInput, decide, isMain } from './shared.mjs';
+import { readInput, decide, findRoot, isMain } from './shared.mjs';
 
-const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const root = findRoot();
 
 // "**" any depth, "*" any name inside one folder, "?" one character
 export function globRegex(pattern) {

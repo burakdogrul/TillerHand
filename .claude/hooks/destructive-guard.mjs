@@ -294,14 +294,15 @@ function obfuscationOne(command) {
     ? { decision: 'ask', reason: 'Komut gizlenmiş görünüyor (satır sonu \\, $\'..\', $(...), `...` veya ${...}) ve korunan bir işlem içeriyor. Kullanıcı onayı gerekli.' } : null;
 }
 
-// A kit guard script (.claude/hooks) run with an indirect spelling: $VAR, $(..), `..`, ${..}, $'..' or a glob * ? (commit-gate.mjs $S,
+// A kit guard script (.claude/hooks) run with an indirect spelling: $VAR, $(..), `..`, ${..}, $'..', a glob * ?, xargs, a pipe or < (commit-gate.mjs $S,
 // --sk$()ip, commit-*.mjs). The text rules for --skip, --approve and --plan-* cannot see through them: asked (user decision 2026-10-25).
 // Heredocs and single-quoted text are not expanded; $CLAUDE_PROJECT_DIR is the documented way to name the folder.
 export function hookScriptIssue(command) {
   const k = command.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, '').replace(/'[^']*'/g, "''")
     .replace(/"(?:[^"\\]|\\.)*"/g, (q) => q.replace(/[*?]/g, '')).replace(/\$\{?CLAUDE_PROJECT_DIR\}?|\$env:CLAUDE_PROJECT_DIR/gi, '');
   if (!/\bnode\b/i.test(k) || !/\.claude|hooks|commit-|gate|freeze/i.test(command)) return null;
-  return /\$\(|`|\$\{|\$'|\$[A-Za-z_]|[*?]/.test(k)
+  // Arguments from elsewhere count too: xargs, a pipe into node, an input redirect or <(...)
+  return /\$\(|`|\$\{|\$'|\$[A-Za-z_]|[*?]|\bxargs\b|\|[^|;&]*\bnode\b|<(?!<)/.test(k)
     ? { decision: 'ask', reason: 'Kitin koruma betiği dolaylı yazımla çalıştırılıyor ($DEĞİŞKEN, $(...), `...`, ${...} veya * ?); kural metni bunun içini göremez. Kullanıcı onayı gerekli.' } : null;
 }
 

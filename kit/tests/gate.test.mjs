@@ -302,3 +302,27 @@ test('3.28.0 a guard script run with an indirect spelling is asked; plain and he
     "git commit -m \"$(cat <<'EOF'\nfix: node .claude/hooks/x.mjs $S *\nEOF\n)\""])
     assert.equal(evaluate(c), null, c);
 });
+
+test('3.28.1 staging the approved changes keeps the approval and the gate (git add does not change the signature)', () => {
+  agents('node -e "process.exit(0)"');
+  sh('git add -A && git commit -qm ara4 --allow-empty');
+  write('a.js', 'imza');
+  write('yeni-dosya.js', 'yeni');
+  fs.rmSync(path.join(p, 'b.js'), { force: true });
+  runGate();
+  approve('board-qa');
+  sh('git add -A');
+  assert.equal(commit().status, 0, 'same content, now staged');
+  write('a.js', 'imza2');
+  assert.equal(commit().status, 2, 'a change after staging still voids it');
+});
+
+test('3.28.1 audit: the exemption needs one plain command; arguments fed from elsewhere are asked', () => {
+  const REPO = path.resolve(HOOKS, '..', '..');
+  for (const c of ['env -C sandbox node .claude/hooks/commit-gate.mjs --approve x', '(cd sandbox; node .claude/hooks/commit-gate.mjs --approve x)',
+    'node .claude/hooks/commit-gate.mjs --approve x && node sandbox/x.mjs', 'pushd sandbox\nnode .claude/hooks/commit-gate.mjs --approve x'])
+    assert.doesNotMatch(maskOwnHook(c, REPO), /KIT-COMMIT-HOOK/, c);
+  for (const c of ['echo --skip | xargs node .claude/hooks/commit-gate.mjs', 'echo --skip | node .claude/hooks/commit-gate.mjs',
+    'node .claude/hooks/commit-gate.mjs < args.txt', 'node .claude/hooks/commit-gate.mjs $(<args.txt)'])
+    assert.equal(evaluate(c)?.decision, 'ask', c);
+});

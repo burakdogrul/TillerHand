@@ -329,3 +329,13 @@ test('3.15.1 F-13 the Codex/Antigravity section of AGENTS.md is filled only for 
   assert.match(agents(cx), section, 'init --tool antigravity: filled');
   fs.rmSync(tmp, { recursive: true, force: true });
 });
+
+test('3.28.1 every hook finds the project root the same way (findRoot), not from the folder it was started in', () => {
+  const fromCwd = fs.readdirSync(HOOKS).filter((f) => f.endsWith('.mjs') && /CLAUDE_PROJECT_DIR\s*\|\|\s*process\.cwd\(\)/.test(fs.readFileSync(path.join(HOOKS, f), 'utf8')));
+  assert.deepEqual(fromCwd, [], 'Codex runs hooks from a subfolder: cwd is not the root');
+  const env = { ...process.env };
+  delete env.CLAUDE_PROJECT_DIR;
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'checkpoint.mjs'), '--list', '--json'], { cwd: path.join(REPO, 'kit'), encoding: 'utf8', env });
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(Array.isArray(JSON.parse(r.stdout).commits), 'runs against the repo from kit/');
+});

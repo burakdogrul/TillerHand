@@ -3,6 +3,19 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.28.1] - 2026-10-26
+
+### Düzeltilen
+- **Onaylanan değişiklikleri `git add` ile sahnelemek commit kapısını ve kurul onayını geçersiz kılıyordu.** Değişiklik imzası artık dosyaların diskteki içeriğinden çıkıyor; aynı içeriği sahnelemek imzayı değiştirmiyor. Diskten farklı içerikle sahnelenen dosya (kısmi sahneleme) imzada ayrıca görünür, çünkü commit sahnedeki içeriği alır.
+- **Kitin klon klasöründe `kit.mjs install` commit edilmemiş işi siliyordu** (`kit/` klasörü, `README.md`). Commit edilmemiş değişiklik varsa kurulum artık başlamadan durur ve dosyaları listeler.
+- **Dokuz betik proje kökünü çalıştırıldığı klasörden buluyordu** (kayıt noktası, bütçe, bildirim, eklenti eşitleme, hatırlatıcı, yapı koruyucu, araçlar, limit). Codex alt klasörden çalıştırınca örneğin `checkpoint.mjs --restore` yalnız o klasörü geri alıyor ama "döndü" diyordu. Hepsi artık kökü aynı yoldan buluyor.
+- **3.28.0'daki güvenlik düzeltmelerinde kalan açıklar:**
+  - npm takma adı (`zod@npm:baska-paket`) asıl kurulan paketi gizliyordu. Paket kapısı artık hedef paketi denetliyor. Bu açık 3.28.0'dan önce de vardı.
+  - `tillerhand` muafiyeti ve projede kurulu komut muafiyeti yalnız düz yazımda geçerli. `tillerhand@npm:…` ya da `tsc@5` gibi yazımlar denetleniyor.
+  - Commit kapısındaki muafiyet yalnız tek başına çalışan `node <yol> --approve <not>` komutu için geçerli. Zincir, alt kabuk ya da `env -C` içeren komutta muafiyet yok.
+  - Koruma betiğine argüman `xargs`, pipe ya da `<` ile verilirse kullanıcıya sorulur.
+  - Elle uyarla: yok.
+
 ## [3.28.0] - 2026-10-25
 
 ### Değişen

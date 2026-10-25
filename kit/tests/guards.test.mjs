@@ -50,6 +50,8 @@ test('package gate: download-and-run commands are checked; only the package, not
     'uv --quiet tool run evilpkg', 'uv run --with evilpkg x.py', 'corepack pnpm dlx evilpkg'])
     assert.deepEqual(names(c), [`${c.startsWith('uv') ? 'pypi' : 'npm'}:evilpkg`], c);
   assert.deepEqual(names('npm --prefix web install zod'), ['npm:zod']);
+  assert.deepEqual(names('npm i zod@npm:evilpkg @types/x@npm:@evil/y@2'), ['npm:evilpkg', 'npm:@evil/y'], 'an npm alias installs its target');
+  assert.deepEqual(names('npm i zod@github:evil/x'), [], 'a git spec is not a registry package (like a bare URL)');
   assert.deepEqual(findPackages('npx --weird evilpkg file.txt').map((x) => x.unsure), [true, true], 'after an unknown flag: asked, not denied');
   // Only npx/npm exec/bunx use a local bin first; dlx and a -p package always download
   assert.equal(findPackages('npx tsc')[0].local, true);
@@ -67,6 +69,9 @@ test('package gate: npx of a bin the project already has is not checked; a made-
   assert.equal(local.status, 0);
   assert.equal(local.stdout, '', 'local bin: no network check, no decision');
   assert.equal(run('npx -y tillerhand@3.28.0 install --type web-saas --project .').stdout, '', 'the kit\'s own package is not checked');
+  // Only the plain spelling is exempt: an npm alias or a version spec downloads something else
+  assert.match(run('npx -y tillerhand@npm:uydurma-paket-adi-9f3k2-yok').stdout, /"(deny|ask)"/, 'alias target is checked');
+  assert.match(run('npx yerel-bin-xq@npm:uydurma-paket-adi-9f3k2-yok').stdout, /"(deny|ask)"/, 'local bin with a spec is checked');
   const made = run('npx -y uydurma-paket-adi-9f3k2-yok');
   if (!/doğrulanamadı/.test(made.stdout)) assert.match(made.stdout, /"deny"/, 'a made-up npx package is denied (offline: asked)');
   fs.rmSync(p, { recursive: true, force: true });

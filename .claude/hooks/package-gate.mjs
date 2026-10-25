@@ -82,10 +82,15 @@ export function normalize(part) {
   return s;
 }
 
+const NOT_REGISTRY = /^(\.|\/|file:|link:|git\+|git:|https?:|github:|workspace:)/;
 function npmName(arg) {
-  if (/^(\.|\/|file:|link:|git\+|git:|https?:|github:|workspace:)/.test(arg)) return null;
-  if (arg.startsWith('@')) { const i = arg.indexOf('@', 1); return i > 0 ? arg.slice(0, i) : arg; }
-  return arg.split('@')[0] || null;
+  if (NOT_REGISTRY.test(arg)) return null;
+  const at = arg.indexOf('@', 1), spec = at > 0 ? arg.slice(at + 1) : '';
+  // name@npm:other installs "other": the alias target is checked. name@github:x/y, @https:… are not from the registry
+  // (like a bare URL, not checked here); the name in front is not what gets installed.
+  if (spec.startsWith('npm:')) return npmName(spec.slice(4));
+  if (/[:/]/.test(spec)) return null;
+  return (at > 0 ? arg.slice(0, at) : arg) || null;
 }
 
 function pypiName(arg) {
@@ -106,7 +111,7 @@ export function findPackages(command) {
     if (exec) {
       for (const { arg, fromFlag, unsure } of execArgs(args, eco, exec.positional)) {
         const name = eco === 'npm' ? npmName(arg) : pypiName(arg);
-        if (name) result.push({ eco, name, exec: true, ...(exec.local && !fromFlag && { local: true }), ...(unsure && { unsure: true }) });
+        if (name) result.push({ eco, name, exec: true, spec: arg, ...(exec.local && !fromFlag && { local: true }), ...(unsure && { unsure: true }) });
       }
       continue;
     }
@@ -181,7 +186,8 @@ async function hook() {
   // npx/bunx run a bin the project already installed without downloading: a local bin (tsc, eas) is not a package name
   const bin = (name) => /^\w[\w.-]*$/.test(name) && [g.dir, g.root].some((d) => fs.existsSync(path.join(d, 'node_modules', '.bin', name)));
   // The kit's own package (/start and /adopt run npx -y tillerhand@<version> install): the kit already trusts itself
-  const packages = findPackages(g.command).filter((p) => !(p.local && bin(p.name)) && !(p.eco === 'npm' && p.name === 'tillerhand'));
+  // Both only for the plain spelling: name@1.2 or name@npm:other downloads, it does not run the local bin or the kit's release
+  const packages = findPackages(g.command).filter((p) => !(p.local && p.spec === p.name && bin(p.name)) && !(p.eco === 'npm' && /^tillerhand(@\d+\.\d+\.\d+)?$/.test(p.spec ?? '')));
   if (!packages.length) process.exit(0);
   const results = await Promise.all(packages.map(async (p) => ({ ...p, ...(await check(p)) })));
   const missing = results.filter((s) => s.status === 'missing' && !s.unsure);

@@ -20,15 +20,23 @@ const git = (c) => execSync(`git ${c}`, { cwd: root, encoding: 'utf8', stdio: ['
 
 // Changes that will go into the commit: staged, unstaged in tracked files (git commit -a) and untracked new
 // files (git add -A && git commit). -z: Turkish or spaced paths are not quoted and escaped
+// The signature is each changed file's content on disk, so "git add" of the approved content keeps the approval and the gate.
+// The commit takes the index: a file staged with other content than the disk (partial staging) also adds its index blob.
+// --no-renames: a staged rename must list the same two paths as the unstaged delete + new file.
 export function changes() {
+  const list = (c) => git(c).split('\0').filter(Boolean);
   // .claude/state/ (approval, gate result) is not part of the signature: writing an approval must not change it even if not in .gitignore
-  const untracked = git('ls-files --others --exclude-standard -z').split('\0').filter((f) => f && !f.startsWith('.claude/state/'));
-  const files = [...new Set([...git('diff --cached --name-only -z').split('\0'), ...git('diff --name-only -z').split('\0'), ...untracked].filter(Boolean))];
-  const h = crypto.createHash('sha256').update(git('diff --cached') + '\0' + git('diff'));
-  for (const f of untracked) {
+  const untracked = list('ls-files --others --exclude-standard -z').filter((f) => !f.startsWith('.claude/state/'));
+  const staged = new Set(list('diff --cached --no-renames --name-only -z')), unstaged = new Set(list('diff --no-renames --name-only -z'));
+  const files = [...new Set([...staged, ...unstaged, ...untracked])].sort();
+  const partial = files.filter((f) => staged.has(f) && unstaged.has(f));
+  const blobs = new Map(partial.length ? list('ls-files -s -z').map((l) => [l.slice(l.indexOf('\t') + 1), l.split(' ')[1]]) : []);
+  const h = crypto.createHash('sha256');
+  for (const f of files) {
     h.update(`\0${f}\0`);
-    try { h.update(fs.readFileSync(path.join(root, f))); } catch { /* unreadable file: the name is enough */ }
+    try { h.update(fs.readFileSync(path.join(root, f))); } catch { h.update('\0silindi'); }
   }
+  for (const f of partial) h.update(`\0index:${f}:${blobs.get(f)}`);
   return { files, signature: h.digest('hex') };
 }
 
@@ -98,11 +106,13 @@ function readApproval() {
 
 // This project's own commit-gate.mjs, resolved from the shell's folder ($CLAUDE_PROJECT_DIR, absolute, relative or ./ spelling),
 // is masked so it is not read as the gate approval; any other *gate.mjs (sandbox/.claude/hooks/commit-gate.mjs, a renamed
-// copy of gate.mjs) still is. A cd in the command moves the folder the text cannot follow: then nothing is masked.
+// copy of gate.mjs) still is. Only a single plain "node <path> --approve <note>" is masked: a chain, subshell, cd, env -C or
+// expansion can change the folder or the file the text names.
 const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
 const samePath = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b);
+const PLAIN_APPROVE = /^\s*node\s+("[^"\n]*"|'[^'\n]*'|[^\s"'`;&|<>(){}]+)\s+--approve(\s+("[^"\n$`]*"|'[^'\n]*'|[^\s"'`$;&|<>(){}]+))?\s*$/;
 export function maskOwnHook(command, dir) {
-  if (/(^|[;&|(]\s*)(cd|pushd|popd|Set-Location|sl|chdir)\b/i.test(command)) return command;
+  if (!PLAIN_APPROVE.test(command)) return command;
   const own = real(path.join(root, '.claude', 'hooks', 'commit-gate.mjs'));
   return command.replace(/"([^"\n]*commit-gate\.mjs)"|'([^'\n]*commit-gate\.mjs)'|([^\s"';&|]*commit-gate\.mjs)\b/gi, (m, a, b, c) => {
     const p = (a ?? b ?? c).replace(/\$\{?CLAUDE_PROJECT_DIR\}?|%CLAUDE_PROJECT_DIR%|\$env:CLAUDE_PROJECT_DIR/gi, process.env.CLAUDE_PROJECT_DIR || root);

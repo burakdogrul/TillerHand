@@ -71,6 +71,21 @@ test('kur: web-saas + ai', () => {
   assert.ok(k.files['.claude/commands/start.md'] && k.files['docs/architecture/stack.md']);
 });
 
+test('install: stops before deleting kit/ when the clone has uncommitted work', () => {
+  const p = cloneKit('kirli');
+  const git = (...a) => spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { cwd: p, encoding: 'utf8' });
+  git('init', '-q');
+  git('add', '-A');
+  git('commit', '-qm', 'ilk');
+  fs.appendFileSync(path.join(p, 'kit', 'kit.mjs'), '\n// yerel değişiklik\n');
+  const r = installType(p, '--type', 'backend');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /Commit edilmemiş/);
+  assert.ok(fs.existsSync(path.join(p, 'kit', 'kit.mjs')) && !fs.existsSync(path.join(p, '.kit.json')), 'nothing changed');
+  git('commit', '-qam', 'iki');
+  assert.equal(installType(p, '--type', 'backend').status, 0, 'committed work can be restored from git: install runs');
+});
+
 test('install: does not run twice, an invalid type is rejected', () => {
   const p = cloneKit('iki');
   assert.equal(installType(p, '--type', 'yok').status, 1);

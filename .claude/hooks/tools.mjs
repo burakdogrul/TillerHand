@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { missingPlugins } from './plugins-sync.mjs';
-import { isMain } from './shared.mjs';
+import { findRoot, isMain } from './shared.mjs';
 
 // Keys are the package names users type (/tools ac tasarim): they stay Turkish
 export const PACKAGES = {
@@ -143,7 +143,7 @@ const tokenOf = (measurement, ids) => {
 };
 const NOTE = 'Açtıktan sonra /reload-plugins. Oturum ortasında açmak prompt önbelleğini bozar; en iyisi faz sınırında, /clear ile.';
 if (isMain(import.meta.url)) {
-  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const root = findRoot();
   const [flag, name] = process.argv.slice(2);
   try {
     if (flag === '--enable' || flag === '--disable') {

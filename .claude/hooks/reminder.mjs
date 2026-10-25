@@ -4,9 +4,10 @@
 // Kept short: every reminder costs tokens.
 import fs from 'node:fs';
 import path from 'node:path';
+import { findRoot } from './shared.mjs';
 
 export const INTERVAL = 12; // every 12 messages
-const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const root = findRoot();
 const counterFile = path.join(root, '.claude', 'state', 'reminder.json');
 
 let data = { session: '', count: 0 };

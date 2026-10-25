@@ -355,6 +355,11 @@ function install({ type, addons, keepKit, project, tool }) {
   if (project && path.resolve(project) !== ROOT) return installIntoProject(path.resolve(project), type, addons, tool);
   const tools = validateTools(tool);
   if (fs.existsSync(path.join(ROOT, '.kit.json'))) throw new Error('Kit bu projede zaten kurulu (.kit.json var).');
+  // This folder is about to lose kit/, README.md and the kit-only files: uncommitted work there could not be brought back
+  const st = spawnSync('git', ['status', '--porcelain', '--', '.'], { cwd: ROOT, encoding: 'utf8' });
+  if (st.status === 0 && st.stdout.trim()) {
+    throw new Error(`Commit edilmemiş değişiklik var; kurulum kit/ klasörünü siler ve README.md'yi değiştirir. Önce commit et ya da git stash ile kaydet:\n${st.stdout.trimEnd().split('\n').slice(0, 10).join('\n')}`);
+  }
 
   const { copies, patches } = layers(null, layerNames(type, addons));
   for (const [rel, source] of copies) copy(source, path.join(ROOT, rel));
