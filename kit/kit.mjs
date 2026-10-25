@@ -99,7 +99,8 @@ export function merge(a, b) {
   const isObject = (x) => x && typeof x === 'object' && !Array.isArray(x);
   if (isObject(a) && isObject(b)) {
     const r = { ...a };
-    for (const [k, v] of Object.entries(b)) r[k] = k in a ? merge(a[k], v) : v;
+    // Own keys only; a JSON "__proto__" key would replace the result's prototype
+    for (const [k, v] of Object.entries(b)) if (k !== '__proto__') r[k] = Object.hasOwn(a, k) ? merge(a[k], v) : v;
     return r;
   }
   return b;

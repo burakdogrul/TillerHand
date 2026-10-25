@@ -204,6 +204,10 @@ test('3.17.0 the pre-3.15 flag and state are gone: --onayla does not approve; th
   assert.equal(gate('--run').status, 1, 'the old flag wrote no approval');
   assert.equal(permissionEquivalent('node .claude/hooks/gate.mjs --onayla'), null, 'Codex/Antigravity: no rule for a flag that does nothing');
   assert.equal(permissionEquivalent('node .claude/hooks/commit-gate.mjs --approve "board-qa"'), null, 'commit-gate --approve is not the gate approval');
+  assert.equal(permissionEquivalent('node .claude\\hooks\\commit-gate.mjs --approve "board-qa"'), null, 'Windows path too');
+  // Only the real commit-gate is exempt: a copy of gate.mjs named commit-gate.mjs elsewhere is still the gate approval
+  assert.equal(permissionEquivalent('node tmp/commit-gate.mjs --approve')?.decision, 'ask');
+  assert.equal(ask('node tmp/commit-gate.mjs --approve'), 'deny', 'not the exact spelling of the gate approval');
   // 3.15.0 audit: Windows paths (unquote drops backslashes) and a renamed copy must not slip past the gate approval rule
   assert.equal(ask('node .claude\\hooks\\gate.mjs --approve'), 'ask', 'Windows path, exact spelling');
   assert.equal(ask('node ".claude\\hooks\\gate.mjs" --approve'), 'deny', 'quoted Windows path is not the exact spelling');

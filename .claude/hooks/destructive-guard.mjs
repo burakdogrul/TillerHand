@@ -240,7 +240,7 @@ export function scopeIssue(command, dir, root) {
 
 // Commands denied/asked in Claude Code via .claude/settings.json → permissions. Codex and Antigravity have no such
 // list; this is its counterpart (applied only on those tools, Claude's behavior does not change).
-// (?<!commit-) keeps only commit-gate.mjs --approve out of the gate rule.
+// Only the real .claude/hooks/commit-gate.mjs --approve is kept out of the gate rule (separators optional: unquote drops backslashes).
 const PERMISSION_EQUIVALENT = [
   ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'rm -rf ile toplu silme'],
   ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'Klasör toplu siliniyor'],
@@ -250,7 +250,7 @@ const PERMISSION_EQUIVALENT = [
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
   ['ask', /tools\.mjs['"]?\s+['"]?--commands\b/i, 'Paylaşılan .claude/settings.json → skillOverrides değişiyor (komut listesi)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-add\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
-  ['ask', /(?<!commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
+  ['ask', /(?<!\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked
   // (.git: the gate command approval and git hooks live there)
   ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents|git)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],

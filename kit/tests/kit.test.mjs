@@ -32,6 +32,14 @@ const record = (p) => JSON.parse(read(path.join(p, '.kit.json')));
 before(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-test-')); });
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
+test('merge: inherited and __proto__ keys are not merged into', () => {
+  const r = merge({ a: 1 }, JSON.parse('{"__proto__": {"x": 1}, "constructor": {"y": 2}, "b": 2}'));
+  assert.equal(Object.getPrototypeOf(r), Object.prototype, 'the prototype is not replaced');
+  assert.equal(r.x, undefined);
+  assert.deepEqual(r.constructor, { y: 2 }, 'an own key named like an inherited one is a plain value');
+  assert.equal(r.b, 2);
+});
+
 test('merge: objects deep, arrays without duplicates', () => {
   assert.deepEqual(merge({ a: [1, 2], b: { c: 1 } }, { a: [2, 3], b: { d: 2 } }), { a: [1, 2, 3], b: { c: 1, d: 2 } });
 });

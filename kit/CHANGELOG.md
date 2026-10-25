@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.26.1] - 2026-10-25
+
+### Düzeltilen
+- **Kapı onayı muafiyeti daraldı.** Sadece gerçek `.claude/hooks/commit-gate.mjs --approve` kapı onayı kuralının dışında; başka bir klasöre `commit-gate.mjs` adıyla konmuş bir `gate.mjs` kopyası artık onay kuralına takılır (Claude Code kapısı ve Codex/Antigravity listesi).
+- **Kurulumda ayar birleştirme** yalnız nesnenin kendi anahtarlarını birleştirir; bir JSON'daki `__proto__` anahtarı sonucun prototipini değiştirmez.
+
 ## [3.26.0] - 2026-10-25
 
 ### Değişen

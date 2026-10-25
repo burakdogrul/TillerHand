@@ -99,9 +99,10 @@ function hook() {
     process.exit(0);
   }
   // The gate command approval gives the commands in AGENTS.md permission to run: the user is asked (also covers spellings the permission list misses).
-  // (?<!commit-) keeps only commit-gate.mjs --approve out (a renamed copy like x-gate.mjs still matches); both the raw and
-  // unquoted text are tested (unquote drops the backslashes of .claude\hooks\gate.mjs).
-  if ([command, open].some((c) => /(?<!commit-)gate\.mjs\b[^;&|\n]*--approve\b/i.test(c))) {
+  // Only the real .claude/hooks/commit-gate.mjs --approve is left out (a copy of gate.mjs named commit-gate.mjs elsewhere
+  // still matches; writing one into .claude/ is itself asked); both the raw and unquoted text are tested (unquote drops
+  // the backslashes of .claude\hooks\gate.mjs, so the separators are optional).
+  if ([command, open].some((c) => /(?<!\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs\b[^;&|\n]*--approve\b/i.test(c))) {
     // The prompt reads AGENTS.md now: a chain, an env variable, a node flag or a redirect must not change it after the
     // prompt and get another list approved. Only the exact spelling is accepted.
     if (!/^\s*node\s+(\.\/)?\.claude[\\/]hooks[\\/]gate\.mjs\s+(['"]?)--approve\2\s*$/.test(command)) {
