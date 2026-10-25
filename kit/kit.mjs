@@ -31,7 +31,7 @@ const ADDONS = fs.readdirSync(path.join(TEMPLATES, 'addons'));
 const TOOLS = ['claude', 'codex', 'antigravity'];
 // Root entries that are not part of the common layer (the kit itself, generated and temporary files)
 // CLAUDE.local.md is personal (in .gitignore); it must not be carried into a project installed from a local folder
-const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md', 'LICENSE', 'README.tr.md']);
+const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md', 'LICENSE', 'README.en.md']);
 // Files that only make sense in the kit repo and are not carried into projects
 const KIT_ONLY = ['.github/workflows/kit-tests.yml'];
 // Git-ignored personal files and secrets of a local kit checkout (a clone does not have them): never copied, at any depth
