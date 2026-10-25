@@ -13,7 +13,7 @@ Hata: $ARGUMENTS
 4. **Doğrula.** Kontrolleri yap. Kök neden kanıtlanmadan düzeltmeye geçme. Kök neden tek bir özellik klasöründeyse düzeltme yayılmasın diye `/freeze <klasör>` öner.
 5. **Kırmızı test.** Hatayı gösteren testi yaz, başarısız olduğunu gör.
 6. **Düzelt.** Birden fazla düzeltme yolu varsa (örn. hızlı yama ile kalıcı düzeltme veya davranış değişikliği) hangisini seçeceğini **karar olarak sor**. Kök nedeni, paylaşılan kodda bir kez düzelt. Aynı hatanın başka çağıranlarda da olup olmadığına bak.
-7. **Yeşil.** Yeni test ve mevcut testler geçiyor: komutu bu turda çalıştır ve çıktısını göster. Kilit açtıysan `/freeze off`.
+7. **Yeşil.** Yeni test ve mevcut testler geçiyor: komutu bu turda çalıştır ve çıktısını göster. Sonra kapıyı çalıştır: `node .claude/hooks/gate.mjs --run` (lint, tip kontrolü, test, Semgrep; commit toplantısı bu çıktıyı kullanır). Kırmızı varsa düzelt. "Komut onayı gerekli" derse komutları bana göster; onaylarsam `node .claude/hooks/gate.mjs --approve`. Kilit açtıysan `/freeze off`.
 8. **Rapor:** Kök neden (1 cümle), düzeltme, eklenen test, benzer riskli yerler.
 
 2 denemede çözemezsen: dur, ne denediğini ve neleri elediğini yaz, yön iste.
