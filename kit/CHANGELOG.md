@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.23.1] - 2026-10-25
+
+### Düzeltilen
+- **Kalkan, tırnak içinde `&` veya `|` olan EAS komutunda da soruyor.** `eas update --message "a & b" --channel production` 3.23.0'da onaysız geçiyordu.
+
 ## [3.23.0] - 2026-10-25
 
 ### Yeni

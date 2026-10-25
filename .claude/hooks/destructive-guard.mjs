@@ -42,7 +42,7 @@ const NEEDS_APPROVAL = [
   [/\b(vercel|vc)(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
   [UNCLEAR_ENV, 'Ortam değişkenleri çekiliyor ama ortam düz development/preview değil (değişken veya özel ortam: prod olabilir)'],
   [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify\s+deploy\b[^;]*--prod/i, 'Sunucuya deploy'],
-  [/\beas(-cli(@[\w.-]+)?)?\s+(submit\b|update:(rollback|republish)\b|update\b[^;&|]*--(branch|channel|environment)(=|\s+)prod(uction)?\b|deploy\b[^;&|]*--prod\b)/i, 'Mağazaya gönderim, prod OTA güncellemesi veya geri alma'],
+  [/\beas(-cli(@[\w.-]+)?)?\s+(submit\b|update:(rollback|republish)\b|update\b(?=[^;\n]*--(branch|channel|environment)(=|\s+)['"]?prod(uction)?\b)|deploy\b(?=[^;\n]*--prod\b))/i, 'Mağazaya gönderim, prod OTA güncellemesi veya geri alma'],
   [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'Ana dala doğrudan push'],
   [/\bgit\s+(rebase|filter-branch|filter-repo)\b/i, 'Git geçmişi yeniden yazılıyor'],
   [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'Migration uygulanıyor (hedef ortamı kontrol et)'],
