@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.23.1-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.24.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -444,7 +444,7 @@ Kit Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve
 | **Mobil test** | **Maestro** MCP (kabul testleri cihazda) + **Expo** MCP (EAS build, TestFlight çökme kayıtları) | Maestro CLI ve Expo hesabı gerekir |
 | **Servis bağlantıları** | GitHub, Stripe, Vercel, PostHog, Figma, Firebase, Linear: `docs/workflow/mcp-catalog.md` | Servis seçilince `/start` önerir |
 | **Yazarken güvenlik** | `security-guidance`: kalıp uyarısı + commit incelemesi; `/claude-security`: `/findings-security` için çok ajanlı derin tarama | Model incelemeleri kotadan yer |
-| **Öğrenen kurallar** | `/hookify` (tekrarlayan düzeltme hook kuralı olur), `claude-md-management` (CLAUDE.md denetimi, oturum dersleri) | `/retro`, `/wrap-up` önerir |
+| **Öğrenen kurallar** | Hata spec'inde `Sınıf`; aynı sınıf ikinci kez gelince `/fix-bug` kural önerir (mekanikse `/hookify`, değilse `AGENTS.md` → "Öğrenilen kurallar"), panoda uyarı. Her kuralda kaynak ve tarih; `/maintain monthly` 90 günden eskileri sorar. `claude-md-management` CLAUDE.md'yi denetler. Auto memory `/start`'ta sorulur, önerilen kapalı | Onaysız yazılmaz; `/retro`, `/wrap-up` de önerir |
 | **Token ve maliyet** | `ccusage` ile proje başına son 30 gün panoda; `/session-report` ile en pahalı istekler | Yerel çalışır |
 | **Güvenlik derinliği** | Trail of Bits: differential-review, insecure-defaults, sharp-edges, static-analysis, supply-chain-risk-auditor, agentic-actions-auditor, fp-check | `/findings-security` ve `security-auditor` kullanır |
 | **Gerçek tarayıcı ölçümü** | **Playwright CLI** (konsol, ağ, ekran görüntüsü; MCP'den az token) + gerektiğinde **Chrome DevTools** MCP (performans izi) | `/findings-perf`, `/findings-ux`; CLI komutları her seferinde sorulur, MCP'ler komut sorunca eklenir |

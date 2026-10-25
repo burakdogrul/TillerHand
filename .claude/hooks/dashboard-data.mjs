@@ -131,6 +131,28 @@ export function specInvariants(root, since = 0) {
   return { invariants: list.map((k) => ({ ...k, test: tested.has(k.key) || results.has(k.key), result: results.get(k.key) ?? null })), unreadable };
 }
 
+// Bug classes seen in two or more bug specs (F-21): a repeat is the cue to propose a rule. Only the fixed list counts
+// ("diğer" and free text never do). A group closes once every spec has a "**Kural:**" answer (rule added or not needed);
+// a new undecided spec in a decided class opens it again (the rule did not prevent the bug).
+export const BUG_CLASSES = ['boş-girdi', 'doğrulama', 'yetki', 'tarih-saat', 'yerel-dil', 'sıralama', 'eşzamanlılık', 'yapılandırma', 'dış-servis', 'sözleşme', 'arayüz-durumu'];
+export function repeatedBugClasses(root) {
+  const dir = path.join(root, 'docs/product/specs');
+  let files = [];
+  try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.md') && !f.startsWith('_')).sort(); } catch { return []; }
+  const byClass = new Map();
+  for (const f of files) {
+    const text = readText(path.join(dir, f));
+    if (!/^\*\*Tür:\*\*[ \t]*hata\b/im.test(text)) continue;
+    const raw = text.match(/^\*\*Sınıf:\*\*[ \t]*`?([^\s`,.[\]]+)/im)?.[1] ?? '';
+    // YETKI and YETKİ both mean yetki: try the Turkish and the plain lowercase
+    const cls = [raw.toLocaleLowerCase('tr'), raw.toLowerCase()].find((c) => BUG_CLASSES.includes(c));
+    if (!cls) continue;
+    const decided = /^\*\*Kural:\*\*[ \t]*[^\s[]/im.test(text);
+    byClass.set(cls, [...(byClass.get(cls) ?? []), { f, decided }]);
+  }
+  return [...byClass].filter(([, list]) => list.length > 1 && list.some((s) => !s.decided)).map(([cls, list]) => ({ cls, specs: list.map((s) => s.f) }));
+}
+
 // ---------- accounts and flags ----------
 export function accounts(text, now = Date.now()) {
   return tableRows(sections(text)['Hesaplar'], 8)

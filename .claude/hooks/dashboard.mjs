@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { readStatus, readText, sections, findSection, tally, tableRows } from './status-read.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
-import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings } from './dashboard-data.mjs';
+import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
 const quiet = args.includes('--quiet');
@@ -114,6 +114,7 @@ else if (limitLevel === 'yellow') addAlert('warn', `Kullanım limiti sarı: ${li
 for (const b of d.pending) addAlert('warn', `Bekleyen karar: ${b}`, 'Claude seni bekliyor');
 for (const k of d.leftOff) addAlert('warn', `Yarıda kalan iş: ${k}`, '/build ile devam');
 for (const s of d.issues.slice(0, 5)) addAlert('warn', `Açık sorun: ${s}`);
+for (const r of repeatedBugClasses(root)) addAlert('info', `Aynı hata sınıfı ${r.specs.length} kez: ${r.cls} (${r.specs.join(', ')}). Tekrarı önleyen bir kural eklenebilir.`, '/retro');
 if (git?.changed.length > 15) addAlert('info', `${git.changed.length} dosya commit edilmemiş.`, 'Commit veya /wrap-up');
 if (git?.progressStale >= 3) addAlert('info', `docs/workflow/progress.md ${git.progressStale} commit'tir güncellenmedi.`, '/wrap-up');
 const off = (a['Soru modu'] ?? '').match(/kapalı konular:\s*(.+)$/i)?.[1];

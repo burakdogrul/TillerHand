@@ -6,6 +6,8 @@
 > Davranışı bilerek değiştiriyorsan veya bir kriter kimliğini değiştiriyorsan önce bu dosyayı güncelle; spec artık geçerli değilse `docs/archive/`'e taşı.
 
 **Tür:** [özellik / hata]
+**Sınıf:** [sadece hata: boş-girdi / doğrulama / yetki / tarih-saat / yerel-dil / sıralama / eşzamanlılık / yapılandırma / dış-servis / sözleşme / arayüz-durumu / diğer]
+**Kural:** [sadece hata, aynı sınıf tekrarlayınca `/fix-bug` yazar: eklenen kuralın yeri veya "gerek yok" · YYYY-AA-GG]
 
 ## Mevcut davranış
 

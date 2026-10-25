@@ -3,6 +3,14 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.24.0] - 2026-10-25
+
+### Yeni
+- **Öğrenen kurallar.** Hata spec'ine `**Sınıf:**` alanı geldi (boş-girdi, yetki, tarih-saat, yerel-dil… sabit liste). `/fix-bug` aynı sınıfta önceki bir hata spec'i bulursa tekrarı önleyecek tek bir kural önerir: mekanik denetlenebiliyorsa `/hookify` kuralı, değilse `AGENTS.md` → "Öğrenilen kurallar". Sen onaylamadan hiçbir kural dosyası değişmez. "Sonra" dersen pano "Aynı hata sınıfı" uyarısıyla hatırlatır, `/retro` toplar. Cevabın (eklendi / gerek yok) spec'e `**Kural:**` satırı olarak yazılır: uyarı kapanır, aynı karar tekrar sorulmaz. Aynı sınıftan yeni bir hata gelirse kural işe yaramamış demektir, uyarı yeniden açılır.
+  - Her kuralın sonunda kaynak ve tarih durur (`/wrap-up` ve `/retro`'nun önerdikleri de). `/maintain monthly` 90 günden eski kuralları listeler: tut, güncelle veya sil; bölüm 10 satırı geçince birleştirmeyi önerir.
+  - Elle uyarla: `AGENTS.md`'nin sonuna "Öğrenilen kurallar" bölümünü kitten kopyala (yoksa `/fix-bug` ilk kuralda açar); `docs/product/specs/_template.md`'ye `**Sınıf:**` ve `**Kural:**` satırlarını ekle.
+- **`/start` ve `/adopt` auto memory'yi soruyor** (Claude Code). Önerilen kapalı: projenin hafızası `AGENTS.md`, `progress.md` ve karar günlüğünde; auto memory notları makinede kalır ve kimse gözden geçirmez. Kapalı seçilirse `.claude/settings.json` → `"autoMemoryEnabled": false`.
+
 ## [3.23.1] - 2026-10-25
 
 ### Düzeltilen

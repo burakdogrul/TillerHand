@@ -18,7 +18,7 @@ Bu bir **9 adımlı uyum sihirbazı** (0-9). `/start`'ın var olan kod için ola
 ## Adım 0: Hazırlık
 
 1. `docs/workflow/progress.md` → `**Aktif faz:** Başlangıç (uyum)`, `**Başlangıç adımı:** 0/9`.
-2. `/start` Adım 0'daki şu maddeleri aynen uygula: Profil (0), anlatıcı mod (0b), araç (0c), ortam kontrolü (1), eklentiler (2), caveman (3), kod haritası (5), bildirimler (6), pano (6b). Var olan projede kod haritası daha da faydalıdır; önerilen seçenek "Kur" olsun.
+2. `/start` Adım 0'daki şu maddeleri aynen uygula: Profil (0), anlatıcı mod (0b), araç (0c), auto memory (0d), ortam kontrolü (1), eklentiler (2), caveman (3), kod haritası (5), bildirimler (6), pano (6b). Var olan projede kod haritası daha da faydalıdır; önerilen seçenek "Kur" olsun.
 3. **Tarama derinliği:** Limiti oku ve sor. Tahmini maliyetleri göster:
    - **Hızlı tarama (Önerilen, Pro'da):** Yapı, stack, testler, git geçmişi, belgeler. 5 saatlik limitin yaklaşık %10-20'si.
    - **Derin tarama:** Hızlı taramaya ek olarak seçilen bulgu raporları (`/findings-tech`, `-security`, `-ux` vb.). Rapor başına yaklaşık %8-15 daha. Hangi raporların çalışacağını çoklu seçimle sor.

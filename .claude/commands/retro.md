@@ -20,7 +20,7 @@ Amaç: Bu projede öğrendiklerini kaybetmemek ve kiti (bundan sonraki tüm proj
    - Bir dahaki projede neyi baştan farklı yapardın?
 3. **`docs/quality/retros.md`'ye** bugünün tarihiyle kayıt ekle (şablon dosyada). `docs/quality/metrics.md`'ye dönem satırı ekle ve bir önceki dönemle karşılaştır: Görev süresi, düzeltme oranı ve kopya kod artıyor mu? Kullanıcının hissiyle veriler çelişiyorsa bunu açıkça söyle.
 4. **Dersleri sınıflandır:**
-   - **Bu projeye özel** → `AGENTS.md` (sadece Claude Code'a özelse `CLAUDE.md`), `docs/architecture/stack.md` veya ilgili dokümana kural olarak ekle. Önce `claude-md-improver` ile CLAUDE.md'nin güncelliğini denetle. Mekanik olarak denetlenebilen kural ("X dosyasına Y yazma") metin yerine `/hookify` ile hook kuralı olur.
+   - **Bu projeye özel** → `AGENTS.md` (sadece Claude Code'a özelse `CLAUDE.md`), `docs/architecture/stack.md` veya ilgili dokümana kural olarak ekle. Önce `claude-md-improver` ile CLAUDE.md'nin güncelliğini denetle. Mekanik olarak denetlenebilen kural ("X dosyasına Y yazma") metin yerine `/hookify` ile hook kuralı olur. Kural `AGENTS.md`'de "Öğrenilen kurallar" bölümüne gider; kaynak ve tarihi `/fix-bug` 8. adımdaki biçimle yaz. Panoda "Aynı hata sınıfı" uyarısı varsa o sınıf için de kural öner; cevabı (eklendi veya gerek yok) spec'lere `**Kural:**` satırı olarak yaz ki uyarı kapansın ve tekrar sorulmasın.
    - **Tüm projelere genel** → kite önerilecek.
 5. **Kit önerileri:** Her öneri için:
    - Hangi kit dosyası: Ortak dosyalar kit reposunun kökünde (`AGENTS.md`, `CLAUDE.md`, `docs/...`, `.claude/...`), tipe özel olanlar `kit/templates/<tip>/...`, ekler `kit/templates/addons/<ek>/...`.

@@ -85,3 +85,7 @@ build:       [ ]
 ## Git
 
 Küçük ve sık commit. Mesaj biçimi: `tür: açıklama` (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `wip`). `main` her zaman çalışır olmalı.
+
+## Öğrenilen kurallar
+
+> `/fix-bug` aynı hata sınıfı tekrarlayınca, `/retro` dönem sonunda önerir; sen onaylarsan eklenir. Biçim: `- Kural. (kaynak: … · YYYY-AA-GG)`; tarih eklenme veya son gözden geçirme. En fazla ~10 satır. `/maintain monthly` 90 günden eskileri gözden geçirir.
