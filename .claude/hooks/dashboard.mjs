@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { readStatus, readText, sections, findSection, tally, tableRows } from './status-read.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
-import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings } from './dashboard-data.mjs';
+import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
 const quiet = args.includes('--quiet');
@@ -82,6 +82,12 @@ try {
 } catch { /* no previews */ }
 
 const acceptance = acceptanceStatus(root);
+let qa = null;
+try {
+  const f = fs.readdirSync(file('docs/quality/qa')).filter((x) => /^\d{4}-.*\.md$/.test(x)).sort().pop();
+  const s = f && qaSummary(readText(file(`docs/quality/qa/${f}`)));
+  if (s) qa = { file: `docs/quality/qa/${f}`, name: f.slice(0, -3), ...s };
+} catch { /* no /qa run yet */ }
 const accountList = accounts(readText(file('docs/operations/accounts.md')));
 const flagList = flags(readText(file('docs/operations/feature-flags.md')));
 const alarmList = spendAlarms(readText(file('docs/operations/spend-alarms.md')));
@@ -237,6 +243,7 @@ const quality = `
     ${Object.keys(kindCounts).length ? `<div class="rows">${Object.entries(kindCounts).sort((x, y) => y[1] - x[1]).map(([t, n]) => `<div class="row"><span><code>${e(t)}</code></span>${progressBar(n, last30.length)}<span class="num muted">${n}</span></div>`).join('')}</div>` : ''}
     <p class="muted small">Yüksek düzeltme oranı, yeni özelliklerin sık bozulduğunu gösterebilir; retroda konuşulmalı.</p></section>
 </div>
+${qa ? `<section class="card"><h3>Son QA · ${e(qa.name)}</h3><div class="kpis mini">${kpi('Geçti', qa.passed)}${kpi('Kaldı', qa.failed, qa.failed ? badge('critical', 'kanıtıyla') : '')}${kpi('Koşulmadı', qa.notRun)}</div>${qa.failures.length ? `<ul>${qa.failures.slice(0, 5).map((x) => `<li>${md(x.criterion)}${x.note ? ` <span class="muted small">${e(x.note)}</span>` : ''}</li>`).join('')}</ul>` : ''}<p class="muted small"><a href="${e(qa.file)}" target="_blank" rel="noopener">raporu aç</a></p></section>` : ''}
 <section class="card"><h3>Kabul testleri</h3>${acceptance.total ? `<div class="kpis mini">${kpi('Kriter', acceptance.total)}${kpi('Testi olan', `${acceptance.tested}/${acceptance.total}`, '', progressBar(acceptance.tested, acceptance.total))}${kpi('Geçen', `${acceptance.passing}/${acceptance.total}`, acceptance.reportTime ? `rapor: ${new Date(acceptance.reportTime).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'JUnit raporu yok', progressBar(acceptance.passing, acceptance.total, 'good'))}</div>` : empty('PRD\'de kimlikli kabul kriteri yok (`Ö-01.1` biçimi).')}</section>
 <section class="card"><h3>Metrikler · aylık</h3>${metricRecords.length ? `<div class="tw"><table><thead><tr><th>Dönem</th><th>Görev</th><th>Ort. süre (dk)</th><th>Ort. limit</th><th>Düzeltme</th><th>Geri alma</th><th>Kopya kod</th><th>Açık kritik</th><th>Kabul</th></tr></thead><tbody>${[...metricRecords].reverse().slice(0, 8).map((m) => `<tr><td class="nw">${e(m.period)}</td><td class="num">${e(m.taskCount)}</td><td class="num">${e(m.duration)}</td><td class="num">${e(m.limit)}</td><td class="num">${e(m.fixes)}</td><td class="num">${e(m.reverts)}</td><td class="num">${e(m.duplicates)}</td><td class="num">${e(m.critical)}</td><td class="num">${e(m.acceptance)}</td></tr>`).join('')}</tbody></table></div>` : empty('Henüz metrik kaydı yok. `/maintain monthly` ve `/retro` ekler.')}</section>
 <section class="card"><h3>Kritik akış testleri</h3>${criticalFlows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>Akış</th><th>Test türü</th><th>Dosya</th><th>Durum</th></tr></thead><tbody>${criticalFlows.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(k.feed)}</td><td>${e(k.kind)}</td><td>${md(k.fileName)}</td><td>${/✅|yeşil|var/i.test(k.state) ? badge('good', 'var') : badge('warn', 'yok')}</td></tr>`).join('')}</tbody></table></div>` : empty('Test planı yok.')}</section>

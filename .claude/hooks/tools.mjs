@@ -39,7 +39,7 @@ export const PACKAGES = {
 // still in the / menu and callable by name. Kit settings.json ships this list; a test keeps the two in sync.
 export const CORE_COMMANDS = ['start', 'adopt', 'build', 'fix-bug', 'plan-task', 'design', 'tools', 'review-changes', 'wrap-up', 'release'];
 export const LIGHT_COMMANDS = ['ask-mode', 'board', 'dashboard', 'findings-all', 'findings-business', 'findings-legal', 'findings-perf',
-  'findings-security', 'findings-tech', 'findings-ux', 'freeze', 'handoff', 'kit-update', 'maintain', 'research', 'retro', 'rollback', 'user-feedback'];
+  'findings-security', 'findings-tech', 'findings-ux', 'freeze', 'handoff', 'kit-update', 'maintain', 'qa', 'research', 'retro', 'rollback', 'user-feedback'];
 
 const settingsPaths = (root) => ({ project: path.join(root, '.claude', 'settings.json'), local: path.join(root, '.claude', 'settings.local.json') });
 

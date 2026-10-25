@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.19.1-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.20.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -386,6 +386,7 @@ flowchart TB
 | `/design [kapsam]` | Görsel önizlemeli tasarım kararları |
 | `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |
 | `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme, kapı |
+| `/qa [kriterler]` | Arayüz kabul kriterlerini gerçek tarayıcıda Playwright testi olarak koşar; rapor test sonucundan yazılır, panoda görünür |
 | `/freeze <klasör> \| off` | Düzenlemeyi tek klasöre kilitler |
 | `/rollback [nokta]` | Son çalışan hale (veya seçilen noktaya) güvenle döner |
 | `/findings-<tür>` | `tech` · `business` · `security` · `ux` · `perf` · `legal` · `all` |

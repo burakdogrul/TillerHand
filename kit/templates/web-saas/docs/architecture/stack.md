@@ -104,6 +104,7 @@ supabase/migrations/            # veritabanı değişiklikleri SADECE burada
 ## Doğrulama (görev bitmeden kanıt)
 
 - Arayüz: `node .claude/hooks/preview.mjs <görev kodu>` masaüstü (1440) ve mobil (390) ekran görüntüsünü alır (`AGENTS.md` → `geliştirme:` ve `önizleme:` satırları). Senaryoları denemek için `npm run dev` açıkken Playwright CLI (`npx -y @playwright/cli@0.1.22 open http://localhost:3000`, sonra `snapshot`, `console`, `screenshot`) veya Claude'un tarayıcısı ile sayfayı aç, ana senaryoyu ve bir hata senaryosunu dene.
+- Kabul kriterlerini tarayıcıda kanıtlamak: `/qa` (kriter başına Playwright testi, rapor `docs/quality/qa/`).
 - Yetki: ikinci bir test kullanıcısıyla birinci kullanıcının kaydına erişmeyi dene; erişememeli.
 - Konsolda hata/uyarı yok.
 

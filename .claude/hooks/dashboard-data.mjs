@@ -34,7 +34,8 @@ export function idsInTests(root) {
       if (SKIP_DIRS.has(e.name)) continue;
       const full = path.join(dir, e.name);
       if (e.isDirectory()) walk(full, depth + 1);
-      else if (TEST_FILE.test(path.relative(root, full)) || TEST_FILE.test(e.name)) {
+      // tests/e2e/qa/ holds /qa's uncommitted tests: they do not count as a criterion's test
+      else if ((TEST_FILE.test(path.relative(root, full)) || TEST_FILE.test(e.name)) && !/(^|[\\/])e2e[\\/]qa[\\/]/.test(path.relative(root, full))) {
         tally++;
         for (const m of readText(full).matchAll(CRITERION_ID)) found.add(key(m[1], m[2]));
       }
@@ -43,21 +44,39 @@ export function idsInTests(root) {
   return found;
 }
 
+const xmlText = (s) => s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+
+// One entry per JUnit testcase that is not skipped: the criterion keys in its name and, if it failed, the reason
+export function* junitCases(xml) {
+  for (const m of xml.matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g)) {
+    const name = (m[1].match(/\bname="([^"]*)"/)?.[1] ?? '') + ' ' + (m[1].match(/\bclassname="([^"]*)"/)?.[1] ?? '');
+    const body = m[2] ?? '';
+    if (/<skipped/.test(body)) continue;
+    // Any failure/error tag fails the case (an unescaped ">" in an attribute or a missing end tag must not turn it green);
+    // the stricter match only reads the reason
+    const failed = /<(failure|error)\b/.test(body);
+    const f = body.match(/<(failure|error)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/);
+    const reason = failed ? xmlText((f?.[3] ?? '').trim() || (f?.[2].match(/\bmessage="([^"]*)"/)?.[1] ?? '')) : null;
+    yield { keys: [...name.matchAll(CRITERION_ID)].map((k) => key(k[1], k[2])), failed, reason };
+  }
+}
+
 export function junitResults(xmlTexts) {
   const result = new Map();
   for (const xml of xmlTexts) {
-    for (const m of xml.matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g)) {
-      const name = (m[1].match(/\bname="([^"]*)"/)?.[1] ?? '') + ' ' + (m[1].match(/\bclassname="([^"]*)"/)?.[1] ?? '');
-      const body = m[2] ?? '';
-      if (/<skipped/.test(body)) continue;
-      const failed = /<(failure|error)\b/.test(body);
-      for (const k of name.matchAll(CRITERION_ID)) {
-        const a = key(k[1], k[2]);
-        result.set(a, failed || result.get(a) === 'failed' ? 'failed' : 'passed');
-      }
+    for (const c of junitCases(xml)) {
+      for (const a of c.keys) result.set(a, c.failed || result.get(a) === 'failed' ? 'failed' : 'passed');
     }
   }
   return result;
+}
+
+// Latest /qa report (F-18); null without rows so the card is left out
+export function qaSummary(text) {
+  const rows = tableRows(text, 4).map(([criterion, result, evidence, note]) => ({ criterion, result, evidence, note }));
+  if (!rows.length) return null;
+  const count = (r) => rows.filter((x) => x.result === r).length;
+  return { passed: count('geçti'), failed: count('kaldı'), notRun: count('koşulmadı'), failures: rows.filter((x) => x.result === 'kaldı') };
 }
 
 function junitFiles(root) {

@@ -282,6 +282,7 @@
     "handoff": "name-only",
     "kit-update": "name-only",
     "maintain": "name-only",
+    "qa": "name-only",
     "research": "name-only",
     "retro": "name-only",
     "rollback": "name-only",

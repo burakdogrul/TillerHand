@@ -9,4 +9,6 @@ next-env.d.ts
 .vercel/
 playwright-report/
 test-results/
+tests/e2e/qa/
+test-results-qa/
 supabase/.temp/

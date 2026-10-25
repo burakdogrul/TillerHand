@@ -3,6 +3,15 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.20.0] - 2026-10-25
+
+### Yeni
+- **`/qa`: arayüz kabul kriterleri gerçek tarayıcıda.** Her kriter bir Playwright testi olarak koşar: varsa mevcut `Ö` testi, yoksa `/qa`'nın `tests/e2e/qa/` altına yazdığı test. Yeni testler, test kalsa da ekran görüntüsü alır ve konsol hatasında kırmızı olur. Sunucuyu Playwright'ın `webServer` ayarı açıp kapatır; adres yerel değilse `/qa` durup sorar. Koşu kendi çıktı klasörünü (`test-results-qa/`) kullanır, `test-results/`'taki kabul raporu silinmez.
+  - Rapor `node .claude/hooks/qa-report.mjs` ile JUnit sonucundan yazılır (`docs/quality/qa/<tarih>.md`): kriter başına geçti / kaldı / koşulmadı, hatanın ilk satırı ve ekran görüntüsü (`.previews/qa-<tarih>/`, git'e girmez). Yani "çalışıyor" demek için arkasında yeşil bir test olmalı. Hiçbir test koşmadıysa rapor yazılmaz.
+  - Geçen yeni testleri kalıcı kabul testi olarak `tests/e2e/`'ye taşımak raporun sonunda sorulur.
+  - Pano "Kalite" sekmesinde son QA koşusu kart olarak görünür. `/build` arayüz görevinde `/qa` önerir; canlıya alma listesinde "son /qa raporunda kaldı yok" maddesi var.
+  - Elle uyarla (web projesi): `.gitignore`'a `tests/e2e/qa/` ve `test-results-qa/` satırlarını, `docs/operations/release-checklist.md`'ye `/qa` maddesini, `docs/architecture/stack.md` → Doğrulama'ya `/qa` satırını ekle.
+
 ## [3.19.1] - 2026-10-25
 
 ### Güvenlik

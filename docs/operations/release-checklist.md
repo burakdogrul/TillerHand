@@ -41,6 +41,7 @@
 - [ ] `docs/product/unit-economics.md`: katkı payı pozitif, başa baş noktası biliniyor
 - [ ] Harcama alarmları: Ücretli her servisin tavanı veya uyarısı kurulu ve bir kez denendi (`docs/operations/spend-alarms.md`); AI/ücretli API çağrısında kullanıcı başı kota ve genel günlük bütçe var
 - [ ] Kabul testlerinin tamamı yeşil (MVP kriterleri)
+- [ ] Son `/qa` raporunda (`docs/quality/qa/`) "kaldı" yok; web projesinde arayüz kriterleri tarayıcıda koşuldu
 
 ### Altyapı
 - [ ] Alan adı, SSL, `www` yönlendirmesi
