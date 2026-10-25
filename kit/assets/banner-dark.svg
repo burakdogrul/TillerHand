@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 440" width="1200" height="440" role="img" aria-label="TillerHand. AI builds. You steer.">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7681"/></marker>
+  </defs>
+  <rect x="0.5" y="0.5" width="1199" height="439" rx="24" fill="#0d1117" stroke="#30363d"/>
+  <g transform="translate(70 70)">
+    <circle cx="36" cy="36" r="30" fill="none" stroke="#e6edf3" stroke-width="5"/>
+    <path d="M36 36 L57 15" stroke="#4c9be8" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="57" cy="15" r="9" fill="#4c9be8"/>
+    <circle cx="36" cy="36" r="5" fill="#e6edf3"/>
+  </g>
+  <text x="168" y="124" font-size="58" font-weight="800" letter-spacing="-1.5" fill="#e6edf3" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">TillerHand</text>
+  <text x="70" y="196" font-size="34" font-weight="600" letter-spacing="-0.5" fill="#e6edf3" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">AI builds. <tspan fill="#4c9be8">You steer.</tspan></text>
+  <text x="70" y="236" font-size="19" fill="#9aa4b1" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">A human-in-the-loop kit for Claude Code: from idea to production, every decision stays yours.</text>
+  <g>
+    <rect x="70" y="292" width="220" height="56" rx="28" fill="#161b22" stroke="#30363d"/>
+    <text x="180" y="326" text-anchor="middle" font-size="19" font-weight="500" fill="#e6edf3" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">AI proposes</text>
+    <rect x="350" y="292" width="220" height="56" rx="28" fill="#4c9be8" stroke="#4c9be8"/>
+    <text x="460" y="326" text-anchor="middle" font-size="19" font-weight="700" fill="#0d1117" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">You decide</text>
+    <rect x="630" y="292" width="220" height="56" rx="28" fill="#161b22" stroke="#30363d"/>
+    <text x="740" y="326" text-anchor="middle" font-size="19" font-weight="500" fill="#e6edf3" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">Board reviews</text>
+    <rect x="910" y="292" width="220" height="56" rx="28" fill="#161b22" stroke="#30363d"/>
+    <text x="1020" y="326" text-anchor="middle" font-size="19" font-weight="500" fill="#e6edf3" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">Ships</text>
+    <path d="M300 320 H340" stroke="#6e7681" stroke-width="2" marker-end="url(#a)"/>
+    <path d="M580 320 H620" stroke="#6e7681" stroke-width="2" marker-end="url(#a)"/>
+    <path d="M860 320 H900" stroke="#6e7681" stroke-width="2" marker-end="url(#a)"/>
+    <path d="M1020 356 V392 H180 V360" fill="none" stroke="#6e7681" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#a)"/>
+    <rect x="530" y="378" width="140" height="28" fill="#0d1117"/>
+    <text x="600" y="398" text-anchor="middle" font-size="16" fill="#9aa4b1" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">every task</text>
+  </g>
+</svg>
