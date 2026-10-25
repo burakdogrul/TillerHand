@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Sağlık ve yanıt süresi
         run: |
           t=$(curl -fsS -o /dev/null --max-time 10 -w '%{time_total}' "${{ vars.LIVE_URL }}/health")
@@ -31,7 +31,7 @@ jobs:
           awk -v t="$t" -v max="$MAX" 'BEGIN { exit (t > max) }'
         env:
           MAX: ${{ vars.LIVE_MAX_SECONDS || '2' }}
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v10
         if: hashFiles('tests/live/**') != ''
       - name: Kritik uçlar (canlı)
         if: hashFiles('tests/live/**') != ''

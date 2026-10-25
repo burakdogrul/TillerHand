@@ -3,6 +3,15 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.28.4] - 2026-10-26
+
+### Değişen
+- **GitHub Actions sürümleri Node 24'e geçti** (GitHub, Node 20 ile çalışan action'ları zorla Node 24'te çalıştırıyordu ve uyarı veriyordu): `actions/checkout` v7, `actions/setup-node` v7, `gitleaks/gitleaks-action` v3, `astral-sh/setup-uv` v10. Şablonlardaki CI, bakım, canlı izleme ve ödeme webhook iş akışları güncellendi. Kitin npm yayın iş akışı commit SHA'sına sabit kalıyor ve paket önbelleğini kapatıyor (önbellek zehirlenmesine karşı).
+  - Elle uyarla: Projedeki iş akışını kendin değiştirdiysen `/kit-update` yeni sürümü `.kit-new` olarak bırakır; sürüm satırlarını oradan al.
+
+### Düzeltilen
+- **Commit alias'ı tespiti genişledi:** büyük/küçük harf duyarsız; başka bir alias'ı çağıran ya da değerinde `commit` geçen `!` kabuk alias'ları da commit sayılıyor. Aynı komutta tanımlanan alias (`git -c alias.x=…`, `git config alias.x …`, `GIT_CONFIG_*`) önceden okunamadığı için komut durduruluyor.
+
 ## [3.28.3] - 2026-10-26
 
 ### Düzeltilen

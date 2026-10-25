@@ -27,8 +27,8 @@ jobs:
       ENV: test
       DATABASE_URL: postgresql+psycopg://app:app@localhost:5432/app_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
@@ -43,14 +43,14 @@ jobs:
   structure:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Klasör yapısı (.claude/structure.json)
         run: node .claude/hooks/structure-guard.mjs --check
 
   karmasiklik:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # base commit'iyle karşılaştırmak için
       - name: Karmaşıklık bütçesi (değişen dosyalar; fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır)
@@ -63,14 +63,14 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Statik güvenlik analizi (yüksek önemli bulgular CI'ı durdurur)
         run: semgrep scan --config p/default --config p/owasp-top-ten --severity ERROR --error
 
   kopya-kod:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Kopya kod oranı (eşik %5)
         run: npx --yes jscpd@4 --threshold 5 --silent --ignore "**/node_modules/**,**/.next/**,**/dist/**,**/build/**,**/.venv/**,**/coverage/**,**/.expo/**" .
 
@@ -81,11 +81,11 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # tüm geçmiş taranır
       # Kişisel hesapta ücretsiz; organizasyon deposunda GITLEAKS_LICENSE sırrı gerekir
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Token salt okunur: PR yorumu kapalı, sızıntı işi kırmızı yapar

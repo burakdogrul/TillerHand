@@ -353,10 +353,17 @@ test('3.28.3 git.exe and commit aliases are commits too', () => {
   write('alias.js', 'x');
   sh('git config alias.ci "commit -v"');
   sh('git config alias.yaz "!git commit"');
-  for (const c of ['git.exe commit -m x', 'git ci -m x', 'git yaz -m x', 'git -c alias.zz=commit zz -m x', '"/usr/bin/git" commit -m x'])
+  sh('git config alias.zincir ci');
+  sh('git config alias.kabuk "!f() { git commit -m x; }; f"');
+  for (const c of ['git.exe commit -m x', 'git ci -m x', 'git CI -m x', 'git yaz -m x', 'git zincir -m x', 'git kabuk', 'git -c alias.zz=commit zz -m x',
+    'GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.q GIT_CONFIG_VALUE_0=commit git q', 'git config alias.w commit && git w -m x', '"/usr/bin/git" commit -m x'])
     assert.equal(commit(c).status, 2, c);
   assert.equal(commit('git status').status, 0);
+  const inline = commit('git -c alias.zz=commit zz -m x && git checkout -- a.js');
+  assert.match(inline.stderr, /zincirli/, 'an inline alias never lets another git command through the chain check');
   sh('git config --unset alias.ci');
   sh('git config --unset alias.yaz');
+  sh('git config --unset alias.zincir');
+  sh('git config --unset alias.kabuk');
   fs.rmSync(path.join(p, 'alias.js'));
 });

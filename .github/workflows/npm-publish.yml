@@ -1,7 +1,7 @@
 # Kitin npm paketini (tillerhand) yayınlar: v* tag'i push edilince. Projelere kopyalanmaz (kit/kit.mjs → KIT_ONLY).
 # Token yok: npm Trusted Publishing (OIDC). npmjs.com → tillerhand → Settings → Trusted Publisher: GitHub Actions,
 # burakdogrul / TillerHand / npm-publish.yml / environment: npm. Kaynak: docs.npmjs.com/trusted-publishers (2026-10-06).
-# Action'lar commit SHA'sına sabit (v4.4.0); yeni sürüme geçerken SHA'yı github.com/actions/<ad>/releases'tan al.
+# Action'lar commit SHA'sına sabit (checkout v7.0.1, setup-node v7.1.0); yeni sürüme geçerken SHA'yı github.com/actions/<ad>/releases'tan al.
 name: npm-publish
 
 on:
@@ -16,12 +16,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          package-manager-cache: false # no cache in a release workflow (cache poisoning)
       - name: Tag main'deki bir commit'i mi gösteriyor
         run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "Tag main dalında değil, yayın durdu."; exit 1; }
       - name: Sürümler aynı mı (tag, package.json, kit/VERSION)
@@ -42,10 +43,11 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          package-manager-cache: false # no cache in a release workflow (cache poisoning)
           registry-url: https://registry.npmjs.org
       - name: npm sürümü (Trusted Publishing 11.5.1+ ister)
         run: node -e "const [a,b,c]=process.argv[1].split('.').map(Number); process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)" "$(npm --version)"

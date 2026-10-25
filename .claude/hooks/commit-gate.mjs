@@ -49,11 +49,22 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // git aliases that run commit ([alias] ci = commit, cm = !git commit), from git config and from an inline -c alias.x=commit
 export function commitPattern(command) {
   if (!/\bgit/.test(command)) return COMMIT; // this hook runs on every Bash call: git config only when git is named
+  // An alias defined in the same command (git -c alias.x=…, git config alias.x …, GIT_CONFIG_* env) cannot be read beforehand:
+  // every git subcommand then counts as a commit (inline), and the chain check, which only knows plain commit, stops the command.
+  if (/GIT_CONFIG_|\balias\.[\w-]+=|\bconfig\b[^;&|\n]*\balias\./i.test(command)) return Object.assign(commitRe(['\\S+']), { inline: true });
   let config = '';
   try { config = git('config --get-regexp ^alias\\.'); } catch { /* no alias or no repo */ }
-  const names = [...config.matchAll(/^alias\.(\S+)\s+(.*)$/gm), ...command.matchAll(/alias\.([\w-]+)=["']?([^"'\s][^"'\n]*)/g)]
-    .filter(([, , value]) => /^(!\s*git\s+)?commit\b/.test(value.trim())).map(([, name]) => escapeRe(name));
-  return names.length ? commitRe(['commit', ...names]) : COMMIT;
+  // Aliases are case-insensitive; one whose value names commit anywhere (a !shell alias too) or calls such an alias is a commit
+  const aliases = [...config.matchAll(/^alias\.(\S+)\s+(.*)$/gm)].map(([, name, value]) => [name.toLowerCase(), value]);
+  const names = new Set();
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const [name, value] of aliases) {
+      const words = value.toLowerCase().split(/[^\w.-]+/);
+      if (!names.has(name) && (words.includes('commit') || words.some((w) => names.has(w)))) { names.add(name); grew = true; }
+    }
+  }
+  return names.size ? new RegExp(commitRe(['commit', ...[...names].map(escapeRe)]).source, 'i') : COMMIT;
 }
 
 // The hook sees the command before it runs: anything that can change files before the commit defeats the review.
@@ -171,7 +182,7 @@ async function hook() {
   }
   if (!commit.test(command) && !commit.test(open)) process.exit(0);
   if (!hasBoard() || reviewOff()) process.exit(0);
-  const chain = chainIssue(command, commit);
+  const chain = chainIssue(command, commit.inline ? COMMIT : commit);
   if (chain) {
     process.stderr.write(`Commit durduruldu: ${chain}. Kapı komut çalışmadan önceki değişiklikleri denetler; commit'i tek başına ` +
       '(veya yalnızca "git add … && git commit" ile) çalıştır. Push ve diğer komutları ayrı çalıştır.\n');
