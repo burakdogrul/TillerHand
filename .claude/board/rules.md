@@ -44,7 +44,7 @@ Kurulda olmayan bir üyeyi çağırma; ilgili alan kurulda yoksa durum bloğunda
 ## 4. Toplantı nasıl yapılır
 
 1. **Limit kontrolü** (`docs/workflow/usage-limits.md`): Seviye sarıysa üye sayısını yarıya indir; kırmızıysa kullanıcıya sor (kurulu hafiflet seçeneği dahil).
-1b. **Deterministik kapı** (commit, görev sonu, faz sonu; plan toplantısında yok): `node .claude/hooks/gate.mjs --run`. AGENTS.md → Komutlar'daki lint, tip kontrolü ve test ile Semgrep çalışır; sonuç değişiklik imzasıyla saklanır. Kırmızıysa veya boşsa (hiçbir kontrol çalışmadı) commit kapısı açılmaz: önce düzelt ya da Komutlar'ı doldur. Kullanıcı ara commit için açıkça isterse `--approve "atlandı: kullanıcı isteği"`. Kapı "komut onayı gerekli" derse komutları kullanıcıya göster; onaylarsa `node .claude/hooks/gate.mjs --approve` (yeni veya değişen komut onaysız çalışmaz).
+1b. **Deterministik kapı** (commit, görev sonu, faz sonu; plan toplantısında yok): `node .claude/hooks/gate.mjs --run`. AGENTS.md → Komutlar'daki lint, tip kontrolü ve test ile Semgrep çalışır; sonuç değişiklik imzasıyla saklanır. Kırmızıysa veya boşsa (hiçbir kontrol çalışmadı) commit kapısı açılmaz: önce düzelt ya da Komutlar'ı doldur. Kullanıcı ara commit için açıkça isterse `node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"` (her zaman onaya sorulur). Kapı "komut onayı gerekli" derse komutları kullanıcıya göster; onaylarsa `node .claude/hooks/gate.mjs --approve` (yeni veya değişen komut onaysız çalışmaz).
 2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu, kabul kriterleri ve kapı çıktısı (varsa). Commit toplantısında `model: "haiku"` ver.
 2b. **Konsey toplantısıysa** (§2) `.claude/board/council.md` aşama 1-4'ü uygula. Sentezi başkanın kararından kur; görüş ayrılığı satırına azınlık görüşünü yaz.
 3. **Sentezle** (ana ajan; konseyde başkanın kararına göre):
@@ -62,7 +62,7 @@ Kullanıcıya sorulacaklar: [üyelerin işaretlediği kararlar]
 5. **Kaydet:** `docs/workflow/board.md` → toplantı günlüğüne bir satır ekle. Kararları `docs/decisions/log.md` günlüğüne ekle. Açık kalan bulguları `docs/workflow/progress.md` → "Açık sorunlar"a yaz.
 6. **Commit toplantısı sonucu ONAY veya KOŞULLU ONAY ise** commit kapısını aç: `node .claude/hooks/commit-gate.mjs --approve "<katılan üyeler>"`. RET ise açma; önce kullanıcıya sor.
 
-Kullanıcı commit denetimini o an için atlamak isterse açıkça söylemesi gerekir. O durumda `node .claude/hooks/commit-gate.mjs --approve "atlandı: kullanıcı isteği"` çalıştır ve günlüğe yaz. Kalıcı olarak kapatmak için: `docs/workflow/board.md` → `**Commit denetimi:** kapalı`.
+Kullanıcı commit denetimini o an için atlamak isterse açıkça söylemesi gerekir. O durumda `node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"` çalıştır (onaya sorulur) ve günlüğe yaz. Kalıcı olarak kapatmak için: `docs/workflow/board.md` → `**Commit denetimi:** kapalı`.
 
 ## 5. Kurul nasıl kurulur (`/start` Kurul adımı veya `/board setup`)
 

@@ -133,7 +133,7 @@ export function runGate(root) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify({ signature, date: new Date().toISOString(), passed, empty, checks }, null, 2));
   const result = checks.some((k) => k.status === 'failed') ? 'Sonuç: KIRMIZI. Commit kapısı açılmaz: düzelt ve kapıyı tekrar çalıştır.'
-    : empty ? 'Sonuç: BOŞ, hiçbir kontrol çalışmadı. AGENTS.md → Komutlar\'ı doldur; commit kapısı açılmaz (kullanıcı isterse "atlandı").'
+    : empty ? 'Sonuç: BOŞ, hiçbir kontrol çalışmadı. AGENTS.md → Komutlar\'ı doldur; commit kapısı açılmaz (kullanıcı isterse commit-gate.mjs --skip).'
     : 'Sonuç: YEŞİL.';
   return { passed, text: [`## Kapı · ${files.length} dosya değişti`, ...checks.map(line), result].join('\n') };
 }

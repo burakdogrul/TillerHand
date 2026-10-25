@@ -239,7 +239,8 @@ export function scopeIssue(command, dir, root) {
 
 // Commands denied/asked in Claude Code via .claude/settings.json → permissions. Codex and Antigravity have no such
 // list; this is its counterpart (applied only on those tools, Claude's behavior does not change).
-// Only the real .claude/hooks/commit-gate.mjs --approve is kept out of the gate rule (separators optional: unquote drops backslashes).
+// Only the real .claude/hooks/commit-gate.mjs --approve is kept out of the gate rule (separators optional: unquote drops backslashes;
+// anchored at the start of the path, so sandbox/.claude/hooks/commit-gate.mjs, a renamed gate.mjs, is not exempt).
 const PERMISSION_EQUIVALENT = [
   ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'rm -rf ile toplu silme'],
   ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'Klasör toplu siliniyor'],
@@ -249,7 +250,10 @@ const PERMISSION_EQUIVALENT = [
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
   ['ask', /tools\.mjs['"]?\s+['"]?--commands\b/i, 'Paylaşılan .claude/settings.json → skillOverrides değişiyor (komut listesi)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-add\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
-  ['ask', /(?<!\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
+  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-save\b/i, 'Kapsam kalkanının dosya listesi yazılıyor'],
+  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-end\b/i, 'Kapsam kalkanı kapatılıyor'],
+  ['ask', /commit-gate\.mjs['"]?\s+['"]?--skip\b/i, 'Commit kapısı ve kurul denetimi atlanıyor'],
+  ['ask', /(?<!(?:^|[\s'"=])(?:\.[\\/]|\$\{?CLAUDE_PROJECT_DIR\}?[\\/]?)?\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked
   // (.git: the gate command approval and git hooks live there)
   ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents|git)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
@@ -290,10 +294,21 @@ function obfuscationOne(command) {
     ? { decision: 'ask', reason: 'Komut gizlenmiş görünüyor (satır sonu \\, $\'..\', $(...), `...` veya ${...}) ve korunan bir işlem içeriyor. Kullanıcı onayı gerekli.' } : null;
 }
 
+// A kit guard script (.claude/hooks) run with an indirect spelling: $VAR, $(..), `..`, ${..}, $'..' or a glob * ? (commit-gate.mjs $S,
+// --sk$()ip, commit-*.mjs). The text rules for --skip, --approve and --plan-* cannot see through them: asked (user decision 2026-10-25).
+// Heredocs and single-quoted text are not expanded; $CLAUDE_PROJECT_DIR is the documented way to name the folder.
+export function hookScriptIssue(command) {
+  const k = command.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, '').replace(/'[^']*'/g, "''")
+    .replace(/"(?:[^"\\]|\\.)*"/g, (q) => q.replace(/[*?]/g, '')).replace(/\$\{?CLAUDE_PROJECT_DIR\}?|\$env:CLAUDE_PROJECT_DIR/gi, '');
+  if (!/\bnode\b/i.test(k) || !/\.claude|hooks|commit-|gate|freeze/i.test(command)) return null;
+  return /\$\(|`|\$\{|\$'|\$[A-Za-z_]|[*?]/.test(k)
+    ? { decision: 'ask', reason: 'Kitin koruma betiği dolaylı yazımla çalıştırılıyor ($DEĞİŞKEN, $(...), `...`, ${...} veya * ?); kural metni bunun içini göremez. Kullanıcı onayı gerekli.' } : null;
+}
+
 // Separators inside quotes turned into spaces: a quoted & or | ("a & b") must not split a command so its later flags escape the rules
 const blankQuoted = (s) => s.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => q.replace(/[;&|\n]/g, ' '));
 export function evaluate(command) {
-  return strictest(evaluateOne(command), evaluateOne(unquote(command)), evaluateOne(blankQuoted(command)), obfuscationOne(command));
+  return strictest(evaluateOne(command), evaluateOne(unquote(command)), evaluateOne(blankQuoted(command)), obfuscationOne(command), hookScriptIssue(command));
 }
 function evaluateOne(command) {
   const k = command.replace(/\s+/g, ' ');

@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -77,4 +78,20 @@ test('Supabase keys use the new names (legacy anon/service_role are retired by t
   const rule = JSON.parse(read('.claude/security-patterns.json')).patterns.find((p) => p.rule_name === 'supabase_service_role_client');
   for (const s of ['process.env.SUPABASE_SECRET_KEY', 'service_role', 'process.env.SUPABASE_SERVICE_ROLE_KEY']) assert.match(s, new RegExp(rule.regex), s);
   assert.doesNotMatch('process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', new RegExp(rule.regex));
+});
+
+test('format hook: runs Prettier without a shell, so a spaced or quoted path works (web and mobile)', () => {
+  for (const t of ['web-saas', 'mobile']) {
+    const p = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'proje boşluk & x '));
+    const bin = path.join(p, 'node_modules', 'prettier', 'bin');
+    fs.mkdirSync(bin, { recursive: true });
+    fs.writeFileSync(path.join(bin, 'prettier.cjs'), "require('fs').writeFileSync(require('path').join(process.cwd(), 'args.json'), JSON.stringify(process.argv.slice(2)));");
+    const file = path.join(p, "a b'c.ts");
+    const r = spawnSync(process.execPath, [path.join(ROOT, `kit/templates/${t}/.claude/hooks/format.mjs`)], {
+      input: JSON.stringify({ tool_input: { file_path: file } }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p },
+    });
+    assert.equal(r.status, 0, t);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(p, 'args.json'), 'utf8')), ['--write', '--log-level', 'warn', file], t);
+    fs.rmSync(p, { recursive: true, force: true });
+  }
 });

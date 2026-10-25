@@ -55,7 +55,8 @@ test('F-06 an active plan does not widen without a question; add and end work; t
   assert.match(again.stderr, /aktif/);
   assert.equal(edit('src/b.ts').decision, 'ask', 'list unchanged');
   assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-add src/b.ts')?.decision, 'ask', 'Codex/Antigravity equivalent');
-  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-end'), null);
+  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-end')?.decision, 'ask', '3.28.0: closing the shield is asked too');
+  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-save G-2 src/')?.decision, 'ask', '--plan-end + --plan-save must not widen unasked');
   assert.equal(cli('--plan-add', 'src/b.ts').status, 0);
   assert.equal(edit('src/b.ts'), null);
   assert.equal(cli('--plan-add', '../dis.ts').status, 1, 'a path outside the project is not added');

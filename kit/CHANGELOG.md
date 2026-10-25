@@ -3,6 +3,23 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.28.0] - 2026-10-25
+
+### Değişen
+- **Commit denetimini atlamak artık ayrı bir komut: `commit-gate.mjs --skip "<neden>"`.** Bu komut her seferinde kullanıcıya sorulur. `--approve` "atlandı" ile başlayan notu artık kabul etmiyor. Önceden hook komut metninde "atlandı" kelimesini arıyordu; kelime `$'atland\xc4\xb1'` gibi kaçışlı yazılınca soru çıkmadan kapı ve kurul atlanabiliyordu.
+- **Kapsam kalkanını açmak ve kapatmak (`freeze-guard.mjs --plan-save`, `--plan-end`) artık sorulur.** İkisi de serbestti. AI planı kapatıp listede olmayan dosyalara yazabiliyor ya da planı daha geniş bir listeyle yeniden kaydedebiliyordu. `/kit-update` eski izin satırlarını kaldırıp yenilerini ekler.
+- **Koruma betiği dolaylı yazımla çalıştırılırsa sorulur.** `.claude/hooks` altındaki bir betik `$DEĞİŞKEN`, `$(...)`, ters tırnak, `${...}` ya da `*` `?` ile çağrılırsa (`commit-gate.mjs $S`, `commit-*.mjs`) kurallar komutun içini göremez; bu yüzden kullanıcı onayı istenir. `$CLAUDE_PROJECT_DIR` ve heredoc içindeki commit mesajları bu kurala takılmaz.
+- **Paket kapısı indirip çalıştıran komutlara da bakıyor:** `npx`, `bunx`, `bun x`, `npm exec`, `pnpm dlx`, `yarn dlx`, `uvx`, `uv tool run`, `uv run --with`, `pipx run`. Paket adı uydurmaysa komut engellenir. Çok yeni, az indirilmiş ya da popüler bir pakete benzeyen paket kullanıcıya sorulur. Projede zaten kurulu bir komut (`node_modules/.bin`) `npx`, `npm exec` ve `bunx` ile çalıştırılırken denetlenmez; `dlx` her zaman indirdiği için denetlenir. Kitin kendi paketi (`tillerhand`) denetlenmez.
+- **Paket kapısı önekleri ve sarmalayıcıları da görüyor** (kurulum komutlarında da): `FOO=1 npx`, `cmd /c`, `bash -c`, `time`, `/usr/bin/npx`, `npx.cmd`, `pnpm -C . dlx`, `npm --prefix web install`. Bilinmeyen bir bayraktan sonraki ad kesin paket sayılmaz; kayıt defterinde yoksa engellenmez, sorulur.
+
+### Düzeltilen
+- **Windows'ta masaüstü bildirimi proje adından komut çalıştırabiliyordu.** Proje adı PowerShell betiğinin metnine gömülüyordu ve yalnız düz `'` kaçırılıyordu; PowerShell `’ ‘ ‚ ‛` işaretlerini de tırnak sayar. Başlık ve mesaj artık betiğe ortam değişkeniyle geçiyor.
+- **Biçimlendirme hook'u (web, mobil) Windows'ta boşluklu klasörde çalışmıyordu** ve dosya yolunu kabuğa kaçışsız veriyordu. Prettier artık kabuk olmadan, doğrudan Node ile çalışıyor (Prettier 3).
+- **Maliyet okuma (`cost.mjs`) `npx`'i proje klasöründe çalıştırıyordu.** Bu yüzden depodaki bir `.npmrc` ya da `node_modules/.bin/ccusage` devreye girebiliyordu. Artık her çalışmada açılıp silinen kendi geçici klasöründe çalışıyor.
+- **Commit kapısındaki muafiyet sadece projenin kendi `commit-gate.mjs` dosyası için geçerli.** Yol çözülerek karşılaştırılır: göreli, mutlak ya da `$CLAUDE_PROJECT_DIR` ile yazılan yol muaf kalır. Başka bir klasörde (`sandbox/.claude/hooks/commit-gate.mjs`) bu adla duran bir `gate.mjs` kopyası ise kapı komut onayı sayılır.
+- Linux bildiriminde `-` ile başlayan mesaj seçenek sanılmaz.
+  - Elle uyarla: yok; `/kit-update` hook'ları, kuralları ve izin satırlarını yeniler.
+
 ## [3.27.2] - 2026-10-25
 
 ### Belgeler

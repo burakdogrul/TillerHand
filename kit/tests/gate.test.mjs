@@ -8,7 +8,8 @@ import path from 'node:path';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readCommands, approvalPath } from '../../.claude/hooks/gate.mjs';
-import { permissionEquivalent } from '../../.claude/hooks/destructive-guard.mjs';
+import { permissionEquivalent, evaluate } from '../../.claude/hooks/destructive-guard.mjs';
+import { maskOwnHook } from '../../.claude/hooks/commit-gate.mjs';
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 let p;
@@ -18,6 +19,7 @@ const gate = (...a) => spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs')
 const runGate = () => (gate('--approve'), gate('--run'));
 const commit = (command = 'git commit -m x') => spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], { input: JSON.stringify({ tool_input: { command } }), encoding: 'utf8', env: env() });
 const approve = (note) => spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs'), '--approve', note], { encoding: 'utf8', env: env() });
+const skip = (note) => spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs'), '--skip', note], { encoding: 'utf8', env: env() });
 const sh = (c) => execSync(c, { cwd: p, stdio: 'ignore' });
 const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); fs.writeFileSync(path.join(p, f), s); };
 const agents = (test) => write('AGENTS.md', `# X\n\n## Komutlar\n\n\`\`\`bash\ngeliştirme:  [ ]\ntest:        ${test}\nlint:        node -e "console.log('lint temiz')"\ntip kontrol: [ ]\nbuild:       [ ]\n\`\`\`\n`);
@@ -93,7 +95,11 @@ test('F-03 commit gate: stops if the gate is missing, red or stale; passes with 
   const red = commit();
   assert.equal(red.status, 2);
   assert.match(red.stderr, /kırmızı/);
-  assert.equal(approve('atlandı: kullanıcı isteği').status, 0);
+  const refused = approve('atlandı: kullanıcı isteği');
+  assert.equal(refused.status, 1, '--approve never writes an "atlandı" note (a $\'\\x..\' spelling arrives here decoded)');
+  assert.match(refused.stderr, /--skip/);
+  assert.equal(commit().status, 2);
+  assert.equal(skip('kullanıcı isteği').status, 0);
   assert.equal(commit().status, 0, 'skipped at the user\'s request');
   write('a.js', 'w');
   approve('board-qa');
@@ -124,10 +130,11 @@ test('F-03 audit: an untracked new file is in the signature; global git options 
   assert.equal(commit('cd . && git add -A && git commit -m x').status, 0, 'commit with cd and git add is free');
 });
 
-test('F-03 audit: an "atlandı" approval is put to the user in every spelling', () => {
-  assert.equal(ask('node .claude/hooks/commit-gate.mjs --approve "atlandı: kullanıcı isteği"'), 'ask');
-  assert.equal(ask("node .claude/hooks/commit-gate.mjs --approve 'atlandı'"), 'ask');
-  assert.equal(ask('node .claude/hooks/commit-gate.mjs --approve atlandı:x'), 'ask');
+test('F-03 audit: --skip is put to the user in every spelling', () => {
+  assert.equal(ask('node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"'), 'ask');
+  assert.equal(ask("node ./.claude/hooks/commit-gate.mjs '--skip'"), 'ask');
+  assert.equal(ask('node .claude\\hooks\\commit-gate.mjs --sk""ip x'), 'ask');
+  assert.equal(permissionEquivalent('node .claude/hooks/commit-gate.mjs --skip x')?.decision, 'ask', 'Codex/Antigravity');
   assert.equal(ask('node .claude/hooks/commit-gate.mjs --approve "board-qa"'), null);
 });
 
@@ -141,7 +148,7 @@ test('3.14.1 an empty gate stops the commit; the user passes with "atlandı"', (
   const r = commit();
   assert.equal(r.status, 2);
   assert.match(r.stderr, /boş/);
-  approve('atlandı: kullanıcı isteği');
+  skip('kullanıcı isteği');
   assert.equal(commit().status, 0);
   fs.renameSync(path.join(p, 'AGENTS.yok'), path.join(p, 'AGENTS.md'));
 });
@@ -208,6 +215,13 @@ test('3.17.0 the pre-3.15 flag and state are gone: --onayla does not approve; th
   // Only the real commit-gate is exempt: a copy of gate.mjs named commit-gate.mjs elsewhere is still the gate approval
   assert.equal(permissionEquivalent('node tmp/commit-gate.mjs --approve')?.decision, 'ask');
   assert.equal(ask('node tmp/commit-gate.mjs --approve'), 'deny', 'not the exact spelling of the gate approval');
+  // 3.28.0: the exemption is anchored at the path start; a nested .claude/hooks/commit-gate.mjs is still the gate approval
+  for (const c of ['node sandbox/.claude/hooks/commit-gate.mjs --approve', 'node x\\.claude\\hooks\\commit-gate.mjs --approve']) {
+    assert.equal(permissionEquivalent(c)?.decision, 'ask', c);
+    assert.equal(ask(c), 'deny', c);
+  }
+  for (const c of ['node ./.claude/hooks/commit-gate.mjs --approve "board-qa"', 'node ".claude/hooks/commit-gate.mjs" --approve x'])
+    assert.equal(permissionEquivalent(c), null, c);
   // 3.15.0 audit: Windows paths (unquote drops backslashes) and a renamed copy must not slip past the gate approval rule
   assert.equal(ask('node .claude\\hooks\\gate.mjs --approve'), 'ask', 'Windows path, exact spelling');
   assert.equal(ask('node ".claude\\hooks\\gate.mjs" --approve'), 'deny', 'quoted Windows path is not the exact spelling');
@@ -261,4 +275,30 @@ test('3.14.1 Semgrep: installed as .cmd on Windows does not say "kurulu değil"'
   assert.doesNotMatch(r.stdout, /kurulu değil/);
   fs.rmSync(bin, { recursive: true, force: true });
   fs.rmSync(path.join(p, 'b.js'));
+});
+
+test('3.28.0 commit-gate exemption: this project\'s own script in any spelling; another commit-gate.mjs is the gate approval', () => {
+  const REPO = path.resolve(HOOKS, '..', '..');
+  for (const [c, dir] of [['node ../.claude/hooks/commit-gate.mjs --approve x', path.join(REPO, 'kit')],
+    [`node "${path.join(REPO, '.claude', 'hooks', 'commit-gate.mjs')}" --approve x`, REPO],
+    ['node "$CLAUDE_PROJECT_DIR/.claude/hooks/commit-gate.mjs" --approve x', path.join(REPO, 'kit')],
+    ['node ./.claude/hooks/commit-gate.mjs --approve x', REPO]])
+    assert.match(maskOwnHook(c, dir), /KIT-COMMIT-HOOK/, c);
+  for (const [c, dir] of [['node .claude/hooks/commit-gate.mjs --approve x', path.join(REPO, 'kit')],
+    ['cd sandbox && node .claude/hooks/commit-gate.mjs --approve x', REPO], ['node sandbox/.claude/hooks/commit-gate.mjs --approve x', REPO]])
+    assert.doesNotMatch(maskOwnHook(c, dir), /KIT-COMMIT-HOOK/, c);
+  assert.equal(ask(`node "${path.join(p, '.claude', 'hooks', 'commit-gate.mjs')}" --approve x`), null, 'absolute path to the real script');
+  assert.equal(ask('node "$CLAUDE_PROJECT_DIR/.claude/hooks/commit-gate.mjs" --approve x'), null);
+  assert.equal(ask('cd sandbox && node .claude/hooks/commit-gate.mjs --approve x'), 'deny', 'a cd hides which file runs');
+});
+
+test('3.28.0 a guard script run with an indirect spelling is asked; plain and heredoc spellings are not', () => {
+  for (const c of ['S=--skip; node .claude/hooks/commit-gate.mjs $S x', 'node .claude/hooks/commit-gate.mjs --sk$()ip x',
+    'node .claude/hooks/commit-*.mjs --skip x', 'node .claude/hooks/commit-gate.mjs --ski? x', 'node .claude/hooks/commit-gate.mjs "$(echo --skip)" x',
+    'node .claude/hooks/freeze-guard.mjs `echo --plan-end`'])
+    assert.equal(evaluate(c)?.decision, 'ask', c);
+  for (const c of ['node .claude/hooks/gate.mjs --run 2>&1 | tail -30', 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/notify.mjs" --stop',
+    'node .claude/hooks/commit-gate.mjs --approve "board-qa, board-security"', "node .claude/hooks/x.mjs 'a*b?'",
+    "git commit -m \"$(cat <<'EOF'\nfix: node .claude/hooks/x.mjs $S *\nEOF\n)\""])
+    assert.equal(evaluate(c), null, c);
 });

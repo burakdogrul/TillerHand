@@ -287,7 +287,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.27.2</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.28.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="install"><span id="cmd">npx tillerhand init</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
@@ -760,14 +760,14 @@ node vibe-kit/kit/kit.mjs init
     <tbody>
       <tr><td>Sır engeli</td><td>Koda veya dokümana yazılan API anahtarını (Anthropic, OpenAI, Stripe, AWS, GitHub, Supabase…) engeller; commit öncesi de tarar</td></tr>
       <tr><td>Yıkıcı komut kalkanı</td><td><code>DROP</code>, <code>TRUNCATE</code>, koşulsuz <code>DELETE</code>, <code>db reset</code> ve prod ortam değişkenlerini makineye çekmek engellenir; prod deploy, geri alma, mağazaya gönderim ve migration sorulur</td></tr>
-      <tr><td>Paket kapısı</td><td>Paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur</td></tr>
+      <tr><td>Paket kapısı</td><td>Kurulan ya da <code>npx</code>, <code>uvx</code> ile indirilip çalıştırılan paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur</td></tr>
       <tr><td>Yapı koruyucu</td><td>Harita dışı yeni dosya sorulur; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir</td></tr>
       <tr><td>Yapılandırma onayı</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> ve iş akışı dosyaları onayın olmadan değişmez</td></tr>
       <tr><td>Test koruması</td><td>Beklenti silmek veya yoruma almak, <code>.skip</code>/<code>.only</code>, gevşek beklenti, test dosyasını silmek veya taşımak ve test ayarında kapsamı daraltmak sorulur; kabukla test dosyasına yazmak da</td></tr>
       <tr><td>Deterministik kapı</td><td><code>gate.mjs --run</code>: lint, tip kontrolü, test ve Semgrep çalışır; çıktı kurula girdi olur, kırmızı kontrol RET sayılır. Spec'teki "değişmemesi gereken" davranışların testi yoksa veya kırmızıysa kapı kırmızıdır. Yeni veya değişen komut önce sana gösterilip onaylatılır</td></tr>
-      <tr><td>Commit kapısı</td><td>Kurul denetimi ve aynı değişiklikler için yeşil kapı olmadan commit atılmaz</td></tr>
+      <tr><td>Commit kapısı</td><td>Kurul denetimi ve aynı değişiklikler için yeşil kapı olmadan commit atılmaz; denetimi atlamak (<code>--skip</code>) her seferinde sorulur</td></tr>
       <tr><td>Düzenleme kilidi</td><td><code>/freeze &lt;klasör&gt;</code> açıkken AI sadece o klasöre yazar; kabukla dışarı yazmak sorulur, sembolik bağdan kaçılamaz</td></tr>
-      <tr><td>Kapsam kalkanı</td><td><code>/plan-task</code> onayından sonra planın dosya listesi kaydedilir; listede olmayan mevcut dosyaya yazım sorulur</td></tr>
+      <tr><td>Kapsam kalkanı</td><td><code>/plan-task</code> onayından sonra planın dosya listesi kaydedilir; listede olmayan mevcut dosyaya yazım sorulur. Kalkanı açmak ve kapatmak da sorulur</td></tr>
       <tr><td>Düzenleme turu sayacı</td><td>Aynı kod dosyası bir oturumda 5., 10. kez düzenlenince Semgrep ve güvenlik incelemesi hatırlatılır</td></tr>
       <tr><td>Dev/prod ayrımı</td><td>Yerel ortam ve AI (salt-okunur MCP dahil) sadece dev projesine bağlanır; prod sırları barındırma panelinde kalır</td></tr>
       <tr><td>Güvenlik incelemesi</td><td><code>security-guidance</code>: yazarken riskli kalıp uyarısı (istemcide service_role, kişisel veri logu, innerHTML), commit'te ayrı modelle inceleme</td></tr>

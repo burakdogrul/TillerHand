@@ -41,4 +41,4 @@ Bu adımda **kod yazma**, sadece plan çıkar.
 
 Planı onaylatmak için AskUserQuestion kullan: "Onayla / Şunu değiştir / Görevi böl". Onayımı bekle. Onaydan sonra `/build` ile uygulanacak.
 
-8. **Onaydan sonra kapsam kalkanını aç:** `node .claude/hooks/freeze-guard.mjs --plan-save <görev kodu> <dosya...>` ("Dokunulacak dosyalar"daki yollar; bütün bir klasör için sonuna `/`). Plan aktifken listede olmayan mevcut dosyaya yazım (dosya aracıyla da, `sed -i`, `mv`, `>` gibi kabuk komutlarıyla da) kullanıcıya sorulur; yeni dosyalar ve `docs/` serbest. Uygularken listede olmayan bir dosya gerekirse kullanıcıya sor, onaylarsa `--plan-add <yol>`.
+8. **Onaydan sonra kapsam kalkanını aç:** `node .claude/hooks/freeze-guard.mjs --plan-save <görev kodu> <dosya...>` ("Dokunulacak dosyalar"daki yollar; bütün bir klasör için sonuna `/`). Komut kullanıcıya sorulur: listeyi görüp onaylar. Plan aktifken listede olmayan mevcut dosyaya yazım (dosya aracıyla da, `sed -i`, `mv`, `>` gibi kabuk komutlarıyla da) kullanıcıya sorulur; yeni dosyalar ve `docs/` serbest. Uygularken listede olmayan bir dosya gerekirse kullanıcıya sor, onaylarsa `--plan-add <yol>`.

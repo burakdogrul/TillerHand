@@ -45,6 +45,15 @@ test('notification: none for a short job or with KIT_NOTIFY=off, no error', () =
   fs.rmSync(p, { recursive: true, force: true });
 });
 
+test('notification: project name never enters the PowerShell script (’ is a quote there)', async () => {
+  const { winCommand } = await import('../../.claude/hooks/notify.mjs');
+  const title = 'Claude Code · Proje’; Write-Output INJECTED; ’';
+  const { args, env } = winCommand(title, 'mesaj ‘x');
+  assert.ok(!args.some((a) => a.includes('INJECTED') || a.includes('mesaj')), 'text is not in the command');
+  assert.match(args.at(-1), /\$env:KIT_T, \$env:KIT_M/);
+  assert.equal(env.KIT_T, title);
+});
+
 test('settings: notification hooks, skill budget, pinned MCP versions', () => {
   const s = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude/settings.json'), 'utf8'));
   assert.ok(s.hooks.Notification && s.hooks.Stop[0].hooks.some((h) => /notify\.mjs" --stop$/.test(h.command)));

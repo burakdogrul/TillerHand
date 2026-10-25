@@ -2,6 +2,7 @@
 // Commit gate: before every AI `git commit` it requires a light board review and a green deterministic gate (gate.mjs).
 //   PreToolUse (Bash) hook: without review approval it stops the commit with exit code 2 and says what to do.
 //   node .claude/hooks/commit-gate.mjs --approve "<members who took part, or a note>"   binds the approval to the current changes.
+//   node .claude/hooks/commit-gate.mjs --skip "<reason>"   only when the user asks: skips the board and the gate (always asked).
 // Exempt: no board set up, "Commit denetimi: kapalı" in docs/workflow/board.md, or only docs changed.
 // Commits the user makes from their own terminal are not affected (this is a Claude Code hook).
 import fs from 'node:fs';
@@ -63,7 +64,19 @@ function reviewOff() {
   }
 }
 
+// A note starting with "atlandı" skips the board and the gate. --approve refuses it whatever the spelling
+// ($'atland\xc4\xb1', $(printf ...)); only --skip writes it, and --skip is always asked.
+const SKIPPED = /^atlandı/i;
+
 function approve(note) {
+  if (SKIPPED.test(note)) {
+    console.error('"atlandı" notu --approve ile yazılmaz. Kullanıcı açıkça isterse: node .claude/hooks/commit-gate.mjs --skip "<neden>"');
+    process.exit(1);
+  }
+  save(note);
+}
+
+function save(note) {
   const { signature, files } = changes();
   fs.mkdirSync(path.dirname(approvalFile), { recursive: true });
   fs.writeFileSync(approvalFile, JSON.stringify({ signature, note, files, date: new Date().toISOString() }));
@@ -83,25 +96,40 @@ function readApproval() {
   return a && { signature: a.signature, note: a.note };
 }
 
+// This project's own commit-gate.mjs, resolved from the shell's folder ($CLAUDE_PROJECT_DIR, absolute, relative or ./ spelling),
+// is masked so it is not read as the gate approval; any other *gate.mjs (sandbox/.claude/hooks/commit-gate.mjs, a renamed
+// copy of gate.mjs) still is. A cd in the command moves the folder the text cannot follow: then nothing is masked.
+const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+const samePath = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b);
+export function maskOwnHook(command, dir) {
+  if (/(^|[;&|(]\s*)(cd|pushd|popd|Set-Location|sl|chdir)\b/i.test(command)) return command;
+  const own = real(path.join(root, '.claude', 'hooks', 'commit-gate.mjs'));
+  return command.replace(/"([^"\n]*commit-gate\.mjs)"|'([^'\n]*commit-gate\.mjs)'|([^\s"';&|]*commit-gate\.mjs)\b/gi, (m, a, b, c) => {
+    const p = (a ?? b ?? c).replace(/\$\{?CLAUDE_PROJECT_DIR\}?|%CLAUDE_PROJECT_DIR%|\$env:CLAUDE_PROJECT_DIR/gi, process.env.CLAUDE_PROJECT_DIR || root);
+    return samePath(real(path.resolve(dir, p)), own) ? 'KIT-COMMIT-HOOK' : m;
+  });
+}
+
 function hook() {
-  let command = '';
+  let command = '', dir = root;
   try {
-    command = JSON.parse(fs.readFileSync(0, 'utf8')).tool_input?.command ?? '';
+    const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+    command = input.tool_input?.command ?? '';
+    if (typeof input.cwd === 'string' && input.cwd) dir = input.cwd;
   } catch {
     process.exit(0);
   }
-  // A "atlandı" approval bypasses the gate and the board: the user is asked (the AI must not write it on its own)
+  // --skip bypasses the gate and the board: the user is asked in every spelling (the AI must not write it on its own)
   const open = unquote(command);
-  if (/commit-gate\.mjs\b[^;&|\n]*--approve\s+atlandı/i.test(open)) {
+  if ([command, open].some((c) => /commit-gate\.mjs\b[^;&|\n]*--skip\b/i.test(c))) {
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
-      permissionDecisionReason: 'Commit kapısı: "atlandı" onayı kurul denetimini ve deterministik kapıyı aşar. Sadece kullanıcı açıkça isterse onayla.' } }));
+      permissionDecisionReason: 'Commit kapısı: --skip kurul denetimini ve deterministik kapıyı aşar. Sadece kullanıcı açıkça isterse onayla.' } }));
     process.exit(0);
   }
   // The gate command approval gives the commands in AGENTS.md permission to run: the user is asked (also covers spellings the permission list misses).
-  // Only the real .claude/hooks/commit-gate.mjs --approve is left out (a copy of gate.mjs named commit-gate.mjs elsewhere
-  // still matches; writing one into .claude/ is itself asked); both the raw and unquoted text are tested (unquote drops
-  // the backslashes of .claude\hooks\gate.mjs, so the separators are optional).
-  if ([command, open].some((c) => /(?<!\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs\b[^;&|\n]*--approve\b/i.test(c))) {
+  // Only this project's commit-gate.mjs --approve is left out (maskOwnHook); both the raw and unquoted text are tested.
+  const masked = maskOwnHook(command, dir);
+  if ([masked, unquote(masked)].some((c) => /gate\.mjs\b[^;&|\n]*--approve\b/i.test(c))) {
     // The prompt reads AGENTS.md now: a chain, an env variable, a node flag or a redirect must not change it after the
     // prompt and get another list approved. Only the exact spelling is accepted.
     if (!/^\s*node\s+(\.\/)?\.claude[\\/]hooks[\\/]gate\.mjs\s+(['"]?)--approve\2\s*$/.test(command)) {
@@ -134,16 +162,16 @@ function hook() {
   const approval = readApproval();
   // The deterministic gate (gate.mjs) must be green for the same changes; not required if the user said "atlandı"
   const gate = readGate();
-  const skipped = /^atlandı/i.test(String(approval?.note ?? ''));
+  const skipped = SKIPPED.test(String(approval?.note ?? ''));
   if (approval?.signature === d.signature && (skipped || (gate?.signature === d.signature && gate.passed === true))) process.exit(0);
   if (approval?.signature === d.signature) {
     const failed = gate?.signature === d.signature ? gate.checks.filter((k) => k.status === 'failed').map((k) => k.name) : null;
     process.stderr.write(failed && !failed.length && gate.empty
       ? 'Commit durduruldu: deterministik kapı boş (hiçbir kontrol çalışmadı). AGENTS.md → Komutlar\'ı doldur ve kapıyı tekrar çalıştır.\n' +
-        'Kullanıcı bu commit için açıkça isterse --approve "atlandı: kullanıcı isteği" kullan.\n'
+        'Kullanıcı bu commit için açıkça isterse --skip "kullanıcı isteği" kullan.\n'
       : failed
       ? `Commit durduruldu: deterministik kapı kırmızı (${failed.join(', ') || 'kaldı'}). Düzelt, node .claude/hooks/gate.mjs --run ile tekrar çalıştır, sonra onayla.\n` +
-        'Kullanıcı ara commit (WIP) için açıkça isterse --approve "atlandı: kullanıcı isteği" kullan.\n'
+        'Kullanıcı ara commit (WIP) için açıkça isterse --skip "kullanıcı isteği" kullan.\n'
       : 'Commit durduruldu: bu değişiklikler için deterministik kapı çalışmadı (ya da sonrasında değişiklik oldu). ' +
         'node .claude/hooks/gate.mjs --run çalıştır; kırmızı yoksa kurul onayını yenile ve commit\'i tekrar dene.\n');
     process.exit(2);
@@ -155,13 +183,14 @@ function hook() {
       '1. .claude/board/rules.md §3\'e göre değişen dosyalara ilgili en fazla 2 kurul üyesini model "haiku" ile, sadece diff üzerinde çalıştır.\n' +
       '2. RET yoksa: node .claude/hooks/commit-gate.mjs --approve "<katılan üyeler>" ve commit\'i tekrar dene.\n' +
       '3. RET varsa commit atma; bulguyu ve seçenekleri kullanıcıya sor.\n' +
-      'Kullanıcı bu commit için denetimi açıkça atlamak isterse --approve "atlandı: kullanıcı isteği" kullan.\n'
+      'Kullanıcı bu commit için denetimi açıkça atlamak isterse --skip "kullanıcı isteği" kullan.\n'
   );
   process.exit(2);
 }
 
 if (isMain(import.meta.url)) {
-  const i = process.argv.indexOf('--approve');
+  const i = process.argv.indexOf('--approve'), j = process.argv.indexOf('--skip');
   if (i > -1) approve(process.argv[i + 1] || 'belirtilmedi');
+  else if (j > -1) save(`atlandı: ${process.argv[j + 1] || 'kullanıcı isteği'}`);
   else hook();
 }

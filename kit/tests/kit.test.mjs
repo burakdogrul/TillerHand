@@ -254,6 +254,9 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   assert.deepEqual(s.permissions.allow.slice(0, 2), own.slice(0, 2), 'project rules kept, in order');
   assert.ok(s.permissions.ask.includes(own[2]));
   assert.deepEqual(s.hooks, stop('--quiet'));
+  const save = 'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)';
+  const moved = migrateSettings({ permissions: { allow: [save] } }, kit).settings.permissions;
+  assert.ok(!moved.allow.includes(save) && moved.ask.includes(save), '3.28.0: --plan-save moves from allow to ask');
   assert.deepEqual(migrateSettings(s, kit), { settings: s, added: [], removed: [] }, 'running again changes nothing');
   for (const bad of [null, 'x', { permissions: 'abc' }, { permissions: { allow: 'xyz' } }, { permissions: { allow: { a: 1 } } }])
     assert.throws(() => migrateSettings(bad, kit), Error, 'a broken shape is reported, not merged');

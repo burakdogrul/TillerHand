@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.26.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.28.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -196,7 +196,7 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 |---|---|
 | Sır engeli | Koda veya dokümana yazılan API anahtarını engeller |
 | Yıkıcı komut kalkanı | `DROP`, koşulsuz `DELETE`, `db reset` engellenir; prod deploy ve geri alma sorulur |
-| Paket kapısı | Var olmayan paketi engeller; çok yeni veya popüler bir pakete benzeyeni sorar |
+| Paket kapısı | Var olmayan paketi engeller (kurulumda ve `npx`, `uvx` ile çalıştırmada); çok yeni veya popüler bir pakete benzeyeni sorar |
 | Yapı koruyucu | Harita dışı dosyayı sorar, dağınıklık dosyalarını engeller |
 | Test koruması | Silinen, atlanan veya gevşetilen testi sorar |
 | Deterministik kapı | Lint, tip, test ve Semgrep çalışmadan commit açılmaz |

@@ -31,7 +31,7 @@ Boşsa `docs/workflow/progress.md` → "Sıradaki adım" veya `docs/product/road
 6. Arayüz değiştiyse `impeccable:impeccable` → `critique` çalıştır; önemli bulguları düzeltip düzeltmeyeceğimi sor.
 6b. **Görev sonu kurul toplantısı** (`.claude/board/rules.md`; kurul kurulduysa): Değişikliğe ilgili en fazla 3 üye. RET varsa görev bitmez; bulguyu ve seçenekleri sor. Toplantıyı `docs/workflow/board.md` günlüğüne yaz.
 7. `AGENTS.md` → "Bitti tanımı" listesini tek tek kontrol et.
-8. Kapsam kalkanını kapat: `node .claude/hooks/freeze-guard.mjs --plan-end`. `docs/product/roadmap.md`'de görevi işaretle; PRD'de sadece testi yeşil olan kriterleri işaretle. Testleri JUnit raporuyla çalıştır (`docs/architecture/stack.md` → Kabul testleri) ki pano güncellensin. Limiti tekrar oku ve `docs/workflow/cost-log.md`'ye satır ekle (başlangıç/bitiş 5 saatlik %, süre dk).
+8. Kapsam kalkanını kapat (komut kullanıcıya sorulur): `node .claude/hooks/freeze-guard.mjs --plan-end`. `docs/product/roadmap.md`'de görevi işaretle; PRD'de sadece testi yeşil olan kriterleri işaretle. Testleri JUnit raporuyla çalıştır (`docs/architecture/stack.md` → Kabul testleri) ki pano güncellensin. Limiti tekrar oku ve `docs/workflow/cost-log.md`'ye satır ekle (başlangıç/bitiş 5 saatlik %, süre dk).
 9. Rapor ver:
    - Ne yapıldı (2-3 satır)
    - Bu görevde alınan kararlar (kullanıcı / otomatik)
