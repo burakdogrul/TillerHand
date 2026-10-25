@@ -90,8 +90,10 @@ test('settings 3.11: browser MCPs in the catalog, the agent uses Playwright CLI,
   const catalog = fs.readFileSync(path.join(ROOT, 'docs/workflow/mcp-catalog.md'), 'utf8');
   for (const s of ['@playwright/mcp@0.0.83', 'chrome-devtools-mcp@1.10.1', '--scope local', 'figma-remote-mcp', 'supabase-dev']) assert.ok(catalog.includes(s), `katalog: ${s}`);
   assert.ok(!/@latest\b/.test(catalog), 'no @latest in the catalog');
-  const permission = JSON.parse(fs.readFileSync(path.join(ROOT, 'kit/templates/web-saas/.claude/settings.merge.json'), 'utf8')).permissions.allow;
-  for (const sub of ['open', 'snapshot', 'console', 'requests', 'screenshot']) assert.ok(permission.includes(`Bash(npx -y @playwright/cli@0.1.22 ${sub}:*)`), `Playwright CLI ${sub} izinli`);
+  const { allow: permission, ask } = JSON.parse(fs.readFileSync(path.join(ROOT, 'kit/templates/web-saas/.claude/settings.merge.json'), 'utf8')).permissions;
+  // 3.19.1: in the project folder the CLI loads a repo's .playwright/cli.config.json, which can run a program: asked, never allowed
+  for (const sub of ['open', 'snapshot', 'console', 'requests', 'screenshot']) assert.ok(ask.includes(`Bash(npx -y @playwright/cli@0.1.22 ${sub}:*)`), `Playwright CLI ${sub} sorulur`);
+  assert.ok(!permission.some((r) => r.includes('@playwright/cli')), 'no Playwright CLI rule is allowed');
   // Subcommands that run code in the page (eval, run-code) are not allowed, they are asked
   assert.ok(!permission.some((r) => /@playwright\/cli@[\d.]+(:\*|\s+(eval|run-code))/.test(r)), 'no broad or code-running Playwright CLI permission');
   for (const t of ['web-saas', 'mobile']) {

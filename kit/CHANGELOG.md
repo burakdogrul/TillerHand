@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.19.1] - 2026-10-25
+
+### Güvenlik
+- **Playwright CLI komutları artık sorulur** (web-saas). `npx -y @playwright/cli@0.1.22 open`, `snapshot`, `console`, `requests` ve `screenshot` izin listesinden çıktı. Bu araç proje klasöründe çalışınca depodaki `.playwright/cli.config.json` dosyasını okur, o dosya da tarayıcı yerine başka bir programı çalıştırabilir. Güvenilmeyen bir depoda bu komutlar sorulmadan çalışmamalı. Yeni projelerde kurallar "sor" listesinde. `/kit-update` mevcut projelerdeki eski izin satırlarını kaldırır, komut her seferinde sorulur. Ekran görüntüsü için `preview.mjs` sormadan çalışmaya devam eder, çünkü aracı geçici bir klasörde çalıştırır.
+
 ## [3.19.0] - 2026-10-25
 
 ### Yeni

@@ -217,6 +217,16 @@ test('status line and dashboard: before and after setup', () => {
   assert.ok(html.includes('Dikkat gerektirenler') && (html.match(/role="tab"/g) ?? []).length === 10, 'dashboard: alert area and 10 tabs');
 });
 
+test('3.19.1 update removes the allowed Playwright CLI rules; the user\'s own rule stays', () => {
+  const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
+  const pw = ['open', 'snapshot', 'console', 'requests', 'screenshot'].map((c) => `Bash(npx -y @playwright/cli@0.1.22 ${c}:*)`);
+  const own = 'Bash(npx -y @playwright/cli@0.1.22 snapshot --depth=2)';
+  const { settings: s, removed } = migrateSettings({ permissions: { allow: ['Bash(npm run dev)', ...pw, own] } }, kit);
+  assert.deepEqual(removed.sort(), pw.map((r) => `allow: ${r}`).sort());
+  assert.ok(!s.permissions.allow.some((r) => pw.includes(r)));
+  assert.ok(s.permissions.allow.includes(own) && s.permissions.allow.includes('Bash(npm run dev)'));
+});
+
 test('3.15.0 update settings migration: missing kit permission rules are added, project rules stay, the old dashboard flag is rewritten', () => {
   const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
   const stop = (flag) => ({ Stop: [{ hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs" ${flag}` }] }] });

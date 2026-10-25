@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.19.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.19.1-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -446,7 +446,7 @@ Kit Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve
 | **Öğrenen kurallar** | `/hookify` (tekrarlayan düzeltme hook kuralı olur), `claude-md-management` (CLAUDE.md denetimi, oturum dersleri) | `/retro`, `/wrap-up` önerir |
 | **Token ve maliyet** | `ccusage` ile proje başına son 30 gün panoda; `/session-report` ile en pahalı istekler | Yerel çalışır |
 | **Güvenlik derinliği** | Trail of Bits: differential-review, insecure-defaults, sharp-edges, static-analysis, supply-chain-risk-auditor, agentic-actions-auditor, fp-check | `/findings-security` ve `security-auditor` kullanır |
-| **Gerçek tarayıcı ölçümü** | **Playwright CLI** (konsol, ağ, ekran görüntüsü; MCP'den az token) + gerektiğinde **Chrome DevTools** MCP (performans izi) | `/findings-perf`, `/findings-ux`; MCP'ler komut sorunca eklenir |
+| **Gerçek tarayıcı ölçümü** | **Playwright CLI** (konsol, ağ, ekran görüntüsü; MCP'den az token) + gerektiğinde **Chrome DevTools** MCP (performans izi) | `/findings-perf`, `/findings-ux`; CLI komutları her seferinde sorulur, MCP'ler komut sorunca eklenir |
 | **Canlıya alma** | **Vercel CLI**: önizleme deploy'u ve kanıt, sonra onayla prod | `--prod`, `promote`, `rollback` her zaman sorulur |
 | **Veritabanı değişikliği** | Supabase CLI migration; MCP prod'da salt-okunur, yazma sadece dev projesinde | Panelden veya MCP'den elle DDL yok |
 | **Bildirim** | `notify.mjs`: soru veya onay beklerken ve 90 sn'den uzun iş bitince | Kapatmak: `KIT_NOTIFY=off` |
