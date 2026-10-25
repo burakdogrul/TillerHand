@@ -1,6 +1,6 @@
 ---
 description: Projeyi kitin GitHub'daki son sürümüne günceller (komutlar, ajanlar, hook'lar, kontrol listeleri).
-argument-hint: [boş | --addons ai | --tool claude,codex,antigravity]
+argument-hint: [boş | --addons ai,tr | --tool claude,codex,antigravity]
 ---
 
 Ek argüman: $ARGUMENTS

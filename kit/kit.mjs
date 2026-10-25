@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Vibe Coding Kit: install and update.
-//   node kit/kit.mjs install --type web-saas [--addons ai] [--keep-kit]
+//   node kit/kit.mjs install --type web-saas [--addons ai,tr] [--keep-kit]
 //       In a project opened from the template, places the type and addons, then deletes the kit/ folder. Run by /start.
 //   node <kit-klonu>/kit/kit.mjs init [--project <yol>] [--tool claude,codex,antigravity]
 //       Installs the kit from a separate folder into a project (default: the current folder). Does not touch the kit folder.
@@ -8,7 +8,7 @@
 //       In a non-empty folder it does not overwrite existing files: the kit's version goes beside them as .kit-new (/adopt merges).
 //   node <kit-klonu>/kit/kit.mjs install --type web-saas --project <yol>
 //       Places the type into a project set up by init. Run by /start and /adopt.
-//   node <kit-klonu>/kit/kit.mjs update --project <yol> [--addons ai]
+//   node <kit-klonu>/kit/kit.mjs update --project <yol> [--addons ai,tr]
 //       Brings the project to this kit version. Run by /kit-update.
 //
 // Layers: repo root (common) -> kit/templates/<type> -> kit/templates/addons/<addon>; a later one overrides an earlier one.
@@ -41,7 +41,7 @@ const PERSONAL = /(^|\/)(\.env(\.(?!example(\.|$))[^/]*)?|secrets\/.*|\.claude\/
 // The rest belong to the project (CLAUDE.md, PRD, stack, settings.json...); the update only adds them if missing.
 const KIT_OWNED = [
   /^\.claude\/(commands|agents|hooks|board|findings|skills)\//,
-  /^docs\/(security\/checklist|operations\/(release-checklist|maintenance|deploy-setup)|legal\/privacy-kvkk|workflow\/(decision-protocol|skills|usage-limits))\.md$/,
+  /^docs\/(security\/checklist|operations\/(release-checklist|maintenance|deploy-setup)|legal\/(privacy-kvkk|turkiye)|workflow\/(decision-protocol|skills|usage-limits))\.md$/,
 ];
 const isKitOwned = (rel) => KIT_OWNED.some((re) => re.test(rel));
 
@@ -63,6 +63,11 @@ function listFiles(root, exclude = new Set()) {
 }
 
 // copies: target relative path -> source file. patches: append/merge operations (applied in order).
+// An addon may carry files for one project type under addons/<addon>/types/<type>/ (e.g. code in the stack's language):
+// that folder is a layer of its own, after the addon, and only for that type.
+const layerNames = (type, addons) => [type, ...addons.flatMap((e) =>
+  [`addons/${e}`, ...(fs.existsSync(path.join(TEMPLATES, 'addons', e, 'types', type)) ? [`addons/${e}/types/${type}`] : [])])];
+
 function layers(commonRoot, names) {
   const copies = new Map();
   const patches = [];
@@ -70,7 +75,8 @@ function layers(commonRoot, names) {
   for (const name of names) {
     const root = path.join(TEMPLATES, name);
     if (!fs.existsSync(root)) throw new Error(`Şablon katmanı yok: ${name}`);
-    for (const rel of listFiles(root)) {
+    const isAddon = /^addons\/[^/]+$/.test(name);
+    for (const rel of listFiles(root, isAddon ? new Set(['types']) : undefined)) {
       const source = path.join(root, rel);
       if (rel.endsWith('.append')) patches.push({ kind: 'append', target: rel.slice(0, -'.append'.length), source, layer: name });
       else if (rel.endsWith('.merge.json')) patches.push({ kind: 'merge', target: rel.replace(/\.merge\.json$/, '.json'), source, layer: name });
@@ -321,7 +327,7 @@ function installIntoProject(projectDir, type, addons, tool) {
   if (j.type) throw new Error(`Kit bu projede zaten kurulu (tip: ${j.type}).`);
   const files = { ...j.files };
   const conflicts = [];
-  const { copies, patches } = layers(null, [type, ...addons.map((e) => `addons/${e}`)]);
+  const { copies, patches } = layers(null, layerNames(type, addons));
   for (const [rel, source] of copies) {
     const target = path.join(projectDir, rel);
     if (fs.existsSync(target) && files[rel] === hash(target)) copy(source, target);
@@ -342,7 +348,7 @@ function install({ type, addons, keepKit, project, tool }) {
   const tools = validateTools(tool);
   if (fs.existsSync(path.join(ROOT, '.kit.json'))) throw new Error('Kit bu projede zaten kurulu (.kit.json var).');
 
-  const { copies, patches } = layers(null, [type, ...addons.map((e) => `addons/${e}`)]);
+  const { copies, patches } = layers(null, layerNames(type, addons));
   for (const [rel, source] of copies) copy(source, path.join(ROOT, rel));
   for (const p of patches) applyPatch(ROOT, p);
   copy(path.join(KIT, 'project', 'README.md'), path.join(ROOT, 'README.md'));
@@ -375,7 +381,7 @@ function update({ project, addons: newAddons, tool }) {
   validateType(j.type, allAddons);
   const record = { ...j.files };
 
-  const { copies, patches } = layers(ROOT, [j.type, ...allAddons.map((e) => `addons/${e}`)]);
+  const { copies, patches } = layers(ROOT, layerNames(j.type, allAddons));
   const report = { added: [], updated: [], conflicts: [], removed: [] };
 
   for (const [rel, source] of copies) {
@@ -408,7 +414,7 @@ function update({ project, addons: newAddons, tool }) {
   }
   // append/merge only from newly added addons (old ones were applied at install; do not touch project files again)
   const addedAddons = newAddons.filter((e) => !oldAddons.includes(e)).map((e) => `addons/${e}`);
-  for (const p of patches) if (addedAddons.includes(p.layer)) applyPatch(project, p);
+  for (const p of patches) if (addedAddons.some((a) => p.layer === a || p.layer.startsWith(`${a}/types/`))) applyPatch(project, p);
   for (const rel of Object.keys(record)) if (!copies.has(rel) && isKitOwned(rel)) report.removed.push(rel);
   const tools = tool.length ? validateTools(tool) : (j.tool ?? ['claude']);
   installTools(project, tools, record, report.conflicts);
@@ -466,7 +472,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       if (!a.project) throw new Error('--project gerekli');
       update(a);
     } else {
-      console.log('Kullanım:\n  node kit/kit.mjs install --type <type> [--addons ai] [--keep-kit] [--project <yol>] [--tool claude,codex,antigravity]\n  node <kit>/kit/kit.mjs init [--project <yol>] [--tool claude,codex,antigravity]\n  node kit/kit.mjs update --project <yol> [--addons ai] [--tool ...]');
+      console.log('Kullanım:\n  node kit/kit.mjs install --type <type> [--addons ai,tr] [--keep-kit] [--project <yol>] [--tool claude,codex,antigravity]\n  node <kit>/kit/kit.mjs init [--project <yol>] [--tool claude,codex,antigravity]\n  node kit/kit.mjs update --project <yol> [--addons ai,tr] [--tool ...]');
       process.exit(command ? 1 : 0);
     }
   } catch (e) {

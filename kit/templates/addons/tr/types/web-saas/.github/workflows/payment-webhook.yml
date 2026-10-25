@@ -1,0 +1,22 @@
+# Ödeme bildirimi imza saldırgan testi (tr eki). Sahte anahtarlarla çalışır; sır gerekmez.
+# Kırmızıysa merge etme: sahte veya değiştirilmiş ödeme bildirimi kabul ediliyor olabilir.
+name: payment-webhook
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Node 22.18+ .ts modülünü doğrudan çalıştırır; bağımlılık kurulumu gerekmez
+      - run: node --test tests/security/payment-webhook.mjs

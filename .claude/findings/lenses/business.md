@@ -27,6 +27,7 @@
 7. **Rekabet:** Rakiplerde olan ve müşterinin karşılaştıracağı özellikler; farklılaşma noktası korunuyor mu?
 8. **Ölçüm:** Başarı kriterleri (PRD §4) ölçülebiliyor mu, iş metrikleri (aktivasyon, tutunma, gelir) izleniyor mu?
 9. **Lansman ve pazara çıkış:** Kanal, satış döngüsü, sektöre özgü güven işaretleri (sertifika, entegrasyon, ortaklık).
+10. **Türkiye** (`docs/legal/turkiye.md` varsa): fatura kesme yöntemi (GİB portalı / özel entegratör) ve ödeme sonrası fatura akışı, ödeme sağlayıcısı seçimi (iyzico / PayTR: komisyon, taksit, para çekme süresi), Türkçe arama ve sıralama.
 
 ## Puanlama notu
 

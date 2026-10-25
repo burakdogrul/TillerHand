@@ -21,12 +21,13 @@ Güncel düzenlemeleri web'de araştır ve kaynak göster. Mevzuat değişebilir
 2. **Hukuki dayanak ve rıza:** Her işleme amacının dayanağı var mı? Açık rıza gereken yerde (pazarlama, özel nitelikli veri, bazı yurt dışı aktarımlar) ayrı ve özgür rıza alınıyor mu?
 3. **Aydınlatma ve metinler:** Aydınlatma metni, gizlilik ve çerez politikası, kullanım şartları yayında ve güncel mi? Çerez bandı onaydan önce analitik yüklüyor mu?
 4. **Haklar:** Erişim, düzeltme, silme talepleri karşılanabiliyor mu? Uygulama içi hesap silme gerçekten siliyor mu? Silme yedekleri ve log'ları da kapsıyor mu?
-5. **Yurt dışı aktarım:** Kullanılan servislerin veri bölgesi ve aktarım dayanağı.
+5. **Yurt dışı aktarım:** Kullanılan servislerin veri bölgesi ve aktarım dayanağı. `docs/legal/turkiye.md` varsa §1'deki listeyle: standart sözleşme ve 5 iş günü içinde Kuruma bildirim, aydınlatma metninde aktarım.
 6. **Saklama süreleri:** Tanımlı mı, kodda uygulanıyor mu (otomatik silme/anonimleştirme)?
 7. **Sektör regülasyonu:** Tespit edilen düzenlemelerin ürüne etkisi (kimlik doğrulama, kayıt saklama, işlem limitleri, raporlama).
 8. **Tüketici ve sözleşme:** Ücretli üründe mesafeli satış sözleşmesi, ön bilgilendirme, iade/cayma, abonelik iptali kolaylığı.
 9. **Ticari ileti:** E-posta/SMS izinleri ve İYS.
 10. **Lisanslar:** Kullanılan açık kaynak paketlerin, fontların ve görsellerin lisansı ticari kullanıma uygun mu? AI sağlayıcısının kullanım şartları ürünle uyumlu mu?
+11. **Türkiye** (`docs/legal/turkiye.md` varsa): e-Fatura/e-Arşiv yükümlülüğü ve fatura akışı. Dosyadaki kontrol tarihi 90 günden eskiyse kaynakları yeniden aç.
 
 ## Araçlar
 

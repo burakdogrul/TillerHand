@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.24.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.25.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -487,7 +487,8 @@ kit/
 │   ├── web-saas/            # stack, design-guide, structure.json, CI, Dependabot, MCP, pre-commit
 │   ├── mobile/
 │   ├── backend/
-│   └── addons/ai/           # docs/ai/guide.md, ai/evals, ai/prompts
+│   ├── addons/ai/           # docs/ai/guide.md, ai/evals, ai/prompts
+│   └── addons/tr/           # docs/legal/turkiye.md; types/<tip>/ ödeme bildirimi imzası (web-saas TS, backend Python)
 ├── project/README.md        # projenin README şablonu
 ├── assets/banner.svg
 ├── tests/                   # node --test "kit/tests/*.test.mjs"
@@ -517,4 +518,4 @@ kit/
   - `.claude/hooks/format.mjs`
   - `.gitignore.append`
   - `.env.example`
-- **Yeni ek eklemek:** `kit/templates/addons/<ad>/` klasörünü aç. Var olan bir dosyanın sonuna eklenecek içerik için `x.append`, JSON birleştirmek için `x.merge.json` adını kullan.
+- **Yeni ek eklemek:** `kit/templates/addons/<ad>/` klasörünü aç. Var olan bir dosyanın sonuna eklenecek içerik için `x.append`, JSON birleştirmek için `x.merge.json` adını kullan. Sadece bir proje tipine gidecek dosyalar `addons/<ad>/types/<tip>/` altına (örn. stack'in dilinde kod).

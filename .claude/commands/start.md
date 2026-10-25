@@ -79,7 +79,7 @@ AskUserQuestion ile sor. Seçenekleri ve önerini PRD'ye göre gerekçelendir:
 
 Kullanıcı birden fazlasını isterse (örn. web + mobil) önce hangisinin MVP olacağını sor; diğeri yol haritasına sonraki faz olarak girer.
 
-Ayrıca sor: **Projede yapay zeka (LLM) özelliği olacak mı?** Evet ise AI eki kurulur.
+Ayrıca sor: **Projede yapay zeka (LLM) özelliği olacak mı?** Evet ise AI eki kurulur. **Türkiye'de satış yapacak veya Türk kullanıcısı olacak mı?** Evet ise Türkiye eki (`tr`) önerilir: KVKK yurt dışı aktarım, e-Fatura/e-Arşiv, iyzico/PayTR bildirim imzası (web-saas ve backend'de kodlu), İ/ı testleri. Birden fazla ek virgülle: `--addons ai,tr`.
 
 ## Adım 3: Kurulum
 
@@ -87,9 +87,9 @@ Kullanıcıya ne yapılacağını tek cümleyle söyle, sonra çalıştır:
 
 ```bash
 # template yolu (kökte kit/ var): kit/ kurulumdan sonra silinir
-node kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai] [--tool claude,codex,antigravity]
+node kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai,tr] [--tool claude,codex,antigravity]
 # init yolu (.kit.json → kit): kit klasörüne dokunulmaz; araç init'te seçildiyse --tool gerekmez
-node <kit>/kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai] --project .
+node <kit>/kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai,tr] --project .
 ```
 
 Çıktıyı raporla. Artık `docs/architecture/stack.md` seçilen tipin dosyasıdır. Proje yapısını (`docs/architecture/structure.md`) kullanıcıya kısaca göster: kod özellik bazlı olacak, yapı haritası (`.claude/structure.json`) korunacak, deneme işleri `sandbox/` altına gidecek. Commit öner: `chore: kit kurulumu (<tip>)`.

@@ -20,6 +20,6 @@ jobs:
         run: node --test "kit/tests/*.test.mjs"
       - name: YAML doğrulama
         run: |
-          for f in kit/templates/*/.github/workflows/*.yml kit/templates/*/.github/dependabot.yml .github/workflows/*.yml; do
+          for f in kit/templates/*/.github/workflows/*.yml kit/templates/addons/*/types/*/.github/workflows/*.yml kit/templates/*/.github/dependabot.yml .github/workflows/*.yml; do
             npx --yes yaml@2.5.1 valid < "$f" || { echo "Geçersiz YAML: $f"; exit 1; }
           done

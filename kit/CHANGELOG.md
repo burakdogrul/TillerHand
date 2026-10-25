@@ -3,6 +3,21 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.25.0] - 2026-10-25
+
+### Yeni
+- **Türkiye eki** (`--addons tr`, isteğe bağlı). `/start` Türkiye'de satış veya Türk kullanıcı varsa önerir. `docs/legal/turkiye.md`'de her madde birincil kaynağa bağlı ve kontrol tarihli (2026-10-25); hukuki görüş değildir, yayından önce avukata veya mali müşavire danış.
+  - KVKK yurt dışı aktarım (m.9, 7499 s. Kanunla değişik): yeterlilik kararı, standart sözleşme ve 5 iş günü içinde Kuruma bildirim, arızi aktarım; AI ve barındırma servisleri için kontrol listesi.
+  - e-Fatura ve e-Arşiv (509 s. VUK GT, güncel hali): 3 milyon TL / internet satışında 500 bin TL eşiği, 1/1/2026'dan itibaren tutardan bağımsız e-Arşiv, internet satışı faturasında zorunlu bilgiler.
+  - iyzico ve PayTR ödeme bildirimi imza doğrulaması, çalışan kodla: web-saas `src/lib/payments/webhook-signature.ts` ve saldırgan testi (`payment-webhook` iş akışı, Node 22.18+), backend `app/shared/payments.py` ve testi (pytest; ruff biçiminde). Sahte, değiştirilmiş veya imzasız bildirim reddedilir; doğrulama kaldırılırsa test kırmızı olur. Mobilde bildirim sunucuya gelir, kod ve sunucu anahtarları (`.env.example`) backend'de.
+  - Rehber, geçerli imzanın ödemenin başarılı olduğu anlamına gelmediğini söyler: sonuç alanı, tutar (iyzico'da sunucudan sorgulanır) ve tekrar gelen bildirim için atomik onay adımları var.
+  - İ/ı ve Türkçe sıralama test durumları. `/findings-legal` ve `/findings-business` Türkiye maddelerini okur.
+  - Var olan projeye eklemek: `node <kit>/kit/kit.mjs update --project . --addons tr`.
+- **Eke özel tip katmanı:** Bir ek, sadece bir proje tipine gidecek dosyaları `addons/<ek>/types/<tip>/` altında taşıyabilir; `update --addons` ile sonradan eklenince de uygulanır.
+
+### Düzeltilen
+- **Kalkan, tırnak içindeki `&` veya `|` ile atlatılamıyor.** `vercel deploy --meta "a&b" --prod`, `rm "a&b" -rf` (Codex/Antigravity) gibi komutlarda tırnaktaki işaret komutu bölüp sonraki bayrağı kuraldan kaçırıyordu; artık her kural bu yazımı da görür.
+
 ## [3.24.0] - 2026-10-25
 
 ### Yeni
