@@ -1,4 +1,6 @@
-# Canlıda sentetik izleme: /health ve kritik uçları saatte bir CANLI ortamda dener.
+# Canlıda sentetik izleme: /health ve kritik uçları 3 saatte bir CANLI ortamda dener.
+# Neden 3 saat: GitHub Free özel depoda ayda 2.000 Actions dakikası var; saatlik koşu ~2.160 dk eder (docs.github.com, 2026-10-25).
+# /health yanıtı LIVE_MAX_SECONDS (Variables, varsayılan 2) saniyeyi aşarsa da alarm verir.
 # Bozulursa "live-monitoring" etiketli bir issue açar (zaten açıksa yenisini açmaz).
 # Etkinleştirmek için:
 #   1. Settings > Variables > LIVE_URL = https://api.alanadin.com
@@ -8,7 +10,7 @@ name: Canlı izleme
 
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "17 */3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -22,13 +24,21 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Sağlık
-        run: curl -fsS --max-time 10 "${{ vars.LIVE_URL }}/health"
+      - name: Sağlık ve yanıt süresi
+        run: |
+          t=$(curl -fsS -o /dev/null --max-time 10 -w '%{time_total}' "${{ vars.LIVE_URL }}/health")
+          echo "/health: ${t} sn (sınır ${MAX} sn)"
+          awk -v t="$t" -v max="$MAX" 'BEGIN { exit (t > max) }'
+        env:
+          MAX: ${{ vars.LIVE_MAX_SECONDS || '2' }}
       - uses: astral-sh/setup-uv@v5
         if: hashFiles('tests/live/**') != ''
       - name: Kritik uçlar (canlı)
         if: hashFiles('tests/live/**') != ''
-        run: uv sync --locked && uv run pytest tests/live -q
+        # pytest exit 5 = no test collected (only __init__.py or fixtures yet): not an alarm
+        run: |
+          uv sync --locked
+          uv run pytest tests/live -q || [ $? -eq 5 ]
         env:
           BASE_URL: ${{ vars.LIVE_URL }}
           LIVE_TEST_TOKEN: ${{ secrets.LIVE_TEST_TOKEN }}

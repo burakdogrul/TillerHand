@@ -1,14 +1,16 @@
-# Canlıda sentetik izleme: Kritik akışları (kayıt, giriş, ana eylem, ödeme test modu) saatte bir CANLI sitede dener.
+# Canlıda sentetik izleme: Kritik akışları (kayıt, giriş, ana eylem, ödeme test modu) 3 saatte bir CANLI sitede dener.
+# Neden 3 saat: GitHub Free özel depoda ayda 2.000 Actions dakikası var; saatlik koşu (~3 dk) ~2.160 dk eder (docs.github.com, 2026-10-25).
 # Bozulursa "live-monitoring" etiketli bir issue açar (zaten açıksa yenisini açmaz).
 # Etkinleştirmek için:
 #   1. Settings > Variables > LIVE_URL = https://alanadin.com
 #   2. Prod'da yetkisi kısıtlı ayrı bir test hesabı aç: Settings > Secrets > LIVE_TEST_EMAIL, LIVE_TEST_PASSWORD
-#   3. Testleri tests/live/*.spec.ts altına yaz (veri silmeyen, test hesabıyla sınırlı akışlar)
+#   3. Testleri tests/live/*.spec.ts altına yaz (veri silmeyen, test hesabıyla sınırlı akışlar). smoke.spec.ts hazır gelir:
+#      ana sayfa açılıyor mu, LIVE_MAX_MS (Variables, varsayılan 3000) içinde mi, konsolda hata var mı.
 name: Canlı izleme
 
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "17 */3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -32,6 +34,7 @@ jobs:
         run: npx playwright test tests/live --reporter=line
         env:
           BASE_URL: ${{ vars.LIVE_URL }}
+          LIVE_MAX_MS: ${{ vars.LIVE_MAX_MS || '3000' }}
           LIVE_TEST_EMAIL: ${{ secrets.LIVE_TEST_EMAIL }}
           LIVE_TEST_PASSWORD: ${{ secrets.LIVE_TEST_PASSWORD }}
       - name: Bozulduysa issue aç

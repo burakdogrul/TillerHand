@@ -3,7 +3,17 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
-## [Yayınlanmamış]
+## [3.22.0] - 2026-10-25
+
+### Değişen
+- **Canlı izleme 3 saatte bir** (web-saas ve backend). Saatlik koşu (~3 dk) ayda ~2.160 Actions dakikası tutuyordu; GitHub Free'de özel depoya ayda 2.000 dakika veriliyor (docs.github.com, 2026-10-25). Yeni sıklık ~720 dakika, CI'ya da pay kalıyor.
+  - Elle uyarla: `.github/workflows/live-monitoring.yml` → `cron: "17 */3 * * *"`.
+
+### Yeni
+- **Hazır canlı duman testi** (web-saas, `tests/live/smoke.spec.ts`): ana sayfa açılıyor mu, `LIVE_MAX_MS` (Variables, varsayılan 3000) içinde mi, konsolda hata var mı. Yalnız sayfa açar, form doldurmaz. `LIVE_URL` girilince izleme hemen çalışır; önceden test olmadığı için boşuna alarm veriyordu.
+- **Backend `/health` yanıt süresi**: `LIVE_MAX_SECONDS` (varsayılan 2) aşılınca alarm. `tests/live/` henüz test içermiyorsa (pytest çıkış 5) alarm yok.
+- **Panoda canlı izlemenin son çalışması** (Operasyon → GitHub): başarılı / başarısız / kurulmadı (`LIVE_URL` yok). Bozulunca "dikkat" uyarısı `/fix-bug` önerir.
+  - Elle uyarla: `tests/live/smoke.spec.ts`'yi kitten kopyala; backend iş akışındaki "Sağlık" ve "Kritik uçlar" adımlarını kittekiyle değiştir.
 
 ### Belgeler
 - **Rehber (`kit/guide.html`) tasarım temizliği.** "Çıkış kapısı" ve not kutularındaki kalın sol şerit yerine ince tam çerçeve; başlık üstündeki etiket (eski sürüm numarasıyla) kaldırıldı, araç bilgisi başlığın altına düz cümle olarak taşındı; etiketlerde satır aralığı kayınca üst üste binmesin diye 1,3. Renkler değişmedi: açık ve koyu temadaki bütün metin/zemin çiftleri WCAG AA'yı geçiyor (en düşük 5,3:1).

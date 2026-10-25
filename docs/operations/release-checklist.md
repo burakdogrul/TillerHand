@@ -37,7 +37,7 @@
 ### Hesaplar, bayraklar, izleme
 - [ ] `docs/operations/accounts.md` eksiksiz: her servis, hesap sahibi, 2FA, bitiş tarihleri
 - [ ] Riskli özellikler bayrak arkasında; acil kapatma en az bir kez denendi (`docs/operations/feature-flags.md`)
-- [ ] Canlıda sentetik izleme açık (`.github/workflows/live-monitoring.yml`, `LIVE_URL` değişkeni tanımlı) ve bir hata denemesiyle uyarı geldiği görüldü
+- [ ] Canlıda sentetik izleme açık (`.github/workflows/live-monitoring.yml`, `LIVE_URL` değişkeni tanımlı, 3 saatte bir), panoda "Canlı izleme · başarılı" görünüyor ve bir hata denemesiyle uyarı geldiği görüldü
 - [ ] `docs/product/unit-economics.md`: katkı payı pozitif, başa baş noktası biliniyor
 - [ ] Harcama alarmları: Ücretli her servisin tavanı veya uyarısı kurulu ve bir kez denendi (`docs/operations/spend-alarms.md`); AI/ücretli API çağrısında kullanıcı başı kota ve genel günlük bütçe var
 - [ ] Kabul testlerinin tamamı yeşil (MVP kriterleri)
