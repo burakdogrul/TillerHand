@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [Yayınlanmamış]
+
+### Belgeler
+- **Rehber (`kit/guide.html`) tasarım temizliği.** "Çıkış kapısı" ve not kutularındaki kalın sol şerit yerine ince tam çerçeve; başlık üstündeki etiket (eski sürüm numarasıyla) kaldırıldı, araç bilgisi başlığın altına düz cümle olarak taşındı; etiketlerde satır aralığı kayınca üst üste binmesin diye 1,3. Renkler değişmedi: açık ve koyu temadaki bütün metin/zemin çiftleri WCAG AA'yı geçiyor (en düşük 5,3:1).
+
 ## [3.21.0] - 2026-10-25
 
 ### Yeni
