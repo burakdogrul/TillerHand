@@ -33,6 +33,7 @@ Bu adımda **kod yazma**, sadece plan çıkar.
 **Kapsam dışı bıraktıklarım:** [...]
 ```
 
+4b. **Özellik spec'i (yalnız 3 veya daha fazla dosyaya dokunan işte):** `docs/product/specs/<görev kodu>.md`'yi `_template.md`'den yaz: mevcut, beklenen ve değişmemesi gereken davranış. Değişmemesi gereken her satır testi olan bir kabul kriteri kimliğiyle başlar (`- Ö-01.1: ...`); kapı bu testler yoksa veya kırmızıysa durur. Daha küçük işte spec yazma.
 5. Görev tek oturuma sığmıyorsa alt görevlere böl ve `docs/product/roadmap.md` için öner.
 6. Kararları `docs/decisions/log.md` günlüğüne yaz; mimari ve tek yönlü olanlar için ADR yaz (`docs/decisions/adr-NNNN-*.md`).
 

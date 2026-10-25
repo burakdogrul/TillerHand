@@ -8,7 +8,7 @@ argument-hint: [boş = commit edilmemiş değişiklikler | main..HEAD | commit h
 Kendi yazdığın kodu kendin inceleme; bağımsız ajanlara ver.
 
 1. `git diff --stat` ile değişen dosyaları gör.
-2. **`code-reviewer`** alt ajanını çalıştır. Ona aralığı ve (biliniyorsa) görev kodunu ver.
+2. **`code-reviewer`** alt ajanını çalıştır. Ona aralığı ve (biliniyorsa) görev kodunu ver. Görevin `docs/product/specs/` altında spec'i varsa onu da ver: beklenen davranış karşılandı mı, değişmemesi gereken davranış bozuldu mu?
 3. Değişiklik şunlardan birine dokunuyorsa **`security-auditor`** alt ajanını da paralel çalıştır: auth, yetki, ödeme, webhook, dosya yükleme, kişisel veri, DB erişim kuralları, ortam değişkenleri, AI/LLM çağrıları.
    Kurul kurulduysa değişikliğe ilgili kurul üyelerini de ekle (`.claude/board/rules.md` §3, en fazla 3; limit sarıysa 1).
    Aynı anda `ponytail:ponytail-review` ile gereksiz kod, aşırı mühendislik ve yük altında kırılacak yerlere bak. Arayüz değiştiyse `impeccable:impeccable` → `audit` da çalışsın.

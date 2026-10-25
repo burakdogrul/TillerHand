@@ -3,6 +3,16 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.21.0] - 2026-10-25
+
+### Yeni
+- **Özellik ve hata spec'i, sapma kontrolü.** Spec, `docs/product/specs/<görev>.md`'de mevcut, beklenen ve değişmemesi gereken davranışı yazar (şablon `_template.md`). `/plan-task` yalnız 3 veya daha fazla dosyaya dokunan işte özellik spec'i, `/fix-bug` her hatada birkaç satırlık hata spec'i yazar; küçük işte ek adım yok.
+  - "Değişmemesi gereken" satırları kabul kriteri kimliğiyle başlar (`- Ö-01.1: ...`). Kapı (`gate.mjs --run`) bu kimliklerin testi yoksa veya kapının kendi koşusunda yazılan test raporunda kırmızıysa kırmızı olur. Eski bir rapor hesaba katılmaz; test komutu JUnit yazmıyorsa yalnız testin varlığı denetlenir ve not düşülür. Bu biçime uymayan kimlikli satırlar da not olarak gösterilir. Sapmayı bir model değil kapı yakalar; `/review-changes` inceleme ajanına spec'i de verir.
+  - Davranışı bilerek değiştiriyorsan önce spec'i güncelle; geçerliliğini yitiren spec `docs/archive/`'e taşınır.
+
+### Düzeltilen
+- **Kabul testi taraması daha çok yığını tanıyor** (pano ve Spec kontrolü): Dart ve Go (`_test.dart`, `_test.go`), Kotlin ve Swift (`…Test.kt`, `…Tests.swift`) ve Jest `__tests__/` klasörü. `build/`, `dist/`, `kit/` yalnız proje kökünde atlanır; `src/features/build/` gibi klasörlerdeki testler artık görülür. `ISO-27.1` gibi adlar kriter kimliği sayılmaz.
+
 ## [3.20.1] - 2026-10-25
 
 ### Düzeltilen

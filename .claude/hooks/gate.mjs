@@ -18,6 +18,7 @@ import { pathToFileURL } from 'node:url';
 import { changes } from './commit-gate.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
 import { findRoot } from './shared.mjs';
+import { specInvariants } from './dashboard-data.mjs';
 
 // Keys of the AGENTS.md → Komutlar block (Turkish template text, matched as written)
 const CHECKS = ['lint', 'tip kontrol', 'test'];
@@ -98,6 +99,20 @@ function semgrep(root, files) {
 export const approvalNeeded = (list) => `komut onayı gerekli\nAGENTS.md → Komutlar yeni veya değişmiş; bu komutlar onaysız çalışmaz:\n${commandList(list)}\n` +
   'Komutları kullanıcıya göster ve sor. Onaylarsa: node .claude/hooks/gate.mjs --approve, sonra komutu tekrar çalıştır.';
 
+// Spec drift (F-23): a "must not change" behavior whose test is missing or red stops the gate; no result is only a note
+// Only reports written during this gate run count (since = gate start): an older report says nothing about the code now.
+function specCheck(root, since) {
+  const { invariants: list, unreadable } = specInvariants(root, since);
+  if (!list.length && !unreadable.length) return null;
+  const bad = list.filter((k) => !k.test || k.result === 'failed');
+  const unknown = list.filter((k) => k.test && !k.result).length;
+  const notes = [`${list.length} değişmemesi gereken davranış`,
+    unknown && `${unknown} testin bu koşuda sonucu yok (test komutu JUnit raporu yazmıyor)`,
+    unreadable.length && `${unreadable.length} satır okunamadı, "- Ö-01.1: ..." biçiminde yaz: ${unreadable.map((u) => `${u.spec}: ${u.line}`).join(' · ')}`];
+  return { name: 'Spec', status: bad.length ? 'failed' : 'passed', note: notes.filter(Boolean).join('; '),
+    output: bad.length ? bad.map((k) => `${k.id} (${k.spec}): ${k.test ? 'test kırmızı' : 'test yok'}`).join('\n') : undefined };
+}
+
 // Status label and mark shown to the user
 export const STATUS_LABEL = { passed: 'geçti', failed: 'kaldı', unset: 'tanımsız', skipped: 'atlandı' };
 const MARK = { passed: '✅', failed: '❌', unset: '⚪', skipped: '⚪' };
@@ -105,12 +120,15 @@ const line = (k) => `${MARK[k.status]} ${k.name}${k.sec != null ? ` (${k.sec} sn
   (k.output ? `\n\`\`\`\n${k.output}\n\`\`\`` : '');
 
 export function runGate(root) {
+  const start = Date.now() - 1000; // 1 s slack for file systems with coarse modification times
   let signature = null, files = [];
   try { ({ signature, files } = changes()); } catch { /* not a git repo: the commands still run */ }
   const list = approvedCommands(root);
   if (!isApproved(root, list)) return { passed: false, text: `## Kapı · ${approvalNeeded(list)}` };
   const checks = [...list.filter((k) => CHECKS.includes(k.name)).map((k) => check(root, k)), semgrep(root, files)];
   const empty = !checks.some((k) => k.status === 'passed');
+  const spec = specCheck(root, start); // after the test command, which may have refreshed the JUnit report; it does not fill an empty gate
+  if (spec) checks.push(spec);
   const passed = !empty && checks.every((k) => k.status !== 'failed');
   const file = path.join(root, '.claude', 'state', 'gate.json');
   fs.mkdirSync(path.dirname(file), { recursive: true });

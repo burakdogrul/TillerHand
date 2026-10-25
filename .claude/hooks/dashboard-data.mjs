@@ -11,7 +11,8 @@ export const daysLeft = (date, now = Date.now()) => Math.ceil((Date.parse(`${dat
 
 // ---------- acceptance tests ----------
 // A criterion id is "Ö-01.1" in the PRD and "Ö-01.1" or "O_01_1" in tests; all normalize to the key "O_01_1".
-const CRITERION_ID = /[ÖO][-_](\d{2})[._](\d+)/g;
+// Not after a letter: "ISO-27.1" or "DEMO_01_2" is not a criterion
+const CRITERION_ID = /(?<![A-Za-z])[ÖO][-_](\d{2})[._](\d+)/g;
 const key = (m1, m2) => `O_${m1}_${m2}`;
 
 export function prdCriteria(prdText) {
@@ -20,8 +21,10 @@ export function prdCriteria(prdText) {
     .map((m) => ({ id: m[2], key: key(m[3], m[4]), text: m[5].trim(), checked: m[1].toLowerCase() === 'x' }));
 }
 
-const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', '.venv', 'venv', 'coverage', '.expo', 'kit', '.previews', '__pycache__', '.claude']);
-const TEST_FILE = /(\.(test|spec)\.[cm]?[jt]sx?$)|(^test_.*\.py$)|(_test\.py$)|(\.maestro[\\/].*\.ya?ml$)/;
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', '.venv', 'venv', '.expo', '.previews', '__pycache__', '.claude', '.dart_tool', '.gradle', 'Pods']);
+// Only at the project root: src/features/build/ or src/kit/ may hold tests (the gate's spec check reads this too)
+const ROOT_SKIP_DIRS = new Set(['dist', 'build', 'coverage', 'kit']);
+const TEST_FILE = /(\.(test|spec)\.[cm]?[jt]sx?$)|(^test_.*\.py$)|(_test\.(py|go|dart)$)|(Tests?\.(kt|swift)$)|((^|[\\/])__tests__[\\/].*\.[cm]?[jt]sx?$)|(\.maestro[\\/].*\.ya?ml$)/;
 
 export function idsInTests(root) {
   const found = new Set();
@@ -31,7 +34,7 @@ export function idsInTests(root) {
     let dirEntries = [];
     try { dirEntries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const e of dirEntries) {
-      if (SKIP_DIRS.has(e.name)) continue;
+      if (SKIP_DIRS.has(e.name) || (depth === 0 && ROOT_SKIP_DIRS.has(e.name))) continue;
       const full = path.join(dir, e.name);
       if (e.isDirectory()) walk(full, depth + 1);
       // tests/e2e/qa/ holds /qa's uncommitted tests: they do not count as a criterion's test
@@ -103,6 +106,29 @@ export function acceptanceStatus(root) {
     passing: list.filter((k) => k.result === 'passed').length,
     mismatched: list.filter((k) => k.checked && k.result !== 'passed'),
   };
+}
+
+// "Must not change" lines of the specs (F-23): each Ö id, whether a test carries it and its JUnit result.
+// since: only reports written at or after this time count (the gate passes its own start: an old red report must not
+// stop a commit whose tests pass now). Files starting with "_" (the template) are skipped. unreadable: lines that name
+// an id but not in the "- Ö-01.1: ..." form, so the check would silently skip them.
+export function specInvariants(root, since = 0) {
+  const dir = path.join(root, 'docs/product/specs');
+  let files = [];
+  try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.md') && !f.startsWith('_')).sort(); } catch { return { invariants: [], unreadable: [] }; }
+  const list = [], unreadable = [];
+  for (const f of files) {
+    const body = sections(readText(path.join(dir, f)))['Değişmemesi gereken davranış'] ?? '';
+    for (const line of body.split(/\r?\n/)) {
+      const m = line.match(/^\s*-\s*(Ö-(\d{2})\.(\d+))/);
+      if (m) list.push({ spec: f, id: m[1], key: key(m[2], m[3]) });
+      else if (/[ÖO][-_]\d{2}[._]\d+/.test(line)) unreadable.push({ spec: f, line: line.trim() });
+    }
+  }
+  if (!list.length) return { invariants: [], unreadable };
+  const tested = idsInTests(root);
+  const results = junitResults(junitFiles(root).filter((r) => r.time >= since).map((r) => r.text));
+  return { invariants: list.map((k) => ({ ...k, test: tested.has(k.key) || results.has(k.key), result: results.get(k.key) ?? null })), unreadable };
 }
 
 // ---------- accounts and flags ----------
