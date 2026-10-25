@@ -7,8 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { readInput, decide } from './shared.mjs';
+import { readInput, decide, isMain } from './shared.mjs';
 import { isTestFile, isTestConfig } from './test-guard.mjs';
 import { readLock, readPlan, allowedInLock, inScope, realPath, relPath, protectedRule } from './freeze-guard.mjs';
 
@@ -319,7 +318,7 @@ function evaluateOne(command) {
   return null;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const g = readInput();
   // Of the lists, the stricter wins (deny > ask)
   const results = g ? [evaluate(g.command), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root)].filter(Boolean) : [];

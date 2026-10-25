@@ -11,8 +11,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { missingPlugins } from './plugins-sync.mjs';
+import { isMain } from './shared.mjs';
 
 // Keys are the package names users type (/tools ac tasarim): they stay Turkish
 export const PACKAGES = {
@@ -142,7 +142,7 @@ const tokenOf = (measurement, ids) => {
   return found.length ? `~${found.reduce((s, o) => s + o.skillTokens + o.agentTokens, 0)} token` : '? token (kurulu değil)';
 };
 const NOTE = 'Açtıktan sonra /reload-plugins. Oturum ortasında açmak prompt önbelleğini bozar; en iyisi faz sınırında, /clear ile.';
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const [flag, name] = process.argv.slice(2);
   try {

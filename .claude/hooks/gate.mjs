@@ -14,10 +14,9 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
 import { changes } from './commit-gate.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
-import { findRoot } from './shared.mjs';
+import { findRoot, isMain } from './shared.mjs';
 import { specInvariants } from './dashboard-data.mjs';
 
 // Keys of the AGENTS.md → Komutlar block (Turkish template text, matched as written)
@@ -139,7 +138,7 @@ export function runGate(root) {
   return { passed, text: [`## Kapı · ${files.length} dosya değişti`, ...checks.map(line), result].join('\n') };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const arg = process.argv[2];
   if (arg === '--approve') { console.log(approve(findRoot())); process.exit(0); }
   if (arg !== '--run') { console.error('Kullanım: node .claude/hooks/gate.mjs --run | --approve'); process.exit(1); }

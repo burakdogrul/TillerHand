@@ -6,7 +6,7 @@
 // Rollback does not delete history: unsaved work is stashed first, files are set to the target state and
 // a NEW commit is made. So a rollback can be undone too. reset --hard is not used.
 import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { isMain } from './shared.mjs';
 
 // Tag prefix in users' repos: it stays as it is, existing tags must keep matching
 const TAG_PREFIX = 'calisan/';
@@ -47,7 +47,7 @@ export function restore(root, target) {
   return { changed: true, stashed, target: short, newCommit: git(root, 'rev-parse', '--short', 'HEAD') };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const arg = process.argv.slice(2);
   // ONLY the first argument sets the mode: the permission list matches by prefix ("--list:*", "--save:*"),

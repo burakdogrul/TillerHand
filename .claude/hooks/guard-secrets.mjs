@@ -5,8 +5,7 @@
 //   2) Git pre-commit: `node .claude/hooks/guard-secrets.mjs --staged` scans the staged changes.
 // High-confidence patterns only; no generic "password=" search, to avoid false alarms.
 import { execSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
-import { readInput, decide } from './shared.mjs';
+import { readInput, decide, isMain } from './shared.mjs';
 
 export const PATTERNS = [
   ['Anthropic/OpenAI anahtarı', /\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}/],
@@ -59,6 +58,6 @@ function stagedMode() {
 }
 
 // Run only when called directly, not when tests import this file
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   process.argv.includes('--staged') ? stagedMode() : hookMode();
 }

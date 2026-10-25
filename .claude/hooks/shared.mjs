@@ -11,6 +11,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Was this file started as the program (not imported)? Compared as real paths: a project opened through a symlink or a
+// junction (macOS /tmp, linked folders, npx's node_modules/.bin) starts the script by its linked path, while
+// import.meta.url is the target. A plain comparison would skip the guard silently there.
+export function isMain(metaUrl) {
+  try {
+    return Boolean(process.argv[1]) && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(metaUrl));
+  } catch {
+    return false;
+  }
+}
+
 const AG_WRITE = ['write_to_file', 'replace_file_content', 'multi_replace_file_content'];
 
 // Claude Code passes CLAUDE_PROJECT_DIR to hooks; Codex does not. Codex has no "ask", so a misdetection stays on the safe side.

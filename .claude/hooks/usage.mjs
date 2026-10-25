@@ -6,7 +6,7 @@
 //   node .claude/hooks/usage.mjs --json   machine-readable
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { isMain } from './shared.mjs';
 
 export const THRESHOLDS = { five_hour: { yellow: 60, red: 85 }, seven_day: { yellow: 70, red: 90 } };
 const WINDOWS = { five_hour: '5 saatlik', seven_day: 'haftalık' };
@@ -82,7 +82,7 @@ export function summary(data, now = Date.now()) {
   return `${parts.join(' · ')} · seviye: ${LEVEL_LABEL[level(data)]} · ${data.ageMin} dk önce okundu${stale}`;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const data = readLimits(root);
   if (process.argv.includes('--json')) console.log(JSON.stringify({ ...data, level: level(data), thresholds: THRESHOLDS }));

@@ -4,8 +4,8 @@
 //   node .claude/hooks/council.mjs docs/workflow/council/<tutanak>.md
 // The tally is done in code: a model cannot add up the ranking wrong, the chair cannot change the count.
 import fs from 'node:fs';
-import { pathToFileURL } from 'node:url';
 import { sections, findSection } from './status-read.mjs';
+import { isMain } from './shared.mjs';
 
 const VOTE = /^\s*[-*]?\s*([A-Z]\d+)\s*[:=]\s*(DOĞRU|YANLIŞ|ABARTILI)(?!\p{L})/gimu; // \b does not work on Turkish letters (Ş)
 
@@ -99,7 +99,7 @@ export function writeMinutes(minutes, s) {
   return `${minutes.trimEnd()}\n\n${section}`;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const file = process.argv[2];
   if (!file || !fs.existsSync(file)) { console.error('Kullanım: node .claude/hooks/council.mjs <tutanak.md>'); process.exit(1); }
   const text = fs.readFileSync(file, 'utf8');

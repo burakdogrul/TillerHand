@@ -45,6 +45,19 @@ test('Ö-09.2 the package holds the kit and nothing private', () => {
   assert.equal(read('kit/project/gitignore'), read('.gitignore'), 'the packed copy of .gitignore matches the kit\'s');
 });
 
+test('Ö-09.1 the CLI runs when started through a symlink (npx on Linux/macOS: node_modules/.bin/tillerhand)', (t) => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bin-'));
+  try {
+    // A directory link (a junction on Windows needs no admin right): the started path differs from the real one, as with .bin
+    const link = path.join(tmp, 'kit');
+    try { fs.symlinkSync(path.join(REPO, 'kit'), link, 'junction'); } catch (e) { return t.skip(`no link: ${e.code}`); }
+    const r = spawnSync(process.execPath, [path.join(link, 'kit.mjs'), '--help'], { encoding: 'utf8' });
+    assert.match(r.stdout + r.stderr, /Kullanım:/, 'a silent exit means the main-module check missed the symlink');
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test('Ö-09.1 npx tillerhand init sets up a project from the package: .gitignore included, the record names the package', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'npx-'));
   try {

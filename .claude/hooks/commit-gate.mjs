@@ -8,8 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { findRoot } from './shared.mjs';
+import { findRoot, isMain } from './shared.mjs';
 import { unquote } from './destructive-guard.mjs';
 import { approvedCommands, commandList } from './gate.mjs'; // circular import: used at run time only
 
@@ -161,7 +160,7 @@ function hook() {
   process.exit(2);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const i = process.argv.indexOf('--approve');
   if (i > -1) approve(process.argv[i + 1] || 'belirtilmedi');
   else hook();

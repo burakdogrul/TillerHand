@@ -7,8 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
-import { readInput, decide } from './shared.mjs';
+import { readInput, decide, isMain } from './shared.mjs';
 
 const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
@@ -80,6 +79,6 @@ function checkAll() {
   process.exit(1);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   process.argv.includes('--check') ? checkAll() : hook();
 }

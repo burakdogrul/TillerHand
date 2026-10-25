@@ -6,8 +6,7 @@
 // State: .claude/state/edit-rounds.json → { session, counts: { file: n }, pending: [note] }; reset when the session changes.
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { readInput, findRoot } from './shared.mjs';
+import { readInput, findRoot, isMain } from './shared.mjs';
 
 export const ROUND = 5;
 const CODE = /\.(m?[jt]sx?|cjs|py|go|rb|php|java|kt|swift|rs|sql|vue|svelte)$/i;
@@ -66,6 +65,6 @@ function inject() {
   process.exit(0);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   process.argv.includes('--inject') ? inject() : hook();
 }

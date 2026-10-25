@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { isMain } from './shared.mjs';
 
 // Windows paths are case-insensitive; other systems are case-sensitive
 const norm = (p) => (process.platform === 'win32' ? path.resolve(p).toLowerCase() : path.resolve(p));
@@ -33,7 +33,7 @@ export function disabledHere(wanted, installed, root) {
     .map(([id]) => id);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   // No shell: arguments go straight to claude (claude is a single-file executable, .exe on Windows)
   const run = (...arg) => execFileSync('claude', arg, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000 });

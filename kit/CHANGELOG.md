@@ -3,6 +3,13 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.27.1] - 2026-10-25
+
+### Düzeltilen
+- **Koruma hook'ları, proje sembolik bağlantı veya junction üzerinden açılınca sessizce çalışmıyordu.** Sır engeli, yıkıcı komut kalkanı, commit kapısı, yapı ve test korumaları dahil 17 betik, başlatıldıkları yolu gerçek yolla karşılaştırırken bağlantıyı çözmüyordu; macOS'ta `/tmp` gibi bağlantılı klasörlerde veya bağlantılı proje klasörlerinde hiçbir şey yapmadan çıkıyorlardı. Artık iki yol da gerçek yola çevrilip karşılaştırılıyor (`shared.mjs` → `isMain`).
+- **`npx tillerhand init` Linux ve macOS'ta hiçbir şey yapmıyordu** (aynı neden: npx kiti `node_modules/.bin` bağlantısıyla başlatıyor). Windows'ta çalışıyordu. 3.27.0'ı Linux veya macOS'ta denediysen tekrar çalıştır.
+  - Elle uyarla: yok; `/kit-update` hook'ları yeniler.
+
 ## [3.27.0] - 2026-10-25
 
 ### Yeni

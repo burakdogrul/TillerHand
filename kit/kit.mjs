@@ -474,7 +474,9 @@ async function askTools() {
   return c.split(',').map((s) => TOOLS[Number(s.trim()) - 1] ?? s.trim().toLowerCase()).filter(Boolean);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Real paths: npx starts the CLI through a link (node_modules/.bin/tillerhand), while import.meta.url is the target
+const realArg = () => { try { return fs.realpathSync(process.argv[1]); } catch { return ''; } };
+if (process.argv[1] && realArg() === fs.realpathSync(fileURLToPath(import.meta.url))) {
   const [command, ...rest] = process.argv.slice(2);
   try {
     const a = parseArgs(rest);

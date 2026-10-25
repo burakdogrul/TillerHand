@@ -7,9 +7,8 @@
 //   Exit code: 0 nothing failed, 1 a criterion failed, 2 nothing to report (no JUnit file, no PRD criterion, no test ran).
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { prdCriteria, junitCases } from './dashboard-data.mjs';
-import { findRoot } from './shared.mjs';
+import { findRoot, isMain } from './shared.mjs';
 
 // A pipe would split the table cell (the dashboard's table reader does not know \|)
 const cell = (s) => String(s ?? '').split(/\r?\n/)[0].trim().slice(0, 160).replace(/\|/g, '/');
@@ -62,7 +61,7 @@ export function qaReport(root, junit = 'test-results-qa/junit.xml', now = new Da
   return { code: count('kaldı') ? 1 : 0, text: `QA: ${summary} → ${file}${stale}` };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const { code, text } = qaReport(findRoot(), process.argv[2]);
   console.log(text);
   process.exit(code);

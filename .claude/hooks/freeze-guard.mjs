@@ -16,8 +16,7 @@
 //   node .claude/hooks/freeze-guard.mjs --plan-end                     close when the task is done
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { readInput, decide, findRoot } from './shared.mjs';
+import { readInput, decide, findRoot, isMain } from './shared.mjs';
 
 // Project root even when called from a subfolder: lock and plan are written where the hook reads them; paths are root-relative
 const root = findRoot();
@@ -157,7 +156,7 @@ function hook() {
   process.exit(0);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const [mode, value] = process.argv.slice(2);
   // A mistyped or removed flag must fail loudly: run as the hook it would pass silently and the AI would think the plan is saved
   if (mode?.startsWith('--') && !MODES.includes(mode)) {

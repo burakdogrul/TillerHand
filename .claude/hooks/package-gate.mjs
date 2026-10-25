@@ -4,8 +4,8 @@
 //   Package missing                                                        -> denied (deny)
 //   Very new / few downloads / very close to a popular package / unverified -> the user is asked (ask)
 // The decision goes through Claude Code's permission UI; the AI cannot skip it.
-import { pathToFileURL } from 'node:url';
-import { readInput, decide } from './shared.mjs';
+
+import { readInput, decide, isMain } from './shared.mjs';
 
 export const THRESHOLD = { newDays: 30, npmWeeklyDownloads: 500 };
 
@@ -128,4 +128,4 @@ async function hook() {
   process.exit(0);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) hook();
+if (isMain(import.meta.url)) hook();

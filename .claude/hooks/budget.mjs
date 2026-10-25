@@ -8,8 +8,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
 import { isTestFile } from './test-guard.mjs';
+import { isMain } from './shared.mjs';
 
 export const BUDGET = { complexity: 15, function: 80, file: 400 };
 const LIZARD = ['pipx', 'run', 'lizard==1.24.1'];
@@ -58,7 +58,7 @@ function check() {
   console.log(`Karmaşıklık bütçesi uygun: ${files.length} dosya.`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   if (process.argv.includes('--check')) check();
   else { console.error('Kullanım: node .claude/hooks/budget.mjs --check [--base <commit>]'); process.exit(1); }
 }

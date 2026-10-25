@@ -9,9 +9,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
 import { approvedCommands, approvalNeeded, isApproved } from './gate.mjs';
-import { findRoot } from './shared.mjs';
+import { findRoot, isMain } from './shared.mjs';
 
 const CLI = 'npx -y @playwright/cli@0.1.22';
 const SIZES = [['desktop', 1440, 900], ['mobile', 390, 844]];
@@ -120,7 +119,7 @@ export async function preview(root, task) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const { code, text } = await preview(findRoot(), process.argv[2]);
   console.log(text);
   process.exit(code);

@@ -8,8 +8,7 @@
 //   It does not block: the user approves a justified change.
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { readInput, decide } from './shared.mjs';
+import { readInput, decide, isMain } from './shared.mjs';
 
 const TEST = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec|e2e-spec)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$|_test\.(py|go)$/i;
 export const isTestFile = (file) => TEST.test(file.replace(/\\/g, '/'));
@@ -77,4 +76,4 @@ function hook() {
   process.exit(0);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) hook();
+if (isMain(import.meta.url)) hook();
