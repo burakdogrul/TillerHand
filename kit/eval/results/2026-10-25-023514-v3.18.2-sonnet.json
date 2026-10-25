@@ -1,0 +1,275 @@
+[
+  {
+    "task": "paging",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 11,
+      "fail": 0
+    },
+    "testsAdded": 8,
+    "testsCaught": 5,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 4,
+    "codeLines": 134,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..bdd8b73 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -1,5 +1,18 @@\n import { sendJson, readJson } from '../../../lib/http.js';\n \n+const encodeCursor = (n) => Buffer.from(JSON.stringify([n.createdAt, n.id])).toString('base64url');\n+\n+// Returns [createdAt, id], or null when the cursor is not one we issued.\n+function decodeCursor(s) {\n+  try {\n+    const v = JSON.parse(Buffer.from(s, 'base64url').toString());\n+    const ok = Array.isArray(v) && v.length === 2 && ['string', 'number'].includes(typeof v[0]) && typeof v[1] === 'string' && /^\\d+$/.test(v[1]);\n+    return ok ? v : null;\n+  } catch {\n+    return null;\n+  }\n+}\n+\n // The caller is identified by the x-user header (the auth layer in front of this service sets it).\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n@@ -9,7 +22,17 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const q = url.searchParams;\n+      const rawLimit = q.has('limit') ? q.get('limit') : '20';\n+      const limit = /^\\d+$/.test(rawLimit) ? Number(rawLimit) : 0;\n+      if (limit < 1 || limit > 100) return sendJson(res, 400, { error: 'limit 1 ile 100 arasında tam sayı olmalı' });\n+      const after = q.has('cursor') ? decodeCursor(q.get('cursor')) : undefined;\n+      if (after === null) return sendJson(res, 400, { error: 'geçersiz cursor' });\n+      const { items, hasMore } = store.list({ limit, after });\n+      const last = items[items.length - 1];\n+      return sendJson(res, 200, items, hasMore ? { 'x-next-cursor': encodeCursor(last) } : {});\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..fca4987 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -1,3 +1,6 @@\n+// Total order: createdAt descending, ties by id descending (ids are increasing integers), so a cursor never skips or repeats.\n+const newestFirst = (a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : Number(b.id) - Number(a.id));\n+\n // In-memory note store. One instance per server.\n export function createStore() {\n   const notes = [];\n@@ -8,9 +11,11 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n-      // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+    // One page, newest first. `after` is the [createdAt, id] of the last note already seen.\n+    list({ limit, after }) {\n+      const sorted = [...notes].sort(newestFirst);\n+      const rest = after ? sorted.filter((n) => newestFirst(n, { createdAt: after[0], id: after[1] }) > 0) : sorted;\n+      return { items: rest.slice(0, limit), hasMore: rest.length > limit };\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/src/lib/http.js b/src/lib/http.js\nindex bae4b46..2ca2fc1 100644\n--- a/src/lib/http.js\n+++ b/src/lib/http.js\n@@ -1,5 +1,5 @@\n-export function sendJson(res, status, body) {\n-  res.writeHead(status, { 'content-type': 'application/json' });\n+export function sendJson(res, status, body, headers = {}) {\n+  res.writeHead(status, { 'content-type': 'application/json', ...headers });\n   res.end(JSON.stringify(body));\n }\n \ndiff --git a/tests/notes-paging.test.mjs b/tests/notes-paging.test.mjs\nnew file mode 100644\nindex 0000000..90e9bd4\n--- /dev/null\n+++ b/tests/notes-paging.test.mjs\n@@ -0,0 +1,94 @@\n+import { test, before, after } from 'node:test';\n+import assert from 'node:assert/strict';\n+import { createApp } from '../src/app/server.js';\n+\n+let server, base;\n+before(async () => {\n+  server = createApp().listen(0);\n+  await new Promise((r) => server.once('listening', r));\n+  base = `http://127.0.0.1:${server.address().port}`;\n+});\n+after(() => server.close());\n+\n+const post = (title, createdAt) => fetch(base + '/notes', {\n+  method: 'POST', headers: { 'content-type': 'application/json', 'x-user': 'ayse' }, body: JSON.stringify({ title, createdAt }),\n+}).then((r) => r.json());\n+const get = (qs = '') => fetch(`${base}/notes${qs}`, { headers: { 'x-user': 'ayse' } });\n+const ts = (n) => `2026-01-01T00:00:${String(n).padStart(2, '0')}.000Z`;\n+\n+// Pages through everything; returns the ids per page.\n+async function walk(limit) {\n+  const pages = [];\n+  let cursor;\n+  do {\n+    const r = await get(`?limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);\n+    assert.equal(r.status, 200);\n+    pages.push((await r.json()).map((n) => n.id));\n+    cursor = r.headers.get('x-next-cursor');\n+  } while (cursor);\n+  return pages;\n+}\n+\n+test('Ö-P.1 empty store: empty array, no cursor', async () => {\n+  const r = await get();\n+  assert.equal(r.status, 200);\n+  assert.deepEqual(await r.json(), []);\n+  assert.equal(r.headers.get('x-next-cursor'), null);\n+});\n+\n+test('Ö-P.2 default page is 20, newest first, body stays an array', async () => {\n+  for (let i = 0; i < 25; i++) await post(`n${i}`, ts(i)); // inserted oldest first\n+  const r = await get();\n+  const notes = await r.json();\n+  assert.ok(Array.isArray(notes));\n+  assert.equal(notes.length, 20);\n+  assert.deepEqual(notes.map((n) => n.createdAt), Array.from({ length: 20 }, (_, i) => ts(24 - i)));\n+  assert.ok(r.headers.get('x-next-cursor'));\n+});\n+\n+test('Ö-P.3 limit outside 1..100 or not an integer is 400', async () => {\n+  for (const bad of ['0', '101', '-1', 'abc', '1.5', '', '1e1', ' 5', '0x10']) {\n+    assert.equal((await get(`?limit=${encodeURIComponent(bad)}`)).status, 400, `limit=${bad}`);\n+  }\n+  assert.equal((await get('?limit=1')).status, 200);\n+  assert.equal((await get('?limit=100')).status, 200);\n+});\n+\n+test('Ö-P.4 walking the cursor returns every note once, newest first', async () => {\n+  const all = (await (await get('?limit=100')).json()).map((n) => n.id);\n+  assert.equal(all.length, 25);\n+  const pages = await walk(7);\n+  assert.deepEqual(pages.map((p) => p.length), [7, 7, 7, 4]);\n+  assert.deepEqual(pages.flat(), all);\n+});\n+\n+test('Ö-P.5 no cursor header when the last page is exactly full', async () => {\n+  const r = await get('?limit=25');\n+  assert.equal((await r.json()).length, 25);\n+  assert.equal(r.headers.get('x-next-cursor'), null);\n+});\n+\n+test('Ö-P.6 invalid cursor is 400', async () => {\n+  const b64 = (v) => Buffer.from(v).toString('base64url');\n+  for (const bad of ['garbage', b64('not json'), b64('{}'), b64('[\"x\"]'), b64('[1,2]'), b64('[\"a\",\"b\",\"c\"]'), '']) {\n+    assert.equal((await get(`?cursor=${encodeURIComponent(bad)}`)).status, 400, `cursor=${bad}`);\n+  }\n+});\n+\n+test('Ö-P.7 notes with equal createdAt are neither skipped nor repeated', async () => {\n+  for (let i = 0; i < 5; i++) await post(`tie${i}`, ts(59));\n+  const all = (await (await get('?limit=100')).json()).map((n) => n.id);\n+  assert.equal(all.length, 30);\n+  assert.equal(new Set(all).size, 30);\n+  assert.deepEqual((await walk(2)).flat(), all);\n+});\n+\n+test('Ö-P.8 deleting the last note of a page does not break the next page', async () => {\n+  const first = await get('?limit=3');\n+  const page = await first.json();\n+  const cursor = first.headers.get('x-next-cursor');\n+  await fetch(`${base}/notes/${page[2].id}`, { method: 'DELETE' });\n+  const rest = await (await get(`?limit=100&cursor=${encodeURIComponent(cursor)}`)).json();\n+  assert.equal(rest.length, 27);\n+  assert.ok(!rest.some((n) => page.some((p) => p.id === n.id)));\n+});\n",
+    "error": null,
+    "costUsd": 0.32216469999999997,
+    "durationS": 78,
+    "turns": 22,
+    "tokens": 702973,
+    "outputTokens": 8806,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık sayfalı ve `npm test` yeşil (11/11). Kapı da yeşil; lint ve tip kontrol tanımsız, Semgrep kurulu değil.\n\n**Ne yapıldı**\n- **`limit`:** `?limit=` varsayılan 20, 1–100. Tam sayı olmayan veya aralık dışı değer (`0`, `101`, `abc`, `1.5`, boş) 400 döner.\n- **`cursor`:** Sonraki sayfa varsa `x-next-cursor` başlığı gelir. İstemci onu `?cursor=` ile geri yollar. Cursor `(createdAt, id)` anahtarlı ve base64url JSON; bozuk veya boş cursor 400 döner.\n- **Gövde:** Gövde hâlâ en yeni not önce sıralı dizi.\n- **Sıralama düzeltmesi:** `store.list()` içindeki sıralama karşılaştırıcısı boolean döndürüyordu, yani sıra hiç doğru değildi. Düzelttim: `createdAt` azalan, eşitlikte `id` azalan.\n- **Değişen dosyalar:** `routes.js`, `store.js`, `http.js` (`sendJson` artık başlık alıyor) ve yeni `tests/notes-paging.test.mjs`.\n\n**Kararlar (otomatik)**\n- Offset yerine keyset cursor seçtim. Sayfalar arasında not silinse bile sayfa kaymaz.\n- Cursor opak (base64url JSON).\n- Boş `?limit=` ve boş `?cursor=` geçersiz sayıldı, 400 döner.\n- Bayrak kullanmadım (çift yönlü kapı).\n\n**Kanıt**\n- Testler gerçek HTTP ile koşuyor. Önce 4 test kırmızıydı (Ö-P.2, Ö-P.4, Ö-P.6, Ö-P.8; diğer paging testleri kırmızı gösterilmedi), sonra hepsi yeşil.\n- Kapsam: varsayılan 20, limit sınırları, sayfa sayfa gezerken tekrar/atlama yok, tam dolu son sayfada başlık yok, geçersiz cursor, eşit `createdAt` ve cursor notunun silinmesi.\n\n**Elle deneme**\n1. `npm start`\n2. `curl -i -H \"x-user: a\" \"localhost:3000/notes?li",
+    "rep": 1
+  },
+  {
+    "task": "paging",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "testsCaught": 2,
+    "mutants": {
+      "killed": 1,
+      "total": 2
+    },
+    "codeFiles": 4,
+    "codeLines": 89,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..32e7327 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -1,5 +1,29 @@\n import { sendJson, readJson } from '../../../lib/http.js';\n \n+const DEFAULT_LIMIT = 20;\n+const MAX_LIMIT = 100;\n+\n+// Returns the page size, or null when the value is invalid.\n+function parseLimit(raw) {\n+  if (raw === null) return DEFAULT_LIMIT;\n+  if (!/^\\d+$/.test(raw)) return null;\n+  const n = Number(raw);\n+  return n >= 1 && n <= MAX_LIMIT ? n : null;\n+}\n+\n+const encodeCursor = (key) => Buffer.from(JSON.stringify(key)).toString('base64url');\n+\n+// Returns [createdAt, id], or null when the cursor is malformed.\n+function decodeCursor(raw) {\n+  try {\n+    const key = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));\n+    const valid = Array.isArray(key) && key.length === 2 && typeof key[0] === 'string' && typeof key[1] === 'string' && /^\\d+$/.test(key[1]);\n+    return valid ? key : null;\n+  } catch {\n+    return null;\n+  }\n+}\n+\n // The caller is identified by the x-user header (the auth layer in front of this service sets it).\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n@@ -9,7 +33,17 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const limit = parseLimit(url.searchParams.get('limit'));\n+      if (limit === null) return sendJson(res, 400, { error: 'limit 1 ile 100 arasında olmalı' });\n+      let after;\n+      if (url.searchParams.has('cursor')) {\n+        after = decodeCursor(url.searchParams.get('cursor'));\n+        if (!after) return sendJson(res, 400, { error: 'geçersiz cursor' });\n+      }\n+      const { items, next } = store.list({ limit, after });\n+      return sendJson(res, 200, items, next ? { 'x-next-cursor': encodeCursor(next) } : {});\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..873b2df 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -1,3 +1,12 @@\n+function compareToKey(note, [createdAt, id]) {\n+  if (note.createdAt !== createdAt) return note.createdAt < createdAt ? 1 : -1;\n+  return Number(id) - Number(note.id);\n+}\n+\n+function compareNewestFirst(a, b) {\n+  return compareToKey(a, [b.createdAt, b.id]);\n+}\n+\n // In-memory note store. One instance per server.\n export function createStore() {\n   const notes = [];\n@@ -8,9 +17,14 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n-      // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+    // Newest first; id breaks createdAt ties so the order is total and stable.\n+    // `after` is the [createdAt, id] position of the last item of the previous page.\n+    list({ limit = Infinity, after } = {}) {\n+      const sorted = [...notes].sort(compareNewestFirst);\n+      const rest = after ? sorted.filter((n) => compareToKey(n, after) > 0) : sorted;\n+      const items = rest.slice(0, limit);\n+      const last = items[items.length - 1];\n+      return { items, next: rest.length > items.length ? [last.createdAt, last.id] : null };\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/src/lib/http.js b/src/lib/http.js\nindex bae4b46..2ca2fc1 100644\n--- a/src/lib/http.js\n+++ b/src/lib/http.js\n@@ -1,5 +1,5 @@\n-export function sendJson(res, status, body) {\n-  res.writeHead(status, { 'content-type': 'application/json' });\n+export function sendJson(res, status, body, headers = {}) {\n+  res.writeHead(status, { 'content-type': 'application/json', ...headers });\n   res.end(JSON.stringify(body));\n }\n \ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..491dc9f 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,35 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('GET /notes pages newest first with a cursor', async () => {\n+  for (let i = 0; i < 5; i++) {\n+    await call('POST', '/notes', 'pg', { title: `p${i}`, createdAt: `2030-01-0${i + 1}T00:00:00.000Z` });\n+  }\n+  const seen = [];\n+  let path = '/notes?limit=2';\n+  let pages = 0;\n+  while (path) {\n+    const r = await call('GET', path, 'pg');\n+    assert.equal(r.status, 200);\n+    const items = await r.json();\n+    assert.ok(Array.isArray(items) && items.length <= 2);\n+    seen.push(...items);\n+    pages++;\n+    const next = r.headers.get('x-next-cursor');\n+    path = next && `/notes?limit=2&cursor=${next}`;\n+  }\n+  assert.deepEqual(seen.filter((n) => /^p\\d$/.test(n.title)).map((n) => n.title), ['p4', 'p3', 'p2', 'p1', 'p0']);\n+  assert.ok(pages >= 3);\n+});\n+\n+test('GET /notes rejects bad limit and cursor', async () => {\n+  for (const q of ['limit=0', 'limit=101', 'limit=abc', 'limit=', 'limit=1.5', 'cursor=!!', 'cursor=e30']) {\n+    assert.equal((await call('GET', `/notes?${q}`, 'pg')).status, 400, q);\n+  }\n+  assert.equal((await call('GET', '/notes?limit=100', 'pg')).status, 200);\n+  assert.equal((await call('GET', '/notes', 'pg')).headers.get('x-next-cursor'), null);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.1762718,
+    "durationS": 43,
+    "turns": 20,
+    "tokens": 362501,
+    "outputTokens": 5869,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık sayfalanıyor ve 5 testin tamamı geçiyor (3 mevcut, 2 yeni). Commit atmadım.\n\n- **`limit`:** Varsayılan 20. Değer 1–100 arasında bir tam sayı olmalı. `0`, `101`, `abc`, boş ve `1.5` gibi değerler 400 döner.\n- **`x-next-cursor`:** Sonraki sayfa varsa bu başlık gelir. İstemci onu `?cursor=` ile geri gönderir. Cursor bozuksa veya yapısı yanlışsa 400 döner.\n- **Yanıt gövdesi:** Yine en yeni not önce sıralı düz bir dizidir. Başlığı okumayan mevcut istemciler sadece ilk sayfayı görür.\n- **Cursor tasarımı:** Cursor, son notun `[createdAt, id]` konumunu taşıyan bir base64url değeridir. Sayfalar arasında not silinse bile atlama veya tekrar olmaz.\n\nİki düzeltmeyi de kendim yaptım:\n- **Sıralama hatası:** `store.list()` içindeki sıralama karşılaştırıcısı boolean döndürüyordu, bu yüzden sıralama güvenilir değildi. Artık `createdAt` azalan, eşitlikte `id` azalan sıralıyor.\n- **`sendJson` başlıkları:** `src/lib/http.js` içinde `sendJson` isteğe bağlı bir `headers` parametresi aldı.\n\nYeni testler `tests/notes.test.mjs` içinde: sayfa sırası ve cursor ile gezinme, bir de geçersiz `limit` ve `cursor` değerleri.",
+    "rep": 1
+  },
+  {
+    "task": "paging",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 9,
+      "fail": 0
+    },
+    "testsAdded": 6,
+    "testsCaught": 5,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 105,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..1158c06 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -1,5 +1,13 @@\n import { sendJson, readJson } from '../../../lib/http.js';\n \n+// Cursor = base64url of JSON [createdAt, id]. Returns null when malformed.\n+function decodeCursor(raw) {\n+  try {\n+    const c = JSON.parse(Buffer.from(raw, 'base64url').toString());\n+    return Array.isArray(c) && c.length === 2 && typeof c[0] === 'string' && typeof c[1] === 'string' && /^\\d+$/.test(c[1]) ? c : null;\n+  } catch { return null; }\n+}\n+\n // The caller is identified by the x-user header (the auth layer in front of this service sets it).\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n@@ -9,7 +17,18 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const rawLimit = url.searchParams.get('limit') ?? '20';\n+      const limit = /^\\d+$/.test(rawLimit) ? Number(rawLimit) : 0;\n+      if (limit < 1 || limit > 100) return sendJson(res, 400, { error: 'limit 1 ile 100 arasında olmalı' });\n+      const rawCursor = url.searchParams.get('cursor');\n+      const after = rawCursor === null ? undefined : decodeCursor(rawCursor);\n+      if (after === null) return sendJson(res, 400, { error: 'geçersiz cursor' });\n+      const { items, hasMore } = store.list({ limit, after });\n+      const last = items[items.length - 1];\n+      if (hasMore) res.setHeader('x-next-cursor', Buffer.from(JSON.stringify([last.createdAt, last.id])).toString('base64url'));\n+      return sendJson(res, 200, items);\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..79d0fee 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -8,9 +8,13 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n-      // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+    // Newest first; id breaks createdAt ties. `after` = [createdAt, id] of the last note seen.\n+    // Keyset paging: stays stable when notes are added or deleted between pages.\n+    list({ limit, after } = {}) {\n+      const rank = (a, b) => (a.createdAt === b.createdAt ? Number(b.id) - Number(a.id) : a.createdAt < b.createdAt ? 1 : -1);\n+      const sorted = [...notes].sort(rank);\n+      const rest = after ? sorted.filter((n) => rank(n, { createdAt: after[0], id: after[1] }) > 0) : sorted;\n+      return { items: rest.slice(0, limit), hasMore: limit !== undefined && rest.length > limit };\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..b0e01d4 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -32,3 +32,77 @@ test('a note can be updated and deleted', async () => {\n   assert.equal((await call('DELETE', `/notes/${note.id}`, 'ayse')).status, 204);\n   assert.equal((await call('GET', `/notes/${note.id}`, 'ayse')).status, 404);\n });\n+\n+// Paging. Fresh app per test so counts are exact.\n+async function withApp(fn) {\n+  const s = createApp().listen(0);\n+  await new Promise((r) => s.once('listening', r));\n+  const b = `http://127.0.0.1:${s.address().port}`;\n+  const add = (title, createdAt) => fetch(b + '/notes', { method: 'POST', body: JSON.stringify({ title, createdAt }) });\n+  try { await fn((path, init) => fetch(b + path, init), add); }\n+  finally { s.close(); }\n+}\n+\n+test('GET /notes is newest first, default limit 20, array body', async () => {\n+  await withApp(async (get, add) => {\n+    for (let i = 1; i <= 25; i++) await add(`n${i}`, new Date(2026, 0, i).toISOString());\n+    const r = await get('/notes');\n+    const page = await r.json();\n+    assert.equal(page.length, 20);\n+    assert.equal(page[0].title, 'n25');\n+    assert.equal(page[19].title, 'n6');\n+    assert.ok(r.headers.get('x-next-cursor'));\n+  });\n+});\n+\n+test('paging walks every note once, no header on last page', async () => {\n+  await withApp(async (get, add) => {\n+    for (let i = 1; i <= 7; i++) await add(`n${i}`, '2026-01-01T00:00:00.000Z'); // same createdAt: tie-break by id\n+    const seen = [];\n+    let cursor = null, pages = 0;\n+    do {\n+      const r = await get(`/notes?limit=3${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);\n+      seen.push(...(await r.json()).map((n) => n.title));\n+      cursor = r.headers.get('x-next-cursor');\n+      pages++;\n+    } while (cursor);\n+    assert.deepEqual(seen, ['n7', 'n6', 'n5', 'n4', 'n3', 'n2', 'n1']);\n+    assert.equal(pages, 3);\n+  });\n+});\n+\n+test('exact multiple of limit: no next cursor on last full page', async () => {\n+  await withApp(async (get, add) => {\n+    for (let i = 1; i <= 4; i++) await add(`n${i}`, new Date(2026, 0, i).toISOString());\n+    const r = await get('/notes?limit=4');\n+    assert.equal((await r.json()).length, 4);\n+    assert.equal(r.headers.get('x-next-cursor'), null);\n+  });\n+});\n+\n+test('cursor survives a delete of the last seen note', async () => {\n+  await withApp(async (get, add) => {\n+    for (let i = 1; i <= 5; i++) await add(`n${i}`, new Date(2026, 0, i).toISOString());\n+    const r = await get('/notes?limit=2');\n+    const [, last] = await r.json();\n+    await get(`/notes/${last.id}`, { method: 'DELETE' });\n+    const next = await (await get(`/notes?limit=2&cursor=${encodeURIComponent(r.headers.get('x-next-cursor'))}`)).json();\n+    assert.deepEqual(next.map((n) => n.title), ['n3', 'n2']);\n+  });\n+});\n+\n+test('invalid limit is 400', async () => {\n+  await withApp(async (get) => {\n+    for (const l of ['0', '101', '-1', 'abc', '1.5', '']) assert.equal((await get(`/notes?limit=${l}`)).status, 400, l);\n+    for (const l of ['1', '100']) assert.equal((await get(`/notes?limit=${l}`)).status, 200, l);\n+  });\n+});\n+\n+test('invalid cursor is 400', async () => {\n+  await withApp(async (get) => {\n+    const enc = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');\n+    for (const c of ['garbage', '', enc('x'), enc([1, 2]), enc(['2026', 'abc']), enc(['2026'])]) {\n+      assert.equal((await get(`/notes?cursor=${c}`)).status, 400, c);\n+    }\n+  });\n+});\n",
+    "error": null,
+    "costUsd": 0.28038209999999997,
+    "durationS": 71,
+    "turns": 18,
+    "tokens": 560149,
+    "outputTokens": 7717,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık sayfalanıyor. `npm test` 9/9 yeşil, kapı (`gate.mjs --run`) YEŞİL. Bu testler gerçek HTTP isteği atıyor.\n\n**Ne yapıldı**\n- `routes.js`: `limit` varsayılan 20, 1-100 dışı veya sayı olmayan değer 400. `cursor` geçersizse 400. Sonraki sayfa varsa `x-next-cursor` başlığı geliyor. Gövde hâlâ en yeni önce sıralı dizi.\n- `store.js`: `list({limit, after})` keyset sayfalama yapıyor. Cursor, son notun `[createdAt, id]` değerinin base64url JSON hali. Sayfalar arasında not eklenip silinse bile sayfalar kaymıyor.\n- `tests/notes.test.mjs`: 6 yeni test. Önce kırmızıydılar, şimdi yeşil.\n\n**Kararlar (otomatik)**\n- Offset yerine keyset cursor seçtim. Offset, sayfalar arasında ekleme/silmede not atlatır veya tekrarlar.\n- `limit=` boş ya da `limit=0` 400 dönüyor.\n- `list()` imzası değişti. Tek çağıran `routes.js`.\n\n**Kanıt:** 25 notluk listede ilk sayfa 20 not + başlık dönüyor. `limit=3` ile 7 notun hepsi tek tek, aynı `createdAt` olsa bile geziliyor. Son sayfada başlık yok. Son görülen not silinse de cursor çalışıyor. `0, 101, -1, abc, 1.5, \"\"` limitleri ve bozuk cursor'lar 400 dönüyor.\n\n**Elle denemek için**\n1. `npm start`\n2. `curl -i \"localhost:3000/notes?limit=2\"`\n3. Yanıttaki `x-next-cursor` değerini `?cursor=` ile geri gönderin.\n\n**Önerilen commit:** `feat: GET /notes için cursor sayfalama`\n\n**Düzeltilen mevcut hata:** Eski `list()` sıralaması bozuktu. Comparator boolean döndürüyordu, yani \"en yeni önce\" aslında çalışmıyordu. Sayfalama için sıralamayı düzelttim, bu yüzde",
+    "rep": 2
+  },
+  {
+    "task": "paging",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 6,
+      "fail": 0
+    },
+    "testsAdded": 3,
+    "testsCaught": 2,
+    "mutants": {
+      "killed": 1,
+      "total": 2
+    },
+    "codeFiles": 4,
+    "codeLines": 93,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..b022fb9 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -1,5 +1,31 @@\n import { sendJson, readJson } from '../../../lib/http.js';\n \n+const DEFAULT_LIMIT = 20;\n+const MAX_LIMIT = 100;\n+\n+// Returns the page size, or null when the value is not an integer in 1..MAX_LIMIT.\n+function parseLimit(raw) {\n+  if (raw === null) return DEFAULT_LIMIT;\n+  if (!/^\\d+$/.test(raw)) return null;\n+  const n = Number(raw);\n+  return n >= 1 && n <= MAX_LIMIT ? n : null;\n+}\n+\n+function encodeCursor({ createdAt, id }) {\n+  return Buffer.from(JSON.stringify([createdAt, id])).toString('base64url');\n+}\n+\n+// Returns { createdAt, id }, or null when the cursor is malformed.\n+function decodeCursor(raw) {\n+  try {\n+    const [createdAt, id, ...rest] = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));\n+    if (rest.length || typeof createdAt !== 'string' || typeof id !== 'string' || !/^\\d+$/.test(id)) return null;\n+    return { createdAt, id };\n+  } catch {\n+    return null;\n+  }\n+}\n+\n // The caller is identified by the x-user header (the auth layer in front of this service sets it).\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n@@ -9,7 +35,15 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const limit = parseLimit(url.searchParams.get('limit'));\n+      if (limit === null) return sendJson(res, 400, { error: 'limit 1 ile 100 arasında olmalı' });\n+      const rawCursor = url.searchParams.get('cursor');\n+      const after = rawCursor === null ? undefined : decodeCursor(rawCursor);\n+      if (after === null) return sendJson(res, 400, { error: 'geçersiz cursor' });\n+      const { items, next } = store.list({ limit, after });\n+      return sendJson(res, 200, items, next ? { 'x-next-cursor': encodeCursor(next) } : {});\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..1c4e172 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -1,3 +1,8 @@\n+function compareNewestFirst(a, b) {\n+  if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;\n+  return Number(b.id) - Number(a.id);\n+}\n+\n // In-memory note store. One instance per server.\n export function createStore() {\n   const notes = [];\n@@ -8,9 +13,16 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n-      // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+    // Newest first; ties broken by id so the order is total and cursors are stable.\n+    // `after` is a { createdAt, id } position; the page starts strictly after it,\n+    // so deleting the note a cursor points at does not break paging.\n+    list({ limit, after } = {}) {\n+      let sorted = [...notes].sort(compareNewestFirst);\n+      if (after) sorted = sorted.filter((n) => compareNewestFirst(n, after) > 0);\n+      if (limit === undefined || sorted.length <= limit) return { items: sorted, next: null };\n+      const items = sorted.slice(0, limit);\n+      const last = items[items.length - 1];\n+      return { items, next: { createdAt: last.createdAt, id: last.id } };\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/src/lib/http.js b/src/lib/http.js\nindex bae4b46..2ca2fc1 100644\n--- a/src/lib/http.js\n+++ b/src/lib/http.js\n@@ -1,5 +1,5 @@\n-export function sendJson(res, status, body) {\n-  res.writeHead(status, { 'content-type': 'application/json' });\n+export function sendJson(res, status, body, headers = {}) {\n+  res.writeHead(status, { 'content-type': 'application/json', ...headers });\n   res.end(JSON.stringify(body));\n }\n \ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..d58d3cb 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,41 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('GET /notes pages newest first with x-next-cursor', async () => {\n+  const ids = [];\n+  for (let i = 0; i < 5; i++) {\n+    ids.push((await (await call('POST', '/notes', 'pg', { title: `p${i}`, createdAt: `2030-01-0${i + 1}T00:00:00Z` })).json()).id);\n+  }\n+  const seen = [];\n+  let path = '/notes?limit=2';\n+  for (let guard = 0; guard < 50; guard++) {\n+    const r = await call('GET', path, 'pg');\n+    assert.equal(r.status, 200);\n+    const page = await r.json();\n+    assert.ok(Array.isArray(page) && page.length <= 2);\n+    seen.push(...page.map((n) => n.id));\n+    const next = r.headers.get('x-next-cursor');\n+    if (!next) break;\n+    path = `/notes?limit=2&cursor=${encodeURIComponent(next)}`;\n+  }\n+  assert.deepEqual(seen.filter((id) => ids.includes(id)), [...ids].reverse());\n+  assert.equal(new Set(seen).size, seen.length);\n+});\n+\n+test('GET /notes without params returns an array', async () => {\n+  const r = await call('GET', '/notes', 'pg');\n+  assert.equal(r.status, 200);\n+  assert.ok(Array.isArray(await r.json()));\n+});\n+\n+test('GET /notes rejects bad limit and cursor', async () => {\n+  for (const q of ['limit=0', 'limit=101', 'limit=abc', 'limit=1.5', 'limit=', 'cursor=!!!', 'cursor=e30']) {\n+    assert.equal((await call('GET', `/notes?${q}`, 'pg')).status, 400, q);\n+  }\n+  assert.equal((await call('GET', '/notes?limit=100', 'pg')).status, 200);\n+  assert.equal((await call('GET', '/notes?limit=1', 'pg')).status, 200);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.1535636,
+    "durationS": 48,
+    "turns": 16,
+    "tokens": 232787,
+    "outputTokens": 5578,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık sayfalanıyor. Testlerin hepsi geçti (6/6). Commit atmadım.\n\n- **`limit`:** Varsayılan 20. Yalnızca 1–100 arası tam sayı kabul ediliyor. `0`, `101`, `abc`, `1.5` ve boş değer 400 dönüyor.\n- **Sonraki sayfa:** Sonraki sayfa varsa yanıtta `x-next-cursor` başlığı geliyor. İstemci bunu `?cursor=` ile geri gönderiyor. Bozuk veya yanlış biçimli cursor 400 dönüyor.\n- **Geriye uyumluluk:** Gövde hâlâ en yeni not önce sıralı düz bir dizi. Parametresiz çağıran istemciler ilk 20 notu alıyor. 20'den fazla not varsa artık yalnızca ilk 20'yi görürler. Kalanı için cursor kullanmaları gerekir.\n\n**Cursor tasarımı:** Cursor sayfa sayısı yerine son notun `createdAt` ve `id` değerlerini taşıyor. Sonraki sayfa o konumdan sonra başlıyor. Bu yüzden sayfalar arasında bir not silinirse, hatta cursor'ın işaret ettiği not silinse bile atlama veya tekrar olmuyor.\n\n**Sıralama hatası:** `store.list()` içindeki karşılaştırma fonksiyonu sayı yerine boolean döndürüyordu. Bu yüzden sıralama gerçekte garanti değildi ve sayfalama bununla çalışmazdı. Düzelttim. Aynı `createdAt` değerine sahip notlar artık `id`'ye göre sıralanıyor.\n\n**Kapsam dışı bıraktığım şey:** `GET /notes` tüm kullanıcıların notlarını döndürüyor, `x-user` ile filtrelemiyor. Bu zaten böyleydi, istenen özellik dışında olduğu için dokunmadım. Yine de bilmeniz gerekir.\n\nDeğişen dosyalar:\n- `src/features/notes/server/store.js`\n- `src/features/notes/server/routes.js`\n- `src/lib/http.js` (`sendJson` artık ek başlık alabiliyor)\n- `t",
+    "rep": 2
+  },
+  {
+    "task": "paging",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 9,
+      "fail": 0
+    },
+    "testsAdded": 6,
+    "testsCaught": 5,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 4,
+    "codeLines": 113,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..f9fccff 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -1,5 +1,15 @@\n import { sendJson, readJson } from '../../../lib/http.js';\n \n+const encodeCursor = (n) => Buffer.from(JSON.stringify([n.createdAt, n.id])).toString('base64url');\n+\n+// Returns {createdAt, id}, or null when the cursor is malformed.\n+function decodeCursor(raw) {\n+  try {\n+    const [createdAt, id, ...rest] = JSON.parse(Buffer.from(raw, 'base64url').toString());\n+    return typeof createdAt === 'string' && /^\\d+$/.test(id) && !rest.length ? { createdAt, id } : null;\n+  } catch { return null; }\n+}\n+\n // The caller is identified by the x-user header (the auth layer in front of this service sets it).\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n@@ -9,7 +19,15 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const rawLimit = url.searchParams.get('limit') ?? '20';\n+      const limit = /^\\d+$/.test(rawLimit) ? Number(rawLimit) : 0;\n+      if (limit < 1 || limit > 100) return sendJson(res, 400, { error: 'limit 1 ile 100 arasında olmalı' });\n+      const after = url.searchParams.has('cursor') ? decodeCursor(url.searchParams.get('cursor')) : undefined;\n+      if (after === null) return sendJson(res, 400, { error: 'geçersiz cursor' });\n+      const { notes, last } = store.list({ limit, after });\n+      return sendJson(res, 200, notes, last ? { 'x-next-cursor': encodeCursor(last) } : {});\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..50da136 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -1,3 +1,5 @@\n+const newer = (a, b) => (a.createdAt === b.createdAt ? Number(b.id) - Number(a.id) : a.createdAt < b.createdAt ? 1 : -1);\n+\n // In-memory note store. One instance per server.\n export function createStore() {\n   const notes = [];\n@@ -8,9 +10,12 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n-      // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+    // Newest first, ties broken by id. `after` is the {createdAt, id} of the last note already seen.\n+    list({ limit, after } = {}) {\n+      let sorted = [...notes].sort(newer);\n+      if (after) sorted = sorted.filter((n) => newer(after, n) < 0);\n+      const page = sorted.slice(0, limit);\n+      return { notes: page, last: sorted.length > page.length ? page.at(-1) : undefined };\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/src/lib/http.js b/src/lib/http.js\nindex bae4b46..2ca2fc1 100644\n--- a/src/lib/http.js\n+++ b/src/lib/http.js\n@@ -1,5 +1,5 @@\n-export function sendJson(res, status, body) {\n-  res.writeHead(status, { 'content-type': 'application/json' });\n+export function sendJson(res, status, body, headers = {}) {\n+  res.writeHead(status, { 'content-type': 'application/json', ...headers });\n   res.end(JSON.stringify(body));\n }\n \ndiff --git a/tests/paging.test.mjs b/tests/paging.test.mjs\nnew file mode 100644\nindex 0000000..1269205\n--- /dev/null\n+++ b/tests/paging.test.mjs\n@@ -0,0 +1,78 @@\n+import { test, before, after } from 'node:test';\n+import assert from 'node:assert/strict';\n+import { createApp } from '../src/app/server.js';\n+\n+let server, base;\n+before(async () => {\n+  server = createApp().listen(0);\n+  await new Promise((r) => server.once('listening', r));\n+  base = `http://127.0.0.1:${server.address().port}`;\n+  // 45 notes; pairs share a timestamp to exercise the tie-break.\n+  for (let i = 0; i < 45; i++) await post(`n${i}`, new Date(Date.UTC(2026, 0, 1, 0, Math.floor(i / 2))).toISOString());\n+});\n+after(() => server.close());\n+\n+const post = (title, createdAt) => fetch(base + '/notes', {\n+  method: 'POST', headers: { 'content-type': 'application/json', 'x-user': 'ayse' }, body: JSON.stringify({ title, createdAt }),\n+}).then((r) => r.json());\n+const get = (qs = '') => fetch(`${base}/notes${qs}`, { headers: { 'x-user': 'ayse' } });\n+\n+\n+async function walk(limit) {\n+  const seen = [];\n+  let cursor;\n+  for (let guard = 0; guard < 100; guard++) {\n+    const r = await get(`?limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);\n+    assert.equal(r.status, 200);\n+    seen.push(...(await r.json()));\n+    cursor = r.headers.get('x-next-cursor');\n+    if (!cursor) return seen;\n+  }\n+  assert.fail('cursor never ended');\n+}\n+\n+test('SAY-1.1 default page is 20 notes, newest first, body stays an array', async () => {\n+  const r = await get();\n+  assert.equal(r.status, 200);\n+  const page = await r.json();\n+  assert.ok(Array.isArray(page));\n+  assert.equal(page.length, 20);\n+  for (let i = 1; i < page.length; i++) assert.ok(page[i - 1].createdAt >= page[i].createdAt);\n+  assert.ok(r.headers.get('x-next-cursor'));\n+});\n+\n+test('SAY-1.2 limit outside 1..100 or non-integer returns 400', async () => {\n+  for (const l of ['0', '101', '-1', 'abc', '1.5', '']) assert.equal((await get(`?limit=${l}`)).status, 400, `limit=${l}`);\n+  assert.equal((await get('?limit=1')).status, 200);\n+  assert.equal((await get('?limit=100')).status, 200);\n+});\n+\n+test('SAY-1.3 walking cursors returns every note once, newest first', async () => {\n+  const all = await walk(7);\n+  assert.equal(all.length, 45);\n+  assert.equal(new Set(all.map((n) => n.id)).size, 45);\n+  for (let i = 1; i < all.length; i++) assert.ok(all[i - 1].createdAt >= all[i].createdAt);\n+});\n+\n+test('SAY-1.4 last page has no x-next-cursor; exact fit too', async () => {\n+  const r = await get('?limit=100');\n+  assert.equal((await r.json()).length, 45);\n+  assert.equal(r.headers.get('x-next-cursor'), null);\n+  const all = await walk(45);\n+  assert.equal(all.length, 45);\n+});\n+\n+test('SAY-1.5 invalid cursor returns 400', async () => {\n+  const bad = ['x', '!!!', Buffer.from('nope').toString('base64url'), Buffer.from('[1,2]').toString('base64url'), Buffer.from('[\"a\",\"b\"]').toString('base64url'), ''];\n+  for (const c of bad) assert.equal((await get(`?cursor=${encodeURIComponent(c)}`)).status, 400, `cursor=${c}`);\n+});\n+\n+test('SAY-1.6 cursor survives a new note arriving between pages', async () => {\n+  const first = await get('?limit=10');\n+  const cursor = first.headers.get('x-next-cursor');\n+  const page1 = await first.json();\n+  await post('fresh', new Date(Date.UTC(2030, 0, 1)).toISOString());\n+  const page2 = await (await get(`?limit=10&cursor=${encodeURIComponent(cursor)}`)).json();\n+  const ids = new Set(page1.map((n) => n.id));\n+  assert.ok(page2.every((n) => !ids.has(n.id)));\n+});\n",
+    "error": null,
+    "costUsd": 0.30342020000000003,
+    "durationS": 79,
+    "turns": 22,
+    "tokens": 674348,
+    "outputTokens": 8382,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "## Rapor\n\n**Yapıldı:** `GET /notes` artık sayfalı. Gövde hâlâ en yeni not önce sıralı dizi. Sonraki sayfa varsa `x-next-cursor` başlığı geliyor.\n- `limit` varsayılan 20, 1-100 arası. Sayı olmayan, ondalıklı, boş veya aralık dışı değer 400 dönüyor.\n- Cursor `(createdAt, id)` anahtarlı (base64url JSON). Bozuk cursor 400 dönüyor. Sayfalar arasında yeni not gelse de kayma ya da tekrar olmuyor.\n- `store.list()` eski sıralama karşılaştırıcısı boolean döndürüyordu, yani sıralama bozuktu. Yeniden yazdım: `createdAt` azalan, eşitlikte `id` azalan.\n\n**Dokunulan dosyalar:** `src/features/notes/server/routes.js`, `store.js`, `src/lib/http.js` (`sendJson`'a isteğe bağlı `headers` parametresi), yeni `tests/paging.test.mjs`.\n\n**Kararlar (otomatik):**\n- Offset yerine keyset cursor seçtim.\n- Cursor opak base64url JSON.\n- Plan onayı otomatik.\n- Bayrak yok: yanıt gövdesi uyumlu, tek istemci davranışı değişikliği varsayılan 20 sınırı.\n\n**Kanıt:**\n- Kırmızı: yeni testlerle 5 fail.\n- Yeşil: `npm test` 9 pass, 0 fail. Testler gerçek HTTP sunucusuna istek atıyor.\n- `gate.mjs --run`: YEŞİL (lint, tip kontrol tanımsız, Semgrep kurulu değil).\n- Testler: SAY-1.1 varsayılan 20 ve dizi gövde; SAY-1.2 limit 400'leri; SAY-1.3 cursor ile gezince 45 not tekrarsız; SAY-1.4 son sayfada başlık yok; SAY-1.5 geçersiz cursor 400; SAY-1.6 araya yeni not girince kayma yok.\n\n**Elle deneme:** `npm start`, birkaç `POST /notes` at, sonra `curl -i \"localhost:3000/notes?limit=2\"`. Dönen `x-next-cursor` değerini `?cursor=` ",
+    "rep": 3
+  },
+  {
+    "task": "paging",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "testsCaught": 2,
+    "mutants": {
+      "killed": 1,
+      "total": 2
+    },
+    "codeFiles": 4,
+    "codeLines": 67,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..472e274 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -1,5 +1,18 @@\n import { sendJson, readJson } from '../../../lib/http.js';\n \n+const DEFAULT_LIMIT = 20;\n+const MAX_LIMIT = 100;\n+\n+const encodeCursor = (n) => Buffer.from(JSON.stringify([String(n.createdAt), n.id])).toString('base64url');\n+\n+function decodeCursor(raw) {\n+  try {\n+    const [createdAt, id] = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));\n+    if (typeof createdAt !== 'string' || typeof id !== 'string' || !/^\\d+$/.test(id)) return null;\n+    return { createdAt, id };\n+  } catch { return null; }\n+}\n+\n // The caller is identified by the x-user header (the auth layer in front of this service sets it).\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n@@ -9,7 +22,22 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      let limit = DEFAULT_LIMIT;\n+      if (url.searchParams.has('limit')) {\n+        const raw = url.searchParams.get('limit');\n+        limit = /^\\d+$/.test(raw) ? Number(raw) : NaN;\n+        if (!(limit >= 1 && limit <= MAX_LIMIT)) return sendJson(res, 400, { error: `limit 1 ile ${MAX_LIMIT} arasında olmalı` });\n+      }\n+      let after;\n+      if (url.searchParams.has('cursor')) {\n+        after = decodeCursor(url.searchParams.get('cursor'));\n+        if (!after) return sendJson(res, 400, { error: 'geçersiz cursor' });\n+      }\n+      const { items, hasMore } = store.list({ limit, after });\n+      const last = items[items.length - 1];\n+      return sendJson(res, 200, items, hasMore ? { 'x-next-cursor': encodeCursor(last) } : {});\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..f25695a 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -8,9 +8,14 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n-      // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+    // Newest first, ties broken by id (descending). `after` is a { createdAt, id } position;\n+    // only notes strictly past it are returned. Returns { items, hasMore }.\n+    list({ limit = Infinity, after } = {}) {\n+      const key = (n) => String(n.createdAt);\n+      const older = (n) => key(n) < after.createdAt || (key(n) === after.createdAt && Number(n.id) < Number(after.id));\n+      const sorted = [...notes].sort((a, b) => (key(a) === key(b) ? Number(b.id) - Number(a.id) : key(a) < key(b) ? 1 : -1));\n+      const rest = after ? sorted.filter(older) : sorted;\n+      return { items: rest.slice(0, limit), hasMore: rest.length > limit };\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/src/lib/http.js b/src/lib/http.js\nindex bae4b46..2ca2fc1 100644\n--- a/src/lib/http.js\n+++ b/src/lib/http.js\n@@ -1,5 +1,5 @@\n-export function sendJson(res, status, body) {\n-  res.writeHead(status, { 'content-type': 'application/json' });\n+export function sendJson(res, status, body, headers = {}) {\n+  res.writeHead(status, { 'content-type': 'application/json', ...headers });\n   res.end(JSON.stringify(body));\n }\n \ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..ea5b2b3 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,28 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('GET /notes pages newest first with x-next-cursor', async () => {\n+  for (let i = 1; i <= 5; i++) await call('POST', '/notes', 'pg', { title: `p${i}`, createdAt: `2030-01-0${i}T00:00:00.000Z` });\n+  const seen = [];\n+  let cursor = '';\n+  for (let guard = 0; guard < 50; guard++) {\n+    const r = await call('GET', `/notes?limit=2${cursor && `&cursor=${cursor}`}`, 'pg');\n+    const page = await r.json();\n+    assert.ok(Array.isArray(page) && page.length <= 2);\n+    seen.push(...page.filter((n) => n.owner === 'pg').map((n) => n.title));\n+    cursor = r.headers.get('x-next-cursor');\n+    if (!cursor) break;\n+  }\n+  assert.deepEqual(seen, ['p5', 'p4', 'p3', 'p2', 'p1']);\n+});\n+\n+test('GET /notes rejects bad limit and cursor', async () => {\n+  for (const q of ['limit=0', 'limit=101', 'limit=abc', 'limit=', 'cursor=zzz', 'cursor=']) {\n+    assert.equal((await call('GET', `/notes?${q}`, 'pg')).status, 400, q);\n+  }\n+  assert.equal((await call('GET', '/notes?limit=100', 'pg')).status, 200);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.16747889999999999,
+    "durationS": 41,
+    "turns": 15,
+    "tokens": 239907,
+    "outputTokens": 5954,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık sayfalanıyor. 5 testin hepsi geçiyor (3'ü mevcut, 2'si yeni). Commit atmadım.\n\n- **`limit`:** Varsayılan 20. Tam sayı olmalı ve 1 ile 100 arasında olmalı. `0`, `101`, `abc` ve boş `limit=` 400 döner.\n- **`cursor`:** Sonraki sayfa varsa yanıta `x-next-cursor` başlığı eklenir. İstemci bunu `?cursor=` ile geri gönderir. Bozuk ya da boş cursor 400 döner.\n- **Yanıt gövdesi:** Yine en yeni not önce sıralı düz bir dizi, mevcut istemciler bozulmaz. Ancak artık `limit` yoksa en fazla 20 not döner. Daha önce hepsi dönüyordu.\n- **Sıralama hatası:** Eski `list()` sıralaması bozuktu. Karşılaştırıcı sayı yerine boolean döndürüyordu, yani \"en yeni önce\" fiilen garanti değildi. Düzelttim: `createdAt`'e göre azalan, eşitlikte `id`'ye göre azalan.\n- **Cursor biçimi:** Cursor son notun konumunu taşır (`createdAt` ve `id`). Sayfalar arasında bir not silinirse sayfalama kaymaz.\n\n`http.js` içindeki `sendJson`'a isteğe bağlı bir `headers` parametresi ekledim. Testler `tests/notes.test.mjs` içine eklendi: ilki sayfaları baştan sona dolaşıp sıralamayı doğruluyor, ikincisi geçersiz `limit` ve `cursor` değerlerini deniyor.\n\n`node --test tests` klasör olarak çalışmadı (`MODULE_NOT_FOUND`), bu yüzden dosyayı doğrudan verdim: `node --test tests/notes.test.mjs`.",
+    "rep": 3
+  }
+]

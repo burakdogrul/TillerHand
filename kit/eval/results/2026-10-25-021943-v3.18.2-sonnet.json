@@ -1,0 +1,275 @@
+[
+  {
+    "task": "security-owner",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 6,
+      "fail": 0
+    },
+    "testsAdded": 3,
+    "testsCaught": 3,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 53,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..a57f85c 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -9,7 +9,9 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (typeof user !== 'string' || !user.trim()) return sendJson(res, 401, { error: 'kimlik gerekli' });\n+\n+    if (!id && req.method === 'GET') return sendJson(res, 200, store.list(user));\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n@@ -18,19 +20,19 @@ export function notesRoutes(store) {\n     }\n \n     if (id && req.method === 'GET') {\n-      const note = store.get(id);\n+      const note = store.get(user, id);\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'PATCH') {\n       const body = await readJson(req);\n       if (!body) return sendJson(res, 400, { error: 'geçersiz JSON' });\n-      const note = store.update(id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n+      const note = store.update(user, id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'DELETE') {\n-      return store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n+      return store.remove(user, id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     return sendJson(res, 405, { error: 'yöntem desteklenmiyor' });\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..24be216 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -8,20 +8,20 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n+    list(owner) {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      return notes.filter((n) => n.owner === owner).sort((a, b) => a.createdAt < b.createdAt);\n     },\n-    get(id) {\n-      return notes.find((n) => n.id === id);\n+    get(owner, id) {\n+      return notes.find((n) => n.id === id && n.owner === owner);\n     },\n-    update(id, fields) {\n-      const note = notes.find((n) => n.id === id);\n+    update(owner, id, fields) {\n+      const note = notes.find((n) => n.id === id && n.owner === owner);\n       if (note) Object.assign(note, fields);\n       return note;\n     },\n-    remove(id) {\n-      const i = notes.findIndex((n) => n.id === id);\n+    remove(owner, id) {\n+      const i = notes.findIndex((n) => n.id === id && n.owner === owner);\n       if (i === -1) return false;\n       notes.splice(i, 1);\n       return true;\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..c03f767 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -32,3 +32,30 @@ test('a note can be updated and deleted', async () => {\n   assert.equal((await call('DELETE', `/notes/${note.id}`, 'ayse')).status, 204);\n   assert.equal((await call('GET', `/notes/${note.id}`, 'ayse')).status, 404);\n });\n+\n+test('SALDIRI Güv-01.1: x-user yok veya boş ise 401', async () => {\n+  for (const [m, p] of [['GET', '/notes'], ['POST', '/notes'], ['GET', '/notes/1'], ['PATCH', '/notes/1'], ['DELETE', '/notes/1']]) {\n+    const body = m === 'POST' || m === 'PATCH' ? { title: 'x' } : undefined;\n+    assert.equal((await call(m, p, undefined, body)).status, 401, `${m} ${p} başlıksız`);\n+    assert.equal((await call(m, p, '   ', body)).status, 401, `${m} ${p} boş başlık`);\n+  }\n+  assert.equal((await fetch(base + '/notes', { headers: { 'x-user': '' } })).status, 401);\n+});\n+\n+test('SALDIRI Güv-01.2: kullanıcı yalnız kendi notlarını listeler', async () => {\n+  const a = await (await call('POST', '/notes', 'list-a', { title: 'a-notu' })).json();\n+  await call('POST', '/notes', 'list-b', { title: 'b-notu' });\n+  const list = await (await call('GET', '/notes', 'list-a')).json();\n+  assert.ok(list.length > 0 && list.every((n) => n.owner === 'list-a'));\n+  assert.ok(list.some((n) => n.id === a.id));\n+});\n+\n+test('SALDIRI Güv-01.3: başkasının notu okunamaz, değiştirilemez, silinemez', async () => {\n+  const note = await (await call('POST', '/notes', 'sahip', { title: 'gizli', body: 'sır' })).json();\n+  assert.equal((await call('GET', `/notes/${note.id}`, 'saldirgan')).status, 404);\n+  assert.equal((await call('PATCH', `/notes/${note.id}`, 'saldirgan', { title: 'hack' })).status, 404);\n+  assert.equal((await call('DELETE', `/notes/${note.id}`, 'saldirgan')).status, 404);\n+  const got = await (await call('GET', `/notes/${note.id}`, 'sahip')).json();\n+  assert.equal(got.title, 'gizli');\n+  assert.equal(got.body, 'sır');\n+});\n",
+    "error": null,
+    "costUsd": 0.2810278,
+    "durationS": 55,
+    "turns": 20,
+    "tokens": 636939,
+    "outputTokens": 6277,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Düzeltme tamam, 6 testin hepsi yeşil. Kapı da yeşil.\n\n**Ne yapıldı**\n- `src/features/notes/server/routes.js`: `x-user` yoksa veya boşsa (boşluklar dahil) 401 dönüyor. Kontrol her yoldan ve her metottan önce çalışıyor.\n- `src/features/notes/server/store.js`: `list`, `get`, `update` ve `remove` artık sahibe göre süzüyor.\n- Başkasının notuna `GET`, `PATCH` veya `DELETE` atınca 404 dönüyor. 403 yerine 404 seçtim ki notun var olduğu sızmasın (otomatik karar).\n- `PATCH` zaten sahibi değiştirmiyordu, ona dokunmadım.\n\n**Kanıt**\n- Önce 3 saldırgan test yazdım (`Güv-01.1`, `Güv-01.2`, `Güv-01.3` in `tests/notes.test.mjs`). Düzeltmeden önce kırmızıydılar: başkasının notu 200 dönüyordu.\n- Düzeltmeden sonra: `tests 6 / pass 6 / fail 0`. `gate.mjs --run` sonucu YEŞİL.\n- Kapıda lint ve tip kontrolü komut tanımsız olduğu için atlandı. Semgrep kurulu olmadığı için atlandı.\n\n**Test etmek için**\n`node --test tests/notes.test.mjs` komutunu çalıştır. Elle denemek için `x-user: ayse` ile not oluştur, sonra `x-user: ali` ile aynı id'yi çağır. 404 gelmeli. Başlıksız istek 401 vermeli.\n\n**Önerilen commit:** `fix: notlar x-user sahibine göre süzülüyor, kimliksiz istek 401`\n\n**Kontrol edemediklerim ve riskler**\n- `roadmap.md`, `progress.md` ve `cost-log.md` güncellenmedi (limit aracı yok, görev ID'si yok).\n- Kurul toplantısı yapılmadı (kurul kurulmamış).\n- Görev dışı, dokunmadım: `store.list` içindeki `sort` karşılaştırıcısı boolean dönüyor, yani sıralama bozuk. Ayrıca `POST`'ta geçersiz JSON gelirse `",
+    "rep": 1
+  },
+  {
+    "task": "security-owner",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "testsCaught": 2,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 2,
+    "codeLines": 33,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..89826a7 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -4,12 +4,19 @@ import { sendJson, readJson } from '../../../lib/http.js';\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n     const url = new URL(req.url, 'http://localhost');\n-    const user = req.headers['x-user'];\n     const match = url.pathname.match(/^\\/notes(?:\\/([^/]+))?$/);\n     if (!match) return false;\n+    const user = String(req.headers['x-user'] ?? '').trim();\n+    if (!user) return sendJson(res, 401, { error: 'kimlik doğrulama gerekli' });\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    // Başkasının notu için 404 döner; varlığı sızdırılmaz.\n+    const ownNote = (noteId) => {\n+      const note = store.get(noteId);\n+      return note && note.owner === user ? note : undefined;\n+    };\n+\n+    if (!id && req.method === 'GET') return sendJson(res, 200, store.list().filter((n) => n.owner === user));\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n@@ -18,19 +25,20 @@ export function notesRoutes(store) {\n     }\n \n     if (id && req.method === 'GET') {\n-      const note = store.get(id);\n+      const note = ownNote(id);\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'PATCH') {\n       const body = await readJson(req);\n       if (!body) return sendJson(res, 400, { error: 'geçersiz JSON' });\n+      if (!ownNote(id)) return sendJson(res, 404, { error: 'bulunamadı' });\n       const note = store.update(id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'DELETE') {\n-      return store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n+      return ownNote(id) && store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     return sendJson(res, 405, { error: 'yöntem desteklenmiyor' });\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..eae3396 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,23 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('requests without x-user are rejected with 401', async () => {\n+  assert.equal((await call('GET', '/notes')).status, 401);\n+  assert.equal((await call('POST', '/notes', '', { title: 'x' })).status, 401);\n+  assert.equal((await call('GET', '/notes', '   ')).status, 401);\n+});\n+\n+test(\"users cannot list, read, update or delete each other's notes\", async () => {\n+  const note = await (await call('POST', '/notes', 'ayse', { title: 'Gizli' })).json();\n+  assert.equal((await call('GET', `/notes/${note.id}`, 'mehmet')).status, 404);\n+  assert.equal((await call('PATCH', `/notes/${note.id}`, 'mehmet', { title: 'x' })).status, 404);\n+  assert.equal((await call('DELETE', `/notes/${note.id}`, 'mehmet')).status, 404);\n+  const list = await (await call('GET', '/notes', 'mehmet')).json();\n+  assert.ok(!list.some((n) => n.id === note.id));\n+  const still = await (await call('GET', `/notes/${note.id}`, 'ayse')).json();\n+  assert.equal(still.title, 'Gizli');\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.14181939999999998,
+    "durationS": 33,
+    "turns": 16,
+    "tokens": 270026,
+    "outputTokens": 4365,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Notlar artık sahibine özel. `x-user` başlığı olmayan ya da boş (sadece boşluk) olan her `/notes` isteği 401 dönüyor. Testlerin hepsi geçti (5/5), ama bunu `node --test tests/notes.test.mjs` ile çalıştırdım. `node --test tests` tek başına dizinle çalıştırılınca başarısız oldu ve nedenine bakmadım.\n\nDeğişiklikler `src/features/notes/server/routes.js` içinde:\n- **Liste:** `GET /notes` yalnızca isteği yapan kullanıcının notlarını döndürüyor.\n- **Okuma, değiştirme, silme:** `GET`, `PATCH` ve `DELETE /notes/:id` yalnızca kendi notunda çalışıyor.\n- **Başkasının notu:** Notun varlığını belli etmemek için 403 yerine 404 dönüyor.\n\n`tests/notes.test.mjs` içine iki test ekledim: biri 401 durumlarını, diğeri başka kullanıcının liste, okuma, değiştirme ve silme denemelerini kapsıyor.\n\nBu işin dışında bir hata gördüm, dokunmadım: `store.js` içindeki `list()` sıralaması boolean döndüren bir karşılaştırıcı kullandığı için \"en yeniler önce\" sıralaması güvenilir çalışmıyor.\n\nCommit atmadım.",
+    "rep": 1
+  },
+  {
+    "task": "security-owner",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 7,
+      "fail": 0
+    },
+    "testsAdded": 4,
+    "testsCaught": 4,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 60,
+    "otherFiles": 1,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..86853ce 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -4,12 +4,13 @@ import { sendJson, readJson } from '../../../lib/http.js';\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n     const url = new URL(req.url, 'http://localhost');\n-    const user = req.headers['x-user'];\n     const match = url.pathname.match(/^\\/notes(?:\\/([^/]+))?$/);\n     if (!match) return false;\n     const id = match[1];\n+    const user = req.headers['x-user']?.trim();\n+    if (!user) return sendJson(res, 401, { error: 'kimlik gerekli' });\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') return sendJson(res, 200, store.list(user));\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n@@ -18,19 +19,19 @@ export function notesRoutes(store) {\n     }\n \n     if (id && req.method === 'GET') {\n-      const note = store.get(id);\n+      const note = store.get(user, id);\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'PATCH') {\n       const body = await readJson(req);\n       if (!body) return sendJson(res, 400, { error: 'geçersiz JSON' });\n-      const note = store.update(id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n+      const note = store.update(user, id,{ ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'DELETE') {\n-      return store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n+      return store.remove(user, id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     return sendJson(res, 405, { error: 'yöntem desteklenmiyor' });\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..24be216 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -8,20 +8,20 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n+    list(owner) {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      return notes.filter((n) => n.owner === owner).sort((a, b) => a.createdAt < b.createdAt);\n     },\n-    get(id) {\n-      return notes.find((n) => n.id === id);\n+    get(owner, id) {\n+      return notes.find((n) => n.id === id && n.owner === owner);\n     },\n-    update(id, fields) {\n-      const note = notes.find((n) => n.id === id);\n+    update(owner, id, fields) {\n+      const note = notes.find((n) => n.id === id && n.owner === owner);\n       if (note) Object.assign(note, fields);\n       return note;\n     },\n-    remove(id) {\n-      const i = notes.findIndex((n) => n.id === id);\n+    remove(owner, id) {\n+      const i = notes.findIndex((n) => n.id === id && n.owner === owner);\n       if (i === -1) return false;\n       notes.splice(i, 1);\n       return true;\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..ef2c9c7 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -32,3 +32,36 @@ test('a note can be updated and deleted', async () => {\n   assert.equal((await call('DELETE', `/notes/${note.id}`, 'ayse')).status, 204);\n   assert.equal((await call('GET', `/notes/${note.id}`, 'ayse')).status, 404);\n });\n+\n+test('Ö-SEC.1 SALDIRI: x-user yok, boş veya boşluk ise 401', async () => {\n+  for (const u of [undefined, '', '   ']) {\n+    const h = { 'content-type': 'application/json', ...(u !== undefined ? { 'x-user': u } : {}) };\n+    for (const [m, p] of [['GET', '/notes'], ['POST', '/notes'], ['GET', '/notes/1'], ['PATCH', '/notes/1'], ['DELETE', '/notes/1']]) {\n+      const r = await fetch(base + p, { method: m, headers: h, body: m === 'POST' || m === 'PATCH' ? JSON.stringify({ title: 'x' }) : undefined });\n+      assert.equal(r.status, 401, `${m} ${p} user=${JSON.stringify(u)}`);\n+    }\n+  }\n+});\n+\n+test('Ö-SEC.2 SALDIRI: kullanıcı başkasının notunu listeleyemez', async () => {\n+  const mine = await (await call('POST', '/notes', 'ali', { title: 'ali-gizli' })).json();\n+  const list = await (await call('GET', '/notes', 'veli')).json();\n+  assert.ok(!list.some((n) => n.id === mine.id));\n+  assert.ok((await (await call('GET', '/notes', 'ali')).json()).some((n) => n.id === mine.id));\n+});\n+\n+test('Ö-SEC.3 SALDIRI: kullanıcı başkasının notunu okuyamaz, değiştiremez, silemez', async () => {\n+  const mine = await (await call('POST', '/notes', 'ali', { title: 'ali-gizli' })).json();\n+  assert.equal((await call('GET', `/notes/${mine.id}`, 'veli')).status, 404);\n+  assert.equal((await call('PATCH', `/notes/${mine.id}`, 'veli', { title: 'hack' })).status, 404);\n+  assert.equal((await call('DELETE', `/notes/${mine.id}`, 'veli')).status, 404);\n+  const still = await (await call('GET', `/notes/${mine.id}`, 'ali')).json();\n+  assert.equal(still.title, 'ali-gizli');\n+});\n+\n+test('Ö-SEC.4 SALDIRI: PATCH ile sahiplik devredilemez', async () => {\n+  const mine = await (await call('POST', '/notes', 'ali', { title: 'a' })).json();\n+  await call('PATCH', `/notes/${mine.id}`, 'ali', { owner: 'veli', title: 'b' });\n+  assert.equal((await call('GET', `/notes/${mine.id}`, 'veli')).status, 404);\n+  assert.equal((await call('GET', `/notes/${mine.id}`, 'ali')).status, 200);\n+});\n",
+    "error": null,
+    "costUsd": 0.2844725,
+    "durationS": 58,
+    "turns": 20,
+    "tokens": 581451,
+    "outputTokens": 6966,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Güvenlik açığı kapandı. Gate yeşil ve 7 testin hepsi geçiyor.\n\n**Ne yapıldı**\n- `src/features/notes/server/routes.js`: `x-user` başlığı kırpılıyor. Başlık yoksa veya boşsa her `/notes` isteği 401 dönüyor.\n- `src/features/notes/server/store.js`: `list`, `get`, `update` ve `remove` artık `owner` alıyor ve sadece o kullanıcının notlarına bakıyor.\n- Başkasının notuna GET, PATCH veya DELETE 404 dönüyor. Notun var olduğu sızmıyor.\n- PATCH sadece `title` ve `body` alıyor. Gövdedeki `owner` alanıyla not devredilemiyor.\n\n**Kararlar (otomatik)**\n- Başkasının notu için 403 yerine 404 seçtim.\n- Boşluktan oluşan `x-user` değerini boş sayıp 401 döndürüyorum.\n\n**Kanıt**\n- Önce 4 yeni saldırgan test (`Ö-SEC.1` ile `Ö-SEC.4`) kırmızıydı: `pass 3, fail 4`.\n- Düzeltmeden sonra `npm test` 7 testin hepsini geçiyor: `pass 7, fail 0`.\n- `node .claude/hooks/gate.mjs --run` yeşil. Lint ve tip kontrolü tanımsız, Semgrep kurulu olmadığı için atlandı.\n\n**Nasıl test edersin**\n1. `node src/app/server.js` ile sunucuyu başlat.\n2. `curl -i localhost:3000/notes` → 401.\n3. `curl -XPOST -H \"x-user: ali\" -H \"content-type: application/json\" -d '{\"title\":\"a\"}' localhost:3000/notes` ile not oluştur.\n4. `curl -H \"x-user: veli\" localhost:3000/notes/1` → 404. Aynı istek `x-user: ali` ile 200 dönmeli.\n\n**Önerilen commit**: `fix: notlar x-user sahibine izole, başlıksız istek 401`\n\n**Kontrol etmediklerim**\n- Testleri gerçek sunucuya `curl` ile elle atmadım. Testler `createApp()` üzerinden gerçek HTTP isteği atıyor.\n- `st",
+    "rep": 2
+  },
+  {
+    "task": "security-owner",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "testsCaught": 2,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 2,
+    "codeLines": 33,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..27e2ba3 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -4,12 +4,18 @@ import { sendJson, readJson } from '../../../lib/http.js';\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n     const url = new URL(req.url, 'http://localhost');\n-    const user = req.headers['x-user'];\n     const match = url.pathname.match(/^\\/notes(?:\\/([^/]+))?$/);\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    const user = String(req.headers['x-user'] ?? '').trim();\n+    if (!user) return sendJson(res, 401, { error: 'kimlik doğrulama gerekli' });\n+\n+    // Başkasının notu için de 404 döner; notun varlığı sızdırılmaz.\n+    const found = id ? store.get(id) : undefined;\n+    const mine = found && found.owner === user ? found : undefined;\n+\n+    if (!id && req.method === 'GET') return sendJson(res, 200, store.list().filter((n) => n.owner === user));\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n@@ -18,19 +24,19 @@ export function notesRoutes(store) {\n     }\n \n     if (id && req.method === 'GET') {\n-      const note = store.get(id);\n-      return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n+      return mine ? sendJson(res, 200, mine) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'PATCH') {\n       const body = await readJson(req);\n       if (!body) return sendJson(res, 400, { error: 'geçersiz JSON' });\n+      if (!mine) return sendJson(res, 404, { error: 'bulunamadı' });\n       const note = store.update(id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n-      return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n+      return sendJson(res, 200, note);\n     }\n \n     if (id && req.method === 'DELETE') {\n-      return store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n+      return mine && store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     return sendJson(res, 405, { error: 'yöntem desteklenmiyor' });\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..edad107 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,21 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('requests without x-user are rejected with 401', async () => {\n+  assert.equal((await call('GET', '/notes')).status, 401);\n+  assert.equal((await call('POST', '/notes', undefined, { title: 'x' })).status, 401);\n+  assert.equal((await call('GET', '/notes', '   ')).status, 401);\n+});\n+\n+test(\"users cannot see or touch each other's notes\", async () => {\n+  const note = await (await call('POST', '/notes', 'ayse', { title: 'Gizli' })).json();\n+  assert.equal((await call('GET', `/notes/${note.id}`, 'mehmet')).status, 404);\n+  assert.equal((await call('PATCH', `/notes/${note.id}`, 'mehmet', { title: 'Hack' })).status, 404);\n+  assert.equal((await call('DELETE', `/notes/${note.id}`, 'mehmet')).status, 404);\n+  assert.deepEqual((await (await call('GET', '/notes', 'mehmet')).json()).filter((n) => n.id === note.id), []);\n+  assert.equal((await (await call('GET', `/notes/${note.id}`, 'ayse')).json()).title, 'Gizli');\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.133891,
+    "durationS": 33,
+    "turns": 13,
+    "tokens": 227425,
+    "outputTokens": 4258,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Notlar artık sahibine göre ayrılıyor ve `x-user` başlığı olmayan istekler reddediliyor. 5 testin hepsi geçti. `node --test tests` dizin olarak verilince hata veriyor, bu yüzden testleri `node --test tests/notes.test.mjs` ile çalıştırdım. Commit atmadım.\n\nDeğişiklik `src/features/notes/server/routes.js` içinde:\n- **401:** `x-user` başlığı yoksa, boşsa ya da yalnızca boşluktan oluşuyorsa `/notes` altındaki her istek 401 döner. `/notes` dışındaki yollar eskisi gibi 404 alır.\n- **Listeleme:** `GET /notes` yalnızca çağıranın notlarını döndürür.\n- **Okuma, güncelleme, silme:** `GET`, `PATCH` ve `DELETE /notes/:id` yalnızca notun sahibi için çalışır. Başkasının notu için 404 döner. 403 yerine 404 seçtim, böylece başkasının notunun var olup olmadığı anlaşılmaz.\n- **Oluşturma:** Not, başlıktaki kullanıcıya atanır.\n- **Sahiplik:** `PATCH` yalnızca `title` ve `body` alanlarını değiştirebiliyor, bu yüzden `owner` değiştirilemez.\n\n`tests/notes.test.mjs` dosyasına iki test ekledim. Biri başlıksız ve boş başlıklı istekleri, diğeri başka kullanıcının okuma, güncelleme, silme ve listeleme denemelerini kapsıyor.\n\nKapsam dışı bir hata gördüm, düzeltmedim: `store.js` içindeki `list()` sıralaması `a.createdAt < b.createdAt` ile boolean döndürüyor. Bu geçerli bir karşılaştırıcı değil, bu yüzden \"en yeni önce\" sırası güvenilir değil.",
+    "rep": 2
+  },
+  {
+    "task": "security-owner",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 6,
+      "fail": 0
+    },
+    "testsAdded": 3,
+    "testsCaught": 3,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 68,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..f2072f0 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -4,12 +4,13 @@ import { sendJson, readJson } from '../../../lib/http.js';\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n     const url = new URL(req.url, 'http://localhost');\n-    const user = req.headers['x-user'];\n     const match = url.pathname.match(/^\\/notes(?:\\/([^/]+))?$/);\n     if (!match) return false;\n+    const user = req.headers['x-user']?.trim();\n+    if (!user) return sendJson(res, 401, { error: 'kimlik gerekli' });\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') return sendJson(res, 200, store.list(user));\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n@@ -18,19 +19,19 @@ export function notesRoutes(store) {\n     }\n \n     if (id && req.method === 'GET') {\n-      const note = store.get(id);\n+      const note = store.get(id, user);\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'PATCH') {\n       const body = await readJson(req);\n       if (!body) return sendJson(res, 400, { error: 'geçersiz JSON' });\n-      const note = store.update(id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n+      const note = store.update(id, user, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'DELETE') {\n-      return store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n+      return store.remove(id, user) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     return sendJson(res, 405, { error: 'yöntem desteklenmiyor' });\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..421ca21 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -8,20 +8,20 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n+    list(owner) {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      return notes.filter((n) => n.owner === owner).sort((a, b) => a.createdAt < b.createdAt);\n     },\n-    get(id) {\n-      return notes.find((n) => n.id === id);\n+    get(id, owner) {\n+      return notes.find((n) => n.id === id && n.owner === owner);\n     },\n-    update(id, fields) {\n-      const note = notes.find((n) => n.id === id);\n+    update(id, owner, fields) {\n+      const note = notes.find((n) => n.id === id && n.owner === owner);\n       if (note) Object.assign(note, fields);\n       return note;\n     },\n-    remove(id) {\n-      const i = notes.findIndex((n) => n.id === id);\n+    remove(id, owner) {\n+      const i = notes.findIndex((n) => n.id === id && n.owner === owner);\n       if (i === -1) return false;\n       notes.splice(i, 1);\n       return true;\ndiff --git a/tests/notes-owner.test.mjs b/tests/notes-owner.test.mjs\nnew file mode 100644\nindex 0000000..e571385\n--- /dev/null\n+++ b/tests/notes-owner.test.mjs\n@@ -0,0 +1,41 @@\n+import { test, before, after } from 'node:test';\n+import assert from 'node:assert/strict';\n+import { createApp } from '../src/app/server.js';\n+\n+let server, base;\n+before(async () => {\n+  server = createApp().listen(0);\n+  await new Promise((r) => server.once('listening', r));\n+  base = `http://127.0.0.1:${server.address().port}`;\n+});\n+after(() => server.close());\n+\n+const call = (method, path, user, body) => fetch(base + path, {\n+  method, headers: { 'content-type': 'application/json', ...(user !== undefined ? { 'x-user': user } : {}) }, body: body && JSON.stringify(body),\n+});\n+\n+test('SALDIRI: x-user olmayan veya boş istek 401', async () => {\n+  for (const user of [undefined, '', '   ']) {\n+    for (const [method, path, body] of [['GET', '/notes'], ['POST', '/notes', { title: 'x' }], ['GET', '/notes/1'], ['PATCH', '/notes/1', { title: 'x' }], ['DELETE', '/notes/1']]) {\n+      assert.equal((await call(method, path, user, body)).status, 401, `${method} ${path} user=${JSON.stringify(user)}`);\n+    }\n+  }\n+});\n+\n+test('SALDIRI: liste sadece kendi notlarını döner', async () => {\n+  const a = await (await call('POST', '/notes', 'ayse', { title: 'ayse-gizli' })).json();\n+  const b = await (await call('POST', '/notes', 'ali', { title: 'ali-not' })).json();\n+  const ayse = await (await call('GET', '/notes', 'ayse')).json();\n+  assert.ok(ayse.some((n) => n.id === a.id));\n+  assert.ok(ayse.every((n) => n.owner === 'ayse'));\n+  assert.ok(!ayse.some((n) => n.id === b.id));\n+});\n+\n+test('SALDIRI: başkasının notunu okuyamaz, değiştiremez, silemez', async () => {\n+  const note = await (await call('POST', '/notes', 'ayse', { title: 'gizli' })).json();\n+  assert.equal((await call('GET', `/notes/${note.id}`, 'ali')).status, 404);\n+  assert.equal((await call('PATCH', `/notes/${note.id}`, 'ali', { title: 'ele geçirildi' })).status, 404);\n+  assert.equal((await call('DELETE', `/notes/${note.id}`, 'ali')).status, 404);\n+  const still = await (await call('GET', `/notes/${note.id}`, 'ayse')).json();\n+  assert.equal(still.title, 'gizli');\n+});\n",
+    "error": null,
+    "costUsd": 0.2789633,
+    "durationS": 53,
+    "turns": 22,
+    "tokens": 585546,
+    "outputTokens": 6001,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Not API'sinde sahiplik kontrolü eklendi. Artık kullanıcı yalnızca kendi notlarını listeleyebiliyor, okuyabiliyor, değiştirebiliyor ve silebiliyor. `x-user` başlığı olmayan veya boş (sadece boşluk dahil) istek 401 alıyor. `npm test` yeşil (6/6), `gate.mjs --run` YEŞİL.\n\n**Değişiklik**\n- `src/features/notes/server/routes.js`: `x-user` başlığı kırpılıyor; boşsa `/notes` yollarında 401 dönüyor. `user` artık store çağrılarına geçiyor.\n- `src/features/notes/server/store.js`: `list`, `get`, `update` ve `remove` `owner` ile filtreliyor.\n- Yeni `tests/notes-owner.test.mjs`: üç saldırgan test var. Kod değişmeden önce çalıştırdım ve kırmızıydı (`200 !== 404`). Şimdi yeşil.\n\n**Kararlar (otomatik)**\n- Başkasının notuna 403 yerine 404 dönüyor. Böylece notun var olup olmadığı sızmıyor.\n- Planı atladım: iş 2 dosyaya dokunuyor, 2'den fazla değil.\n\n**Nasıl test edilir**\n- `npm test` çalıştır.\n- Elle: `ayse` ile `POST /notes` at. Sonra `x-user: ali` ile `GET /notes/<id>` iste, 404 dönmeli. `x-user` olmadan `GET /notes` iste, 401 dönmeli.\n\n**Önerilen commit:** `fix: not API'sinde sahiplik kontrolü ve x-user zorunluluğu`\n\n**Kontrol edemediklerim ve notlar**\n- Semgrep kurulu değil, çalışmadı. Lint ve tip kontrolü projede tanımsız.\n- Kurul kurulu değil, toplantı yapılmadı. Hook `security-auditor` önerdi; çalıştırmadım.\n- Başlık sahteciliği (`x-user` taklidi) kapsam dışı: kod, başlığı önündeki auth katmanının koyduğunu varsayıyor (`routes.js` yorumu).\n- Kapsam dışı hata: `store.list()` içindeki `sor",
+    "rep": 3
+  },
+  {
+    "task": "security-owner",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 4,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "testsCaught": 2,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 2,
+    "codeLines": 32,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..3319896 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -4,12 +4,20 @@ import { sendJson, readJson } from '../../../lib/http.js';\n export function notesRoutes(store) {\n   return async function handle(req, res) {\n     const url = new URL(req.url, 'http://localhost');\n-    const user = req.headers['x-user'];\n     const match = url.pathname.match(/^\\/notes(?:\\/([^/]+))?$/);\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    const user = String(req.headers['x-user'] ?? '').trim();\n+    if (!user) return sendJson(res, 401, { error: 'kimlik gerekli' });\n+\n+    // Başkasının notu için de 404 döneriz; varlığı sızdırılmaz.\n+    const own = (noteId) => {\n+      const note = store.get(noteId);\n+      return note && note.owner === user ? note : undefined;\n+    };\n+\n+    if (!id && req.method === 'GET') return sendJson(res, 200, store.list().filter((n) => n.owner === user));\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n@@ -18,18 +26,20 @@ export function notesRoutes(store) {\n     }\n \n     if (id && req.method === 'GET') {\n-      const note = store.get(id);\n+      const note = own(id);\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'PATCH') {\n       const body = await readJson(req);\n       if (!body) return sendJson(res, 400, { error: 'geçersiz JSON' });\n+      if (!own(id)) return sendJson(res, 404, { error: 'bulunamadı' });\n       const note = store.update(id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });\n       return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \n     if (id && req.method === 'DELETE') {\n+      if (!own(id)) return sendJson(res, 404, { error: 'bulunamadı' });\n       return store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });\n     }\n \ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..55235ab 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,22 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('requests without x-user are rejected with 401', async () => {\n+  assert.equal((await call('GET', '/notes')).status, 401);\n+  assert.equal((await call('POST', '/notes', undefined, { title: 'x' })).status, 401);\n+  assert.equal((await call('GET', '/notes', '   ')).status, 401);\n+});\n+\n+test(\"users cannot see or touch each other's notes\", async () => {\n+  const note = await (await call('POST', '/notes', 'ayse', { title: 'Gizli' })).json();\n+  assert.equal((await call('GET', `/notes/${note.id}`, 'mehmet')).status, 404);\n+  assert.equal((await call('PATCH', `/notes/${note.id}`, 'mehmet', { title: 'x' })).status, 404);\n+  assert.equal((await call('DELETE', `/notes/${note.id}`, 'mehmet')).status, 404);\n+  const list = await (await call('GET', '/notes', 'mehmet')).json();\n+  assert.ok(list.every((n) => n.owner === 'mehmet'));\n+  assert.equal((await (await call('GET', `/notes/${note.id}`, 'ayse')).json()).title, 'Gizli');\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.139421,
+    "durationS": 37,
+    "turns": 15,
+    "tokens": 268701,
+    "outputTokens": 4248,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Her kullanıcı artık yalnızca kendi notlarını görebiliyor ve değiştirebiliyor. Testlerin hepsi geçti (5/5). Commit atmadım.\n\nDeğişiklik `src/features/notes/server/routes.js` içinde:\n- **401:** `x-user` başlığı yoksa, boşsa ya da yalnızca boşluktan oluşuyorsa `/notes` altındaki her istek 401 döner.\n- **Liste:** `GET /notes` sadece çağıranın notlarını döndürür.\n- **Okuma, güncelleme, silme:** Not başkasına aitse 404 döner. Böylece notun var olup olmadığı da sızmaz.\n- **Testler:** `tests/notes.test.mjs` dosyasına iki test ekledim: başlıksız istekte 401 ve başka kullanıcının notuna erişimin engellenmesi.\n\n`node --test tests` komutunu klasör olarak vermek bu ortamda hata veriyor. Testleri `node --test tests/notes.test.mjs` ile çalıştırdım.\n\nGüvenlikle ilgisiz bir hata da gördüm, düzeltmedim: `store.js` içindeki `list()` sıralaması `a.createdAt < b.createdAt` ile boolean döndürüyor. \"En yeni önce\" sıralaması bu yüzden güvenilir çalışmıyor.",
+    "rep": 3
+  }
+]

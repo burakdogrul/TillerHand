@@ -1,0 +1,275 @@
+[
+  {
+    "task": "tr-sort",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 3,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 11,
+      "fail": 0
+    },
+    "testsAdded": 8,
+    "testsCaught": 7,
+    "mutants": {
+      "killed": 1,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 65,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..c5d450d 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -9,7 +9,11 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const sort = url.searchParams.get('sort');\n+      if (sort !== null && sort !== 'title') return sendJson(res, 400, { error: 'sort sadece title olabilir' });\n+      return sendJson(res, 200, store.list({ sort, q: url.searchParams.get('q') }));\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..f48d475 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -8,9 +8,13 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n+    list({ sort, q } = {}) {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      let out = [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      // tr locale: İ/i and I/ı pair up correctly, which plain toLowerCase() gets wrong\n+      if (q) out = out.filter((n) => n.title.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr')));\n+      if (sort === 'title') out.sort((a, b) => a.title.localeCompare(b.title, 'tr'));\n+      return out;\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..baae8bb 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -32,3 +32,54 @@ test('a note can be updated and deleted', async () => {\n   assert.equal((await call('DELETE', `/notes/${note.id}`, 'ayse')).status, 204);\n   assert.equal((await call('GET', `/notes/${note.id}`, 'ayse')).status, 404);\n });\n+\n+// Depo sunucu başına tek; her test kendine özgü önek kullanır ve q ile sonucu ayırır.\n+const titles = async (qs) => (await (await call('GET', `/notes?${qs}`, 'ayse')).json()).map((n) => n.title);\n+const seed = (...ts) => Promise.all(ts.map((title) => call('POST', '/notes', 'ayse', { title })));\n+\n+test('S-01.1 sort=title Türkçe alfabe sırasıyla sıralar', async () => {\n+  await seed('zS1 Zeytin', 'zS1 Çay', 'zS1 Ilık', 'zS1 İnci', 'zS1 Şeker', 'zS1 Ayva', 'zS1 Ödev', 'zS1 Ağaç');\n+  assert.deepEqual(await titles('sort=title&q=zS1'),\n+    ['zS1 Ağaç', 'zS1 Ayva', 'zS1 Çay', 'zS1 Ilık', 'zS1 İnci', 'zS1 Ödev', 'zS1 Şeker', 'zS1 Zeytin']);\n+});\n+\n+test('S-01.2 sort=title büyük/küçük harfi yok sayar', async () => {\n+  await seed('zS2 bal', 'zS2 Armut', 'zS2 çilek');\n+  assert.deepEqual(await titles('sort=title&q=zS2'), ['zS2 Armut', 'zS2 bal', 'zS2 çilek']);\n+});\n+\n+test('S-02.1 q büyük/küçük harf duyarsız arar', async () => {\n+  await seed('zS3 Toplantı notu', 'zS3 Market');\n+  assert.deepEqual(await titles('q=ZS3 TOPLANTI'), ['zS3 Toplantı notu']);\n+});\n+\n+test('S-02.2 q Türkçe İ/I ve ı/i eşlemesini doğru yapar', async () => {\n+  await seed('zS4 İstanbul', 'zS4 ılık süt', 'zS4 Iğdır');\n+  assert.deepEqual(await titles('sort=title&q=zS4 istanbul'), ['zS4 İstanbul']);\n+  assert.deepEqual(await titles('sort=title&q=zS4 ILIK'), ['zS4 ılık süt']);\n+  assert.deepEqual(await titles('sort=title&q=zS4 iğdır'), []);\n+});\n+\n+test('S-02.3 q sadece başlığa bakar, gövdeye bakmaz', async () => {\n+  await call('POST', '/notes', 'ayse', { title: 'zS5 a', body: 'gizlikelime' });\n+  assert.deepEqual(await titles('q=gizlikelime'), []);\n+});\n+\n+test('S-03.1 sort ve q birlikte çalışır', async () => {\n+  await seed('zS6 Muz', 'zS6 elma', 'zS6 Kiraz', 'zS6 Armut');\n+  assert.deepEqual(await titles('sort=title&q=zS6 '), ['zS6 Armut', 'zS6 elma', 'zS6 Kiraz', 'zS6 Muz']);\n+  assert.deepEqual(await titles('sort=title&q=zS6 m'), ['zS6 Muz']);\n+});\n+\n+test('S-04.1 parametresiz liste eskisi gibi, boş q filtre değil', async () => {\n+  await seed('zS7 x');\n+  const all = await titles('');\n+  assert.ok(all.includes('zS7 x'));\n+  assert.deepEqual(await titles('q='), all);\n+});\n+\n+test('S-04.2 desteklenmeyen sort 400 döner', async () => {\n+  const r = await call('GET', '/notes?sort=body', 'ayse');\n+  assert.equal(r.status, 400);\n+  assert.ok((await r.json()).error);\n+});\n",
+    "error": null,
+    "costUsd": 0.2743015999999999,
+    "durationS": 62,
+    "turns": 13,
+    "tokens": 615973,
+    "outputTokens": 6769,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Özellik hazır: `GET /notes?sort=title` ve `?q=` çalışıyor, ikisi birlikte de kullanılabiliyor. Test seti yeşil (11/11), kapı yeşil.\n\n**Ne yapıldı**\n- `store.list({ sort, q })` (`src/features/notes/server/store.js`) artık `q`'yu başlıkta arıyor. Arama büyük/küçük harf duyarsız ve `tr` locale ile yapılıyor, yani İ/i ve I/ı doğru eşleşiyor.\n- `sort=title` sıralaması `localeCompare(..., 'tr')` kullanıyor: Ç, Ğ, İ, Ö, Ş, Ü kendi yerlerinde sıralanıyor.\n- `routes.js` `sort` ve `q`'yu okuyor. `sort` için `title` dışındaki bir değer 400 dönüyor. Boş `q` filtre sayılmıyor, parametresiz liste eskisi gibi.\n\n**Kararlar (hepsi otomatik)**\n- Arama alt dizgi (`includes`) ile yapılıyor, sadece başlığa bakıyor.\n- Geçersiz `sort` değerinde sessizce yok saymak yerine 400 dönüyor.\n- Sıralama ve filtre depoda; yeni dosya yok.\n\n**Kanıt**\n- Önce kırmızı: 8 yeni test (S-01.1 … S-04.2) hata verdi.\n- Sonra `npm test`: pass 11, fail 0. Testler gerçek HTTP isteği atıyor (`createApp().listen(0)` + `fetch`).\n- `gate.mjs --run`: test yeşil. Lint ve tip kontrolü projede tanımsız, Semgrep kurulu değil, ikisi atlandı.\n\n**Elle deneme**\n1. `npm start`\n2. `curl -X POST localhost:3000/notes -H \"x-user: ayse\" -H \"content-type: application/json\" -d '{\"title\":\"İstanbul\"}'` ile birkaç Türkçe başlıklı not ekle.\n3. `curl \"localhost:3000/notes?sort=title&q=istanbul\" -H \"x-user: ayse\"` çalıştır.\n\n**Önerilen commit:** `feat: notlarda başlığa göre sıralama ve Türkçe duyarlı arama`\n\n**Şüpheli veya yapılmayanlar**\n- Commit a",
+    "rep": 1
+  },
+  {
+    "task": "tr-sort",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 3,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 4,
+      "fail": 0
+    },
+    "testsAdded": 1,
+    "testsCaught": 1,
+    "mutants": {
+      "killed": 0,
+      "total": 2
+    },
+    "codeFiles": 2,
+    "codeLines": 27,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..ba1b740 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -9,7 +9,18 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      let notes = store.list();\n+      const q = url.searchParams.get('q');\n+      if (q) {\n+        const needle = q.toLocaleLowerCase('tr');\n+        notes = notes.filter((n) => n.title.toLocaleLowerCase('tr').includes(needle));\n+      }\n+      if (url.searchParams.get('sort') === 'title') {\n+        notes = [...notes].sort((a, b) => a.title.localeCompare(b.title, 'tr'));\n+      }\n+      return sendJson(res, 200, notes);\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..f3a4867 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,20 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('notes can be sorted by title (Turkish alphabet) and searched case-insensitively', async () => {\n+  for (const title of ['Zeytin', 'Çorba', 'Ilık', 'İstanbul', 'Arı', 'Ördek', 'Işık']) {\n+    await call('POST', '/notes', 'ayse', { title });\n+  }\n+  const sorted = await (await call('GET', '/notes?sort=title', 'ayse')).json();\n+  const expected = ['Arı', 'Çorba', 'Ilık', 'Işık', 'İstanbul', 'Ördek', 'Zeytin'];\n+  assert.deepEqual(sorted.map((n) => n.title).filter((t) => expected.includes(t)), expected);\n+\n+  const found = await (await call('GET', '/notes?q=' + encodeURIComponent('İSTANBUL'), 'ayse')).json();\n+  assert.deepEqual(found.map((n) => n.title), ['İstanbul']);\n+  const both = await (await call('GET', '/notes?sort=title&q=' + encodeURIComponent('ık'), 'ayse')).json();\n+  assert.deepEqual(both.map((n) => n.title), ['Ilık', 'Işık']);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.11116900000000002,
+    "durationS": 30,
+    "turns": 12,
+    "tokens": 183588,
+    "outputTokens": 3032,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık `?sort=title` ve `?q=` parametrelerini destekliyor. İkisi birlikte de çalışıyor. Testlerin hepsi geçti, eklediğim yeni test de dahil.\n\nDeğişiklik `src/features/notes/server/routes.js` içinde:\n- **`?q=`:** Başlıkta büyük/küçük harf duyarsız alt dize araması yapar. Karşılaştırma Türkçe kurallarıyla yapıldığı için `İSTANBUL` araması `İstanbul` başlığını bulur, `I` ile `ı` da doğru eşleşir.\n- **`?sort=title`:** Başlığa göre Türkçe alfabe sırasıyla sıralar: `Arı, Çorba, Ilık, Işık, İstanbul, Ördek, Zeytin`.\n- **Parametre yoksa:** Davranış eskisi gibi, yani store'dan gelen sırayla döner.\n- **Birlikte kullanım:** Önce `q` ile filtreler, sonra sıralar.\n- **Test:** `tests/notes.test.mjs` içine Türkçe karakterli bir test ekledim.\n\nKoda dokunmadan gördüğüm iki sorun var:\n- `store.list()` içindeki karşılaştırma fonksiyonu boolean döndürüyor (`a.createdAt < b.createdAt`). Bu yüzden \"en yeni önce\" sırası aslında çalışmıyor.\n- `GET /notes` `x-user` ile filtreleme yapmıyor, yani herkes tüm kullanıcıların notlarını görüyor.\n\nİkisi de istediğin işin kapsamı dışında olduğu için dokunmadım. Commit atmadım.",
+    "rep": 1
+  },
+  {
+    "task": "tr-sort",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 3,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 8,
+      "fail": 0
+    },
+    "testsAdded": 5,
+    "testsCaught": 5,
+    "mutants": {
+      "killed": 1,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 45,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..128fb98 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -9,7 +9,11 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const sort = url.searchParams.get('sort');\n+      if (sort !== null && sort !== 'title') return sendJson(res, 400, { error: 'sort sadece title olabilir' });\n+      return sendJson(res, 200, store.list({ q: url.searchParams.get('q'), sort }));\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..43ea90e 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -8,9 +8,14 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n+    list({ q, sort } = {}) {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      const all = [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      // ı ile i eşit sayılır: \"ISTANBUL\" yazan \"İstanbul\"u bulsun\n+      const fold = (s) => s.toLocaleLowerCase('tr').replaceAll('ı', 'i');\n+      const needle = q && fold(q);\n+      const found = needle ? all.filter((n) => fold(n.title).includes(needle)) : all;\n+      return sort === 'title' ? found.sort((a, b) => a.title.localeCompare(b.title, 'tr')) : found;\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..2fc54e5 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -32,3 +32,33 @@ test('a note can be updated and deleted', async () => {\n   assert.equal((await call('DELETE', `/notes/${note.id}`, 'ayse')).status, 204);\n   assert.equal((await call('GET', `/notes/${note.id}`, 'ayse')).status, 404);\n });\n+\n+const mk = (title) => call('POST', '/notes', 'ayse', { title });\n+const titles = async (qs) => (await (await call('GET', `/notes${qs}`, 'ayse')).json()).map((n) => n.title);\n+\n+test('Ö-01.1 sort=title Türkçe alfabe sırasıyla sıralar', async () => {\n+  for (const t of ['Zeytin s1', 'Şeker s1', 'Sabah s1', 'Çay s1', 'Cam s1', 'Ilık s1', 'İş s1', 'Ğ s1', 'Gül s1']) await mk(t);\n+  assert.deepEqual(await titles('?sort=title&q=s1'), ['Cam s1', 'Çay s1', 'Gül s1', 'Ğ s1', 'Ilık s1', 'İş s1', 'Sabah s1', 'Şeker s1', 'Zeytin s1']);\n+});\n+\n+test('Ö-01.2 q büyük/küçük harf duyarsız, Türkçe I/İ/ı/i doğru eşleşir', async () => {\n+  await mk('IŞIK q2'); await mk('İstanbul q2'); await mk('ılık q2');\n+  assert.deepEqual(await titles('?q=ışık'), ['IŞIK q2']);\n+  assert.deepEqual(await titles('?q=ISTANBUL'), ['İstanbul q2']);\n+  assert.deepEqual(await titles('?q=İSTANBUL'), ['İstanbul q2']);\n+  assert.deepEqual(await titles('?q=ILIK%20q2'), ['ılık q2']);\n+});\n+\n+test('Ö-01.3 q ve sort birlikte çalışır', async () => {\n+  await mk('b ELMA q3'); await mk('a elma q3'); await mk('muz q3');\n+  assert.deepEqual(await titles('?q=ELMA&sort=title'), ['a elma q3', 'b ELMA q3']);\n+});\n+\n+test('Ö-01.4 eşleşme yoksa 200 ve boş liste; q gövdede aranmaz', async () => {\n+  await call('POST', '/notes', 'ayse', { title: 'x', body: 'gövde-q4' });\n+  assert.deepEqual(await titles('?q=gövde-q4'), []);\n+});\n+\n+test('Ö-01.5 geçersiz sort değeri 400 döner', async () => {\n+  assert.equal((await call('GET', '/notes?sort=body', 'ayse')).status, 400);\n+});\n",
+    "error": null,
+    "costUsd": 0.30616,
+    "durationS": 72,
+    "turns": 18,
+    "tokens": 744689,
+    "outputTokens": 7327,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Rapor (caveman, Türkçe):\n\n**Yapıldı**\n- `GET /notes?sort=title`: Türkçe alfabe sırası (`Intl` `tr` karşılaştırması: C < Ç, G < Ğ, I < İ, S < Ş).\n- `GET /notes?q=`: başlıkta büyük/küçük harf duyarsız arama. `q` ve `sort` birlikte çalışır.\n- Değişen dosyalar: `src/features/notes/server/store.js`, `src/features/notes/server/routes.js`, `tests/notes.test.mjs`.\n\n**Otomatik kararlar**\n- `sort` için sadece `title` geçerli. Başka değer 400 döner.\n- Arama `ı` ile `i`'yi eşit sayar. `ISTANBUL` yazan `İstanbul`'u bulur, `ILIK` yazan `ılık`'ı bulur. Bedeli: `ilik` yazan `ılık`'ı da bulur.\n- Arama sadece başlıkta yapılır, gövdede yapılmaz.\n- Plan ve kurul atlandı: üç dosya, kurul kurulmamış.\n\n**Kanıt**\n- Önce 5 test (`Ö-01.1`–`Ö-01.5`) kırmızıydı. Şimdi `npm test` 8/8 yeşil.\n- `gate.mjs --run` yeşil. Lint ve tip kontrol komutu tanımsız, Semgrep kurulu değil.\n- İlk uygulamada `Ö-01.2` kırmızı çıktı: saf `tr` küçük harfe çevirme `ISTANBUL`'u bulamıyordu. Kodu düzelttim.\n- Aynı testte `ILIK` sorgusu paylaşılan veride `Ilık s1`'i de buluyordu. Bu testin hatasıydı, kod doğruydu. Sorguyu `ILIK q2` yaptım. Test kapsamı aynı kaldı.\n\n**Elle deneme**\n1. `npm start`\n2. `POST /notes` ile `Şeker`, `Çay`, `İş`, `Ilık` ekle (`x-user` başlığı ile).\n3. `GET /notes?sort=title`, `GET /notes?q=ISTANBUL`, `GET /notes?q=çay&sort=title`, `GET /notes?sort=body` (400 beklenir).\n\n**Önerilen commit**\n`feat: notlarda başlığa göre Türkçe sıralama ve büyük/küçük harf duyarsız arama`\n\n**Şüpheli veya kapsam dışı (açık s",
+    "rep": 2
+  },
+  {
+    "task": "tr-sort",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 3,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 4,
+      "fail": 0
+    },
+    "testsAdded": 1,
+    "testsCaught": 1,
+    "mutants": {
+      "killed": 0,
+      "total": 2
+    },
+    "codeFiles": 2,
+    "codeLines": 24,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..3d7f70f 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -9,7 +9,19 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const sort = url.searchParams.get('sort');\n+      if (sort !== null && sort !== 'title') return sendJson(res, 400, { error: 'geçersiz sort' });\n+      let notes = store.list();\n+      const q = url.searchParams.get('q');\n+      if (q) {\n+        // Turkish locale so that İ/i and I/ı fold correctly\n+        const needle = q.toLocaleLowerCase('tr');\n+        notes = notes.filter((n) => n.title.toLocaleLowerCase('tr').includes(needle));\n+      }\n+      if (sort === 'title') notes = [...notes].sort((a, b) => a.title.localeCompare(b.title, 'tr'));\n+      return sendJson(res, 200, notes);\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..0228aa7 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,16 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('notes can be sorted by title (Turkish alphabet) and searched case-insensitively', async () => {\n+  for (const title of ['Zeytin', 'Çorba', 'Ilık süt', 'İzmir', 'Armut', 'Ödev']) await call('POST', '/notes', 'ayse', { title });\n+  const titles = async (qs) => (await (await call('GET', `/notes${qs}`, 'ayse')).json()).map((n) => n.title);\n+  const pick = ['Armut', 'Çorba', 'Ilık süt', 'İzmir', 'Ödev', 'Zeytin'];\n+  assert.deepEqual((await titles('?sort=title')).filter((t) => pick.includes(t)), pick);\n+  assert.deepEqual(await titles('?q=İZMİR'), ['İzmir']);\n+  assert.deepEqual(await titles('?q=ILIK&sort=title'), ['Ilık süt']);\n+  assert.equal((await call('GET', '/notes?sort=bogus', 'ayse')).status, 400);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.11148680000000001,
+    "durationS": 34,
+    "turns": 12,
+    "tokens": 183706,
+    "outputTokens": 3057,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık `?sort=title` ve `?q=` parametrelerini destekliyor, ikisi birlikte de çalışıyor. Yeni test dahil 4 testin hepsi geçti. Commit atmadım.\n\nDeğişiklik `src/features/notes/server/routes.js` içinde:\n- **Arama (`?q=`):** Başlıkta büyük/küçük harf duyarsız arıyor. Karşılaştırma Türkçe yerel ayarıyla (`tr`) yapılıyor, yani `İZMİR` araması `İzmir` notunu, `ILIK` araması `Ilık süt` notunu buluyor.\n- **Sıralama (`?sort=title`):** Türkçe alfabeye göre sıralıyor (… C, Ç, … I, ı, İ, … O, Ö …).\n- **Birlikte kullanım:** Önce `q` ile süzüyor, sonra sıralıyor.\n- **Geçersiz değer:** `sort` için `title` dışında bir değer verilirse 400 dönüyor. Bu, istekte bulunmadığın bir karar. Sessizce yok saymak istersen kolayca değişir.\n\n`tests/notes.test.mjs` içine Türkçe harfli başlıklarla sıralama, arama, ikisinin birleşimi ve geçersiz `sort` için bir test ekledim.\n\nBir hata gördüm ama dokunmadım. `store.list()` içindeki sıralama fonksiyonu sayı yerine boolean döndürüyor (`a.createdAt < b.createdAt`). Bu yüzden `sort` verilmediğinde \"en yeni başta\" sırası güvenilir değil. Bu istek kapsamı dışındaydı.",
+    "rep": 2
+  },
+  {
+    "task": "tr-sort",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 3,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 7,
+      "fail": 0
+    },
+    "testsAdded": 4,
+    "testsCaught": 4,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 50,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..59c95d5 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -9,7 +9,11 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const sort = url.searchParams.get('sort');\n+      if (sort && sort !== 'title') return sendJson(res, 400, { error: 'sort sadece title olabilir' });\n+      return sendJson(res, 200, store.list({ q: url.searchParams.get('q'), sort }));\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..59bffec 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -1,3 +1,5 @@\n+const trCollator = new Intl.Collator('tr');\n+\n // In-memory note store. One instance per server.\n export function createStore() {\n   const notes = [];\n@@ -8,9 +10,15 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n+    list({ q, sort } = {}) {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      let result = [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      if (q) {\n+        const needle = q.toLocaleLowerCase('tr');\n+        result = result.filter((n) => n.title.toLocaleLowerCase('tr').includes(needle));\n+      }\n+      if (sort === 'title') result.sort((a, b) => trCollator.compare(a.title, b.title));\n+      return result;\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..50dd694 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -32,3 +32,35 @@ test('a note can be updated and deleted', async () => {\n   assert.equal((await call('DELETE', `/notes/${note.id}`, 'ayse')).status, 204);\n   assert.equal((await call('GET', `/notes/${note.id}`, 'ayse')).status, 404);\n });\n+\n+const titles = async (path) => (await (await call('GET', path, 'ayse')).json()).map((n) => n.title);\n+\n+test('Ö-01.1 sort=title orders Turkish titles alphabetically (ç, ğ, ı, i, ö, ş, ü)', async () => {\n+  for (const t of ['Zeytin', 'Şeker', 'Ördek', 'İnek', 'Işık', 'Ilık', 'Iğdır', 'Çilek', 'Armut', 'Üzüm']) {\n+    await call('POST', '/notes', 'ayse', { title: `${t} #sort` });\n+  }\n+  assert.deepEqual(\n+    (await titles('/notes?sort=title&q=%23sort')).map((t) => t.replace(' #sort', '')),\n+    ['Armut', 'Çilek', 'Iğdır', 'Ilık', 'Işık', 'İnek', 'Ördek', 'Şeker', 'Üzüm', 'Zeytin'],\n+  );\n+});\n+\n+test('Ö-01.2 q matches titles case-insensitively with Turkish I/İ rules', async () => {\n+  await call('POST', '/notes', 'ayse', { title: 'Işık Faturası' });\n+  await call('POST', '/notes', 'ayse', { title: 'İstanbul Planı' });\n+  assert.deepEqual(await titles('/notes?q=' + encodeURIComponent('IŞIK F')), ['Işık Faturası']);\n+  assert.deepEqual(await titles('/notes?q=' + encodeURIComponent('işik f')), []);\n+  assert.deepEqual(await titles('/notes?q=' + encodeURIComponent('istanbul')), ['İstanbul Planı']);\n+  assert.deepEqual(await titles('/notes?q=' + encodeURIComponent('İSTANBUL')), ['İstanbul Planı']);\n+});\n+\n+test('Ö-01.3 q and sort work together', async () => {\n+  for (const t of ['b kitap', 'Çay kitap', 'A kitap', 'kalem']) await call('POST', '/notes', 'ayse', { title: t });\n+  assert.deepEqual(await titles('/notes?q=KİTAP&sort=title'), ['A kitap', 'b kitap', 'Çay kitap']);\n+});\n+\n+test('Ö-01.4 unknown sort value is rejected, empty q means no filter', async () => {\n+  assert.equal((await call('GET', '/notes?sort=bogus', 'ayse')).status, 400);\n+  const all = await titles('/notes');\n+  assert.deepEqual(await titles('/notes?q='), all);\n+});\n",
+    "error": null,
+    "costUsd": 0.2729258,
+    "durationS": 67,
+    "turns": 16,
+    "tokens": 568518,
+    "outputTokens": 6457,
+    "testFirst": true,
+    "gateRan": true,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Özellik tamam: `GET /notes?sort=title` ve `?q=` çalışıyor, ikisi birlikte de kullanılabiliyor. `npm test` 7/7 yeşil (3 eski, 4 yeni). Kapıda lint, tip kontrolü ve Semgrep atlandı, çünkü tanımsız ya da kurulu değil.\n\n**Ne yapıldı**\n- `sort=title` Türkçe alfabeye göre sıralıyor: ç, ğ, ı, i, ö, ş, ü doğru yerlerde.\n- `q` başlıkta Türkçe kurallarla büyük/küçük harf duyarsız arıyor. `IŞIK` aranınca `Işık` bulunuyor, `İSTANBUL` aranınca `İstanbul` bulunuyor. `işik` ise `Işık`'ı bulmuyor, çünkü Türkçede `i` ile `ı` ayrı harf.\n- `sort` için `title` dışında bir değer 400 dönüyor: `sort sadece title olabilir`. Boş `q` filtre uygulamıyor.\n- Değişen dosyalar: `src/features/notes/server/store.js`, `src/features/notes/server/routes.js`, `tests/notes.test.mjs`.\n\n**Kararlar (otomatik)**\n- Bilinmeyen `sort` değeri sessizce yok sayılmıyor, 400 dönüyor.\n- Sıralama ve arama Node'un `Intl.Collator('tr')` ve `toLocaleLowerCase('tr')` fonksiyonlarıyla yapılıyor. Yeni paket yok.\n\n**Kanıt**\n- Önce 4 yeni test kırmızıydı (`200 !== 400`, filtre uygulanmayan liste). Uygulamadan sonra hepsi geçti.\n- İstek/yanıt örneğini ayrıca göstermedim. Davranış testlerde HTTP ile doğrulanıyor.\n\n**Kendin denemek için**\n1. `npm start`\n2. `curl -H \"x-user: ayse\" -X POST localhost:<port>/notes -d '{\"title\":\"Işık\"}'`\n3. `curl \"localhost:<port>/notes?q=IŞIK&sort=title\"`\n\n**Önerilen commit:** `feat: notlarda başlığa göre sıralama ve Türkçe duyarlı arama`\n\n**Dokunmadım, ama şüpheli**\n- `store.list()` içindeki varsayılan \"en ",
+    "rep": 3
+  },
+  {
+    "task": "tr-sort",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 3,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 4,
+      "fail": 0
+    },
+    "testsAdded": 1,
+    "testsCaught": 1,
+    "mutants": {
+      "killed": 0,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 30,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..25ad842 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -9,7 +9,11 @@ export function notesRoutes(store) {\n     if (!match) return false;\n     const id = match[1];\n \n-    if (!id && req.method === 'GET') return sendJson(res, 200, store.list());\n+    if (!id && req.method === 'GET') {\n+      const sort = url.searchParams.get('sort');\n+      if (sort !== null && sort !== 'title') return sendJson(res, 400, { error: 'geçersiz sort' });\n+      return sendJson(res, 200, store.list({ q: url.searchParams.get('q')?.trim(), sort }));\n+    }\n \n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..a00c0e1 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -8,9 +8,16 @@ export function createStore() {\n       notes.push(note);\n       return note;\n     },\n-    list() {\n-      // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+    list({ q, sort } = {}) {\n+      // newest first by default\n+      let result = [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      // Turkish locale so that İ/i and I/ı fold and order correctly\n+      if (q) {\n+        const needle = q.toLocaleLowerCase('tr');\n+        result = result.filter((n) => n.title.toLocaleLowerCase('tr').includes(needle));\n+      }\n+      if (sort === 'title') result.sort((a, b) => a.title.localeCompare(b.title, 'tr'));\n+      return result;\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..f83d12b 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,17 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('GET /notes supports sort=title and q with Turkish letters', async () => {\n+  const all = ['Zeytin', 'çorba', 'Çay', 'Arı', 'ılık', 'İzmir', 'Iğdır'];\n+  for (const title of all) await call('POST', '/notes', 'ayse', { title });\n+  const titles = async (qs) => (await (await call('GET', `/notes${qs}`, 'ayse')).json()).map((n) => n.title);\n+  assert.deepEqual((await titles('?sort=title')).filter((t) => all.includes(t)), ['Arı', 'Çay', 'çorba', 'Iğdır', 'ılık', 'İzmir', 'Zeytin']);\n+  assert.deepEqual(await titles('?q=izmir'), ['İzmir']);\n+  assert.deepEqual(await titles('?q=%C3%87AY'), ['Çay']);\n+  assert.deepEqual(await titles('?q=ç&sort=title'), ['Çay', 'çorba']);\n+  assert.equal((await call('GET', '/notes?sort=foo', 'ayse')).status, 400);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.12139920000000001,
+    "durationS": 31,
+    "turns": 13,
+    "tokens": 224364,
+    "outputTokens": 3490,
+    "testFirst": false,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes?sort=title` artık notları başlığa göre alfabetik sıralıyor, `?q=` da başlıkta büyük/küçük harf duyarsız arıyor. İkisi birlikte de çalışıyor (`?q=ç&sort=title`). Yeni test dahil 4 test geçti. Commit atmadım.\n\n- **Türkçe harfler:** Sıralama ve arama Türkçe yerel ayarıyla (`tr`) yapılıyor. Sıra Arı, Çay, çorba, Iğdır, ılık, İzmir, Zeytin şeklinde çıkıyor. `?q=izmir` \"İzmir\" notunu, `?q=ÇAY` \"Çay\" notunu buluyor. Bu yüzden \"I\" ile \"ı\" ve \"İ\" ile \"i\" eşleşmeleri Türkçe kurala göre: \"Isparta\" yazan başlık `?q=isparta` ile bulunmaz, `?q=ısparta` ile bulunur.\n- **Geçersiz `sort`:** `title` dışındaki bir değer (`?sort=foo`) 400 `geçersiz sort` döndürüyor. Bu benim seçimim. `sort` hiç verilmezse sıralama eskisi gibi kalıyor.\n- **`q` temizleme:** `q` baştaki ve sondaki boşluklardan arındırılıyor. Boş `q` filtre uygulamıyor.\n- **Değişen dosyalar:** `src/features/notes/server/store.js` (`list({ q, sort })`), `src/features/notes/server/routes.js` ve `tests/notes.test.mjs` (yeni test).\n\nFark ettiğim iki mevcut sorun, bu işin kapsamı dışında olduğu için dokunmadım:\n- `store.list()` içindeki varsayılan \"en yeni önce\" sıralaması bozuk. Karşılaştırma fonksiyonu sayı yerine boolean döndürüyor, bu yüzden sıra güvenilir değil.\n- `GET /notes` tüm kullanıcıların notlarını döndürüyor, `x-user` ile filtrelemiyor.",
+    "rep": 3
+  }
+]

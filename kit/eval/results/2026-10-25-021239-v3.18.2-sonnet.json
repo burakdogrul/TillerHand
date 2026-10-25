@@ -1,0 +1,275 @@
+[
+  {
+    "task": "bug-sort",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 2,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "testsCaught": 2,
+    "mutants": {
+      "killed": 0,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 18,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..fae33b5 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -14,6 +14,7 @@ export function notesRoutes(store) {\n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n       if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title gerekli' });\n+      if (body.createdAt !== undefined && (typeof body.createdAt !== 'string' || Number.isNaN(Date.parse(body.createdAt)))) return sendJson(res, 400, { error: 'createdAt geçerli ISO tarih olmalı' });\n       return sendJson(res, 201, store.create({ owner: user, title: body.title.trim(), body: body.body, createdAt: body.createdAt }));\n     }\n \ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..002562f 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -10,7 +10,7 @@ export function createStore() {\n     },\n     list() {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      return [...notes].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..a2c70b0 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,21 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('GET /notes returns the newest note first', async () => {\n+  const mk = (title, createdAt) => call('POST', '/notes', 'ayse', { title, createdAt });\n+  await mk('sort-b', '2024-01-02T10:00:00Z');\n+  await mk('sort-d', '2024-01-03T12:00:00+05:00'); // 07:00Z: older than sort-c, though its string sorts later\n+  await mk('sort-a', '2024-01-01T10:00:00Z');\n+  await mk('sort-c', '2024-01-03T10:00:00Z');\n+  await call('POST', '/notes', 'ayse', { title: 'sort-now' });\n+  const titles = (await (await call('GET', '/notes', 'ayse')).json()).map((n) => n.title).filter((t) => t.startsWith('sort-'));\n+  assert.deepEqual(titles, ['sort-now', 'sort-c', 'sort-d', 'sort-b', 'sort-a']);\n+});\n+\n+test('an invalid createdAt is rejected', async () => {\n+  assert.equal((await call('POST', '/notes', 'ayse', { title: 'x', createdAt: 'dün' })).status, 400);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.33663820000000005,
+    "durationS": 46,
+    "turns": 20,
+    "tokens": 657316,
+    "outputTokens": 4317,
+    "testFirst": true,
+    "gateRan": false,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "**Kök neden:** `store.js:13` içindeki comparator boolean döndürüyordu (`a.createdAt < b.createdAt`). `sort` sayı bekler, bu yüzden sıralama fiilen yapılmıyordu. Ayrıca `createdAt` string olarak karşılaştırılıyordu. İstemci farklı saat dilimi ofsetiyle (`+05:00`) tarih gönderirse string sırası gerçek zaman sırasından sapar.\n\n**Düzeltme:**\n- `src/features/notes/server/store.js`: `Date.parse(b.createdAt) - Date.parse(a.createdAt)` kullanılıyor. Düzeltme `list()` içinde bir kez yapıldı. Başka bir sıralama çağıranı yok.\n- `src/features/notes/server/routes.js`: `POST /notes` geçersiz `createdAt` değerini 400 ile reddediyor. Geçersiz tarih `Date.parse` ile NaN verir ve sıralamayı yine bozardı.\n\n**Testler** (`tests/notes.test.mjs`):\n- `GET /notes returns the newest note first`: karışık sırada ve `+05:00` ofsetli tarihlerle not ekliyor, sunucu zamanı yazılan notu da içeriyor. Düzeltmeden önce kırmızıydı (sıra eklenme sırasıydı).\n- `an invalid createdAt is rejected`.\n\n**Kanıt:** `npm test` çıktısında 5 test geçti, 0 başarısız.\n\n**Karar (otomatik):** Geçersiz `createdAt` için 400 dönmeyi seçtim, sessizce şimdiki zamanı yazmak yerine. Bu davranış değişikliği küçük ve geri alınabilir.\n\n**Benzer riskli yer:** `GET /notes` `x-user` ile filtrelemiyor, her kullanıcı tüm notları görüyor. Bu hatayla ilgisi yok, dokunmadım. Gizlilik açısından ayrıca bakmaya değer.\n\nCommit atılmadı.\n\n```\n── Durum ──────────────────────\nAşama: Faz 1 · Görev: fix-bug (1/1) · Soru modu: kapalı · Limit: bilinmiyor\nYa",
+    "rep": 1
+  },
+  {
+    "task": "bug-sort",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 2,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 3,
+      "fail": 0
+    },
+    "testsAdded": 0,
+    "testsCaught": 0,
+    "mutants": {
+      "killed": 0,
+      "total": 2
+    },
+    "codeFiles": 2,
+    "codeLines": 4,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..bd0c93d 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -14,6 +14,7 @@ export function notesRoutes(store) {\n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n       if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title gerekli' });\n+      if (body.createdAt !== undefined && (typeof body.createdAt !== 'string' || Number.isNaN(Date.parse(body.createdAt)))) return sendJson(res, 400, { error: 'createdAt geçerli bir ISO tarih olmalı' });\n       return sendJson(res, 201, store.create({ owner: user, title: body.title.trim(), body: body.body, createdAt: body.createdAt }));\n     }\n \ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..c11c706 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -10,7 +10,8 @@ export function createStore() {\n     },\n     list() {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      // compare as instants (client dates may carry different offsets); ties: later insert first\n+      return [...notes].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || Number(b.id) - Number(a.id));\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\n",
+    "error": null,
+    "costUsd": 0.1684771,
+    "durationS": 21,
+    "turns": 7,
+    "tokens": 137366,
+    "outputTokens": 1577,
+    "testFirst": null,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık en yeni notu önce döndürüyor. Mevcut 3 test geçiyor, ama sıralama için yeni test yazmadım ve düzeltmeyi ayrıca çalıştırıp denemedim.\n\n**Neden bozuktu:** `src/features/notes/server/store.js` içindeki `list()` sıralama fonksiyonu sayı yerine `true`/`false` döndürüyordu. `sort` bunu anlamlı bir karşılaştırma olarak yorumlamadığı için sıra tutarsız çıkıyordu.\n\n**Düzeltme:**\n- **Sıralama:** Notlar artık tarihleri zaman anı olarak karşılaştıran bir sayısal farkla, yeniden eskiye sıralanıyor. İstemci farklı saat dilimi ofsetleriyle `createdAt` gönderse bile sıra doğru kalıyor.\n- **Eşit tarih:** İki notun tarihi aynıysa sonradan eklenen önce geliyor.\n- **Ek doğrulama:** Tarih ayrıştırılamazsa sıralama bozulacağı için `POST /notes` (`routes.js`), geçersiz `createdAt` değerini artık `400` ile reddediyor. Bu senin istemediğin bir davranış değişikliği; istemezsen o satırı geri alabilirsin.\n\nCommit atmadım.",
+    "rep": 1
+  },
+  {
+    "task": "bug-sort",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 2,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 5,
+      "fail": 0
+    },
+    "testsAdded": 2,
+    "testsCaught": 2,
+    "mutants": {
+      "killed": 2,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 19,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..a4ba6f2 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -14,6 +14,7 @@ export function notesRoutes(store) {\n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n       if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title gerekli' });\n+      if (body.createdAt !== undefined && (typeof body.createdAt !== 'string' || Number.isNaN(Date.parse(body.createdAt)))) return sendJson(res, 400, { error: 'createdAt geçersiz' });\n       return sendJson(res, 201, store.create({ owner: user, title: body.title.trim(), body: body.body, createdAt: body.createdAt }));\n     }\n \ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..defbd3a 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -10,7 +10,8 @@ export function createStore() {\n     },\n     list() {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      // compare instants, not strings (offsets differ); ties: later id first\n+      return [...notes].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id - a.id);\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..f9413a7 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,21 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('GET /notes returns newest first, by instant, even with offsets', async () => {\n+  const mk = (title, createdAt) => call('POST', '/notes', 'ayse', { title, createdAt });\n+  await mk('s-b', '2026-01-02T00:00:00.000Z');\n+  await mk('s-a', '2026-01-01T00:00:00.000Z');\n+  await mk('s-d', '2026-01-03T01:00:00.000+03:00'); // = 2026-01-02T22:00Z\n+  await mk('s-c', '2026-01-02T12:00:00.000Z');\n+  await mk('s-e', '2026-01-02T00:00:00.000Z'); // ties s-b; created later, so first\n+  const titles = (await (await call('GET', '/notes', 'ayse')).json()).map((n) => n.title).filter((t) => t.startsWith('s-'));\n+  assert.deepEqual(titles, ['s-d', 's-c', 's-e', 's-b', 's-a']);\n+});\n+\n+test('a note with an invalid createdAt is rejected', async () => {\n+  assert.equal((await call('POST', '/notes', 'ayse', { title: 'x', createdAt: 'dün' })).status, 400);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.22979950000000002,
+    "durationS": 49,
+    "turns": 16,
+    "tokens": 546407,
+    "outputTokens": 4037,
+    "testFirst": true,
+    "gateRan": false,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "Hata düzeldi. `npm test` bu turda 5/5 yeşil.\n\n**Kök neden:** `store.js` `list()` içindeki karşılaştırıcı `a.createdAt < b.createdAt` boolean döndürüyordu. `sort` sayı bekler, bu yüzden sıra anlamsızdı. İkinci bir kusur da vardı: ISO metinleri string olarak kıyaslamak, `+03:00` gibi ofsetli tarihlerde yanlış sonuç verir.\n\n**Düzeltme:**\n- `src/features/notes/server/store.js`: `Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id - a.id`. Sıralama anına göre yapılır. Eşitlikte sonradan eklenen önce gelir.\n- `src/features/notes/server/routes.js`: `POST /notes` geçersiz `createdAt` için 400 döner. Bu olmazsa `NaN` sıralamayı yine bozardı.\n\n**Testler (`tests/notes.test.mjs`):**\n- Karışık sıra, ofsetli tarih ve eşit zaman damgası senaryosu. Düzeltmeden önce kırmızıydı (`[s-b, s-a, s-d, s-c, s-e]` geldi).\n- Geçersiz `createdAt` için 400 testi. Bu da düzeltmeden önce kırmızıydı (201 döndü).\n\n**Kararlar (otomatik):**\n- Geçersiz `createdAt` için 400 seçtim. Sessizce \"şimdi\" yazmak veriyi gizlice değiştirirdi.\n- İlk denemede testi kabuktan eklemeye çalıştım ve test koruması engelledi. Sonra Edit aracıyla ekledim.\n\n**Benzer riskler:** Başka `sort` çağıranı yok. `PATCH` `createdAt`'i değiştirmiyor. Bellek içi depo kalıcı değil, restart'ta notlar kaybolur.\n\n**Atlananlar:** `/freeze` önermedim, kök neden tek dosya. Commit atılmadı.\n\n── Durum ──────────────────────\nAşama: Faz 1 · Görev: hata düzeltme (bitti) · Soru modu: kapalı · Limit: bilinmiyor\nYapıldı: sıralama düzeltildi, 2 test ekl",
+    "rep": 2
+  },
+  {
+    "task": "bug-sort",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 2,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 3,
+      "fail": 0
+    },
+    "testsAdded": 0,
+    "testsCaught": 0,
+    "mutants": {
+      "killed": 0,
+      "total": 2
+    },
+    "codeFiles": 2,
+    "codeLines": 4,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..bd0c93d 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -14,6 +14,7 @@ export function notesRoutes(store) {\n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n       if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title gerekli' });\n+      if (body.createdAt !== undefined && (typeof body.createdAt !== 'string' || Number.isNaN(Date.parse(body.createdAt)))) return sendJson(res, 400, { error: 'createdAt geçerli bir ISO tarih olmalı' });\n       return sendJson(res, 201, store.create({ owner: user, title: body.title.trim(), body: body.body, createdAt: body.createdAt }));\n     }\n \ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..3fcc090 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -10,7 +10,8 @@ export function createStore() {\n     },\n     list() {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      // createdAt can be client-supplied in any ISO form (offsets etc.), so compare as times, not strings\n+      return [...notes].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || Number(b.id) - Number(a.id));\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\n",
+    "error": null,
+    "costUsd": 0.07840409999999999,
+    "durationS": 19,
+    "turns": 7,
+    "tokens": 137425,
+    "outputTokens": 1586,
+    "testFirst": null,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık en yeni notu önce döndürüyor. Mevcut 3 test geçiyor, ama sıralamaya özel bir test eklemedim.\n\n**Sebep:** `src/features/notes/server/store.js` içindeki `list()` sıralama fonksiyonu `a.createdAt < b.createdAt` ile boolean döndürüyordu. `sort` ise sayı bekler, bu yüzden sıra rastgele gibi çıkıyordu.\n\n**Düzeltmeler:**\n- **`store.js`:** `list()` artık `createdAt` değerlerini `Date.parse` ile zamana çevirip karşılaştırıyor. İstemci farklı saat dilimi ofsetli ISO tarihler gönderebildiği için düz string karşılaştırması da yanlış sonuç verirdi. Zamanlar eşitse sonradan eklenen (büyük id) önce geliyor.\n- **`routes.js`:** `POST /notes` artık geçersiz bir `createdAt` değerini (string değil ya da tarih olarak ayrıştırılamıyor) 400 ile reddediyor. Aksi halde bozuk tarihli bir not sıralamayı bozabilirdi. Bu, `createdAt` gönderilen isteklerde eskiden kabul edilen bir değeri artık reddetmek anlamına geliyor.\n\nCommit atmadım.",
+    "rep": 2
+  },
+  {
+    "task": "bug-sort",
+    "cond": "kit",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 2,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 4,
+      "fail": 0
+    },
+    "testsAdded": 1,
+    "testsCaught": 1,
+    "mutants": {
+      "killed": 0,
+      "total": 2
+    },
+    "codeFiles": 3,
+    "codeLines": 13,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/routes.js b/src/features/notes/server/routes.js\nindex 337a4aa..f30ae18 100644\n--- a/src/features/notes/server/routes.js\n+++ b/src/features/notes/server/routes.js\n@@ -14,6 +14,7 @@ export function notesRoutes(store) {\n     if (!id && req.method === 'POST') {\n       const body = await readJson(req);\n       if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title gerekli' });\n+      if (body.createdAt !== undefined && Number.isNaN(Date.parse(body.createdAt))) return sendJson(res, 400, { error: 'createdAt geçerli ISO tarih olmalı' });\n       return sendJson(res, 201, store.create({ owner: user, title: body.title.trim(), body: body.body, createdAt: body.createdAt }));\n     }\n \ndiff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..002562f 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -10,7 +10,7 @@ export function createStore() {\n     },\n     list() {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      return [...notes].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\ndiff --git a/tests/notes.test.mjs b/tests/notes.test.mjs\nindex b43658e..37cb4a7 100644\n--- a/tests/notes.test.mjs\n+++ b/tests/notes.test.mjs\n@@ -26,6 +26,16 @@ test('a note without a title is rejected', async () => {\n   assert.equal((await call('POST', '/notes', 'ayse', { body: 'x' })).status, 400);\n });\n \n+test('GET /notes returns newest first, comparing createdAt as instants', async () => {\n+  const mk = (title, createdAt) => call('POST', '/notes', 'sort', { title, createdAt });\n+  await mk('eski', '2030-01-01T07:00:00Z');\n+  await mk('yeni', '2030-01-01T08:00:00Z');\n+  await mk('ofsetli', '2030-01-01T10:00:00+03:00'); // = 07:00Z, older than 'yeni'\n+  await mk('en-yeni', '2030-01-02T00:00:00Z');\n+  const titles = (await (await call('GET', '/notes', 'sort')).json()).filter((n) => n.owner === 'sort').map((n) => n.title);\n+  assert.deepEqual(titles, ['en-yeni', 'yeni', 'eski', 'ofsetli']);\n+});\n+\n test('a note can be updated and deleted', async () => {\n   const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();\n   assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');\n",
+    "error": null,
+    "costUsd": 0.2195141,
+    "durationS": 37,
+    "turns": 16,
+    "tokens": 487391,
+    "outputTokens": 3528,
+    "testFirst": true,
+    "gateRan": false,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "caveman",
+      "impeccable",
+      "humanizer",
+      "ponytail",
+      "mattpocock-skills",
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "**Kök neden:** `store.list()` içindeki sort karşılaştırıcısı boolean döndürüyordu (`a.createdAt < b.createdAt`). Sort bunu hiç negatif olmayan sayı sayıyor, sonuç tutarsız çıkıyor. Ayrıca `createdAt` string olarak karşılaştırılıyordu. Bu da `+03:00` gibi ofsetli ISO tarihlerde yanlış sıra veriyordu.\n\n**Düzeltme:**\n- `src/features/notes/server/store.js`: karşılaştırıcı artık `Date.parse(b.createdAt) - Date.parse(a.createdAt)`.\n- `src/features/notes/server/routes.js`: `POST /notes` geçersiz `createdAt` değerini 400 ile reddediyor. Aksi halde `NaN` sıralamayı yine bozardı. Bu küçük bir davranış eklemesi. İstemci artık hatalı tarih gönderemiyor. Otomatik karar olarak kaydedildi.\n\n**Test:** `tests/notes.test.mjs` içine sıralama testi ekledim. Ofsetli tarih de içeriyor. Düzeltmeden önce kırmızıydı. `npm test` şimdi 4/4 geçiyor.\n\n**Benzer riskli yerler:** Başka sort ya da tarih karşılaştırması yok. `GET /notes` hâlâ tüm kullanıcıların notlarını listeliyor, `x-user`'a göre süzmüyor. Bu ayrı bir konu, dokunmadım.\n\nCommit atılmadı. `/freeze` gerekmedi.\n\n── Durum ──────────────────────\nAşama: Faz 1 · Görev: hata düzeltme (bitti) · Soru modu: kapalı · Limit: bilinmiyor\nYapıldı: sıralama düzeltildi, regresyon testi eklendi, createdAt doğrulaması eklendi · Kurul: kurulmadı · Otomatik kararlar: createdAt geçersizse 400\nSıradaki: `/build G-001` · bekleyen karar: yok",
+    "rep": 3
+  },
+  {
+    "task": "bug-sort",
+    "cond": "plain",
+    "model": "sonnet",
+    "hidden": {
+      "pass": 2,
+      "fail": 0
+    },
+    "visible": {
+      "pass": 3,
+      "fail": 0
+    },
+    "own": {
+      "pass": 3,
+      "fail": 0
+    },
+    "testsAdded": 0,
+    "testsCaught": 0,
+    "mutants": {
+      "killed": 0,
+      "total": 2
+    },
+    "codeFiles": 1,
+    "codeLines": 5,
+    "otherFiles": 0,
+    "patch": "diff --git a/src/features/notes/server/store.js b/src/features/notes/server/store.js\nindex b7aa26d..b193c98 100644\n--- a/src/features/notes/server/store.js\n+++ b/src/features/notes/server/store.js\n@@ -10,7 +10,10 @@ export function createStore() {\n     },\n     list() {\n       // newest first\n-      return [...notes].sort((a, b) => a.createdAt < b.createdAt);\n+      // Client-supplied createdAt may carry a timezone offset, so compare instants, not strings.\n+      // Ties (and unparsable dates) fall back to insertion order, newest first.\n+      const time = (n) => Date.parse(n.createdAt) || 0;\n+      return [...notes].sort((a, b) => time(b) - time(a) || Number(b.id) - Number(a.id));\n     },\n     get(id) {\n       return notes.find((n) => n.id === id);\n",
+    "error": null,
+    "costUsd": 0.08146550000000001,
+    "durationS": 17,
+    "turns": 6,
+    "tokens": 175651,
+    "outputTokens": 1283,
+    "testFirst": null,
+    "gateRan": null,
+    "claudeVersion": "2.1.306",
+    "plugins": [
+      "cc-plugin-agents-md",
+      "cc-plugin-telemetry",
+      "cc-plugin-plugin-authoring"
+    ],
+    "summary": "`GET /notes` artık en yeni notu önce döndürüyor. Mevcut 3 test geçiyor, ama sıralamayı doğrulayan yeni bir test yazmadım.\n\n**Hata:** `src/features/notes/server/store.js` içindeki `list()` sıralama fonksiyonu bir boolean döndürüyordu (`a.createdAt < b.createdAt`). `sort` sayı bekler, bu yüzden sıra güvenilmez çıkıyordu.\n\n**Düzeltme:**\n- Notlar `Date.parse` ile gerçek zamana çevrilip büyükten küçüğe sıralanıyor. İstemci `createdAt` alanını saat dilimi farklı (`+03:00` gibi) bir ISO tarihle gönderirse, string karşılaştırması da yanlış sonuç verirdi.\n- `createdAt` eşit olan ya da çözümlenemeyen notlarda, sonra eklenen not önce geliyor.\n\nCommit atmadım.",
+    "rep": 3
+  }
+]

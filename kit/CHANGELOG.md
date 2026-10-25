@@ -5,6 +5,9 @@ Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit
 
 ## [Yayınlanmamış]
 
+### Belgeler
+- **Değerlendirmenin ikinci ölçümü** (Sonnet, 6 görev, her koşulda 24 koşu): iki koşul da bütün gizli testleri geçti. Kitin yazdığı testler koda bilerek eklenen hataların %63'ünü yakaladı, kitsiz koşununkiler %31'ini. Kit her koşuda testi koddan önce yazdı. Bedeli yaklaşık 2 kat maliyet ve 1,8 kat süre. `/fix-bug` akışında kapının (`gate.mjs --run`) çalışmadığı görüldü. Ayrıntı: `kit/eval/results/2026-10-25-v3.18.2-sonnet-ozet.md`.
+
 ## [3.18.2] - 2026-10-25
 
 ### Düzeltilen

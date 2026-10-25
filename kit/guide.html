@@ -699,7 +699,7 @@ sandbox/       <span class="c"># git'e girmez</span></pre>
       </tbody>
     </table>
   </div>
-  <p class="note"><b>Kit değerlendirmesi:</b> <code>node kit/eval/run.mjs</code> aynı görevi kitli ve kitsiz çalıştırır, gizli kabul ve saldırgan testleriyle puanlar. İlk ölçümde (Sonnet, 3 görev, her hücre tek koşu) iki koşul da bütün gizli testleri geçti. Kit 11 test ekledi (kitsiz 3). Bedeli ~2,3 kat maliyet. Görevler kolay kaldığı için doğruluk farkı henüz ölçülemedi. Bu ölçüm 3.16.2'de düzeltilen bir kurulum hatasından etkilendi, yeniden koşulacak. 3.18.0'da üç zor görev, testlerin hatayı yakalayıp yakalamadığını ölçen mutantlar ve tekrarlı koşu eklendi; ikinci ölçüm bunlarla yapılacak.</p>
+  <p class="note"><b>Kit değerlendirmesi:</b> <code>node kit/eval/run.mjs</code> aynı görevi kitli ve kitsiz çalıştırır, gizli kabul ve saldırgan testleriyle puanlar. Son ölçümde (3.18.2, Sonnet, 6 görev, koşul başına 24 koşu) iki koşul da bütün gizli testleri geçti. Fark testlerin kalitesinde çıktı: kitin testleri koda bilerek eklenen hataların %63'ünü yakaladı, kitsiz koşununkiler %31'ini. Kit her koşuda testi koddan önce yazdı. Bedeli yaklaşık 2 kat maliyet ve 1,8 kat süre.</p>
 </section>
 
 <section id="kurallar">
