@@ -272,6 +272,9 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   const save = 'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)';
   const moved = migrateSettings({ permissions: { allow: [save] } }, kit).settings.permissions;
   assert.ok(!moved.allow.includes(save) && moved.ask.includes(save), '3.28.0: --plan-save moves from allow to ask');
+  const broad = 'Bash(node .claude/hooks/tools.mjs:*)';
+  const narrowed = migrateSettings({ permissions: { allow: [broad] } }, kit).settings.permissions;
+  assert.ok(!narrowed.allow.includes(broad) && narrowed.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'), '3.10.0 broad tools.mjs rule is removed');
   assert.deepEqual(migrateSettings(s, kit), { settings: s, added: [], removed: [] }, 'running again changes nothing');
   for (const bad of [null, 'x', { permissions: 'abc' }, { permissions: { allow: 'xyz' } }, { permissions: { allow: { a: 1 } } }])
     assert.throws(() => migrateSettings(bad, kit), Error, 'a broken shape is reported, not merged');

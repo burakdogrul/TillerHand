@@ -119,7 +119,9 @@ const OLD_RULES = {
     // 3.19.1: in the project folder the CLI loads a repo's .playwright/cli.config.json (it can run a program); asked, not allowed
     ...['open', 'snapshot', 'console', 'requests', 'screenshot'].map((c) => `Bash(npx -y @playwright/cli@0.1.22 ${c}:*)`),
     // 3.28.0: --plan-end + --plan-save widened or dropped the scope shield unasked; both are asked now
-    'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-end)'],
+    'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-end)',
+    // 3.10.0 allowed every tools.mjs flag; --enable and --commands are asked since 3.10.1, the broad rule skipped that
+    'Bash(node .claude/hooks/tools.mjs:*)'],
   ask: ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)', 'Bash(node .claude/hooks/gate.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac:*)'],
 };
 

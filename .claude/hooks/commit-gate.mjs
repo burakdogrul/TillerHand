@@ -41,12 +41,24 @@ export function changes() {
   return { files, signature: h.digest('hex') };
 }
 
-// git's global options may come before commit: git --no-pager commit, git -C x commit, git --git-dir=x commit
-const COMMIT = /\bgit\b(?:\s+(?:-[cC]\s+\S+|--?[\w-]+(?:=\S+)?))*\s+commit\b/;
+// git's global options may come before commit: git --no-pager commit, git -C x commit, git --git-dir=x commit; git.exe on Windows
+const commitRe = (verbs) => new RegExp(`\\bgit(?:\\.exe)?["']?(?:\\s+(?:-[cC]\\s+\\S+|--?[\\w-]+(?:=\\S+)?))*\\s+(?:${verbs.join('|')})(?=\\s|$|["';&|)])`);
+const COMMIT = commitRe(['commit']);
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// git aliases that run commit ([alias] ci = commit, cm = !git commit), from git config and from an inline -c alias.x=commit
+export function commitPattern(command) {
+  if (!/\bgit/.test(command)) return COMMIT; // this hook runs on every Bash call: git config only when git is named
+  let config = '';
+  try { config = git('config --get-regexp ^alias\\.'); } catch { /* no alias or no repo */ }
+  const names = [...config.matchAll(/^alias\.(\S+)\s+(.*)$/gm), ...command.matchAll(/alias\.([\w-]+)=["']?([^"'\s][^"'\n]*)/g)]
+    .filter(([, , value]) => /^(!\s*git\s+)?commit\b/.test(value.trim())).map(([, name]) => escapeRe(name));
+  return names.length ? commitRe(['commit', ...names]) : COMMIT;
+}
 
 // The hook sees the command before it runs: anything that can change files before the commit defeats the review.
 // Allowed: commit alone, with "git add" and "cd" before it. A heredoc and a $(cat <<'EOF' … EOF) message do not count as commands.
-export function chainIssue(command) {
+export function chainIssue(command, commit = COMMIT) {
   const k = command.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, '<<HEREDOC')
     .replace(/\$\(\s*cat\s+<<HEREDOC\s*\)/g, 'MESAJ')
     .replace(/'[^']*'/g, "''")
@@ -54,7 +66,7 @@ export function chainIssue(command) {
     .replace(/\d*>&\d+/g, '');
   if (/\$\(|`/.test(k)) return 'komutta ikame var ($(...) veya `...`)';
   const parts = k.split(/&&|\|\||[;|&\n]/).map((s) => s.trim()).filter(Boolean);
-  return parts.every((s) => COMMIT.test(s) || /^git\s+add\b/.test(s) || /^cd\b/.test(s)) ? null : 'commit başka komutlarla zincirli';
+  return parts.every((s) => commit.test(s) || /^git\s+add\b/.test(s) || /^cd\b/.test(s)) ? null : 'commit başka komutlarla zincirli';
 }
 
 export const docsOnly = (files) => files.every((f) => /\.(md|txt)$/i.test(f) || f.startsWith('docs/'));
@@ -131,8 +143,10 @@ async function hook() {
     process.exit(0);
   }
   // --skip bypasses the gate and the board: the user is asked in every spelling (the AI must not write it on its own)
+  // A commit whose message names --skip goes on to the commit checks below (a real --skip chained to a commit is stopped there).
   const open = unquote(command);
-  if ([command, open].some((c) => /commit-gate\.mjs\b[^;&|\n]*--skip\b/i.test(c))) {
+  const commit = commitPattern(command);
+  if (!commit.test(command) && [command, open].some((c) => /commit-gate\.mjs\b[^;&|\n]*--skip\b/i.test(c))) {
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
       permissionDecisionReason: 'Commit kapısı: --skip kurul denetimini ve deterministik kapıyı aşar. Sadece kullanıcı açıkça isterse onayla.' } }));
     process.exit(0);
@@ -155,9 +169,9 @@ async function hook() {
       permissionDecisionReason: `Kapı komut onayı: AGENTS.md → Komutlar'daki şu komutlar bundan sonra her kapıda çalışır:\n${list}\nGüvendiğin komutlarsa onayla.` } }));
     process.exit(0);
   }
-  if (!COMMIT.test(command) && !COMMIT.test(open)) process.exit(0);
+  if (!commit.test(command) && !commit.test(open)) process.exit(0);
   if (!hasBoard() || reviewOff()) process.exit(0);
-  const chain = chainIssue(command);
+  const chain = chainIssue(command, commit);
   if (chain) {
     process.stderr.write(`Commit durduruldu: ${chain}. Kapı komut çalışmadan önceki değişiklikleri denetler; commit'i tek başına ` +
       '(veya yalnızca "git add … && git commit" ile) çalıştır. Push ve diğer komutları ayrı çalıştır.\n');

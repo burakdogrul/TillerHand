@@ -132,6 +132,12 @@ test('F-03 audit: an untracked new file is in the signature; global git options 
 
 test('F-03 audit: --skip is put to the user in every spelling', () => {
   assert.equal(ask('node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"'), 'ask');
+  // B9: a commit message that names --skip is not a --skip: the commit checks still run (no board approval here: stopped)
+  write('b9.js', 'b9');
+  const b9 = commit('git commit -am "docs: commit-gate.mjs --skip anlatıldı"');
+  assert.equal(b9.status, 2, 'not waved through by the --skip ask');
+  assert.equal(commit('node .claude/hooks/commit-gate.mjs --skip x && git commit -m y').status, 2, 'a real --skip chained to a commit is stopped');
+  fs.rmSync(path.join(p, 'b9.js'));
   assert.equal(ask("node ./.claude/hooks/commit-gate.mjs '--skip'"), 'ask');
   assert.equal(ask('node .claude\\hooks\\commit-gate.mjs --sk""ip x'), 'ask');
   assert.equal(permissionEquivalent('node .claude/hooks/commit-gate.mjs --skip x')?.decision, 'ask', 'Codex/Antigravity');
@@ -339,4 +345,18 @@ test('3.28.2 audit: content staged behind skip-worktree or assume-unchanged void
   assert.equal(commit().status, 2, 'the index holds content that was not approved');
   sh('git update-index --no-skip-worktree a.js');
   sh('git add a.js');
+});
+
+test('3.28.3 git.exe and commit aliases are commits too', () => {
+  agents('node -e "process.exit(0)"');
+  sh('git add -A && git commit -qm ara6 --allow-empty');
+  write('alias.js', 'x');
+  sh('git config alias.ci "commit -v"');
+  sh('git config alias.yaz "!git commit"');
+  for (const c of ['git.exe commit -m x', 'git ci -m x', 'git yaz -m x', 'git -c alias.zz=commit zz -m x', '"/usr/bin/git" commit -m x'])
+    assert.equal(commit(c).status, 2, c);
+  assert.equal(commit('git status').status, 0);
+  sh('git config --unset alias.ci');
+  sh('git config --unset alias.yaz');
+  fs.rmSync(path.join(p, 'alias.js'));
 });

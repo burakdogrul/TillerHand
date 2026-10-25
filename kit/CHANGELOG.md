@@ -3,6 +3,14 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.28.3] - 2026-10-26
+
+### Düzeltilen
+- **Commit kapısı `git.exe commit`, tam yolla yazılan git ve commit'e açılan git alias'larını da görüyor** (`[alias] ci = commit`, `!git commit`, `git -c alias.x=commit x`). Bunlar önceden kapıya takılmıyordu.
+- **Mesajında `commit-gate.mjs --skip` geçen bir commit, kurul ve kapı denetiminden sorusuz geçebiliyordu.** Böyle bir commit artık normal commit denetiminden geçiyor.
+- **3.10.0'dan kalan geniş `tools.mjs` izni (`Bash(node .claude/hooks/tools.mjs:*)`) `/kit-update` ile kaldırılıyor.** Bu izin, sorulması gereken `--enable` ve `--commands` komutlarını da serbest bırakıyordu.
+  - Elle uyarla: yok.
+
 ## [3.28.2] - 2026-10-26
 
 ### Düzeltilen
