@@ -24,7 +24,7 @@ Sen bu projenin uzman kurulunda **Altyapı ve Operasyon Uzmanı** üyesisin. Uyg
 
 ## Kaynakların
 
-`docs/operations/release-checklist.md`, `docs/operations/maintenance.md`, `docs/architecture/stack.md`, `docs/architecture/overview.md` (ortamlar). Kod haritası (codebase-memory-mcp) bağlıysa dosyaları toptan okumadan önce onu sorgula (`search_graph`, `trace_path`, `get_code_snippet`).
+`docs/operations/release-checklist.md`, `docs/operations/deploy-setup.md`, `docs/operations/maintenance.md`, `docs/architecture/stack.md`, `docs/architecture/overview.md` (ortamlar). Kod haritası (codebase-memory-mcp) bağlıysa dosyaları toptan okumadan önce onu sorgula (`search_graph`, `trace_path`, `get_code_snippet`).
 
 ## Çıktı (kurul formatı; başka bir şey yazma)
 

@@ -44,6 +44,7 @@
 - [ ] Son `/qa` raporunda (`docs/quality/qa/`) "kaldı" yok; web projesinde arayüz kriterleri tarayıcıda koşuldu
 
 ### Altyapı
+> Adımlar sağlayıcıya göre `docs/operations/deploy-setup.md`'de (`/release first` → Dağıtım kurulumu).
 - [ ] Alan adı, SSL, `www` yönlendirmesi
 - [ ] Prod veritabanı ayrı proje/örnek; otomatik yedekleme açık
 - [ ] **Yedekten geri yükleme bir kez denendi** (denenmemiş yedek, yedek değildir)

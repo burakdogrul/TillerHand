@@ -16,6 +16,7 @@ export const PATTERNS = [
   ['Slack token', /\bxox[abprs]-[A-Za-z0-9-]{10,}/],
   ['Özel anahtar', /-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----/],
   ['Resend anahtarı', /\bre_[A-Za-z0-9]{8,}_[A-Za-z0-9]{16,}/],
+  ['Supabase gizli anahtarı', /\bsb_secret_(?=[\w-]*\d)[\w-]{16,}/],
 ];
 
 export function findSecrets(text) {

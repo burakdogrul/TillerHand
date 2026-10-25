@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.22.0-2a78d6?style=flat-square">
+  <img alt="Sürüm" src="https://img.shields.io/badge/kit-v3.23.0-2a78d6?style=flat-square">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-template-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
@@ -309,7 +309,7 @@ Kurulumdan sonra her proje bu düzende başlar ve **bu düzende kalır**. Kod ö
 │   ├── quality/             # test-plan · metrics · retros
 │   ├── security/            # checklist
 │   ├── legal/               # privacy-kvkk
-│   ├── operations/          # release-checklist · maintenance · accounts · feature-flags
+│   ├── operations/          # release-checklist · deploy-setup · maintenance · accounts · feature-flags
 │   ├── workflow/            # progress · decision-protocol · skills · board · usage-limits · cost-log
 │   ├── findings/            # /findings-* raporları
 │   └── archive/             # artık geçerli olmayan dokümanlar
@@ -394,7 +394,7 @@ flowchart TB
 | `/ask-mode [on\|off] [konu]` | Soru modunu yönetir |
 | `/dashboard` | Ayrıntılı rapor ve kontrol paneli |
 | `/wrap-up` | Oturumu kapatır, ilerlemeyi kaydeder |
-| `/release [first]` | Canlıya alma kontrolleri |
+| `/release [first]` | Canlıya alma kontrolleri; `first` hosting, alan adı, yedek ve geri almayı sağlayıcıya göre adım adım kurdurur (`docs/operations/deploy-setup.md`: Vercel, Supabase, Railway, EAS) |
 | `/maintain [weekly\|monthly\|quarterly]` | Düzenli bakım |
 | `/user-feedback` | Kullanıcı geri bildirimini yol haritasına işler |
 | `/retro` | Dersleri projeye ve kite geri yazar |

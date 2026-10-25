@@ -59,6 +59,12 @@ test('shield: destructive commands are denied, normal commands pass', () => {
   assert.equal(k('npx -y vercel@63.1.1 deploy --prod'), 'ask', 'prod deploy via pinned npx');
   assert.equal(k('npx vercel@63.1.1 promote https://app-abc.vercel.app'), 'ask', 'promoting a preview to prod');
   assert.equal(k('vercel rollback'), 'ask', 'prod rollback');
+  assert.equal(k('eas update --branch production --message x'), 'ask');
+  assert.equal(k('eas update --environment production --channel production --message x'), 'ask', 'prod OTA by environment or channel');
+  assert.equal(k('npx eas-cli update --channel=production'), 'ask');
+  assert.equal(k('eas update:rollback'), 'ask', 'OTA rollback');
+  assert.equal(k('eas deploy --prod'), 'ask', 'EAS Hosting prod');
+  assert.equal(k('eas update --branch preview --message x'), 'free');
   assert.equal(k('npx -y vercel@63.1.1 deploy'), 'free', 'preview deploy');
   assert.equal(k('vercel --scope ekip promote https://app-abc.vercel.app'), 'ask', 'promote even with a flag in between');
   assert.equal(k('npx vercel@63.1.1 -t $TOKEN rollback'), 'ask', 'rollback even with a flag in between');

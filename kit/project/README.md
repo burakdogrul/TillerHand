@@ -48,5 +48,5 @@ Tam liste ve açıklamalar: `.env.example`.
 | `docs/architecture/overview.md` · `docs/architecture/structure.md` | Nasıl kurulu, klasörler nerede |
 | `docs/product/roadmap.md` | Görevler |
 | `docs/decisions/log.md` | Neden böyle yaptık |
-| `docs/operations/release-checklist.md` · `docs/operations/maintenance.md` | Operasyon |
+| `docs/operations/release-checklist.md` · `docs/operations/deploy-setup.md` · `docs/operations/maintenance.md` | Operasyon |
 | `docs/findings/` | Teknik, iş, güvenlik, UX, performans ve hukuk bulgu raporları |

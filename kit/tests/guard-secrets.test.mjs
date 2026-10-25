@@ -12,6 +12,7 @@ const FAKE = {
   stripe: 'sk_' + 'live_' + 'b'.repeat(24),
   aws: 'AKIA' + 'ABCDEFGHIJKLMNOP',
   pem: '-----BEGIN ' + 'PRIVATE KEY-----',
+  supabase: 'sb_' + 'secret_' + 'N7c-' + 'c'.repeat(16) + '_x9Ab',
 };
 
 test('catches real key patterns', () => {
@@ -25,6 +26,9 @@ test('no alarm on normal code', () => {
     'password: "testpassword123"',
     'const task = "sk-short"',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY=',
+    'SUPABASE_SECRET_KEY=sb_secret_...',
+    'SUPABASE_SECRET_KEY=sb_secret_your-secret-key-here',
+    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_' + 'd'.repeat(32),
   ];
   for (const s of clean) assert.deepEqual(findSecrets(s), [], s);
 });

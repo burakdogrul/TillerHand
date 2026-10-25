@@ -28,6 +28,11 @@ Kaynak listeler: `docs/operations/release-checklist.md`, `docs/architecture/stac
    - `CHANGELOG.md` güncel mi?
    - Bekleyen DB migration var mı?
 2. **Kontrol edemediklerini** (panel ayarları, yedek, alan adı, yasal metinler, mağaza ayarları) AskUserQuestion ile sor: Yapıldı / Yapılmadı / Bu projede geçerli değil. Her biri için nasıl kontrol edeceğimi tek satırla yaz. Benim elle yapmam gereken çok adımlı kurulumlar (DNS, SPF/DKIM, mağaza hesabı, prod ortam değişkenleri) için `mattpocock-skills:wizard` ile adım adım rehber hazırla.
+   - **Dağıtım kurulumu (`first`, hosting veya alan adı kurulmadıysa; rapordan önce):** `docs/operations/deploy-setup.md` → sadece `docs/architecture/stack.md`'deki sağlayıcıların bölümü.
+     1. Bölümün kaynak sayfalarını `source-research` ile yeniden aç. Panel yolu, kayıt değeri veya plan sınırı değiştiyse güncel kaynağa göre ilerle; dosyayı düzenleme (kit günceller), farkı raporda yaz.
+     2. `mattpocock-skills:wizard` ile kullanıcının yapacağı adımları sırayla hazırla: hosting projesi, ortam değişkenleri, alan adı ve DNS, yedek ve PITR, geri alma provası. Dosyadaki "Kurallar"a uy: sır değerini sorma, sohbete veya dosyaya yazma; sadece değişken adını ver, değeri kullanıcı panelde girer. Prod veritabanı yedeğini kullanıcı kendi terminalinde alır.
+     3. Her adımı AskUserQuestion ile sor: Yapıldı / Sonra / Bu projede geçerli değil. Sonucu `docs/operations/accounts.md`'ye ve rapor tablosuna işle.
+     4. Geri alma provası ve yedekten geri yükleme prod'a dokunur: onaysız başlatma.
    - Yayına girecek metinler (açılış sayfası, mağaza açıklaması, e-postalar) `humanizer:humanizer`'dan geçti mi?
 3. Raporu tablo olarak ver:
 

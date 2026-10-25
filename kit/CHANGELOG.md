@@ -3,6 +3,16 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.23.0] - 2026-10-25
+
+### Yeni
+- **Dağıtım kurulumu** (`/release first`). Hosting veya alan adı kurulmadıysa sağlayıcı sağlayıcı adım adım rehber: proje, ortam değişkenleri, alan adı ve DNS, yedek ve PITR, geri alma provası. Adımlar `docs/operations/deploy-setup.md`'de: Vercel, Supabase, Railway, EAS; her biri resmî dokümandan, kaynak ve kontrol tarihiyle (2026-10-25). Komut kullanmadan önce kaynak sayfaları yeniden açar, değişen adımı düzeltir.
+  - Sır değeri sohbete ve dosyaya yazılmaz; değeri sen sağlayıcının panelinde girersin. Prod veritabanı yedeğini kendi terminalinde alırsın (Supabase Free'de rol, şema ve veri için üç komut); geri yükleme provası geçici yerel veritabanında yapılır, dev projesine prod verisi taşınmaz. Prod deploy, geri alma provası ve yedekten geri yükleme senin onayınla başlar.
+- **Sır engeli Supabase gizli anahtarını tanıyor** (`sb_secret_…`, en az bir rakam içeren). `sb_publishable_…` ve `sb_secret_your-key` gibi yer tutucular engellenmez; Supabase CLI'nin yerel geliştirme anahtarı da gizli anahtar biçiminde olduğu için engellenir.
+
+### Düzeltilen
+- **Kalkan EAS'ın prod komutlarını da soruyor**: `eas update` `--channel`/`--environment production` ile, `eas update:rollback`, `eas update:republish`, `eas deploy --prod` ve `npx eas-cli …` yazımı. Önceden sadece `--branch production` soruluyordu.
+
 ## [3.22.0] - 2026-10-25
 
 ### Değişen
