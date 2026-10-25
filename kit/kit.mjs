@@ -31,9 +31,12 @@ const ADDONS = fs.readdirSync(path.join(TEMPLATES, 'addons'));
 const TOOLS = ['claude', 'codex', 'antigravity'];
 // Root entries that are not part of the common layer (the kit itself, generated and temporary files)
 // CLAUDE.local.md is personal (in .gitignore); it must not be carried into a project installed from a local folder
-const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md', 'LICENSE', 'README.en.md']);
+const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md', 'LICENSE', 'README.en.md', 'package.json']);
 // Files that only make sense in the kit repo and are not carried into projects
-const KIT_ONLY = ['.github/workflows/kit-tests.yml'];
+const KIT_ONLY = ['.github/workflows/kit-tests.yml', '.github/workflows/npm-publish.yml'];
+// Run from the npm package (npx tillerhand): the kit lives in the npx cache, which can be cleared, so the record names
+// the package version instead of the folder
+const VIA_NPX = /[\\/]_npx[\\/]/.test(ROOT);
 // Git-ignored personal files and secrets of a local kit checkout (a clone does not have them): never copied, at any depth
 const PERSONAL = /(^|\/)(\.env(\.(?!example(\.|$))[^/]*)?|secrets\/.*|\.claude\/(settings\.local\.json|state\/.*)|[^/]*\.kit-new|[^/]*\.log|logs\/.*|CLAUDE-SECURITY-[^/]*\/.*)$/;
 
@@ -72,6 +75,8 @@ function layers(commonRoot, names) {
   const copies = new Map();
   const patches = [];
   if (commonRoot) for (const rel of listFiles(commonRoot, COMMON_EXCLUDE)) copies.set(rel, path.join(commonRoot, rel));
+  // npm never packs a .gitignore: the package carries a copy, so a project set up with npx still ignores .env
+  if (commonRoot && !copies.has('.gitignore')) copies.set('.gitignore', path.join(KIT, 'project', 'gitignore'));
   for (const name of names) {
     const root = path.join(TEMPLATES, name);
     if (!fs.existsSync(root)) throw new Error(`Şablon katmanı yok: ${name}`);
@@ -310,10 +315,10 @@ function init({ project, tool }) {
   installTools(projectDir, tools, files, conflicts);
   const today = new Date().toISOString().slice(0, 10);
   // type: null = kit installed, no type chosen yet (/start step 3 or /adopt)
-  writeRecord(projectDir, { version: VERSION, source: SOURCE, kit: inside ? kitRel : ROOT, type: null, addons: [], tool: tool.length ? tools : null, created: today, updated: today, files });
+  writeRecord(projectDir, { version: VERSION, source: SOURCE, kit: VIA_NPX ? `npx:tillerhand@${VERSION}` : inside ? kitRel : ROOT, type: null, addons: [], tool: tool.length ? tools : null, created: today, updated: today, files });
 
   console.log(`Kit ${VERSION} kuruldu: ${projectDir} · araç: ${tool.length ? tools.join(', ') : 'seçilmedi (Claude Code dosyaları kuruldu; /start ve /adopt sorar, Codex/Antigravity için --tool)'}`);
-  console.log(`Kit klasörü: ${inside ? `${kitRel} (.gitignore'a eklendi)` : ROOT} · git deposu: ${git}`);
+  console.log(`Kit klasörü: ${VIA_NPX ? `npm paketi tillerhand@${VERSION}` : inside ? `${kitRel} (.gitignore'a eklendi)` : ROOT} · git deposu: ${git}`);
   conflictReport(conflicts);
   console.log('Sonraki adım: Bu klasörü aracında yeni oturumla aç (komutlar ve hook\'lar yüklensin). Yeni projede /start [fikir], var olan projede /adopt.');
   nextSteps(tools);

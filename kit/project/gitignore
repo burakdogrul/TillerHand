@@ -1,0 +1,43 @@
+# Sırlar
+.env
+.env.local
+.env.*.local
+.env.production
+secrets/
+
+# İşletim sistemi / editör
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code kişisel ayarları (ortak .claude/ commit edilir)
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Kit güncellemesinden gelen, birleştirilmeyi bekleyen dosyalar
+*.kit-new
+
+# Loglar
+*.log
+logs/
+
+# Kit tarafından üretilen çıktılar
+dashboard.html
+.previews/
+
+# Kit çalışma durumu (limit, bağlam, onaylar, önbellek)
+.claude/state/
+
+# Deneme ve geçici işler (yapı haritası dışı)
+sandbox/
+
+# Tanıtım videosu kareleri ve çıktıları (motion-video)
+marketing/**/frames/
+marketing/**/out/
+# Understand-Anything yerel ara dosyaları (grafın kendisi .ua/ altında commit'lenebilir)
+.ua/intermediate/
+.ua/diff-overlay.json
+# claude-security tarama çıktısı (açık ayrıntısı içerir; özet docs/findings/security'de)
+CLAUDE-SECURITY-*/

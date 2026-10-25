@@ -1,0 +1,33 @@
+{
+  "name": "tillerhand",
+  "version": "3.27.0",
+  "description": "Claude Code, Codex ve Antigravity için Türkçe vibe coding kiti: kurallar, komutlar, korumalar ve proje şablonları.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "tillerhand": "kit/kit.mjs"
+  },
+  "files": [
+    ".claude/",
+    "!.claude/state/",
+    "!.claude/settings.local.json",
+    ".github/",
+    "docs/",
+    "kit/",
+    "!kit/eval/",
+    "!kit/tests/",
+    ".gitattributes",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CLAUDE.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burakdogrul/TillerHand.git"
+  },
+  "homepage": "https://github.com/burakdogrul/TillerHand#readme",
+  "keywords": ["claude-code", "codex", "antigravity", "vibe-coding", "turkish", "starter-kit"]
+}

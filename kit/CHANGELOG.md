@@ -3,6 +3,15 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.27.0] - 2026-10-25
+
+### Yeni
+- **Tek komutla kurulum: `npx tillerhand init`.** Kit npm'de `tillerhand` paketi olarak yayınlanır; boş bir klasörde bu komut kiti kurar, sonra yeni oturumda `/start` (var olan kodda `/adopt`). `.kit.json` → `kit` alanı `npx:tillerhand@<sürüm>` olur; `/start` ve `/adopt` tip kurulumunu aynı sürümle `npx -y tillerhand@<sürüm> install ...` ile yapar. Git klonu yolu (`node <kit>/kit/kit.mjs init`) aynen çalışır.
+  - Paket sadece kiti taşır: iç notlar, kişisel durum dosyaları, eval ve test klasörleri girmez. npm `.gitignore` paketlemediği için kit kendi kopyasını taşır; npx ile kurulan projede de `.env` git'e girmez.
+  - Yayın otomatik: `v*` tag'i push edilince GitHub Actions tag'in `main`'de olduğunu, sürümlerin (tag, `package.json`, `kit/VERSION`) aynı olduğunu ve testleri denetler; yayını ayrı bir işte, repo kodu çalıştırmadan, npm'e token'sız (Trusted Publishing, provenance ile) yapar. Action'lar commit SHA'sına sabit.
+  - `npx` dışındaki çalıştırıcılar (`pnpm dlx`, `bunx`) kitin geçici yolunu kaydeder; bunlarla kurulumdan sonra `/start` kit klasörünü bulamayabilir. `npx` kullan.
+- **Kitin `package.json`'u projeye kopyalanmaz** (projenin kendi `package.json`'u ile çakışmasın).
+
 ## [3.26.1] - 2026-10-25
 
 ### Düzeltilen
