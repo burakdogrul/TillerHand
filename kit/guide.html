@@ -90,9 +90,9 @@ p { margin: 0 0 1em; }
 .hero h1 { font-size: clamp(40px, 5.6vw, 64px); font-weight: 800; letter-spacing: -.035em; line-height: 1.04; margin-bottom: 22px; }
 .hero h1 em { font-style: normal; color: var(--accent); }
 .hero .sub { font-size: 19px; color: var(--fg-2); max-width: 34em; margin-bottom: 30px; }
-.cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 30px; }
 .install { display: flex; align-items: center; gap: 10px; max-width: 520px; background: var(--term-bg); color: var(--term-fg); border-radius: 12px; padding: 12px 12px 12px 18px; font: 14px var(--mono); }
-.install span { flex: 1; overflow-x: auto; white-space: nowrap; }
+.install + .install { margin-top: 10px; }
+.install span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .install span::before { content: "$ "; color: var(--term-dim); }
 .copy { flex: none; background: rgba(255,255,255,.08); color: var(--term-fg); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; font: 500 12.5px var(--font); padding: 6px 10px; cursor: pointer; }
 .copy:hover { background: rgba(255,255,255,.16); }
@@ -158,7 +158,7 @@ p { margin: 0 0 1em; }
 .moments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .moment h3 { font-size: 17px; margin: 18px 0 6px; }
 .moment > p { color: var(--muted); font-size: 15px; margin: 0; }
-.term { background: var(--term-bg); color: var(--term-fg); font: 13px/1.7 var(--mono); padding: 18px 20px; border-radius: 12px; overflow-x: auto; white-space: pre; margin: 0 0 1.2em; }
+.term { background: var(--term-bg); color: var(--term-fg); font: 13px/1.7 var(--mono); padding: 18px 20px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 1.2em; }
 .term .c { color: var(--term-dim); }
 .term .r { color: #ff8a80; font-weight: 600; }
 .term .g { color: #7ee2a8; }
@@ -287,14 +287,11 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.26.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.27.2</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
-      <div class="cta">
-        <a class="btn primary" href="#baslangic">Hemen başla</a>
-        <a class="btn ghost" href="#nasil">Nasıl çalışır?</a>
-      </div>
-      <div class="install"><span id="cmd">git clone https://github.com/burakdogrul/TillerHand.git vibe-kit</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
+      <div class="install"><span id="cmd">npx tillerhand init</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
+      <div class="install"><span id="cmd-git">git clone https://github.com/burakdogrul/TillerHand.git vibe-kit</span><button class="copy" type="button" data-copy="cmd-git">Kopyala</button></div>
       <p class="hero-note">Claude Code için yazıldı · Codex ve Antigravity'de de çalışır · Kod bilmen gerekmez</p>
     </div>
     <div class="window" aria-label="Örnek: AI'nın sana sorduğu bir karar sorusu">
@@ -527,11 +524,13 @@ Bekleyen karar: e-posta servisi</pre>
   <h2>Kurulum</h2>
   <p class="lead">TillerHand ve projen ayrı klasörlerde durur. <code>init</code> gereken dosyaları (<code>.claude/</code>, <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>docs/</code>) proje klasörüne kopyalar, git deposu açar ve kit klasörüne dokunmaz. Proje tipi kurulumda değil, <code>/start</code> sırasında soruyla seçilir.</p>
   <p><b>Gereksinimler:</b> <a href="https://claude.com/claude-code">Claude Code</a>, Git, Node.js 18+.</p>
-<pre class="term"><span class="c"># 1. Proje klasörü ve içinde kit</span>
+<pre class="term"><span class="c"># 1. Proje klasöründe kiti kur (npm ile, önerilen)</span>
 mkdir yeni-proje &amp;&amp; cd yeni-proje
-git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
-node vibe-kit/kit/kit.mjs init      <span class="c"># vibe-kit/ .gitignore'a girer</span>
+npx tillerhand init
 claude
+<span class="c"># ya da git ile: kit proje içinde vibe-kit/ klasöründe durur (.gitignore'a girer)</span>
+git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
+node vibe-kit/kit/kit.mjs init
 <span class="c"># 2. Claude Code içinde (yeni oturum)</span>
 /start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
 <span class="c"># var olan projede /start yerine:</span>
@@ -549,7 +548,7 @@ claude
   <ol>
     <li><b>Hesaplar (bir kez):</b> <a href="https://github.com">GitHub</a> hesabı (ücretsiz) ve Claude <b>Pro</b> veya <b>Max</b> aboneliği.</li>
     <li><b>Programlar (bir kez):</b> <a href="https://claude.com/download">Claude masaüstü uygulaması</a>, <a href="https://nodejs.org">Node.js</a> (LTS sürümü), <a href="https://git-scm.com/downloads">Git</a>. İstersen <a href="https://desktop.github.com">GitHub Desktop</a> da kurabilirsin.</li>
-    <li><b>Proje:</b> Projen için bir klasör aç ve Claude masaüstü uygulamasında <b>Code</b> sekmesinde seç. Claude'a yaz: "github.com/burakdogrul/TillerHand reposunu bu klasörün içine vibe-kit adıyla klonla, sonra <code>node vibe-kit/kit/kit.mjs init</code> çalıştır".</li>
+    <li><b>Proje:</b> Projen için bir klasör aç ve Claude masaüstü uygulamasında <b>Code</b> sekmesinde seç. Claude'a yaz: "bu klasörde <code>npx tillerhand init</code> komutunu çalıştır".</li>
     <li><b>Aç:</b> Aynı klasörde <b>yeni oturum</b> aç; kitin komutları ve korumaları yeni oturumda yüklenir. Eklentileri kurmayı önerirse kabul et.</li>
     <li><b>Başlat:</b> <code>/start fikrin</code> yaz. <b>Her sorunun ilk seçeneği önerilendir</b>; emin değilsen onu seç. Pro'daysan ilk sorular için öneri: profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (5 saatlik limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
   </ol>
@@ -953,7 +952,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
   <p class="path">Başka araçla</p>
   <h2>Codex ve Antigravity</h2>
   <p class="lead">TillerHand Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü ve durum çubuğu bu araçlarda yok.</p>
-<pre class="term">node vibe-kit/kit/kit.mjs init --tool codex          <span class="c"># ya da antigravity, ya da claude,codex</span>
+<pre class="term">npx tillerhand init --tool codex          <span class="c"># ya da antigravity, ya da claude,codex</span>
 <span class="c"># var olan projeye araç eklemek</span>
 /kit-update --tool claude,codex</pre>
   <div class="table-wrap"><table>

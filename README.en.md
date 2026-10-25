@@ -56,7 +56,7 @@ You don't need to know how to code. Claude handles git, the terminal and install
 
 **2. Create your project**
 1. Make a folder for your project and select it in the **Code** tab of the Claude desktop app.
-2. Type: `clone github.com/burakdogrul/TillerHand into this folder as vibe-kit, then run node vibe-kit/kit/kit.mjs init`.
+2. Type: `run npx tillerhand init in this folder`.
 3. **Start a new session** in the same folder. The kit's commands and guardrails load in the new session.
 
 **3. Start**
@@ -87,14 +87,20 @@ Claude asks its questions one by one. **The first option is always the recommend
 
 ```bash
 mkdir my-app && cd my-app
+npx tillerhand init
+claude
+```
+
+With git instead of npm (the kit stays in a `vibe-kit/` folder inside the project and goes into `.gitignore`):
+
+```bash
 git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
 node vibe-kit/kit/kit.mjs init
-claude
 ```
 
 - On first launch Claude Code offers to install the kit's skill plugins; accept.
 - Kit in another folder: `node <kit>/kit/kit.mjs init --project <project>`.
-- For Codex or Antigravity: `node vibe-kit/kit/kit.mjs init --tool codex` (several: `--tool claude,codex`).
+- For Codex or Antigravity: `npx tillerhand init --tool codex` (several: `--tool claude,codex`).
 - Recommended: a code map ([codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp)). The AI queries the code instead of reading it file by file, which saves tokens. `/start` offers to install it.
 
 ## How it works

@@ -3,6 +3,13 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.27.2] - 2026-10-25
+
+### Belgeler
+- **README ve rehberde npm ile kurulum:** `npx tillerhand init` önerilen yol; git klonu seçenek olarak duruyor. Codex/Antigravity için `npx tillerhand init --tool codex`.
+- **Rehber:** Üstteki "Hemen başla" ve "Nasıl çalışır?" düğmeleri kaldırıldı. Kurulum komutları ve terminal blokları (durum bloğu, alt durum çubuğu) dar ekranda yana kaymadan alt satıra iner.
+- Paket Node.js 18 ve üstünü kabul eder (belgedeki gereksinimle aynı).
+
 ## [3.27.1] - 2026-10-25
 
 ### Düzeltilen

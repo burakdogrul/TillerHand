@@ -54,7 +54,7 @@ Kod yazmayı bilmen gerekmez. Git, terminal ve kurulum işlerini Claude yapar; s
 
 **2. Projeni oluştur**
 1. Projen için bir klasör aç ve Claude masaüstü uygulamasında **Code** sekmesinde seç.
-2. Şunu yaz: `github.com/burakdogrul/TillerHand reposunu bu klasörün içine vibe-kit adıyla klonla, sonra node vibe-kit/kit/kit.mjs init komutunu çalıştır`.
+2. Şunu yaz: `bu klasörde npx tillerhand init komutunu çalıştır`.
 3. Aynı klasörde **yeni oturum aç**. Kitin komutları ve korumaları yeni oturumda yüklenir.
 
 **3. Başlat**
@@ -85,14 +85,20 @@ Claude sırayla soru sorar. **Her sorunun ilk seçeneği önerilendir**; emin de
 
 ```bash
 mkdir yeni-proje && cd yeni-proje
+npx tillerhand init
+claude
+```
+
+npm yerine git ile (kit, proje içinde `vibe-kit/` klasöründe durur ve `.gitignore`'a girer):
+
+```bash
 git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
 node vibe-kit/kit/kit.mjs init
-claude
 ```
 
 - Açılışta Claude Code, kitin skill eklentilerini kurmayı önerir; kabul et.
 - Kit başka bir klasördeyse: `node <kit>/kit/kit.mjs init --project <proje>`.
-- Codex veya Antigravity için: `node vibe-kit/kit/kit.mjs init --tool codex` (birden fazlası: `--tool claude,codex`).
+- Codex veya Antigravity için: `npx tillerhand init --tool codex` (birden fazlası: `--tool claude,codex`).
 - Önerilen: kod haritası ([codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp)). AI kodu dosya dosya okumak yerine sorgular, token tasarrufu sağlar. `/start` kurmayı sorar.
 
 ## Nasıl çalışır

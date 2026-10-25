@@ -1,6 +1,6 @@
 {
   "name": "tillerhand",
-  "version": "3.27.1",
+  "version": "3.27.2",
   "description": "Claude Code, Codex ve Antigravity için Türkçe vibe coding kiti: kurallar, komutlar, korumalar ve proje şablonları.",
   "license": "MIT",
   "type": "module",
@@ -22,7 +22,7 @@
     "CLAUDE.md"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=18"
   },
   "repository": {
     "type": "git",
