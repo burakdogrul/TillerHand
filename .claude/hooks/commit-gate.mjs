@@ -11,7 +11,6 @@ import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { findRoot, isMain } from './shared.mjs';
 import { unquote } from './destructive-guard.mjs';
-import { approvedCommands, commandList } from './gate.mjs'; // circular import: used at run time only
 
 // Project root (the script's location) even when called from a subfolder: approval and gate must not be written elsewhere
 const root = findRoot();
@@ -29,7 +28,9 @@ export function changes() {
   const untracked = list('ls-files --others --exclude-standard -z').filter((f) => !f.startsWith('.claude/state/'));
   const staged = new Set(list('diff --cached --no-renames --name-only -z')), unstaged = new Set(list('diff --no-renames --name-only -z'));
   const files = [...new Set([...staged, ...unstaged, ...untracked])].sort();
-  const partial = files.filter((f) => staged.has(f) && unstaged.has(f));
+  // A file marked assume-unchanged or skip-worktree hides index-vs-disk changes from "git diff": its index blob always counts
+  const hidden = list('ls-files -v -z').filter((l) => /^([a-z]|S) /.test(l)).map((l) => l.slice(2));
+  const partial = [...new Set([...files.filter((f) => staged.has(f) && unstaged.has(f)), ...hidden])].sort();
   const blobs = new Map(partial.length ? list('ls-files -s -z').map((l) => [l.slice(l.indexOf('\t') + 1), l.split(' ')[1]]) : []);
   const h = crypto.createHash('sha256');
   for (const f of files) {
@@ -120,7 +121,7 @@ export function maskOwnHook(command, dir) {
   });
 }
 
-function hook() {
+async function hook() {
   let command = '', dir = root;
   try {
     const input = JSON.parse(fs.readFileSync(0, 'utf8'));
@@ -147,6 +148,8 @@ function hook() {
         permissionDecisionReason: 'Kapı komut onayı sadece tam bu yazımla, tek başına çalıştırılır (zincir, ortam değişkeni, bayrak, yönlendirme yok): node .claude/hooks/gate.mjs --approve' } }));
       process.exit(0);
     }
+    // Loaded only here: every Bash call runs this hook, and gate.mjs pulls in the dashboard and edit-round modules
+    const { approvedCommands, commandList } = await import('./gate.mjs');
     const list = commandList(approvedCommands(root)) || '(tanımlı komut yok)';
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
       permissionDecisionReason: `Kapı komut onayı: AGENTS.md → Komutlar'daki şu komutlar bundan sonra her kapıda çalışır:\n${list}\nGüvendiğin komutlarsa onayla.` } }));

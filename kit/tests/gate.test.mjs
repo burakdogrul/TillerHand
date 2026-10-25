@@ -326,3 +326,17 @@ test('3.28.1 audit: the exemption needs one plain command; arguments fed from el
     'node .claude/hooks/commit-gate.mjs < args.txt', 'node .claude/hooks/commit-gate.mjs $(<args.txt)'])
     assert.equal(evaluate(c)?.decision, 'ask', c);
 });
+
+test('3.28.2 audit: content staged behind skip-worktree or assume-unchanged voids the approval', () => {
+  agents('node -e "process.exit(0)"');
+  sh('git add -A && git commit -qm ara5 --allow-empty');
+  write('a.js', 'onayli');
+  runGate();
+  approve('board-qa');
+  const blob = execSync('git hash-object -w --stdin', { cwd: p, input: 'kotu', encoding: 'utf8' }).trim();
+  sh(`git update-index --cacheinfo 100644,${blob},a.js`);
+  sh('git update-index --skip-worktree a.js');
+  assert.equal(commit().status, 2, 'the index holds content that was not approved');
+  sh('git update-index --no-skip-worktree a.js');
+  sh('git add a.js');
+});

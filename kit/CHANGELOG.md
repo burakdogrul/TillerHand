@@ -3,6 +3,13 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.28.2] - 2026-10-26
+
+### Düzeltilen
+- **`skip-worktree` ya da `assume-unchanged` işaretli bir dosyada sahneye konan içerik commit onayını delebiliyordu.** Bu işaretler sahne ile disk arasındaki farkı `git diff`'ten gizliyor. 3.28.1'deki yeni imza da bu yüzden onaylanmamış içeriği göremiyordu. İşaretli dosyaların sahnedeki içeriği artık her zaman imzaya giriyor.
+- **Commit kapısı her Bash komutunda daha hızlı.** Kapı modülü yalnız kapı komut onayında yükleniyor.
+  - Elle uyarla: yok.
+
 ## [3.28.1] - 2026-10-26
 
 ### Düzeltilen
