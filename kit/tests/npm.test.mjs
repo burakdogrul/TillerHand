@@ -55,6 +55,8 @@ test('Ö-09.1 npx tillerhand init sets up a project from the package: .gitignore
     fs.mkdirSync(project);
     const r = spawnSync('npx', ['--yes', '--package', tgz, 'tillerhand', 'init'].map(q), { cwd: project, encoding: 'utf8', shell: WIN, env: { ...process.env, NODE_TEST_CONTEXT: undefined } });
     assert.equal(r.status, 0, r.stderr);
+    const seen = () => `stdout: ${r.stdout}\nstderr: ${r.stderr}\nproject: ${fs.readdirSync(project).join(' ')}\ntmp: ${fs.readdirSync(tmp).join(' ')}`;
+    assert.ok(fs.existsSync(path.join(project, '.gitignore')), seen());
     assert.match(fs.readFileSync(path.join(project, '.gitignore'), 'utf8'), /^\.env$/m, '.env stays out of git');
     for (const f of ['AGENTS.md', '.claude/hooks/guard-secrets.mjs', '.claude/settings.json']) assert.ok(fs.existsSync(path.join(project, f)), f);
     for (const f of ['package.json', '.github/workflows/npm-publish.yml', '.github/workflows/kit-tests.yml']) assert.ok(!fs.existsSync(path.join(project, f)), `${f} is the kit's own`);

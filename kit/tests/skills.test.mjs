@@ -130,7 +130,8 @@ test('plugin sync: finds the missing and the disabled, ignores installs in anoth
   const root = path.resolve(os.tmpdir(), 'proje-a');
   const installed = [
     { id: 'caveman@caveman', scope: 'user' },
-    { id: 'hookify@claude-plugins-official', scope: 'project', projectPath: root.toUpperCase() },
+    // Windows paths ignore case; Linux and macOS paths do not
+    { id: 'hookify@claude-plugins-official', scope: 'project', projectPath: process.platform === 'win32' ? root.toUpperCase() : root },
     { id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'proje-b') },
   ];
   const enabled = { 'caveman@caveman': true, 'hookify@claude-plugins-official': true, 'fp-check@trailofbits': true, 'remotion@remotion': false };
