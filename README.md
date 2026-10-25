@@ -63,7 +63,7 @@ Kit ve projen ayrı klasörlerde durur. Kit dosyaları uygulamanın arasına kar
 
 1. Projen için bir klasör aç (örn. `Belgeler/fatura-takip`).
 2. Claude masaüstü uygulamasında **Code** sekmesine geç ve bu klasörü seç.
-3. Şunu yaz: `github.com/burakdogrul/vibecoding reposunu bu klasörün içine vibe-kit adıyla klonla, sonra node vibe-kit/kit/kit.mjs init komutunu çalıştır`.
+3. Şunu yaz: `github.com/burakdogrul/TillerHand reposunu bu klasörün içine vibe-kit adıyla klonla, sonra node vibe-kit/kit/kit.mjs init komutunu çalıştır`.
    - Kit, ihtiyaç duyulan dosyaları (`.claude/`, `CLAUDE.md`, `docs/`) proje klasörüne kopyalar, git deposu açar ve `vibe-kit/` klasörünü `.gitignore`'a ekler. Kit klasörüne dokunulmaz.
    - Kiti tek bir yerde de tutabilirsin (örn. `Belgeler/vibe-kit`). O zaman her yeni projede `node ../vibe-kit/kit/kit.mjs init` yeterli.
 4. **Yeni oturum aç** (sol üstte yeni oturum, aynı klasör). Kitin komutları ve korumaları yeni oturumda yüklenir.
@@ -111,7 +111,7 @@ Kitin GitHub sayfasında **Use this template → Create a new repository** ile y
 
 ```bash
 mkdir yeni-proje && cd yeni-proje
-git clone https://github.com/burakdogrul/vibecoding.git vibe-kit
+git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
 node vibe-kit/kit/kit.mjs init
 claude
 ```
