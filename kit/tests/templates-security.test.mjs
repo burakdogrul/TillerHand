@@ -95,3 +95,14 @@ test('format hook: runs Prettier without a shell, so a spaced or quoted path wor
     fs.rmSync(p, { recursive: true, force: true });
   }
 });
+
+test('template copies stay identical (one fix must reach every type)', () => {
+  const same = [
+    ['.github/workflows/claude-ci-fix.yml', ['web-saas', 'mobile', 'backend']],
+    ['.github/workflows/claude-maintenance.yml', ['web-saas', 'mobile', 'backend']],
+    ['.claude/hooks/format.mjs', ['web-saas', 'mobile']],
+    [RLS, ['web-saas', 'mobile']],
+  ];
+  for (const [file, types] of same)
+    for (const t of types.slice(1)) assert.equal(read(`kit/templates/${t}/${file}`), read(`kit/templates/${types[0]}/${file}`), `${t}/${file} differs from ${types[0]}`);
+});
