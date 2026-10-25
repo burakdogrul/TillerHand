@@ -19,6 +19,9 @@ test('package gate: extracts package names from commands', () => {
   assert.deepEqual(findPackages('pip install -r requirements.txt requests==2.32'), [{ eco: 'pypi', name: 'requests' }]);
   assert.deepEqual(findPackages('npm install'), [], 'an install without arguments (lock file) is not checked');
   assert.deepEqual(findPackages('npm run build && git status'), []);
+  // 3.20.1: a redirect is not a package name (2>&1 was reported as a made-up package and the install was blocked)
+  for (const c of ['npm install -D zod 2>&1 | tail -2', 'npm i zod > kurulum.log', 'npm i zod 2>/dev/null', 'npm i zod &> log.txt', 'pip install requests >> out.txt'])
+    assert.deepEqual(findPackages(c).map((x) => x.name), [c.startsWith('pip') ? 'requests' : 'zod'], c);
 });
 
 test('package gate: catches a name that looks like a popular package', () => {

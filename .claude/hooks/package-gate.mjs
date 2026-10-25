@@ -44,7 +44,8 @@ export function findPackages(command) {
     const match = COMMANDS.find(([re]) => re.test(s));
     if (!match) continue;
     const [re, eco] = match;
-    const args = s.replace(re, '').trim().split(/\s+/).map((x) => x.replace(/^['"]|['"]$/g, '')).filter(Boolean);
+    // Redirects (2>&1, > log, 2>/dev/null, &> x) are not arguments; a quoted "pkg>=1" has no space before ">" and stays
+    const args = s.replace(re, '').replace(/\s+(\d*|&)(>>?|<)(&\d+|\s*[^\s'"]+)/g, '').trim().split(/\s+/).map((x) => x.replace(/^['"]|['"]$/g, '')).filter(Boolean);
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
       if (a.startsWith('-')) {

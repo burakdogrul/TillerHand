@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.20.1] - 2026-10-25
+
+### Düzeltilen
+- **Paket kapısı yönlendirmeyi paket sanmıyor.** `npm install zod 2>&1 | tail` gibi komutlarda `2>&1` "kayıt defterinde olmayan paket" sayılıp kurulum engelleniyordu. `> dosya`, `2>/dev/null`, `&> dosya` gibi yönlendirmeler artık argümanlardan ayıklanıyor.
+
 ## [3.20.0] - 2026-10-25
 
 ### Yeni
