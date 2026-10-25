@@ -1,195 +1,530 @@
-<title>Vibe Coding Kit</title>
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TillerHand · Kodu AI yazar, dümen sende</title>
+<meta name="description" content="TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götüren başlangıç kiti. Kodu AI yazar, kararları sen verirsin.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Ccircle cx='36' cy='36' r='30' fill='none' stroke='%230f172a' stroke-width='6'/%3E%3Cpath d='M36 36 L57 15' stroke='%232a78d6' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='57' cy='15' r='10' fill='%232a78d6'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: tek okuma sütunu; aşamalar dikey zaman çizgisi, her aşamada "çıkış kapısı" kutusu. */
 :root {
-  --bg: #f5f7fa;
+  --bg: #ffffff;
+  --bg-soft: #f6f8fb;
   --surface: #ffffff;
-  --fg: #172033;
-  --muted: #586378;
-  --line: #dce2eb;
-  --accent: #2648c9;
-  --accent-soft: #e6ecfc;
-  --gate: #8a5a00;
-  --gate-soft: #fdf3dd;
-  --code-bg: #eef1f6;
-  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+  --fg: #0f172a;
+  --fg-2: #334155;
+  --muted: #5b6577;
+  --line: #e4e8ee;
+  --line-strong: #cfd6e0;
+  --accent: #2a78d6;
+  --accent-ink: #1d5fb0;
+  --accent-soft: #eaf2fc;
+  --ok: #1f8a4c;
+  --ok-soft: #e7f5ec;
+  --warn: #9a6200;
+  --warn-soft: #fdf4e3;
+  --bad: #c2362b;
+  --bad-soft: #fdecea;
+  --code-bg: #f3f5f8;
+  --term-bg: #0f172a;
+  --term-fg: #dbe4f0;
+  --term-dim: #7d8aa0;
+  --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .06);
+  --font: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --radius: 14px;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f141d; --surface: #161d2a; --fg: #e4e9f2; --muted: #9aa5b8; --line: #283246;
-    --accent: #8ea8ff; --accent-soft: #1c2847; --gate: #f2c46b; --gate-soft: #2b2416; --code-bg: #1d2535;
+    --bg: #0b0f16; --bg-soft: #10161f; --surface: #121923; --fg: #e8eef6; --fg-2: #c3cdda; --muted: #94a0b2;
+    --line: #222c39; --line-strong: #2f3a49; --accent: #5aa2ec; --accent-ink: #8cc0f5; --accent-soft: #14253a;
+    --ok: #4cc27f; --ok-soft: #12261b; --warn: #e9b44c; --warn-soft: #2a2213; --bad: #f07167; --bad-soft: #2c1615;
+    --code-bg: #18212d; --term-bg: #070a10; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0f141d; --surface: #161d2a; --fg: #e4e9f2; --muted: #9aa5b8; --line: #283246;
-  --accent: #8ea8ff; --accent-soft: #1c2847; --gate: #f2c46b; --gate-soft: #2b2416; --code-bg: #1d2535;
+  --bg: #0b0f16; --bg-soft: #10161f; --surface: #121923; --fg: #e8eef6; --fg-2: #c3cdda; --muted: #94a0b2;
+  --line: #222c39; --line-strong: #2f3a49; --accent: #5aa2ec; --accent-ink: #8cc0f5; --accent-soft: #14253a;
+  --ok: #4cc27f; --ok-soft: #12261b; --warn: #e9b44c; --warn-soft: #2a2213; --bad: #f07167; --bad-soft: #2c1615;
+  --code-bg: #18212d; --term-bg: #070a10; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
-body {
-  background: var(--bg); color: var(--fg);
-  font: 400 16px/1.6 var(--font-body);
-  padding-inline: 16px; padding-block: 0 64px;
-}
-.wrap { max-width: 920px; margin: 0 auto; }
-h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
-h1 { font-size: clamp(2.1rem, 5vw, 3.2rem); font-weight: 700; letter-spacing: -0.02em; }
-h2 { font-size: clamp(1.5rem, 3.2vw, 2rem); font-weight: 700; letter-spacing: -0.01em; }
-h3 { font-size: 1.15rem; font-weight: 700; }
-p { margin: 0; }
-a { color: var(--accent); }
-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
-code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
-code { background: var(--code-bg); padding: 0.1em 0.38em; border-radius: 4px; overflow-wrap: anywhere; }
-.eyebrow { font: 500 0.75rem/1.3 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.lede { font-size: 1.12rem; color: var(--muted); max-width: 62ch; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--accent-ink); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+code { font: .86em var(--mono); background: var(--code-bg); padding: .12em .4em; border-radius: 6px; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.02em; margin: 0; }
+p { margin: 0 0 1em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
 
-header.top { padding-block: 56px 32px; display: grid; gap: 18px; }
-nav.toc { display: flex; flex-wrap: wrap; gap: 8px; }
-nav.toc a {
-  font: 500 0.85rem/1 var(--font-body); text-decoration: none; color: var(--fg);
-  border: 1px solid var(--line); background: var(--surface); padding: 8px 12px; border-radius: 999px;
-}
-nav.toc a:hover { border-color: var(--accent); color: var(--accent); }
+/* Üst menü */
+.nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+.nav .container { display: flex; align-items: center; gap: 24px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; color: var(--fg); letter-spacing: -.02em; }
+.brand:hover { text-decoration: none; }
+.mark { width: 26px; height: 26px; flex: none; }
+.nav-links { display: flex; gap: 22px; margin-left: auto; font-size: 14.5px; }
+.nav-links a { color: var(--fg-2); font-weight: 500; }
+.nav-links a:hover { color: var(--fg); text-decoration: none; }
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 10px; font-weight: 600; font-size: 15px; border: 1px solid transparent; transition: transform .15s ease, background .15s ease; }
+.btn:hover { text-decoration: none; transform: translateY(-1px); }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-ink); }
+.btn.ghost { border-color: var(--line-strong); color: var(--fg); background: var(--surface); }
+.btn.small { height: 36px; padding: 0 14px; font-size: 14px; }
 
-section { padding-block: 40px; border-top: 1px solid var(--line); display: grid; gap: 20px; }
-.section-head { display: grid; gap: 8px; }
+/* Hero */
+.hero { padding: 88px 0 72px; background: radial-gradient(1000px 420px at 85% -10%, var(--accent-soft), transparent 70%); }
+.hero .container { display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--fg-2); border: 1px solid var(--line-strong); background: var(--surface); padding: 4px 12px 4px 6px; border-radius: 999px; margin-bottom: 22px; }
+.pill b { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; padding: 1px 8px; border-radius: 999px; font-size: 12px; }
+.hero h1 { font-size: clamp(40px, 5.6vw, 64px); font-weight: 800; letter-spacing: -.035em; line-height: 1.04; margin-bottom: 22px; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero .sub { font-size: 19px; color: var(--fg-2); max-width: 34em; margin-bottom: 30px; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 30px; }
+.install { display: flex; align-items: center; gap: 10px; max-width: 520px; background: var(--term-bg); color: var(--term-fg); border-radius: 12px; padding: 12px 12px 12px 18px; font: 14px var(--mono); }
+.install span { flex: 1; overflow-x: auto; white-space: nowrap; }
+.install span::before { content: "$ "; color: var(--term-dim); }
+.copy { flex: none; background: rgba(255,255,255,.08); color: var(--term-fg); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; font: 500 12.5px var(--font); padding: 6px 10px; cursor: pointer; }
+.copy:hover { background: rgba(255,255,255,.16); }
+.hero-note { font-size: 13.5px; color: var(--muted); margin-top: 14px; }
 
-pre.term {
-  margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
-  padding: 16px 18px; overflow-x: auto; font: 400 0.88rem/1.7 var(--font-mono);
-}
-pre.term .c { color: var(--muted); }
+/* Ürün kartları (çizilmiş ekranlar) */
+.window { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.window .bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; border-bottom: 1px solid var(--line); background: var(--bg-soft); font-size: 12.5px; color: var(--muted); }
+.window .bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+.window .bar span { margin-left: 8px; font-weight: 500; }
+.window .body { padding: 20px; }
+.ctx { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+.q { font-weight: 700; font-size: 17px; margin-bottom: 14px; letter-spacing: -.01em; }
+.opt { display: block; border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; margin-bottom: 8px; font-size: 14px; }
+.opt b { display: block; font-size: 14.5px; }
+.opt span { color: var(--muted); font-size: 13px; line-height: 1.45; display: block; margin-top: 2px; }
+.opt.rec { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
+.opt.rec b { color: var(--accent-ink); }
+.board-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line-strong); font-size: 12.5px; color: var(--muted); align-items: center; }
+.tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); }
+.tag.warn { background: var(--warn-soft); color: var(--warn); }
+.tag.bad { background: var(--bad-soft); color: var(--bad); }
+.tag.info { background: var(--accent-soft); color: var(--accent-ink); }
 
-/* Aşamalar: dikey zaman çizgisi */
-.phases { display: grid; gap: 0; }
-.phase { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 0 20px; }
-.phase .rail { display: flex; flex-direction: column; align-items: center; }
-.phase .num {
-  width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
-  font: 700 1.3rem/1 var(--font-display); background: var(--accent); color: var(--bg); flex: none;
-}
-.phase .rail::after { content: ""; flex: 1; width: 2px; background: var(--line); margin-block: 6px; }
-.phase:last-child .rail::after { display: none; }
-.phase .body { display: grid; gap: 14px; padding-bottom: 40px; min-width: 0; }
-.phase .when { font: 500 0.8rem/1.3 var(--font-mono); color: var(--accent); letter-spacing: 0.04em; text-transform: uppercase; }
-.phase .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.kv { display: grid; gap: 6px; align-content: start; min-width: 0; }
-.kv .k { font: 500 0.72rem/1.3 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font: 500 0.8rem/1.3 var(--font-mono); background: var(--accent-soft); color: var(--accent); padding: 6px 9px; border-radius: 6px; }
-.gate {
-  background: var(--gate-soft); border: 1px solid color-mix(in srgb, var(--gate) 35%, transparent); border-radius: 8px;
-  padding: 14px 16px; display: grid; gap: 8px;
-}
-.gate .k { font: 600 0.75rem/1.3 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--gate); }
-.gate ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; }
+/* Bölümler */
+.band { padding: 96px 0; }
+.band.soft { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.kicker { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 12px; }
+.band h2 { font-size: clamp(30px, 3.6vw, 42px); font-weight: 800; letter-spacing: -.03em; margin-bottom: 16px; }
+.band .lead { font-size: 18px; color: var(--fg-2); max-width: 46em; margin-bottom: 48px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; }
+.card h3 { font-size: 18px; margin-bottom: 10px; }
+.card p { color: var(--fg-2); font-size: 15px; margin: 0; }
+.problem .was { font-size: 14px; color: var(--muted); padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.problem .was b { color: var(--bad); font-weight: 600; display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+.problem .now b { color: var(--ok); font-weight: 600; display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+.icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-ink); display: grid; place-items: center; margin-bottom: 16px; }
+.icon svg { width: 22px; height: 22px; }
 
-/* Geliştirme döngüsü */
-.loop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.loop .step { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font: 500 0.88rem/1.2 var(--font-mono); }
-.loop .arrow { color: var(--muted); font-family: var(--font-mono); }
-.loop .step.back { border-style: dashed; color: var(--muted); }
+/* Döngü */
+.cycle { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; margin-top: 8px; }
+.cycle li { list-style: none; position: relative; padding: 0 14px; text-align: center; }
+.cycle li::after { content: ""; position: absolute; top: 27px; left: calc(50% + 34px); right: calc(-50% + 34px); height: 2px; background: var(--line-strong); }
+.cycle li:last-child::after { display: none; }
+.cycle .dot { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px; display: grid; place-items: center; font-weight: 800; font-size: 18px; border: 2px solid var(--line-strong); background: var(--surface); color: var(--fg-2); animation: pulse 10s infinite; }
+.cycle li:nth-child(1) .dot { animation-delay: 0s; }
+.cycle li:nth-child(2) .dot { animation-delay: 2s; }
+.cycle li:nth-child(3) .dot { animation-delay: 4s; }
+.cycle li:nth-child(4) .dot { animation-delay: 6s; }
+.cycle li:nth-child(5) .dot { animation-delay: 8s; }
+.cycle li.you .dot { border-color: var(--accent); color: var(--accent-ink); }
+@keyframes pulse { 0%, 18%, 100% { background: var(--surface); transform: scale(1); } 6%, 12% { background: var(--accent); color: #fff; border-color: var(--accent); transform: scale(1.08); } }
+.cycle h3 { font-size: 16px; margin-bottom: 6px; }
+.cycle p { font-size: 14px; color: var(--muted); margin: 0; }
+.back { text-align: center; margin-top: 28px; font-size: 14px; color: var(--muted); }
+.back span { display: inline-block; border: 1px dashed var(--line-strong); border-radius: 999px; padding: 6px 16px; }
 
-/* Tablolar */
-.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
-table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
-th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+/* Anlar */
+.moments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.moment h3 { font-size: 17px; margin: 18px 0 6px; }
+.moment > p { color: var(--muted); font-size: 15px; margin: 0; }
+.term { background: var(--term-bg); color: var(--term-fg); font: 13px/1.7 var(--mono); padding: 18px 20px; border-radius: 12px; overflow-x: auto; white-space: pre; margin: 0 0 1.2em; }
+.term .c { color: var(--term-dim); }
+.term .r { color: #ff8a80; font-weight: 600; }
+.term .g { color: #7ee2a8; }
+.term .y { color: #ffd479; }
+.window .term { border-radius: 0; margin: 0; }
+
+/* Ölçüm */
+.stats { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: stretch; }
+.bars .row { display: grid; grid-template-columns: 120px 1fr 56px; gap: 14px; align-items: center; margin-bottom: 16px; font-size: 15px; }
+.bars .track { height: 14px; background: var(--code-bg); border-radius: 999px; overflow: hidden; }
+.bars .fill { height: 100%; border-radius: 999px; background: var(--line-strong); }
+.bars .fill.kit { background: var(--accent); }
+.bars .val { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.big { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.big .card { padding: 22px; }
+.big .num { font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1; margin-bottom: 8px; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.big .card p { font-size: 14px; }
+.fine { font-size: 13.5px; color: var(--muted); margin-top: 20px; }
+
+/* Rehber düzeni */
+.docs { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 56px; padding-top: 24px; padding-bottom: 96px; }
+.side { position: sticky; top: 84px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; font-size: 14px; padding-right: 8px; }
+.side p { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 20px 0 8px; }
+.side p:first-child { margin-top: 0; }
+.side a { display: block; color: var(--fg-2); padding: 5px 12px; border-left: 2px solid var(--line); }
+.side a:hover { color: var(--fg); text-decoration: none; border-left-color: var(--line-strong); }
+.side a.on { color: var(--accent-ink); border-left-color: var(--accent); font-weight: 600; }
+.doc section { padding-top: 56px; margin-top: 8px; border-top: 1px solid var(--line); }
+.doc section:first-child { border-top: 0; padding-top: 8px; }
+.doc .path { font: 12.5px var(--mono); color: var(--muted); margin-bottom: 8px; }
+.doc h2 { font-size: 30px; font-weight: 800; letter-spacing: -.025em; margin-bottom: 12px; }
+.doc h3 { font-size: 19px; margin: 32px 0 12px; }
+.doc .lead { font-size: 17px; color: var(--fg-2); margin-bottom: 26px; max-width: 48em; }
+.doc ol, .doc ul { padding-left: 1.3em; }
+.doc li { margin-bottom: 6px; }
+.note { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; font-size: 14.5px; color: var(--fg-2); margin: 20px 0; }
+.note.accent { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; margin: 0 0 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+th { text-align: left; font-weight: 600; font-size: 13px; color: var(--muted); background: var(--bg-soft); padding: 11px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--fg-2); }
 tr:last-child td { border-bottom: 0; }
-th { font: 600 0.75rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
-td.f { font-family: var(--font-mono); font-size: 0.84rem; white-space: nowrap; }
-.matrix td.m { text-align: center; font: 600 0.82rem/1 var(--font-mono); font-variant-numeric: tabular-nums; }
-.matrix th.m { text-align: center; }
-.m-Y { color: var(--accent); }
-.m-G { color: var(--fg); }
-.m-O { color: var(--muted); }
-.m-K { color: var(--gate); }
-.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.86rem; color: var(--muted); }
-.legend b { font-family: var(--font-mono); }
+td.f { font: 13px var(--mono); color: var(--fg); white-space: nowrap; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin: 0 0 20px; }
+.tile { border: 1px solid var(--line); border-radius: 12px; padding: 18px; background: var(--surface); }
+.tile h3 { font-size: 15.5px; margin: 0 0 4px; }
+.tile .stack { font: 12px var(--mono); color: var(--muted); margin-bottom: 10px; }
+.tile ul { margin: 0; padding-left: 1.1em; font-size: 14px; color: var(--fg-2); }
+.tile ul li { margin-bottom: 3px; }
+.tile p { font-size: 14px; color: var(--fg-2); margin: 0; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 22px; }
+.flow span { font-size: 13.5px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 5px 13px; }
+.flow i { font-style: normal; color: var(--muted); }
+.phase { display: grid; grid-template-columns: 44px 1fr; gap: 18px; margin-bottom: 28px; }
+.phase .n { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; display: grid; place-items: center; }
+.phase .when { font-size: 12.5px; color: var(--muted); margin: 0 0 2px; font-weight: 500; }
+.phase h3 { margin: 0 0 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.chips span { font: 12.5px var(--mono); background: var(--code-bg); border-radius: 6px; padding: 3px 8px; }
+.gate { border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); background: var(--warn-soft); border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+.gate b { color: var(--warn); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.gate ul { margin: 6px 0 0; }
+.rules { counter-reset: r; list-style: none; padding: 0 !important; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.rules li { counter-increment: r; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 16px 58px; position: relative; margin: 0; }
+.rules li::before { content: counter(r, decimal-leading-zero); position: absolute; left: 18px; top: 16px; font: 600 13px var(--mono); color: var(--accent-ink); }
+.rules b { display: block; margin-bottom: 2px; }
+.rules span { font-size: 14px; color: var(--muted); }
 
-/* Proje tipleri */
-.types { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
-.type { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
-.type .stack { font: 400 0.82rem/1.5 var(--font-mono); color: var(--muted); }
-.type ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 0.93rem; }
+footer { border-top: 1px solid var(--line); padding: 40px 0; font-size: 14px; color: var(--muted); }
+footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; }
 
-/* Kurallar */
-ol.rules { margin: 0; padding: 0; list-style: none; counter-reset: r; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 28px; }
-ol.rules li { counter-increment: r; display: grid; grid-template-columns: 2.2em minmax(0, 1fr); gap: 4px; }
-ol.rules li::before { content: counter(r, decimal-leading-zero); font: 500 0.85rem/1.8 var(--font-mono); color: var(--accent); }
-ol.rules b { display: block; }
-ol.rules span { color: var(--muted); font-size: 0.93rem; }
-
-/* Takvim */
-.cadence { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-.cad { border-top: 3px solid var(--accent); background: var(--surface); border-radius: 0 0 10px 10px; padding: 16px; display: grid; gap: 8px; align-content: start; }
-.cad .dur { font: 500 0.8rem/1.3 var(--font-mono); color: var(--muted); }
-.cad ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; font-size: 0.93rem; }
-
-footer { padding-block: 32px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.88rem; }
-
-@media (max-width: 560px) {
-  .phase { grid-template-columns: 40px minmax(0, 1fr); gap: 0 12px; }
-  .phase .num { width: 36px; height: 36px; font-size: 1.05rem; }
+@media (max-width: 960px) {
+  .hero .container, .stats, .moments { grid-template-columns: minmax(0, 1fr); }
+  .grid3 { grid-template-columns: minmax(0, 1fr); }
+  .docs { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .side { position: static; max-height: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 8px; }
+  .side p { display: none; }
+  .side a { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+  .cycle { grid-template-columns: 1fr; gap: 22px; }
+  .cycle li { display: grid; grid-template-columns: 56px 1fr; gap: 16px; text-align: left; padding: 0; }
+  .cycle li::after { display: none; }
+  .cycle .dot { margin: 0; }
 }
-@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
-html { scroll-behavior: smooth; }
+@media (max-width: 720px) {
+  .container { padding: 0 16px; }
+  .nav-links a:not(.btn) { display: none; }
+  .hero { padding: 56px 0 48px; }
+  .band { padding: 64px 0; }
+  .grid2, .rules, .big { grid-template-columns: minmax(0, 1fr); }
+  .bars .row { grid-template-columns: 92px 1fr 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .cycle .dot { animation: none; }
+  .btn { transition: none; }
+}
 </style>
-<style>
-/* v2 ekleri: soru örneği ve durum bloğu */
-.ask { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 12px; max-width: 640px; }
-.ask .qt { font-weight: 600; }
-.ask .ctx { color: var(--muted); font-size: 0.92rem; }
-.opt { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px; }
-.opt.rec { border-color: var(--accent); background: var(--accent-soft); }
-.opt b { font-size: 0.95rem; }
-.opt span { color: var(--muted); font-size: 0.88rem; }
-.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
-.note { background: var(--gate-soft); border: 1px solid color-mix(in srgb, var(--gate) 35%, transparent); border-radius: 8px; padding: 12px 14px; font-size: 0.93rem; }
-.tools { color: var(--muted); font-size: 0.92rem; }
-</style>
+</head>
+<body>
 
-<div class="wrap">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="0 0 72 72">
+    <circle cx="36" cy="36" r="30" fill="none" stroke="currentColor" stroke-width="5"/>
+    <path d="M36 36 L57 15" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="57" cy="15" r="9" fill="var(--accent)"/>
+    <circle cx="36" cy="36" r="5" fill="currentColor"/>
+  </symbol>
+</svg>
 
-<header class="top">
-  <h1>Vibe Coding Kit</h1>
-  <p class="lede">Bir projeyi fikirden bakıma kadar soru sorarak yürüten şablon. AI hiçbir kararı kendi başına vermez. Seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar; tasarım kararlarını görsel önizlemeyle sorar, her işte uygun skill'i kullanır ve her adımda nerede olduğunu raporlar.</p>
-  <p class="tools">Claude Code için yazıldı; Codex ve Antigravity'de de çalışır.</p>
-  <nav class="toc" aria-label="İçindekiler">
-    <a href="#baslangic">Yeni proje</a>
+<header class="nav">
+  <div class="container">
+    <a class="brand" href="#top"><svg class="mark"><use href="#mark"/></svg>TillerHand</a>
+    <nav class="nav-links" aria-label="Ana menü">
+      <a href="#nasil">Nasıl çalışır</a>
+      <a href="#ekranlar">Ekranlar</a>
+      <a href="#olcum">Ölçüm</a>
+      <a href="#rehber">Rehber</a>
+      <a class="btn ghost small" href="https://github.com/burakdogrul/TillerHand">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="container">
+    <div>
+      <span class="pill"><b>v3.26.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
+      <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
+      <div class="cta">
+        <a class="btn primary" href="#baslangic">Hemen başla</a>
+        <a class="btn ghost" href="#nasil">Nasıl çalışır?</a>
+      </div>
+      <div class="install"><span id="cmd">git clone https://github.com/burakdogrul/TillerHand.git vibe-kit</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
+      <p class="hero-note">Claude Code için yazıldı · Codex ve Antigravity'de de çalışır · Kod bilmen gerekmez</p>
+    </div>
+    <div class="window" aria-label="Örnek: AI'nın sana sorduğu bir karar sorusu">
+      <div class="bar"><i></i><i></i><i></i><span>Claude Code · /start · Adım 4/9</span></div>
+      <div class="body">
+        <p class="ctx">Teknoloji · Bu karar tüm veri katmanını belirler; sonradan değiştirmek pahalı.</p>
+        <p class="q">Veritabanı ve kimlik doğrulama hangisi olsun?</p>
+        <div class="opt rec"><b>Supabase (Önerilen)</b><span>Postgres, kimlik ve dosya depolama tek yerde. Satır bazlı güvenlik hazır; ücretsiz katman MVP için yeterli.</span></div>
+        <div class="opt"><b>Neon + Better Auth</b><span>Daha fazla kontrol, sağlayıcıya bağımlılık az. Kimlik kodu sende kalır.</span></div>
+        <div class="opt"><b>Firebase</b><span>Gerçek zamanlı ve mobil ile ortak backend. NoSQL; ilişkisel sorgu zayıf.</span></div>
+        <div class="board-row">Kurul görüşü: <span class="tag">Mimar ✓</span><span class="tag">Güvenlik ✓</span><span class="tag warn">Maliyet: izle</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SORUN ============ -->
+<section class="band soft">
+  <div class="container">
+    <p class="kicker">Neden</p>
+    <h2>AI ile kod yazmak hızlı. Ürün çıkarmak başka iş.</h2>
+    <p class="lead">"Vibe coding" ile bir demo bir öğleden sonra çıkar. Gerçek kullanıcıya açılan bir ürün ise sessizce verilen kararları, testsiz kodu, sızan anahtarları ve dağılan klasörleri kaldırmaz. TillerHand hızı korur, bu dört açığı kapatır.</p>
+    <div class="grid2">
+      <div class="card problem">
+        <div class="was"><b>Genelde</b>AI veritabanını, kütüphaneyi, veri modelini kendi seçer. Neden öyle olduğunu kimse bilmez.</div>
+        <div class="now"><b>TillerHand'de</b>Her karar 2-4 seçenekle sana gelir: önerilen ilk sırada, her birinin ne zaman daha iyi olduğu ve bedeli yanında. Cevabın günlüğe yazılır, bir daha sorulmaz.</div>
+      </div>
+      <div class="card problem">
+        <div class="was"><b>Genelde</b>"Çalışıyor" denir, test yoktur. Bir sonraki değişiklik eskisini bozar.</div>
+        <div class="now"><b>TillerHand'de</b>Kabul testleri koddan önce yazılır ve önce kırmızı olur. "Bitti" demeden kanıt gösterilir: test çıktısı, ekran görüntüsü.</div>
+      </div>
+      <div class="card problem">
+        <div class="was"><b>Genelde</b>API anahtarı koda girer, prod veritabanı yanlışlıkla silinir, test geçsin diye test zayıflatılır.</div>
+        <div class="now"><b>TillerHand'de</b>Hook'lar bunları daha olmadan durdurur. AI bu korumaları atlatamaz; prod'a giden her adım senin onayını ister.</div>
+      </div>
+      <div class="card problem">
+        <div class="was"><b>Genelde</b>Üç ay sonra kimse dosyaların nerede olduğunu bilmez; <code>final-v2-old.tsx</code> çoğalır.</div>
+        <div class="now"><b>TillerHand'de</b>Özellik bazlı bir klasör haritası yazım anında, CI'da ve kurulda korunur. Dağınıklık dosyaları engellenir.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DÖNGÜ ============ -->
+<section class="band" id="nasil">
+  <div class="container">
+    <p class="kicker">Nasıl çalışır</p>
+    <h2>Her görevde aynı döngü. Ortasında sen varsın.</h2>
+    <p class="lead">TillerHand bir komut listesi değil, bir çalışma düzeni. Fikrini yazarsın, gerisini AI ile birlikte adım adım yürütürsün. Önemli hiçbir şey senin haberin olmadan olmaz.</p>
+    <ol class="cycle">
+      <li><div class="dot">1</div><div><h3>AI planlar</h3><p>Görevi okur, karar noktalarını bulur, seçenekleri hazırlar.</p></div></li>
+      <li class="you"><div class="dot">2</div><div><h3>Sen karar verirsin</h3><p>Önerilen ilk sırada; ne zaman hangisi daha iyi, bedeli ne.</p></div></li>
+      <li><div class="dot">3</div><div><h3>Önce test, sonra kod</h3><p>Kabul testleri kırmızı başlar; kod onları yeşile çevirir.</p></div></li>
+      <li><div class="dot">4</div><div><h3>Kurul denetler</h3><p>İlgili uzmanlar inceler; kritik bulguda iş bitmez.</p></div></li>
+      <li><div class="dot">5</div><div><h3>Kanıtla kaydedilir</h3><p>Kapı yeşilse commit, pano güncellenir, sıradaki görev.</p></div></li>
+    </ol>
+    <p class="back"><span>↺ Her görevde tekrar · faz sonunda bulgu raporları ve kurul toplantısı</span></p>
+
+    <div class="grid3" style="margin-top:56px">
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <h3>Kararı sen verirsin</h3>
+        <p>Ürün, teknik, tasarım, veri, güvenlik ve maliyet kararları gerekçeli seçeneklerle sorulur. Tasarım soruları gerçek içerikli görsel önizlemeyle gelir.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3>Uzman kurulu denetler</h3>
+        <p>Ürün, Mimar, Güvenlik, UX, KVKK ve QA gibi üyeler planı, görevi, commit'i ve fazı inceler. Önemli kararlarda farklı modellerden bir konsey toplanır.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>Korumalar durdurur</h3>
+        <p>Sır engeli, yıkıcı komut kalkanı, paket kapısı, test koruması, commit kapısı. Kurallar yazılı, kontroller otomatik; AI atlatamaz.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div>
+        <h3>Her an neredesin, bilirsin</h3>
+        <p>Her cevabın sonunda durum bloğu, alt çubukta görev ve limit, tarayıcıda canlı bir kontrol paneli.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+        <h3>Bir uzman gözüyle tarar</h3>
+        <p>Teknik, iş, güvenlik, UX, performans ve hukuk için en önemli 20 bulgu; kanıtlı, puanlı ve düzeltme yöntemiyle.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <h3>Canlıya ve ötesine</h3>
+        <p>Hosting, alan adı ve yedek kurulumu adım adım; onaylı prod deploy; canlı izleme ve düzenli bakım.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EKRANLAR ============ -->
+<section class="band soft" id="ekranlar">
+  <div class="container">
+    <p class="kicker">Çalışırken</p>
+    <h2>TillerHand ile bir gün böyle görünür.</h2>
+    <p class="lead">Aşağıdakiler gerçek çıktıların sadeleştirilmiş halleri. Hepsi Claude Code oturumunda, sohbetin içinde olur.</p>
+    <div class="moments">
+      <div class="moment">
+        <div class="window">
+          <div class="bar"><i></i><i></i><i></i><span>Kurul · görev sonu toplantısı</span></div>
+<pre class="term">ÜYE: Güvenlik · KARAR: <span class="r">RET</span>
+BULGULAR:
+<span class="r">[KRİTİK]</span> app/api/invoice/[id]/route.ts:14
+  Fatura sahibi kontrol edilmiyor; başka
+  kullanıcının id'siyle fatura okunur.
+  <span class="g">→ Sorguya user_id koşulu ekle.</span>
+ÜYE: QA · KARAR: <span class="g">ONAY</span>
+KULLANICIYA SORULMALI: yok</pre>
+        </div>
+        <h3>Kurul bir açığı yakalar</h3>
+        <p>Kritik bulgu (RET) varsa görev bitmiş sayılmaz. Sana üç yol sunulur: düzelt, riski gerekçesiyle kabul et ya da görevi geri al.</p>
+      </div>
+      <div class="moment">
+        <div class="window">
+          <div class="bar"><i></i><i></i><i></i><span>Koruma · AI bir dosyaya yazmaya çalışıyor</span></div>
+<pre class="term"><span class="c">Write lib/stripe.ts</span>
+<span class="r">ENGELLENDİ:</span> lib/stripe.ts dosyasına sır
+yazılıyor (Stripe gizli anahtarı).
+Sırrı koda yazma; ortam değişkeninden oku
+ve adını .env.example'a boş değerle ekle.
+
+<span class="c">Bash vercel deploy --prod</span>
+<span class="y">ONAY GEREKİYOR:</span> Prod ortamına deploy.</pre>
+        </div>
+        <h3>Korumalar hatayı daha olmadan durdurur</h3>
+        <p>Engel sohbetin içinde açıklamasıyla gelir. Prod'a, veriye ve paraya dokunan her adım senin onayını bekler.</p>
+      </div>
+      <div class="moment">
+        <div class="window">
+          <div class="bar"><i></i><i></i><i></i><span>Her cevabın sonunda</span></div>
+<pre class="term">── Durum ─────────────────────────────
+Aşama: Faz 1 · Görev: G-012 (7/23)
+Soru modu: açık · Limit: 5s %34 hf %5
+Yapıldı: kayıt formu + doğrulama, test yeşil
+Kurul: <span class="g">ONAY</span> (ux, qa)
+Sıradaki: G-013 şifre sıfırlama
+Bekleyen karar: e-posta servisi</pre>
+        </div>
+        <h3>Nerede olduğunu her an bilirsin</h3>
+        <p>Aşama, görev, limit, kurulun kararı ve sıradaki adım her cevabın sonunda. Bırakıp döndüğünde kaldığın yer hazır.</p>
+      </div>
+      <div class="moment">
+        <div class="window">
+          <div class="bar"><i></i><i></i><i></i><span>dashboard.html</span></div>
+          <div class="body">
+            <p class="ctx">Şimdi · Faz 1 · G-012 kayıt formu</p>
+            <div class="bars" style="margin:6px 0 14px">
+              <div class="row"><span>Yol haritası</span><div class="track"><div class="fill kit" style="width:30%"></div></div><span class="val">7/23</span></div>
+              <div class="row"><span>Güvenlik</span><div class="track"><div class="fill kit" style="width:86%"></div></div><span class="val">86</span></div>
+              <div class="row"><span>UX</span><div class="track"><div class="fill kit" style="width:74%"></div></div><span class="val">74</span></div>
+            </div>
+            <div class="board-row" style="margin-top:0">Dikkat: <span class="tag bad">1 kritik bulgu</span><span class="tag warn">alan adı 21 gün</span><span class="tag info">2 karar bekliyor</span></div>
+          </div>
+        </div>
+        <h3>Proje tek sayfada</h3>
+        <p>Kararlar, kurul, bulgular, kalite, operasyon ve limit; her Claude cevabından sonra kendiliğinden güncellenir.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ÖLÇÜM ============ -->
+<section class="band" id="olcum">
+  <div class="container">
+    <p class="kicker">Ölçüm</p>
+    <h2>Fark, hataları yakalayan testlerde.</h2>
+    <p class="lead">Aynı görevler TillerHand ile ve onsuz <code>claude -p</code> ile koşuldu ve gizli testlerle puanlandı. Sonra koda bilerek hatalar eklendi: Ajanın yazdığı testler bu hataları yakalıyor mu?</p>
+    <div class="stats">
+      <div class="card bars">
+        <h3 style="margin-bottom:22px">Bilerek eklenen hataları yakalayan testler</h3>
+        <div class="row"><span><b>TillerHand</b></span><div class="track"><div class="fill kit" style="width:63%"></div></div><span class="val">%63</span></div>
+        <div class="row"><span>Kitsiz</span><div class="track"><div class="fill" style="width:31%"></div></div><span class="val">%31</span></div>
+        <p class="fine" style="margin-top:8px">Fark en çok örtük gereksinim ve Türkçe sıralama tuzağı olan görevlerde çıktı.</p>
+      </div>
+      <div class="big">
+        <div class="card"><div class="num">24/24</div><p>TillerHand her koşuda testi koddan önce yazdı. Kitsiz koşu hiçbirinde yazmadı.</p></div>
+        <div class="card"><div class="num">81/81</div><p>İki koşul da gizli testlerin hepsini geçti; bu boyuttaki görevleri model kitsiz de çözüyor.</p></div>
+        <div class="card" style="grid-column:1 / -1"><div class="num">≈2×</div><p>Bedeli: yaklaşık 2 kat maliyet ve 1,8 kat süre. Planlama, test ve denetim token harcar; karşılığında kalıcı bir test ağı kalır.</p></div>
+      </div>
+    </div>
+    <p class="fine">Sürüm 3.18.2 · Sonnet · 6 görev · koşul başına 24 koşu. Düzenek ve sonuçlar depoda: <code>kit/eval/</code>.</p>
+  </div>
+</section>
+
+<!-- ============ REHBER ============ -->
+<div class="band soft" style="padding:72px 0 0" id="rehber">
+  <div class="container">
+    <p class="kicker">Rehber</p>
+    <h2>Ayrıntılı rehber</h2>
+    <p class="lead" style="margin-bottom:40px">Kurulumdan bakıma kadar her şey: komutlar, kurul, korumalar, araçlar ve kurallar.</p>
+  </div>
+</div>
+
+<div class="container docs">
+  <nav class="side" aria-label="Rehber içindekiler">
+    <p>Başla</p>
+    <a href="#baslangic">Kurulum</a>
+    <a href="#hic-bilmiyorsan">Hiç bilmiyorsan</a>
+    <a href="#gunluk">Her gün</a>
+    <p>Çalışma şekli</p>
     <a href="#protokol">Karar protokolü</a>
     <a href="#sihirbaz">/start sihirbazı</a>
     <a href="#tasarim">Tasarım akışı</a>
-    <a href="#asamalar">Aşamalar</a>
+    <a href="#asamalar">Dört aşama</a>
     <a href="#kurul">Uzman kurulu</a>
-    <a href="#limit">Limit</a>
-    <a href="#rapor">Raporlama</a>
-    <a href="#skiller">Skill'ler</a>
-    <a href="#yetenekler">Yetenekler</a>
-    <a href="#kontroller">Koruma</a>
-    <a href="#bulgular">Bulgular</a>
-    <a href="#yapi">Yapı</a>
-    <a href="#komutlar">Komutlar</a>
+    <p>Kalite ve güvenlik</p>
+    <a href="#kontroller">Koruma katmanları</a>
+    <a href="#bulgular">Bulgu raporları</a>
+    <a href="#yapi">Proje yapısı</a>
+    <p>Takip</p>
+    <a href="#rapor">Raporlama ve pano</a>
+    <a href="#limit">Limit farkındalığı</a>
+    <p>Araçlar</p>
+    <a href="#yetenekler">Yetenek paketleri</a>
+    <a href="#skiller">Hangi işte hangi skill</a>
     <a href="#araclar">Codex ve Antigravity</a>
-    <a href="#kit">Kitin bakımı</a>
+    <p>Referans</p>
+    <a href="#komutlar">Komutlar</a>
+    <a href="#kit">Güncelleme ve bakım</a>
     <a href="#kurallar">Altın kurallar</a>
   </nav>
-</header>
+
+  <div class="doc">
 
 <section id="baslangic">
-  <div class="section-head">
-    <p class="eyebrow">Başlamadan</p>
-    <h2>Yeni proje açmak</h2>
-    <p class="lede">Kit ve proje ayrı klasörlerde durur: <code>init</code> kitin ihtiyaç duyulan dosyalarını proje klasörüne kopyalar, git deposu açar, kit klasörüne dokunmaz. Proje tipi kurulumda değil, <code>/start</code> sırasında soruyla seçilir.</p>
-  </div>
+  <p class="path">Başlamadan</p>
+  <h2>Kurulum</h2>
+  <p class="lead">TillerHand ve projen ayrı klasörlerde durur. <code>init</code> gereken dosyaları (<code>.claude/</code>, <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>docs/</code>) proje klasörüne kopyalar, git deposu açar ve kit klasörüne dokunmaz. Proje tipi kurulumda değil, <code>/start</code> sırasında soruyla seçilir.</p>
+  <p><b>Gereksinimler:</b> <a href="https://claude.com/claude-code">Claude Code</a>, Git, Node.js 18+.</p>
 <pre class="term"><span class="c"># 1. Proje klasörü ve içinde kit</span>
 mkdir yeni-proje &amp;&amp; cd yeni-proje
 git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
@@ -199,208 +534,206 @@ claude
 /start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
 <span class="c"># var olan projede /start yerine:</span>
 /adopt</pre>
-  <p class="note"><b>Hangi araç:</b> <code>init</code> Claude Code, Codex veya Antigravity'den hangisiyle (birden fazlası olabilir) çalışacağını sorar. Doğrudan da verebilirsin: <code>init --tool codex</code>. Ayrıntı: <a href="#araclar">Codex ve Antigravity</a>.</p>
-  <p class="note"><b>Var olan proje:</b> <code>/adopt</code> kodu tarar, belgeleri koddan çıkarır, neyi beğenmediğini sorar, eski CLAUDE.md'deki kuralları tek tek sorup AGENTS.md'ye taşır. Önce kritik akışlara doğru davranışa göre test yazılır, sonra yapı özellik özellik ayrı dalda kitin düzenine taşınır. Projenin dosyalarının üzerine yazılmaz; kitin hali <code>.kit-new</code> olarak yanına konur. Eski yol (GitHub <b>Use this template</b>) da çalışır.</p>
-  <h3>Hiç bilmiyorsan</h3>
+  <div class="note"><b>Hangi araç:</b> <code>init</code>, Claude Code, Codex ve Antigravity'den hangisiyle (birden fazlası olabilir) çalışacağını sorar. Doğrudan da verebilirsin: <code>init --tool codex</code>. Kit başka bir klasördeyse: <code>node &lt;kit&gt;/kit/kit.mjs init --project &lt;proje&gt;</code>. Türkiye eki için <code>--addons tr</code>.</div>
+  <div class="note"><b>Var olan proje:</b> <code>/adopt</code> kodu tarar, belgeleri koddan çıkarır, neyi beğenmediğini sorar, eski CLAUDE.md'deki kuralları tek tek sorup AGENTS.md'ye taşır. Önce kritik akışlara doğru davranışa göre test yazılır, sonra yapı özellik özellik ayrı dalda kitin düzenine taşınır. Projenin dosyalarının üzerine yazılmaz; kitin hali <code>.kit-new</code> olarak yanına konur.</div>
+  <div class="note"><b>Eklentiler:</b> Proje ilk açıldığında Claude Code, <code>.claude/settings.json</code>'da tanımlı skill eklentilerini kurmayı önerir: Caveman, Impeccable, Taste Skill, UI UX Pro Max, Humanizer, Ponytail ve Matt Pocock. <code>/start</code> onayınla eksikleri proje kapsamında kurar (<code>plugins-sync.mjs --install</code>). Tasarım, güvenlik, yayın ve video paketleri kurulur ama kapalı kalır; ilgili komut gerektiğinde açmayı sorar.</div>
+  <div class="note"><b>Önerilen: kod haritası.</b> <a href="https://github.com/DeusData/codebase-memory-mcp">codebase-memory-mcp</a> bağlıysa AI kodu dosya dosya okumak yerine sorgular; proje büyüdükçe ciddi token tasarrufu sağlar. <code>/start</code> kurmak isteyip istemediğini sorar; kurulumu kendi terminalinde yaparsın.</div>
+</section>
+
+<section id="hic-bilmiyorsan">
+  <p class="path">Kod bilmeden</p>
+  <h2>Hiç bilmiyorsan: adım adım</h2>
+  <p class="lead">Kod yazmayı bilmen gerekmez. Git, terminal ve kurulum işlerini Claude yapar ve önemli her adımda sana sorar. Sen ne istediğini anlatır ve seçim yaparsın.</p>
   <ol>
-    <li><b>Hesap ve programlar (bir kez):</b> GitHub hesabı, Claude Pro veya Max, Claude masaüstü uygulaması, Node.js (LTS) ve Git. İstersen GitHub Desktop da kurabilirsin.</li>
+    <li><b>Hesaplar (bir kez):</b> <a href="https://github.com">GitHub</a> hesabı (ücretsiz) ve Claude <b>Pro</b> veya <b>Max</b> aboneliği.</li>
+    <li><b>Programlar (bir kez):</b> <a href="https://claude.com/download">Claude masaüstü uygulaması</a>, <a href="https://nodejs.org">Node.js</a> (LTS sürümü), <a href="https://git-scm.com/downloads">Git</a>. İstersen <a href="https://desktop.github.com">GitHub Desktop</a> da kurabilirsin.</li>
     <li><b>Proje:</b> Projen için bir klasör aç ve Claude masaüstü uygulamasında <b>Code</b> sekmesinde seç. Claude'a yaz: "github.com/burakdogrul/TillerHand reposunu bu klasörün içine vibe-kit adıyla klonla, sonra <code>node vibe-kit/kit/kit.mjs init</code> çalıştır".</li>
-    <li><b>Aç:</b> Aynı klasörde yeni oturum aç ki kitin komutları yüklensin, sonra eklentileri kabul et.</li>
-    <li><b>Başlat:</b> <code>/start fikrin</code> yaz. Her sorunun ilk seçeneği önerilendir. Pro'daysan profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
-    <li><b>Her gün:</b> <code>/build</code> ile çalış (görev kodu gerekmez), <code>/wrap-up</code> ve <code>/clear</code> ile bırak; temiz ekranda sıradaki komut yazar. Bozulursa <code>/rollback</code>, merak edersen <code>/dashboard</code>.</li>
+    <li><b>Aç:</b> Aynı klasörde <b>yeni oturum</b> aç; kitin komutları ve korumaları yeni oturumda yüklenir. Eklentileri kurmayı önerirse kabul et.</li>
+    <li><b>Başlat:</b> <code>/start fikrin</code> yaz. <b>Her sorunun ilk seçeneği önerilendir</b>; emin değilsen onu seç. Pro'daysan ilk sorular için öneri: profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (5 saatlik limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
   </ol>
-  <p class="note">Proje ilk açıldığında Claude Code, <code>.claude/settings.json</code>'da tanımlı skill plugin'lerini kurmayı önerir: Caveman, Impeccable, Taste Skill, UI UX Pro Max, Humanizer, Ponytail ve Matt Pocock. <code>/start</code> onayınla eksikleri proje kapsamında kurar (<code>plugins-sync.mjs --install</code>); kurulmamış eklenti yükleme hatası verir ve skill'leri gelmez. Tasarım, güvenlik, yayın ve video paketleri kurulur ama kapalı kalır; ilgili komut gerektiğinde açmayı sorar.</p>
+  <div class="note accent"><b>Bilmen gerekenler.</b> Pro'da 5 saatlik ve haftalık kullanım limiti var; Claude %90, %95 ve %99'da uyarır ama işi durdurmaz. Limit dolup iş kesilirse yenilenince <code>/build</code> ile kaldığın yerden devam edersin. Veritabanı, tasarım ve maliyet gibi kararlar sorulmadan verilmez; ödeme, veri silme ve canlıya alma gibi geri dönüşü zor işler her zaman onay ister. Projeyi başkasına bırakacaksan <code>/handoff</code>; devralan <code>/handoff devral</code> ile aynı yerden devam eder.</div>
+</section>
+
+<section id="gunluk">
+  <p class="path">Rutin</p>
+  <h2>Her gün</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Ne zaman</th><th>Ne yazarsın</th></tr></thead>
+    <tbody>
+      <tr><td>Çalışmaya başlarken</td><td><code>/build</code>: görev kodu yazmana gerek yok; sıradaki görevi kendisi alır, test eder</td></tr>
+      <tr><td>Durumu merak edersen</td><td><code>ne durumdayız?</code> veya <code>/dashboard</code></td></tr>
+      <tr><td>Bir şey bozulursa</td><td><code>/rollback</code>: son çalışan hale güvenle döner</td></tr>
+      <tr><td>Hata görürsen</td><td><code>/fix-bug belirti</code>: kök nedeni bulur, önce kırmızı test yazar, sonra düzeltir</td></tr>
+      <tr><td>Bırakırken</td><td><code>/wrap-up</code> (her şeyi kaydeder), sonra <code>/clear</code>. Temiz ekranda sıradaki komut yazar</td></tr>
+    </tbody>
+  </table></div>
 </section>
 
 <section id="protokol">
-  <div class="section-head">
-    <p class="eyebrow">docs/workflow/decision-protocol.md</p>
-    <h2>Kararı sen verirsin</h2>
-    <p class="lede">Ürün, teknik, tasarım, içerik, veri, güvenlik ve maliyet ile ilgili her seçim bir karar noktasıdır. AI seçenekleri hazırlar, önerisini ilk sıraya koyar, her seçeneğin ne zaman daha iyi olduğunu ve bedelini yazar. Cevabın günlüğe kaydedilir, sonra uygulanır.</p>
-  </div>
-  <div class="two">
-    <div class="ask" aria-label="Örnek soru">
-      <p class="ctx">Aşama: Başlangıç 4/8 · Teknoloji. Bu karar tüm backend kodunu belirler; sonradan değiştirmek pahalı.</p>
-      <p class="qt">Backend'i hangi dil ve framework ile yazalım?</p>
-      <div class="opt rec"><b>Python + FastAPI (Önerilen)</b><span>Fikrinde belge okuma ve AI özetleme var; Python bu işlerde en güçlü ekosistem. Otomatik API dokümanı üretir.</span></div>
-      <div class="opt"><b>Node.js + Hono</b><span>Frontend de TypeScript olacaksa tek dil ve tip paylaşımı sağlar; AI kütüphaneleri Python kadar zengin değil.</span></div>
-      <div class="opt"><b>Go</b><span>Çok yüksek trafik ve düşük sunucu maliyeti gerekiyorsa daha iyi; geliştirme daha yavaş.</span></div>
+  <p class="path">docs/workflow/decision-protocol.md</p>
+  <h2>Kararı sen verirsin</h2>
+  <p class="lead">Ürün, teknik, tasarım, içerik, veri, güvenlik ve maliyetle ilgili her seçim bir karar noktasıdır. AI seçenekleri hazırlar, önerisini ilk sıraya koyar, her seçeneğin ne zaman daha iyi olduğunu ve bedelini yazar. Cevabın <code>docs/decisions/log.md</code>'ye kaydedilir, sonra uygulanır ve bir daha sorulmaz.</p>
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="window">
+      <div class="bar"><i></i><i></i><i></i><span>Örnek soru</span></div>
+      <div class="body">
+        <p class="ctx">Aşama: Başlangıç 4/9 · Teknoloji. Bu karar tüm backend kodunu belirler; sonradan değiştirmek pahalı.</p>
+        <p class="q">Backend'i hangi dil ve framework ile yazalım?</p>
+        <div class="opt rec"><b>Python + FastAPI (Önerilen)</b><span>Fikrinde belge okuma ve AI özetleme var; Python bu işlerde en güçlü ekosistem.</span></div>
+        <div class="opt"><b>Node.js + Hono</b><span>Frontend de TypeScript olacaksa tek dil ve tip paylaşımı sağlar.</span></div>
+        <div class="opt"><b>Go</b><span>Çok yüksek trafik ve düşük sunucu maliyeti gerekiyorsa; geliştirme daha yavaş.</span></div>
+      </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Sen ne dersin</th><th>Ne olur</th></tr></thead>
-        <tbody>
-          <tr><td>"tasarımda sorma"</td><td>Sadece <code>tasarim</code> konusu kapanır. AI önerilen seçeneği seçer, kararı "otomatik" diye kaydeder ve durum bloğunda bildirir. Önizlemeler yine üretilir.</td></tr>
-          <tr><td>"hiç sorma"</td><td>Tüm konular kapanır.</td></tr>
-          <tr><td>"tekrar sor"</td><td>Konu(lar) yeniden açılır.</td></tr>
-          <tr><td><code>/ask-mode</code></td><td>Mevcut modu ve otomatik verilen kararları gösterir.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Konu</th><th>Örnek kararlar</th></tr></thead>
+    <div class="table-wrap" style="margin:0"><table>
+      <thead><tr><th>Sen ne dersin</th><th>Ne olur</th></tr></thead>
       <tbody>
-        <tr><td class="f">urun</td><td>MVP kapsamı, öncelik, kullanıcı akışı, fiyat</td></tr>
-        <tr><td class="f">teknik</td><td>Dil, framework, veritabanı, auth, hosting, kütüphane ekleme, API stili</td></tr>
-        <tr><td class="f">tasarim</td><td>Stil yönü, renk, yazı tipi, düzen, bileşen stili, animasyon, koyu tema</td></tr>
-        <tr><td class="f">icerik</td><td>Metinler, ses tonu, sen/siz, başlık ve CTA alternatifleri</td></tr>
-        <tr><td class="f">veri</td><td>Veri modeli, silme davranışı, saklama süresi</td></tr>
-        <tr><td class="f">guvenlik</td><td>Roller, oturum süresi, hız sınırları, kişisel veri</td></tr>
-        <tr><td class="f">maliyet</td><td>Ücretli servis, plan seviyesi, AI modeli, harcama limiti</td></tr>
+        <tr><td>"tasarımda sorma"</td><td>Sadece <code>tasarim</code> konusu kapanır. AI önerilen seçeneği seçer, kararı "otomatik" diye kaydeder ve durum bloğunda bildirir. Önizlemeler yine üretilir.</td></tr>
+        <tr><td>"hiç sorma"</td><td>Tüm konular kapanır.</td></tr>
+        <tr><td>"tekrar sor"</td><td>Konu(lar) yeniden açılır.</td></tr>
+        <tr><td><code>/ask-mode</code></td><td>Mevcut modu ve otomatik verilen kararları gösterir; <code>on</code> / <code>off &lt;konu&gt;</code> ile değiştirir.</td></tr>
       </tbody>
-    </table>
+    </table></div>
   </div>
-  <p class="note">Soru modundan bağımsız olarak her zaman onay istenir: veri silme, prod'a deploy, para harcatan işlem, geri dönülemez komutlar. Dosya ve değişken adı gibi uygulama ayrıntıları sorulmaz, raporlanır.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Konu</th><th>Örnek kararlar</th></tr></thead>
+    <tbody>
+      <tr><td class="f">urun</td><td>MVP kapsamı, öncelik, kullanıcı akışı, fiyat</td></tr>
+      <tr><td class="f">teknik</td><td>Dil, framework, veritabanı, auth, hosting, kütüphane ekleme, API stili</td></tr>
+      <tr><td class="f">tasarim</td><td>Stil yönü, renk, yazı tipi, düzen, bileşen stili, animasyon, koyu tema</td></tr>
+      <tr><td class="f">icerik</td><td>Metinler, ses tonu, sen/siz, başlık ve CTA alternatifleri</td></tr>
+      <tr><td class="f">veri</td><td>Veri modeli, silme davranışı, saklama süresi</td></tr>
+      <tr><td class="f">guvenlik</td><td>Roller, oturum süresi, hız sınırları, kişisel veri</td></tr>
+      <tr><td class="f">maliyet</td><td>Ücretli servis, plan seviyesi, AI modeli, harcama limiti</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">Geri dönüşü zor kararlarda (veritabanı, auth, ödeme, veri modeli; "tek yönlü kapı") önce kurulun ve gerekirse konseyin görüşü alınır. Soru modundan bağımsız olarak her zaman onay istenir: veri silme, prod'a deploy, para harcatan işlem, geri dönülemez komutlar. Dosya ve değişken adı gibi uygulama ayrıntıları sorulmaz, raporlanır.</div>
 </section>
 
 <section id="sihirbaz">
-  <div class="section-head">
-    <p class="eyebrow">.claude/commands/start.md</p>
-    <h2>/start: dokuz adımlı sihirbaz</h2>
-    <p class="lede">Uygulama kodu yazmadan projenin tüm temel kararlarını alır. Yarıda kalırsa kaldığı adımdan devam eder.</p>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Adım</th><th>Ne olur</th><th>Örnek soru</th><th>Skill</th></tr></thead>
-      <tbody>
-        <tr><td class="f">0 Hazırlık</td><td>Profil (Hafif / Standart / Tam), planlama derinliği (Hızlı / Standart / Ayrıntılı, maliyetiyle), araç (Claude Code / Codex / Antigravity), pano tarayıcıda açılır, node, git, kit, skill, limit ve kod haritası kontrolü</td><td>"Planlama derinliği: Hızlı (~%25-35) / Standart (~%50-70) / Ayrıntılı (~%80-100)?"</td><td>caveman</td></tr>
-        <tr><td class="f">1 Fikir</td><td>Fikir turlar halinde sorgulanır → PRD</td><td>"İlk sürümde hangi özellikler olsun?" (çoklu seçim; seçilmeyenler kapsam dışı)</td><td>grilling</td></tr>
-        <tr><td class="f">2 Tip</td><td>Web/SaaS, mobil, backend; AI özelliği var mı</td><td>"Web mi, mobil mi? Kullanıcın masa başında çalışıyor, bu yüzden web öneriyorum."</td><td>-</td></tr>
-        <tr><td class="f">3 Kurulum</td><td><code>node kit/kit.mjs install</code> tipi yerleştirir, <code>kit/</code> silinir</td><td>-</td><td>-</td></tr>
-        <tr><td class="f">4 Teknoloji</td><td>Tipin karar kataloğundaki 10-12 karar tek tek</td><td>"Veritabanı ve kimlik: Supabase / Neon + Better Auth / Firebase?"</td><td>research</td></tr>
-        <tr><td class="f">5 Mimari</td><td>Veri modeli, giriş yöntemleri, roller, servisler ve maliyet, sözlük</td><td>"Silinen fatura çöp kutusuna mı gitsin, kalıcı mı silinsin?"</td><td>domain-modeling, codebase-design</td></tr>
-        <tr><td class="f">6 Kurul</td><td>Tipe göre önerilen uzman kurulu, model dağılımı, ajanlar projede üretilir. Pahalı adım: önce maliyet, sonra "Yap / Hafif yap / Sonraya bırak"</td><td>"Kurulda kimler olsun?" (çoklu seçim)</td><td>-</td></tr>
-        <tr><td class="f">7 Tasarım</td><td><code>/design genel</code>: görsel önizlemelerle stil, renk, yazı, detaylar. Pahalı adım: önce maliyet sorulur</td><td>"Bu üç açılış sayfasından hangisi?"</td><td>taste, impeccable, ui-ux-pro-max</td></tr>
-        <tr><td class="f">8 Yol haritası</td><td>Görevler, ilk özellik, lansman hedefi</td><td>"Faz 1'de önce hangi özellikle başlayalım?"</td><td>-</td></tr>
-        <tr><td class="f">9 Kapanış</td><td>Özet, sonraya bırakılan adımlar, ilk görev</td><td>-</td><td>-</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <p class="path">.claude/commands/start.md</p>
+  <h2>/start: dokuz adımlı sihirbaz</h2>
+  <p class="lead">Uygulama kodu yazmadan projenin tüm temel kararlarını alır. Kararlar verildiği anda günlüğe yazılır ve panoda görünür. Yarıda kalırsa kaldığı adımdan devam eder.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Adım</th><th>Ne olur</th><th>Örnek soru</th><th>Skill</th></tr></thead>
+    <tbody>
+      <tr><td class="f">0 Hazırlık</td><td>Profil (Hafif / Standart / Tam), planlama derinliği (maliyetiyle), araç, pano, node, git, skill, limit ve kod haritası kontrolü</td><td>"Planlama derinliği: Hızlı (~%25-35) / Standart (~%50-70) / Ayrıntılı (~%80-100)?"</td><td>caveman</td></tr>
+      <tr><td class="f">1 Fikir</td><td>Fikir turlar halinde sorgulanır, PRD yazılır</td><td>"İlk sürümde hangi özellikler olsun?" (çoklu seçim; seçilmeyenler kapsam dışı)</td><td>grilling</td></tr>
+      <tr><td class="f">2 Tip</td><td>Web/SaaS, mobil veya backend; AI özelliği var mı</td><td>"Kullanıcın masa başında çalışıyor; web öneriyorum. Uygun mu?"</td><td>-</td></tr>
+      <tr><td class="f">3 Kurulum</td><td><code>node kit/kit.mjs install</code> tipi ve klasör haritasını yerleştirir</td><td>-</td><td>-</td></tr>
+      <tr><td class="f">4 Teknoloji</td><td>Tipin karar kataloğundaki 10-12 karar tek tek</td><td>"Veritabanı ve kimlik: Supabase / Neon + Better Auth / Firebase?"</td><td>research</td></tr>
+      <tr><td class="f">5 Mimari</td><td>Veri modeli, giriş yöntemleri, roller, servisler ve maliyet, sözlük, birim ekonomisi</td><td>"Silinen fatura çöp kutusuna mı gitsin, kalıcı mı silinsin?"</td><td>domain-modeling, codebase-design</td></tr>
+      <tr><td class="f">6 Kurul</td><td>Tipe göre önerilen uzman kurulu ve model dağılımı; ajanlar projede üretilir. Pahalı adım: önce maliyet, sonra "Yap / Hafif yap / Sonraya bırak"</td><td>"Kurulda kimler olsun?" (çoklu seçim)</td><td>-</td></tr>
+      <tr><td class="f">7 Tasarım</td><td><code>/design general</code>: görsel önizlemelerle stil, renk, yazı tipi, detaylar. Pahalı adım: önce maliyet sorulur</td><td>"Bu üç açılış sayfasından hangisi?"</td><td>taste, impeccable, ui-ux-pro-max</td></tr>
+      <tr><td class="f">8 Yol haritası</td><td>Kabul testi önce gelen görevler, ilk özellik, lansman hedefi</td><td>"Faz 1'de önce hangi özellikle başlayalım?"</td><td>-</td></tr>
+      <tr><td class="f">9 Kapanış</td><td>Özet, sonraya bırakılan adımlar, ilk görev</td><td>-</td><td>-</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">Stack seçilince projenin README'sindeki Gereksinimler/Kurulum bölümü ve sürüm dosyası (<code>.nvmrc</code> / <code>.python-version</code>) doldurulur; proje başka bilgisayarda aynı şekilde kurulabilir. <code>/release</code> ve aylık <code>/maintain</code> bunu temiz bir klasörde kurarak sınar.</div>
 </section>
 
 <section id="tasarim">
-  <div class="section-head">
-    <p class="eyebrow">/design · görsel önizleme</p>
-    <h2>Tasarımı görerek seçersin</h2>
-    <p class="lede">Her tasarım kararında seçenek başına gerçek içerikle bir örnek üretilir (<code>.previews/</code>), tarayıcıda açılır, ekran görüntüsü gösterilir; sonra sorulur. Her stil yönü kendi skill'iyle çizilir, böylece seçenekler arasındaki fark gerçek olur.</p>
+  <p class="path">/design · görsel önizleme</p>
+  <h2>Tasarımı görerek seçersin</h2>
+  <p class="lead">Her tasarım kararında seçenek başına gerçek içerikle bir örnek üretilir (<code>.previews/</code>), tarayıcıda açılır, ekran görüntüsü gösterilir; sonra sorulur. Her stil yönü kendi skill'iyle çizilir, böylece seçenekler arasındaki fark gerçek olur.</p>
+  <div class="flow" role="list" aria-label="Tasarım akışı">
+    <span role="listitem">Stil yönü · 3 örnek</span><i aria-hidden="true">→</i>
+    <span role="listitem">Renk · 3 palet</span><i aria-hidden="true">→</i>
+    <span role="listitem">Yazı tipi · 3 çift</span><i aria-hidden="true">→</i>
+    <span role="listitem">Detaylar</span><i aria-hidden="true">→</i>
+    <span role="listitem">DESIGN.md</span><i aria-hidden="true">→</i>
+    <span role="listitem">Sayfa yapısı</span><i aria-hidden="true">→</i>
+    <span role="listitem">Metin + humanizer</span><i aria-hidden="true">→</i>
+    <span role="listitem">Uygula</span><i aria-hidden="true">→</i>
+    <span role="listitem">critique · audit · polish</span>
   </div>
-  <div class="loop" role="list" aria-label="Tasarım akışı">
-    <span class="step" role="listitem">Stil yönü · 3 örnek</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">Renk · 3 palet</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">Yazı tipi · 3 çift</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">Detaylar</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">DESIGN.md</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">Sayfa yapısı</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">Metin + humanizer</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">Uygula</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">critique · audit · polish</span>
+  <div class="tiles">
+    <article class="tile"><h3>Premium / Apple tarzı</h3><p class="stack">taste-skill:high-end-visual-design</p><ul><li>Bol boşluk, büyük ve ince tipografi, yumuşak geçişler</li><li>Tüketici ürünü, marka algısı, yüksek fiyat</li></ul></article>
+    <article class="tile"><h3>Minimal editoryal</h3><p class="stack">taste-skill:minimalist-ui</p><ul><li>Sıcak monokrom, tipografi odaklı, düz yüzeyler</li><li>İçerik, portfolyo, sakin SaaS</li></ul></article>
+    <article class="tile"><h3>Cesur ve hareketli</h3><p class="stack">taste-skill:gpt-taste</p><ul><li>Dev tipografi, kaydırmaya bağlı animasyon, bento</li><li>Lansman sayfası, genç kitle</li></ul></article>
+    <article class="tile"><h3>Endüstriyel / brutalist</h3><p class="stack">taste-skill:industrial-brutalist-ui</p><ul><li>Ham ızgara, terminal estetiği</li><li>Geliştirici aracı, veri yoğun pano</li></ul></article>
+    <article class="tile"><h3>İşlevsel ürün arayüzü</h3><p class="stack">impeccable + ui-ux-pro-max:ui-styling</p><ul><li>Sade, yoğun bilgi, hızlı kullanım</li><li>Panel, admin, B2B araç</li></ul></article>
+    <article class="tile"><h3>Her yönde ortak</h3><p class="stack">impeccable · ui-ux-pro-max · humanizer</p><ul><li>PRODUCT.md ve DESIGN.md Impeccable'da</li><li>Palet ve yazı adayları UI UX Pro Max'ten</li><li>Metinler Humanizer'dan geçer</li></ul></article>
   </div>
-  <div class="types">
-    <article class="type"><h3>Premium / Apple tarzı</h3><p class="stack">taste-skill:high-end-visual-design</p><ul><li>Bol boşluk, büyük ve ince tipografi, yumuşak geçişler</li><li>Tüketici ürünü, marka algısı, yüksek fiyat</li></ul></article>
-    <article class="type"><h3>Minimal editoryal</h3><p class="stack">taste-skill:minimalist-ui</p><ul><li>Sıcak monokrom, tipografi odaklı, düz yüzeyler</li><li>İçerik, portfolyo, sakin SaaS</li></ul></article>
-    <article class="type"><h3>Cesur ve hareketli</h3><p class="stack">taste-skill:gpt-taste</p><ul><li>Dev tipografi, kaydırmaya bağlı animasyon, bento</li><li>Lansman sayfası, genç kitle</li></ul></article>
-    <article class="type"><h3>Endüstriyel / brutalist</h3><p class="stack">taste-skill:industrial-brutalist-ui</p><ul><li>Ham ızgara, terminal estetiği</li><li>Geliştirici aracı, veri yoğun pano</li></ul></article>
-    <article class="type"><h3>İşlevsel ürün arayüzü</h3><p class="stack">impeccable + ui-ux-pro-max:ui-styling</p><ul><li>Sade, yoğun bilgi, hızlı kullanım</li><li>Panel, admin, B2B araç</li></ul></article>
-    <article class="type"><h3>Her yönde ortak</h3><p class="stack">impeccable · ui-ux-pro-max · humanizer</p><ul><li>PRODUCT.md ve DESIGN.md Impeccable'da</li><li>Palet ve yazı adayları UI UX Pro Max'ten</li><li>Metinler Humanizer'dan geçer</li></ul></article>
-  </div>
+  <div class="note"><b>İlham markası (isteğe bağlı):</b> Beğendiğin bir ürünün DESIGN.md'si (awesome-design-md) indirilir ve Impeccable ile ilkeleri damıtılır. Logo, ad ve birebir palet alınmaz; marka taklidi yoktur.</div>
 </section>
 
 <section id="asamalar">
-  <div class="section-head">
-    <p class="eyebrow">/start sonrası</p>
-    <h2>Dört aşama</h2>
+  <p class="path">/start sonrası</p>
+  <h2>Dört aşama</h2>
+  <p class="lead">Her aşamanın bir çıkış kapısı var: kapıdaki maddeler tamamlanmadan bir sonrakine geçilmez.</p>
+  <div class="phase">
+    <div class="n">1</div>
+    <div>
+      <p class="when">İlk gün · Faz 0</p>
+      <h3>Kurulum ve ilk deploy</h3>
+      <div class="chips"><span>/build G-001</span><span>… G-007</span><span>CI yeşil</span><span>prod URL</span><span>Sentry</span><span>belirteçler kodda</span></div>
+      <div class="gate"><b>Çıkış kapısı</b><ul><li>dev, test, lint, build komutları çalışıyor</li><li>Sır içeren deneme commit'i reddediliyor, GitHub'da CI yeşil</li><li>"Merhaba dünya" prod URL'de açılıyor, hata takibi çalışıyor</li></ul></div>
+    </div>
   </div>
-  <div class="phases">
-    <div class="phase">
-      <div class="rail"><div class="num">1</div></div>
-      <div class="body">
-        <p class="when">İlk gün · Faz 0</p>
-        <h3>Kurulum ve ilk deploy</h3>
-        <div class="meta">
-          <div class="kv"><span class="k">Komut</span><div class="chips"><span class="chip">/build G-001</span><span class="chip">… G-007</span></div></div>
-          <div class="kv"><span class="k">Sonuç</span><div class="chips"><span class="chip">CI yeşil</span><span class="chip">prod URL</span><span class="chip">Sentry</span><span class="chip">belirteçler kodda</span></div></div>
-        </div>
-        <div class="gate"><span class="k">Çıkış kapısı</span><ul><li>dev, test, lint, build komutları çalışıyor</li><li>Sır içeren deneme commit'i reddediliyor, GitHub'da CI yeşil</li><li>"Merhaba dünya" prod URL'de açılıyor, hata takibi çalışıyor</li></ul></div>
+  <div class="phase">
+    <div class="n">2</div>
+    <div>
+      <p class="when">Her görev · Faz 1–2</p>
+      <h3>Geliştirme döngüsü</h3>
+      <div class="flow" role="list" aria-label="Görev döngüsü">
+        <span role="listitem">/plan-task · karar noktaları sorulur</span><i aria-hidden="true">→</i>
+        <span role="listitem">/build · önce kabul testleri</span><i aria-hidden="true">→</i>
+        <span role="listitem">kanıt</span><i aria-hidden="true">→</i>
+        <span role="listitem">/review-changes</span><i aria-hidden="true">→</i>
+        <span role="listitem">kapı + kurul → commit</span><i aria-hidden="true">→</i>
+        <span role="listitem">/wrap-up</span>
       </div>
+      <div class="gate"><b>"Bitti" tanımı</b><ul><li>Görevde çıkan tüm kararlar soruldu ve kaydedildi</li><li>Testler yeşil, çalıştığına dair kanıt gösterildi</li><li>Arayüz varsa DESIGN.md'ye uygun, Impeccable critique yapıldı, metinler Humanizer'dan geçti</li><li>Görev sonu kurul toplantısında RET yok</li></ul></div>
     </div>
-    <div class="phase">
-      <div class="rail"><div class="num">2</div></div>
-      <div class="body">
-        <p class="when">Her görev · Faz 1–2</p>
-        <h3>Geliştirme döngüsü</h3>
-        <div class="loop" role="list" aria-label="Görev döngüsü">
-          <span class="step" role="listitem">/plan-task · karar noktaları sorulur</span><span class="arrow" aria-hidden="true">→</span>
-          <span class="step" role="listitem">/build · yeni karar çıkarsa durur</span><span class="arrow" aria-hidden="true">→</span>
-          <span class="step" role="listitem">kanıt</span><span class="arrow" aria-hidden="true">→</span>
-          <span class="step" role="listitem">/review-changes</span><span class="arrow" aria-hidden="true">→</span>
-          <span class="step" role="listitem">commit</span><span class="arrow" aria-hidden="true">→</span>
-          <span class="step" role="listitem">/wrap-up</span>
-        </div>
-        <div class="gate"><span class="k">"Bitti" tanımı</span><ul><li>Görevde çıkan tüm kararlar soruldu ve kaydedildi</li><li>Testler yeşil, çalıştığına dair kanıt gösterildi</li><li>Arayüz varsa DESIGN.md'ye uygun, Impeccable critique yapıldı, metinler Humanizer'dan geçti</li></ul></div>
-      </div>
+  </div>
+  <div class="phase">
+    <div class="n">3</div>
+    <div>
+      <p class="when">Lansman · ve her sürüm</p>
+      <h3>Canlıya alma</h3>
+      <div class="chips"><span>/release first</span><span>/release</span><span>security-auditor</span><span>security-review</span><span>ponytail-audit</span><span>impeccable audit</span></div>
+      <p><code>/release first</code> ilk lansmanda hosting, ortam değişkenleri, alan adı ve DNS, yedek ve zamana geri dönüş (PITR) ile geri alma provasını sağlayıcıya göre adım adım kurdurur (Vercel, Supabase, Railway, EAS). Adımlar resmî dokümandan, kaynak ve tarihle; sırrı sen panelde girersin.</p>
+      <div class="gate"><b>Çıkış kapısı</b><ul><li>Tüm ❌ maddeleri kapandı; senin kontrol etmen gerekenler soruldu</li><li>Yedekten geri yükleme denendi, geri alma yolu yazılı</li><li>KVKK metinleri yayında, harcama limitleri ayarlı, canlı izleme açık</li></ul></div>
     </div>
-    <div class="phase">
-      <div class="rail"><div class="num">3</div></div>
-      <div class="body">
-        <p class="when">Lansman · ve her sürüm</p>
-        <h3>Canlıya alma</h3>
-        <div class="meta">
-          <div class="kv"><span class="k">Komut</span><div class="chips"><span class="chip">/release ilk</span><span class="chip">/release</span></div></div>
-          <div class="kv"><span class="k">Denetimler</span><div class="chips"><span class="chip">security-auditor</span><span class="chip">security-review</span><span class="chip">ponytail-audit</span><span class="chip">impeccable audit</span></div></div>
-        </div>
-        <div class="gate"><span class="k">Çıkış kapısı</span><ul><li>Tüm ❌ maddeleri kapandı; senin kontrol etmen gerekenler soruldu</li><li>Yedekten geri yükleme denendi, rollback yolu yazılı</li><li>KVKK metinleri yayında, harcama limitleri ayarlı</li></ul></div>
-      </div>
-    </div>
-    <div class="phase">
-      <div class="rail"><div class="num">4</div></div>
-      <div class="body">
-        <p class="when">Canlıdayken · düzenli</p>
-        <h3>Bakım</h3>
-        <div class="meta">
-          <div class="kv"><span class="k">Komut</span><div class="chips"><span class="chip">/maintain weekly</span><span class="chip">monthly · ponytail-debt</span><span class="chip">quarterly · ponytail-audit</span></div></div>
-        </div>
-        <div class="gate"><span class="k">Olay anında sırayla</span><ul><li><b>Durdur</b>, <b>Kaydet</b>, <b>Düzelt</b>, <b>Bildir</b> (kişisel veri ihlalinde Kurul'a 72 saat içinde), <b>Öğren</b></li></ul></div>
-      </div>
+  </div>
+  <div class="phase">
+    <div class="n">4</div>
+    <div>
+      <p class="when">Canlıdayken · düzenli</p>
+      <h3>Bakım</h3>
+      <div class="chips"><span>/maintain weekly</span><span>monthly · ponytail-debt</span><span>quarterly · ponytail-audit</span><span>/user-feedback</span><span>/retro</span></div>
+      <p>Canlı izleme 3 saatte bir kritik akışı ve yanıt süresini dener; bozulunca GitHub issue açılır, panoda uyarı çıkar ve <code>/fix-bug</code> önerilir.</p>
+      <div class="gate"><b>Olay anında sırayla</b><ul><li><b>Durdur</b>, <b>Kaydet</b>, <b>Düzelt</b>, <b>Bildir</b> (kişisel veri ihlalinde Kurul'a 72 saat içinde), <b>Öğren</b></li></ul></div>
     </div>
   </div>
 </section>
 
 <section id="kurul">
-  <div class="section-head">
-    <p class="eyebrow">.claude/agents/board-* · docs/workflow/board.md</p>
-    <h2>Uzman kurulu</h2>
-    <p class="lede">Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur ve seçilen stack'e göre özelleştirilir. İşleri sürekli denetler, karar önerir ve seni bilgilendirir. Danışmandırlar; sadece kritik bulguda işi durdururlar. Karar her zaman sende.</p>
+  <p class="path">.claude/agents/board-* · docs/workflow/board.md</p>
+  <h2>Uzman kurulu</h2>
+  <p class="lead">Seçilen ürün tipine göre uzman ajanlar senin projende oluşturulur ve stack'e göre özelleştirilir. İşleri sürekli denetler, karar önerir ve seni bilgilendirir. Danışmandırlar; sadece kritik bulguda işi durdururlar. Karar her zaman sende.</p>
+  <div class="tiles">
+    <article class="tile"><h3>Web / SaaS</h3><p class="stack">ürün · mimar · güvenlik · ux · performans · kvkk · qa</p><ul><li>+ devops, + ai (AI eki varsa)</li></ul></article>
+    <article class="tile"><h3>Mobil</h3><p class="stack">ürün · mimar · güvenlik · ux · mobil · kvkk · qa</p><ul><li>+ devops, + ai</li></ul></article>
+    <article class="tile"><h3>Backend</h3><p class="stack">ürün · mimar · güvenlik · api · devops · qa</p><ul><li>+ kvkk (kişisel veri varsa), + ai</li></ul></article>
   </div>
-  <div class="types">
-    <article class="type"><h3>Web / SaaS</h3><p class="stack">urun · mimar · guvenlik · ux · performans · kvkk · qa</p><ul><li>+ devops, + ai (AI eki varsa)</li></ul></article>
-    <article class="type"><h3>Mobil</h3><p class="stack">urun · mimar · guvenlik · ux · mobil · kvkk · qa</p><ul><li>+ devops, + ai</li></ul></article>
-    <article class="type"><h3>Backend</h3><p class="stack">urun · mimar · guvenlik · api · devops · qa</p><ul><li>+ kvkk (kişisel veri varsa), + ai</li></ul></article>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Toplantı</th><th>Ne zaman</th><th>Kim</th><th>Model</th></tr></thead>
-      <tbody>
-        <tr><td>Plan · konsey</td><td>/plan-task sonunda, onaydan önce</td><td>Ürün + Mimar + ilgili üyeler (en fazla 4) + başkan</td><td>üyenin modeli · başkan opus</td></tr>
-        <tr><td>Görev sonu</td><td>/build sonunda</td><td>İlgili üyeler (en fazla 3)</td><td>üyenin modeli</td></tr>
-        <tr><td>Commit (hafif)</td><td>Her commit öncesi; hook zorunlu kılar</td><td>İlgili en fazla 2 üye, sadece diff ve kapı çıktısı</td><td>haiku</td></tr>
-        <tr><td>Faz sonu · canlıya alma · konsey</td><td>/board convene, /release ilk</td><td>Tüm kurul + başkan</td><td>üyenin modeli · başkan opus</td></tr>
-        <tr><td>Karar konseyi</td><td>Tek yönlü kapı kararı, /board council</td><td>3 danışman aynı soruyu cevaplar + başkan</td><td>haiku · sonnet · opus · başkan opus</td></tr>
-      </tbody>
-    </table>
-  </div>
-<pre class="term">ÜYE: Güvenlik · KARAR: RET
-BULGULAR:
-[KRİTİK] app/api/invoice/[id]/route.ts:14 — fatura sahibi kontrol edilmiyor; başka kullanıcının id'siyle fatura okunur — sorguya user_id koşulu ekle
-KULLANICIYA SORULMALI: yok</pre>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Toplantı</th><th>Ne zaman</th><th>Kim</th><th>Model</th></tr></thead>
+    <tbody>
+      <tr><td>Plan · konsey</td><td>/plan-task sonunda, onaydan önce</td><td>Ürün + Mimar + ilgili üyeler (en fazla 4) + başkan</td><td>üyenin modeli · başkan opus</td></tr>
+      <tr><td>Görev sonu</td><td>/build sonunda</td><td>İlgili üyeler (en fazla 3)</td><td>üyenin modeli</td></tr>
+      <tr><td>Commit (hafif)</td><td>Her commit öncesi; hook zorunlu kılar</td><td>İlgili en fazla 2 üye, sadece diff ve kapı çıktısı</td><td>haiku</td></tr>
+      <tr><td>Faz sonu · canlıya alma</td><td>/board convene, /release first</td><td>Tüm kurul + başkan</td><td>üyenin modeli · başkan opus</td></tr>
+      <tr><td>Karar konseyi</td><td>Tek yönlü kapı kararı, /board council</td><td>3 danışman aynı soruyu cevaplar + başkan</td><td>haiku · sonnet · opus · başkan opus</td></tr>
+    </tbody>
+  </table></div>
   <h3>Konsey: üç aşama</h3>
   <p>Karpathy'nin <a href="https://github.com/karpathy/llm-council">llm-council</a> yapısı kurula uyarlandı. Ağır toplantılar ve geri dönüşü pahalı kararlar üç aşamadan geçer:</p>
-  <div class="types">
-    <article class="type"><h3>1 · İlk görüşler</h3><p>Üyeler (veya farklı modellerdeki danışmanlar) birbirinden habersiz, paralel çalışır. Görüşler A, B, C diye etiketlenir; bulgular A1, A2…</p></article>
-    <article class="type"><h3>2 · Anonim çapraz oy</h3><p>Her üye diğerlerinin görüşünü kimin yazdığını bilmeden okur, her bulguya DOĞRU · ABARTILI · YANLIŞ oyu verir, eksik olanı yazar ve görüşleri sıralar.</p></article>
-    <article class="type"><h3>Sayım (kod)</h3><p>council.mjs ortalama sırayı, bulgu oylarını ve uzlaşma yüzdesini kodla hesaplar; model sayıyı değiştiremez.</p></article>
-    <article class="type"><h3>3 · Başkan</h3><p>board-chair (opus) tutanağı okur, kararı yazar, çürütülen bulguları gerekçesiyle eler, azınlık görüşünü korur. Tartışmalı kritik bulguyu eleyemez; sana sorar.</p></article>
+  <div class="tiles">
+    <article class="tile"><h3>1 · İlk görüşler</h3><p>Üyeler (veya farklı modellerdeki danışmanlar) birbirinden habersiz, paralel çalışır. Görüşler A, B, C diye etiketlenir; bulgular A1, A2…</p></article>
+    <article class="tile"><h3>2 · Anonim çapraz oy</h3><p>Her üye diğerlerinin görüşünü kimin yazdığını bilmeden okur, her bulguya DOĞRU · ABARTILI · YANLIŞ oyu verir, eksik olanı yazar ve görüşleri sıralar.</p></article>
+    <article class="tile"><h3>Sayım (kod)</h3><p><code>council.mjs</code> ortalama sırayı, bulgu oylarını ve uzlaşma yüzdesini kodla hesaplar; model sayıyı değiştiremez.</p></article>
+    <article class="tile"><h3>3 · Başkan</h3><p>board-chair (opus) tutanağı okur, kararı yazar, çürütülen bulguları gerekçesiyle eler, azınlık görüşünü korur. Tartışmalı kritik bulguyu eleyemez; sana sorar.</p></article>
   </div>
   <p><b>Profil</b> konseyin ne zaman toplanacağını belirler (bir konsey Pro'da 5 saatlik limitin yaklaşık %12'si):</p>
   <div class="table-wrap"><table>
@@ -408,74 +741,116 @@ KULLANICIYA SORULMALI: yok</pre>
     <tbody>
       <tr><td>Eklentiler</td><td>Çekirdek 6 + tipin LSP ve stack skill'leri</td><td>Çekirdek 8 + stack; paketler gerekince</td><td>Çekirdek 8 + stack; paketler gerekince</td></tr>
       <tr><td>Commit denetimi</td><td>Kapalı</td><td>Açık</td><td>Açık</td></tr>
-      <tr><td>Komut listesi</td><td>10 çekirdek komut açıklamalı, 18'i sadece adıyla (~1.100 token az)</td><td>Hafif gibi</td><td>Hepsi açıklamalı</td></tr>
+      <tr><td>Komut listesi</td><td>10 çekirdek komut açıklamalı, gerisi sadece adıyla (~1.100 token az)</td><td>Hafif gibi</td><td>Hepsi açıklamalı</td></tr>
       <tr><td>Toplantı konseyi</td><td>Yok</td><td>Faz sonu, canlıya alma</td><td>Plan, faz sonu, canlıya alma, RET</td></tr>
       <tr><td>Karar konseyi</td><td>Veritabanı, auth</td><td>Veritabanı, auth</td><td>Tüm tek yönlü kararlar</td></tr>
     </tbody>
   </table></div>
-  <p>Karar konseyinde sana sorulan sorunun "(Önerilen)" seçeneği konseyden gelir; her seçeneğin altında konseyin oyu ve azınlık görüşü yazar. Tutanaklar <code>docs/workflow/council/</code>, özet panonun Kurul sekmesinde.</p>
-  <p class="note">RET geldiğinde görev bitmiş sayılmaz. Sana üç seçenek sunulur: düzelt (önerilen), riski kabul et ve gerekçeyi kaydet, ya da görevi geri al. Üyeler arasında görüş ayrılığı varsa iki görüş yan yana konur ve karar sana sorulur.</p>
+  <p>Karar konseyinde sana sorulan sorunun "(Önerilen)" seçeneği konseyden gelir; her seçeneğin altında konseyin oyu ve azınlık görüşü yazar. Tutanaklar <code>docs/workflow/council/</code>'da, özeti panonun Kurul sekmesinde.</p>
+  <div class="note">RET geldiğinde görev bitmiş sayılmaz. Sana üç seçenek sunulur: düzelt (önerilen), riski kabul et ve gerekçeyi kaydet, ya da görevi geri al. Üyeler arasında görüş ayrılığı varsa iki görüş yan yana konur ve karar sana sorulur.</div>
 </section>
 
-<section id="limit">
-  <div class="section-head">
-    <p class="eyebrow">docs/workflow/usage-limits.md</p>
-    <h2>Limit farkındalığı</h2>
-    <p class="lede">İş başlamadan 5 saatlik ve haftalık limit okunur. Masaüstünde <code>get_usage</code> aracıyla, terminal ve IDE'de Claude Code'un durum çubuğuna gönderdiği <code>rate_limits</code> bilgisiyle. Limit sadece uyarı sebebidir: iş durmaz, sen "dur" demedikçe devam eder.</p>
-  </div>
-  <div class="two">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Çalışırken</th><th>Ne olur</th></tr></thead>
-        <tbody>
-          <tr><td>%90</td><td>Tek satır hatırlatma ve sıfırlanma saati; iş devam eder</td></tr>
-          <tr><td>%95</td><td>"Limit çok azaldı" uyarısı; kaldığı yer sessizce kaydedilir, iş devam eder</td></tr>
-          <tr><td>%99</td><td>"İş yarım kalabilir" uyarısı; adımlar küçük tutulur, WIP commit önerilir</td></tr>
-          <tr><td>"dur" dersen</td><td>Güvenli durur: adımı tamamlar, testleri çalıştırır, kaldığı yeri yazar</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Seviye</th><th>5 saatlik</th><th>Haftalık</th><th>Davranış</th></tr></thead>
-        <tbody>
-          <tr><td>yeşil</td><td>&lt; %60</td><td>&lt; %70</td><td>Normal çalışır, limit durum bloğunda görünür</td></tr>
-          <tr><td>sarı</td><td>%60–84</td><td>%70–89</td><td>Tahmini maliyeti söyler, kurul yarıya iner</td></tr>
-          <tr><td>kırmızı</td><td>≥ %85</td><td>≥ %90</td><td>Maliyeti ve kalan payı tek satırla söyler; seçenekleri sen istersen sunar</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <p class="note">Görev maliyetleri <code>docs/workflow/cost-log.md</code>'ye yazılır; tahminler zamanla gerçek verilere oturur. Az token için oturum açılışında sadece özet kurallar ve <code>docs/workflow/progress.md</code> yüklenir; bu yaklaşık 1.700 token'dır (önceki sürümde yaklaşık 8.000). Kod haritası (codebase-memory-mcp) bağlıysa kod, dosyalar okunmadan sorgulanır.</p>
+<section id="kontroller">
+  <p class="path">Kurallar yazılı, kontroller otomatik</p>
+  <h2>Koruma katmanları</h2>
+  <p class="lead">Kararlar Claude Code'un izin katmanında verilir (izin ver · sor · engelle); AI bunları atlatamaz. Codex ve Antigravity'de aynı betikler o aracın hook'larıyla çalışır.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Katman</th><th>Ne yapar</th></tr></thead>
+    <tbody>
+      <tr><td>Sır engeli</td><td>Koda veya dokümana yazılan API anahtarını (Anthropic, OpenAI, Stripe, AWS, GitHub, Supabase…) engeller; commit öncesi de tarar</td></tr>
+      <tr><td>Yıkıcı komut kalkanı</td><td><code>DROP</code>, <code>TRUNCATE</code>, koşulsuz <code>DELETE</code>, <code>db reset</code> ve prod ortam değişkenlerini makineye çekmek engellenir; prod deploy, geri alma, mağazaya gönderim ve migration sorulur</td></tr>
+      <tr><td>Paket kapısı</td><td>Paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur</td></tr>
+      <tr><td>Yapı koruyucu</td><td>Harita dışı yeni dosya sorulur; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir</td></tr>
+      <tr><td>Yapılandırma onayı</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> ve iş akışı dosyaları onayın olmadan değişmez</td></tr>
+      <tr><td>Test koruması</td><td>Beklenti silmek veya yoruma almak, <code>.skip</code>/<code>.only</code>, gevşek beklenti, test dosyasını silmek veya taşımak ve test ayarında kapsamı daraltmak sorulur; kabukla test dosyasına yazmak da</td></tr>
+      <tr><td>Deterministik kapı</td><td><code>gate.mjs --run</code>: lint, tip kontrolü, test ve Semgrep çalışır; çıktı kurula girdi olur, kırmızı kontrol RET sayılır. Spec'teki "değişmemesi gereken" davranışların testi yoksa veya kırmızıysa kapı kırmızıdır. Yeni veya değişen komut önce sana gösterilip onaylatılır</td></tr>
+      <tr><td>Commit kapısı</td><td>Kurul denetimi ve aynı değişiklikler için yeşil kapı olmadan commit atılmaz</td></tr>
+      <tr><td>Düzenleme kilidi</td><td><code>/freeze &lt;klasör&gt;</code> açıkken AI sadece o klasöre yazar; kabukla dışarı yazmak sorulur, sembolik bağdan kaçılamaz</td></tr>
+      <tr><td>Kapsam kalkanı</td><td><code>/plan-task</code> onayından sonra planın dosya listesi kaydedilir; listede olmayan mevcut dosyaya yazım sorulur</td></tr>
+      <tr><td>Düzenleme turu sayacı</td><td>Aynı kod dosyası bir oturumda 5., 10. kez düzenlenince Semgrep ve güvenlik incelemesi hatırlatılır</td></tr>
+      <tr><td>Dev/prod ayrımı</td><td>Yerel ortam ve AI (salt-okunur MCP dahil) sadece dev projesine bağlanır; prod sırları barındırma panelinde kalır</td></tr>
+      <tr><td>Güvenlik incelemesi</td><td><code>security-guidance</code>: yazarken riskli kalıp uyarısı (istemcide service_role, kişisel veri logu, innerHTML), commit'te ayrı modelle inceleme</td></tr>
+    </tbody>
+  </table></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Ne zaman</th><th>Nerede</th><th>Ne yakalar</th></tr></thead>
+    <tbody>
+      <tr><td>Push ve PR</td><td>GitHub Actions</td><td>Lint, tip, test, build, Semgrep, kopya kod, klasör yapısı, bağımlılık açıkları, tüm geçmişte sır taraması; değişen dosyalarda karmaşıklık bütçesi (fonksiyon 15 karmaşıklık / 80 satır, dosya 400 satır); Supabase varsa yerel Supabase'e karşı RLS saldırgan testi</td></tr>
+      <tr><td>Canlıda</td><td>Canlı izleme · bulut ajanları (isteğe bağlı)</td><td>3 saatte bir kritik akış ve yanıt süresi testi, bozulunca issue ve panoda uyarı; kırmızı CI'a düzeltme önerisi; haftalık bakım raporu</td></tr>
+      <tr><td>Her hafta</td><td>Dependabot</td><td>Eskiyen bağımlılıklar; majörler planlı</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="bulgular">
+  <p class="path">/findings-* · docs/findings/</p>
+  <h2>Bulgu raporları</h2>
+  <p class="lead">Projeyi bir uzman gözüyle tarar; en önemli en fazla 20 bulguyu kanıtla, 0-100 önem puanıyla ve teknik düzeltme yöntemiyle sıralar. Her rapor alan için bir sağlık puanı verir ve bir öncekiyle karşılaştırılır (yeni / devam / kötüleşti / çözüldü).</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Komut</th><th>Bakış açısı</th><th>Örnek bulgu</th></tr></thead>
+    <tbody>
+      <tr><td class="f">/findings-tech</td><td>Kıdemli mimar</td><td>Aynı yetki kontrolü 4 yerde tekrar yazılmış; kullanılmayan export; N+1 sorgu</td></tr>
+      <tr><td class="f">/findings-business</td><td>Sektörün kıdemli uzmanı (bankacılıkta bankacı); web araştırmalı</td><td>Mutabakat akışı yok; iade kuralı tanımsız; rakiplerin standart özelliği eksik</td></tr>
+      <tr><td class="f">/findings-security</td><td>Saldırgan</td><td>Başkasının faturası okunabiliyor (IDOR); webhook imzası doğrulanmıyor</td></tr>
+      <tr><td class="f">/findings-ux</td><td>Kullanıcı ve UX araştırmacısı</td><td>Boş liste ekranı yönlendirmiyor; kontrast 3.1:1</td></tr>
+      <tr><td class="f">/findings-perf</td><td>Performans ve FinOps</td><td>Panel sayfası 480 KB istemci JS; AI çağrısında max_tokens yok</td></tr>
+      <tr><td class="f">/findings-legal</td><td>Uyum uzmanı (hukuki görüş değildir)</td><td>Vergi numarası veri envanterinde yok; çerez bandı onaydan önce analitik yüklüyor</td></tr>
+      <tr><td class="f">/findings-all</td><td>Seçilenlerin hepsi, paralel</td><td>Birleşik özet ve ortak düzeltme planı</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">Önem puanı = etki (40) + olasılık (25) + yayılım (20) + aciliyet (15). Seviyeler: Kritik ≥80 · Yüksek 60-79 · Orta 40-59 · Düşük &lt;40. Sağlık = 100 − ceza (kritik 15 · yüksek 8 · orta 4 · düşük 1). Raporun sonunda düzeltme planı, ilgili kurul üyesinin görüşü ve hangi bulguların yol haritasına gireceği sorusu var.</div>
+</section>
+
+<section id="yapi">
+  <p class="path">.claude/structure.json · docs/architecture/structure.md</p>
+  <h2>Proje yapısı korunur</h2>
+  <p class="lead">Kod özellik bazlıdır: bir özelliğe ait her şey <code>features/&lt;özellik&gt;/</code> altında. Yeni bir dosya yapı haritası dışına yazılmak istenirse sana sorulur; dağınıklık dosyaları engellenir. Deneme işleri <code>sandbox/</code>, eski dokümanlar <code>docs/archive/</code> altına gider.</p>
+<pre class="term">.claude/         <span class="c"># komutlar, ajanlar, hook'lar, kurul, bulgular, structure.json</span>
+.github/         <span class="c"># CI, Dependabot, canlı izleme, bulut ajanları</span>
+docs/
+  product/       prd · roadmap · glossary · launch · feedback · unit-economics · specs/
+  architecture/  overview · stack · structure
+  design/        design-guide
+  decisions/     log.md + adr-NNNN-*.md
+  quality/       test-plan · metrics · retros · qa/
+  security/      checklist
+  legal/         privacy-kvkk
+  operations/    release-checklist · deploy-setup · maintenance · accounts · feature-flags · spend-alarms
+  workflow/      progress · decision-protocol · skills · board · usage-limits · cost-log
+  findings/      /findings-* raporları
+  archive/
+src/features/&lt;özellik&gt;/{components,hooks,server,__tests__}   <span class="c"># web</span>
+tests/
+sandbox/         <span class="c"># git'e girmez</span>
+AGENTS.md · CLAUDE.md · README.md · CHANGELOG.md</pre>
+  <div class="note"><code>AGENTS.md</code> ortak kuralları tutar (Claude Code, Codex, Antigravity okur); <code>CLAUDE.md</code> onu içe alır ve Claude Code'a özel ekleri taşır. Yapı dört yerde korunur: yazım anında hook, her PR'da CI, kurul Mimarı ve <code>/findings-tech</code>. Haritayı değiştirmek teknik bir karardır; sana sorulur ve ADR olarak kaydedilir.</div>
 </section>
 
 <section id="rapor">
-  <div class="section-head">
-    <p class="eyebrow">Her an neredeyiz</p>
-    <h2>Raporlama ve bildirim</h2>
-  </div>
-  <div class="two">
-    <div class="kv">
-      <span class="k">Her cevabın sonunda: durum bloğu</span>
+  <p class="path">Her an neredeyiz</p>
+  <h2>Raporlama ve pano</h2>
+  <div class="grid2">
+    <div>
+      <h3 style="margin-top:0">Her cevabın sonunda: durum bloğu</h3>
 <pre class="term">── Durum ─────────────────────────────
 Aşama: Faz 1 · Görev: G-012 (7/23) · Soru modu: açık · Limit: 5s %34 hf %5
 Yapıldı: kayıt formu + doğrulama, test yeşil · Kurul: ONAY (ux, qa)
 Otomatik kararlar: yok
 Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
-      <span class="k">Her zaman: Claude Code alt durum çubuğu</span>
+      <h3>Her zaman: alt durum çubuğu</h3>
 <pre class="term">▶ Faz 1 · G-012 · görev 7/23 · soru: açık · 5s %34 · hf %5 · bağlam %42</pre>
     </div>
-    <div class="kv">
-      <span class="k">dashboard.html · her Claude cevabından sonra güncellenir</span>
-      <ul class="plain">
+    <div>
+      <h3 style="margin-top:0">dashboard.html</h3>
+      <ul>
         <li><b>Üstte:</b> Şimdi (aşama, görev, sıradaki adım), Dikkat gerektirenler (önem sırasıyla), sağlık rozeti ve özet kutucuklar</li>
         <li><b>10 sekme:</b> Genel · Yol haritası · Kararlar · Kurul · Bulgular · Kalite · Aktivite · Ürün ve teknik · Operasyon · Limit ve maliyet</li>
         <li><b>Ürün ve teknik:</b> PRD, MVP ve kabul testleri, birim ekonomisi, geri bildirim, stack, tasarım, marka paketi, tanıtım videoları, araştırma notları</li>
         <li><b>Limit ve maliyet:</b> 5 saatlik ve haftalık limit, bağlam, son 30 günün token ve API karşılığı maliyeti (ccusage), görev başı limit maliyeti</li>
-        <li>Açıkken 30 saniyede bir yenilenir; ek token harcamaz</li>
+        <li>Her Claude cevabından sonra güncellenir, açıkken 30 saniyede bir yenilenir; ek token harcamaz</li>
       </ul>
-      <span class="k">Masaüstü bildirimi</span>
-      <ul class="plain">
+      <h3>Masaüstü bildirimi</h3>
+      <ul>
         <li>Claude soru sorduğunda veya onay beklediğinde</li>
         <li>90 saniyeden uzun bir iş bittiğinde · kapatmak için <code>KIT_NOTIFY=off</code></li>
       </ul>
@@ -483,252 +858,213 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
   </div>
 </section>
 
-<section id="skiller">
-  <div class="section-head">
-    <p class="eyebrow">docs/workflow/skills.md</p>
-    <h2>Hangi işte hangi skill</h2>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>İş</th><th>Skill</th></tr></thead>
+<section id="limit">
+  <p class="path">docs/workflow/usage-limits.md</p>
+  <h2>Limit farkındalığı</h2>
+  <p class="lead">İş başlamadan 5 saatlik ve haftalık limit okunur: masaüstünde <code>get_usage</code> aracıyla, terminal ve IDE'de Claude Code'un durum çubuğuna gönderdiği bilgiyle. Limit sadece uyarı sebebidir: iş durmaz, sen "dur" demedikçe devam eder.</p>
+  <div class="grid2">
+    <div class="table-wrap" style="margin:0"><table>
+      <thead><tr><th>Çalışırken</th><th>Ne olur</th></tr></thead>
       <tbody>
-        <tr><td>Değişebilen bilgi: sürüm, fiyat, mevzuat, rakip</td><td class="f">source-research · Context7</td></tr>
-        <tr><td>Logo, ikon, marka paketi</td><td class="f">logo-design</td></tr>
-        <tr><td>Uygulama içi hareket</td><td class="f">ui-motion</td></tr>
-        <tr><td>Kaydırma animasyonu (cesur yön)</td><td class="f">gsap-skills (tasarim paketi)</td></tr>
-        <tr><td>3D sahne (seçilirse)</td><td class="f">threejs-fundamentals · threejs-performance · threejs-react-three-fiber</td></tr>
-        <tr><td>Tanıtım videosu</td><td class="f">motion-video (Remotion isteğe bağlı)</td></tr>
-        <tr><td>Durum blokları, ilerleme notları</td><td class="f">caveman:caveman</td></tr>
-        <tr><td>Fikri ve büyük planları sorgulamak</td><td class="f">mattpocock-skills:grilling</td></tr>
-        <tr><td>Sözlük, karar kaydı, veri modeli</td><td class="f">mattpocock-skills:domain-modeling</td></tr>
-        <tr><td>Modül sınırları, mimari</td><td class="f">mattpocock-skills:codebase-design</td></tr>
-        <tr><td>Elle yapılacak kurulum (DNS, panel, mağaza)</td><td class="f">mattpocock-skills:wizard</td></tr>
-        <tr><td>Her kod değişikliği</td><td class="f">ponytail:ponytail</td></tr>
-        <tr><td>Kritik akış (auth, ödeme, veri)</td><td class="f">mattpocock-skills:tdd</td></tr>
-        <tr><td>Hata ayıklama</td><td class="f">mattpocock-skills:diagnosing-bugs · /freeze &lt;klasör&gt;</td></tr>
-        <tr><td>React/Next performansı · React Native</td><td class="f">react-best-practices · composition-patterns · react-native-guidelines (Vercel)</td></tr>
-        <tr><td>Veritabanı şeması, sorgu, indeks</td><td class="f">postgres-best-practices · supabase</td></tr>
-        <tr><td>Expo build, yükseltme, mağaza</td><td class="f">expo (Expo resmi)</td></tr>
-        <tr><td>Core Web Vitals, erişilebilirlik, SEO</td><td class="f">web-quality-skills</td></tr>
-        <tr><td>CLAUDE.md denetimi · oturum dersleri</td><td class="f">claude-md-improver · /revise-claude-md</td></tr>
-        <tr><td>"Bunu bir daha yapma" → kalıcı kural</td><td class="f">/hookify</td></tr>
-        <tr><td>İnceleme · denetim · borç listesi</td><td class="f">ponytail-review · ponytail-audit · ponytail-debt</td></tr>
-        <tr><td>Derin güvenlik taraması</td><td class="f">/claude-security (Anthropic)</td></tr>
-        <tr><td>Güvenlik derinliği</td><td class="f">Trail of Bits: differential-review · insecure-defaults · sharp-edges · static-analysis · supply-chain-risk-auditor · agentic-actions-auditor · fp-check</td></tr>
-        <tr><td>Stil yönüne göre arayüz</td><td class="f">taste-skill:* (yukarıdaki eşleme)</td></tr>
-        <tr><td>Ürün bağlamı, tasarım sistemi, critique/audit/polish</td><td class="f">impeccable:impeccable</td></tr>
-        <tr><td>Palet, yazı tipi, belirteçler, banner</td><td class="f">ui-ux-pro-max:*</td></tr>
-        <tr><td>Kullanıcıya görünen her metin</td><td class="f">humanizer:humanizer</td></tr>
+        <tr><td>%90</td><td>Tek satır hatırlatma ve sıfırlanma saati; iş devam eder</td></tr>
+        <tr><td>%95</td><td>"Limit çok azaldı" uyarısı; kaldığı yer sessizce kaydedilir</td></tr>
+        <tr><td>%99</td><td>"İş yarım kalabilir" uyarısı; adımlar küçük tutulur, WIP commit önerilir</td></tr>
+        <tr><td>"dur" dersen</td><td>Güvenli durur: adımı tamamlar, testleri çalıştırır, kaldığı yeri yazar</td></tr>
       </tbody>
-    </table>
+    </table></div>
+    <div class="table-wrap" style="margin:0"><table>
+      <thead><tr><th>Seviye</th><th>5 saatlik</th><th>Haftalık</th><th>Davranış</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag">yeşil</span></td><td>&lt; %60</td><td>&lt; %70</td><td>Normal çalışır</td></tr>
+        <tr><td><span class="tag warn">sarı</span></td><td>%60–84</td><td>%70–89</td><td>Tahmini maliyeti söyler, kurul yarıya iner</td></tr>
+        <tr><td><span class="tag bad">kırmızı</span></td><td>≥ %85</td><td>≥ %90</td><td>Maliyeti ve kalan payı tek satırla söyler</td></tr>
+      </tbody>
+    </table></div>
   </div>
-  <p class="note">Bağlam paketleri: Skill listesi bağlamın %1'iyle sınırlı, taşınca skill'ler kaçırılır. Çekirdek eklentiler hep açık; tasarım, güvenlik, yayın ve video paketleri kapalı gelir ve ilgili komut gerektiğinde açmayı sorar (<code>/tools</code>). Hafif ve Standart profilde çekirdek dışı 19 komut listede sadece adıyla durur; <code>/</code> menüsünde kalır (Tam: <code>/tools komutlar tam</code>). Backend projelerinde arayüz tasarım plugin'leri de kapalıdır. Yeni plugin eklemek teknik bir karardır; üçüncü taraf skill'ler kurulmadan önce okunur.</p>
+  <div class="note">Görev maliyetleri <code>docs/workflow/cost-log.md</code>'ye yazılır; tahminler zamanla gerçek verilere oturur. Oturum açılışında sadece özet kurallar ve <code>docs/workflow/progress.md</code> yüklenir (yaklaşık 1.700 token). Kod haritası bağlıysa kod, dosyalar okunmadan sorgulanır.</div>
 </section>
 
 <section id="yetenekler">
-  <div class="section-head">
-    <p class="eyebrow">.claude/skills · MCP</p>
-    <h2>Yetenek paketleri</h2>
-    <p class="lede">Çekirdek işler dışarıdan kurulan araçlara değil, kitin kendi skill'lerine dayanır; dış araçlar sadece fark yarattığı yerde ve proje tipine göre açılır.</p>
-  </div>
-  <div class="types">
-    <article class="type"><h3>Doğru kaynak</h3><p class="stack">source-research · Context7 · Firecrawl (isteğe bağlı)</p><ul><li>Önce resmi doküman, mevzuat, standart</li><li>Her iddiaya kaynak, tarih, güven seviyesi (A-D)</li><li>Kütüphane dokümanı Context7'den güncel</li><li>Firecrawl API anahtarı ister; anahtar senin ortam değişkeninde kalır</li></ul></article>
-    <article class="type"><h3>Logo</h3><p class="stack">logo-design · SVG</p><ul><li>Marka soruları → 4-6 konsept görsel önizlemeyle</li><li>16 px okunurluk, tek renk hal, koyu zemin</li><li>Favicon, uygulama ikonları, PNG boyutları, kullanım kuralları</li></ul></article>
-    <article class="type"><h3>Tanıtım videosu</h3><p class="stack">motion-video · renderAt(t) · Playwright · ffmpeg</p><ul><li>Tek kesintisiz dönüşüm, gerçek imleç, 120 BPM</li><li>Kapalı formlu yaylar (testle doğrulandı)</li><li>Önce vuruş haritası ve 4 kare onayı, sonra MP4</li></ul></article>
-    <article class="type"><h3>Arayüz hareketi ve 3D</h3><p class="stack">ui-motion · Motion · Reanimated · GSAP · three.js</p><ul><li>Süre belirteçleri, yaylar, sadece transform/opacity</li><li>Hareket azaltma tercihi zorunlu</li><li>Kaydırma anlatımı GSAP ile (ücretsiz, ticari dahil)</li><li>3D: tembel yükleme, statik yedek, mobil GPU, dispose()</li></ul></article>
-    <article class="type"><h3>İnceleme ve keşif</h3><p class="stack">rea · Understand-Anything · awesome-design-md</p><ul><li>Rakip özelliği nasıl çalışıyor: rea CLI, sadece yetkili olduğun yazılımda, önce onay</li><li>İnsan için kod haritası ve tanıtım rehberi: /adopt, /handoff, /release first önerir</li><li>İlham markasının DESIGN.md'si damıtılır; marka taklidi yok</li></ul></article>
-    <article class="type"><h3>Güvenlik</h3><p class="stack">security-guidance · claude-security · Trail of Bits</p><ul><li>Yazarken: riskli kalıp uyarısı (ücretsiz)</li><li>Commit'te: ayrı modelle derin inceleme; tur sonu incelemesi kota için kapalı</li><li>/findings-security: çok ajanlı, doğrulanmış tarama</li></ul></article>
-    <article class="type"><h3>Kod zekâsı</h3><p class="stack">typescript-lsp · pyright-lsp</p><ul><li>Her düzenlemeden sonra tip hatası</li><li>Tanıma git, referans bul</li><li>Uydurma API'yi derlemeden yakalar</li></ul></article>
-    <article class="type"><h3>Stack kuralları</h3><p class="stack">Vercel · Expo · Supabase · web-quality</p><ul><li>Proje tipine göre açılır, ihtiyaç olunca yüklenir</li><li>React, React Native, Postgres, Core Web Vitals</li></ul></article>
-    <article class="type"><h3>Mobil test ve servisler</h3><p class="stack">Maestro · Expo MCP · servis kataloğu</p><ul><li>Kabul testleri cihazda/simülatörde</li><li>EAS build, TestFlight çökme kayıtları</li><li>GitHub, Stripe, PostHog, Figma: servis seçilince; Vercel CLI ile önizleme ve onaylı prod deploy</li></ul></article>
-    <article class="type"><h3>Ölçüm ve maliyet</h3><p class="stack">Playwright CLI · Chrome DevTools MCP · ccusage · session-report</p><ul><li>Konsol, ağ ve ekran görüntüsü CLI ile; performans izi gerektiğinde MCP ile</li><li>Proje başına token ve maliyet panoda</li><li>En pahalı istekler raporu</li></ul></article>
-    <article class="type"><h3>Geri alma</h3><p class="stack">/rollback · checkpoint.mjs</p><ul><li>Testler yeşilken çalışan nokta kaydedilir (/build, /wrap-up)</li><li>Geri dönüş yeni bir commit'tir, geçmiş silinmez</li><li>Yarım iş saklanır, .env'e dokunulmaz</li></ul></article>
-    <article class="type"><h3>Anlatıcı mod</h3><p class="stack">output style: anlatici</p><ul><li>Her adımdan sonra: ne yaptım, neden, nasıl görürsün</li><li>Hatalar sade dille, yeni kavramlar tek cümleyle</li><li>Görev sonunda en fazla 2 anlama sorusu; cevaplar panoda öğrenme kartı</li><li>/start sorar; kişisel ayar</li></ul></article>
-    <article class="type"><h3>Dağıtım kurulumu</h3><p class="stack">/release first · deploy-setup.md</p><ul><li>Hosting, ortam değişkenleri, alan adı ve DNS, yedek, geri alma provası</li><li>Vercel, Supabase, Railway, EAS; adımlar kaynaklı ve tarihli</li><li>Sırrı sen panelde girersin; sohbete ve dosyaya yazılmaz</li></ul></article>
-    <article class="type"><h3>Türkiye eki</h3><p class="stack">--addons tr · docs/legal/turkiye.md</p><ul><li>KVKK yurt dışı aktarım: standart sözleşme, 5 iş günü bildirim</li><li>e-Fatura ve e-Arşiv eşikleri (GİB)</li><li>iyzico ve PayTR bildirim imzası kodu ve saldırgan testi (web-saas, backend)</li><li>İ/ı ve Türkçe sıralama testleri; hukuki görüş değildir</li></ul></article>
-    <article class="type"><h3>Harcama alarmı</h3><p class="stack">spend-alarms.md · pano</p><ul><li>Sağlayıcı tavanı ve %50/%80 uyarısı</li><li>Kodda kullanıcı kotası, günlük bütçe, otomatik kapatma</li><li>/release ve /maintain kontrol eder</li></ul></article>
-    <article class="type"><h3>Öğrenen kurallar</h3><p class="stack">/fix-bug · /retro · hookify · AGENTS.md</p><ul><li>Aynı hata sınıfı ikinci kez gelince /fix-bug kural önerir; panoda da uyarı çıkar</li><li>Mekanik kural hookify'a, gerisi AGENTS.md'ye; sen onaylamadan yazılmaz</li><li>Her kuralda kaynak ve tarih; /maintain 90 günden eskileri sorar</li><li>Auto memory /start'ta sorulur, önerilen kapalı</li></ul></article>
-    <article class="type"><h3>Bildirim</h3><p class="stack">notify.mjs</p><ul><li>Soru veya onay beklerken</li><li>Uzun iş bitince</li><li>Windows, macOS, Linux</li></ul></article>
+  <p class="path">.claude/skills · MCP</p>
+  <h2>Yetenek paketleri</h2>
+  <p class="lead">Çekirdek işler dışarıdan kurulan araçlara değil, kitin kendi skill'lerine dayanır; dış araçlar sadece fark yarattığı yerde ve proje tipine göre açılır.</p>
+  <div class="tiles">
+    <article class="tile"><h3>Doğru kaynak</h3><p class="stack">source-research · Context7 · Firecrawl (isteğe bağlı)</p><ul><li>Önce resmî doküman, mevzuat, standart</li><li>Her iddiaya kaynak, tarih, güven seviyesi (A-D)</li><li>Kütüphane dokümanı Context7'den güncel</li><li>Firecrawl API anahtarı senin ortam değişkeninde kalır</li></ul></article>
+    <article class="tile"><h3>Dağıtım kurulumu</h3><p class="stack">/release first · deploy-setup.md</p><ul><li>Hosting, ortam değişkenleri, alan adı ve DNS, yedek, geri alma provası</li><li>Vercel, Supabase, Railway, EAS; adımlar kaynaklı ve tarihli</li><li>Sırrı sen panelde girersin; sohbete ve dosyaya yazılmaz</li></ul></article>
+    <article class="tile"><h3>Öğrenen kurallar</h3><p class="stack">/fix-bug · /retro · hookify · AGENTS.md</p><ul><li>Aynı hata sınıfı ikinci kez gelince /fix-bug kural önerir; panoda da uyarı çıkar</li><li>Mekanik kural hookify'a, gerisi AGENTS.md'ye; sen onaylamadan yazılmaz</li><li>Her kuralda kaynak ve tarih; /maintain 90 günden eskileri sorar</li><li>Auto memory /start'ta sorulur, önerilen kapalı</li></ul></article>
+    <article class="tile"><h3>Türkiye eki</h3><p class="stack">--addons tr · docs/legal/turkiye.md</p><ul><li>KVKK yurt dışı aktarım: standart sözleşme, 5 iş günü bildirim</li><li>e-Fatura ve e-Arşiv eşikleri (GİB)</li><li>iyzico ve PayTR bildirim imzası kodu ve saldırgan testi</li><li>İ/ı ve Türkçe sıralama testleri; hukuki görüş değildir</li></ul></article>
+    <article class="tile"><h3>Tarayıcıda QA ve önizleme</h3><p class="stack">/qa · preview.mjs · Playwright CLI</p><ul><li>Arayüz kriterleri gerçek tarayıcıda test olarak koşar</li><li>Rapor test sonucundan yazılır, panoda kart</li><li>/build arayüz görevinde masaüstü ve mobil ekran görüntüsü</li></ul></article>
+    <article class="tile"><h3>Spec ve sapma kontrolü</h3><p class="stack">docs/product/specs/ · gate.mjs</p><ul><li>Mevcut, beklenen ve değişmemesi gereken davranış</li><li>"Değişmemesi gereken" satırların testi kapıda denetlenir</li><li>3+ dosyalık işte /plan-task, her hatada /fix-bug yazar</li></ul></article>
+    <article class="tile"><h3>Logo</h3><p class="stack">logo-design · SVG</p><ul><li>Marka soruları, 4-6 konsept görsel önizlemeyle</li><li>16 px okunurluk, tek renk hal, koyu zemin</li><li>Favicon, uygulama ikonları, PNG boyutları</li></ul></article>
+    <article class="tile"><h3>Tanıtım videosu</h3><p class="stack">motion-video · renderAt(t) · Playwright · ffmpeg</p><ul><li>Tek kesintisiz dönüşüm, gerçek imleç, 120 BPM</li><li>Kapalı formlu yaylar (testle doğrulandı)</li><li>Önce vuruş haritası ve 4 kare onayı, sonra MP4</li></ul></article>
+    <article class="tile"><h3>Arayüz hareketi ve 3D</h3><p class="stack">ui-motion · Motion · Reanimated · GSAP · three.js</p><ul><li>Süre belirteçleri, yaylar, sadece transform/opacity</li><li>Hareket azaltma tercihi zorunlu</li><li>3D: tembel yükleme, statik yedek, mobil GPU</li></ul></article>
+    <article class="tile"><h3>İnceleme ve keşif</h3><p class="stack">rea · Understand-Anything · awesome-design-md</p><ul><li>Rakip özelliği nasıl çalışıyor: sadece yetkili olduğun yazılımda, önce onay</li><li>İnsan için kod haritası: /adopt, /handoff, /release first önerir</li></ul></article>
+    <article class="tile"><h3>Güvenlik</h3><p class="stack">security-guidance · claude-security · Trail of Bits</p><ul><li>Yazarken: riskli kalıp uyarısı</li><li>Commit'te: ayrı modelle inceleme</li><li>/findings-security: çok ajanlı, doğrulanmış tarama</li></ul></article>
+    <article class="tile"><h3>Kod zekâsı ve stack kuralları</h3><p class="stack">typescript-lsp · pyright-lsp · Vercel · Expo · Supabase</p><ul><li>Her düzenlemeden sonra tip hatası; uydurma API derlemeden yakalanır</li><li>React, React Native, Postgres, Core Web Vitals kuralları tipe göre açılır</li></ul></article>
+    <article class="tile"><h3>Mobil test ve servisler</h3><p class="stack">Maestro · Expo MCP · servis kataloğu</p><ul><li>Kabul testleri cihazda veya simülatörde</li><li>EAS build, TestFlight çökme kayıtları</li><li>GitHub, Stripe, PostHog, Figma: servis seçilince</li></ul></article>
+    <article class="tile"><h3>Ölçüm ve maliyet</h3><p class="stack">Playwright CLI · Chrome DevTools MCP · ccusage</p><ul><li>Konsol, ağ, ekran görüntüsü CLI ile; performans izi MCP ile</li><li>Proje başına token ve maliyet panoda</li></ul></article>
+    <article class="tile"><h3>Geri alma</h3><p class="stack">/rollback · checkpoint.mjs</p><ul><li>Testler yeşilken çalışan nokta kaydedilir</li><li>Geri dönüş yeni bir commit'tir, geçmiş silinmez</li><li>Yarım iş saklanır, .env'e dokunulmaz</li></ul></article>
+    <article class="tile"><h3>Anlatıcı mod</h3><p class="stack">output style: anlatici</p><ul><li>Her adımdan sonra: ne yaptım, neden, nasıl görürsün</li><li>Görev sonunda en fazla 2 anlama sorusu; cevaplar panoda</li></ul></article>
+    <article class="tile"><h3>Harcama alarmı</h3><p class="stack">spend-alarms.md · pano</p><ul><li>Sağlayıcı tavanı ve %50/%80 uyarısı</li><li>Kodda kullanıcı kotası, günlük bütçe, otomatik kapatma</li><li>/release ve /maintain kontrol eder</li></ul></article>
   </div>
 </section>
 
-<section id="kontroller">
-  <div class="section-head">
-    <p class="eyebrow">Kurallar yazılı, kontroller otomatik</p>
-    <h2>Koruma katmanları</h2>
-    <p class="lede">Kararlar Claude Code'un izin katmanında verilir (izin ver · sor · engelle); AI bunları atlatamaz. Codex ve Antigravity'de aynı betikler o aracın hook'larıyla çalışır.</p>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Ne zaman</th><th>Katman</th><th>Ne yakalar</th></tr></thead>
-      <tbody>
-        <tr><td>AI dosya yazarken</td><td>Sır engeli · yapı koruyucu · yapılandırma onayı · düzenleme kilidi · kapsam kalkanı · test koruması · düzenleme turu sayacı · güvenlik kalıpları</td><td>Koda yazılan API anahtarı engellenir; /freeze açıkken kilitli klasör dışına yazılmaz; onaylı plan açıkken planda olmayan mevcut dosyaya yazım sorulur (sembolik bağ üzerinden de; Jupyter defterleri dahil); riskli kalıpta (service_role istemcide, kişisel veri logu, innerHTML) uyarı; harita dışı yeni dosya sorulur, dağınıklık (*.bak, *-old.*, kopya) engellenir; CLAUDE.md, AGENTS.md, .claude/, .codex/, .mcp.json, iş akışı değişikliği sorulur; testte beklenti silmek veya yoruma almak, .skip/.only/skipIf, gevşek veya matcher'sız beklenti, test dosyasını silmek veya taşımak ve test ayarında kapsamı daraltmak (include/exclude, passWithNoTests, eşik, test script'i) sorulur; aynı kod dosyası 5. kez düzenlenince Semgrep ve güvenlik incelemesi hatırlatılır</td></tr>
-        <tr><td>AI komut çalıştırırken</td><td>Yıkıcı komut kalkanı · paket kapısı · commit kapısı</td><td>DROP, TRUNCATE, koşulsuz DELETE, db reset ve prod ortam değişkenlerini makineye çekmek engellenir; prod deploy, test dosyasına kabukla yazmak (sed -i, rm, &gt;), kilit ya da plan açıkken onların dışındaki dosyayı kabukla değiştirmek ve kural/koruma dosyalarına (.claude/, .git/, AGENTS.md; kilit, plan ve onay durumları dahil) kabukla dokunmak sorulur; uydurma, çok yeni veya az kullanılan paket engellenir veya sorulur; kurul denetimi ve yeşil deterministik kapı (lint, tip, test, Semgrep) olmadan commit yok; hiçbir kontrol çalışmazsa da commit yok; kapının çalıştıracağı yeni veya değişen komut önce sana gösterilip onaylatılır (onay proje dışında, kullanıcı klasöründe durur)</td></tr>
-        <tr><td>Commit anında</td><td>Pre-commit · security-guidance</td><td>Sahnelenmiş değişikliklerde sır, lint, format; ayrı bir model değişikliği çevresiyle birlikte güvenlik açısından inceler</td></tr>
-        <tr><td>Push ve PR</td><td>GitHub Actions</td><td>Lint, tip, test, build, Semgrep, kopya kod, klasör yapısı, bağımlılık açıkları, tüm geçmişte sır taraması; değişen dosyalarda karmaşıklık bütçesi (fonksiyon 15 karmaşıklık / 80 satır, dosya 400 satır); Supabase varsa CI içinde yerel Supabase'e karşı RLS saldırgan testi (anonim ve ikinci kullanıcı)</td></tr>
-        <tr><td>Canlıda</td><td>Canlı izleme · bulut ajanları (isteğe bağlı)</td><td>3 saatte bir kritik akış ve yanıt süresi testi, bozulunca issue ve panoda uyarı; kırmızı CI'a düzeltme önerisi; haftalık bakım raporu</td></tr>
-        <tr><td>Her hafta</td><td>Dependabot</td><td>Eskiyen bağımlılıklar; majörler planlı</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section id="bulgular">
-  <div class="section-head">
-    <p class="eyebrow">/findings-* · docs/findings/</p>
-    <h2>Bulgu raporları</h2>
-    <p class="lede">Projeyi bir uzman gözüyle tarar; en önemli en fazla 20 bulguyu kanıtla, 0-100 önem puanıyla ve teknik düzeltme yöntemiyle sıralar. Her rapor alan için bir sağlık puanı verir ve bir öncekiyle karşılaştırılır.</p>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Komut</th><th>Bakış açısı</th><th>Örnek bulgu</th></tr></thead>
-      <tbody>
-        <tr><td class="f">/findings-tech</td><td>Kıdemli mimar</td><td>Aynı yetki kontrolü 4 yerde tekrar yazılmış; kullanılmayan export; N+1 sorgu</td></tr>
-        <tr><td class="f">/findings-business</td><td>Sektörün kıdemli uzmanı (bankacılıkta bankacı); web araştırmalı</td><td>Mutabakat akışı yok; iade kuralı tanımsız; rakiplerin standart özelliği eksik</td></tr>
-        <tr><td class="f">/findings-security</td><td>Saldırgan</td><td>Başkasının faturası okunabiliyor (IDOR); webhook imzası doğrulanmıyor</td></tr>
-        <tr><td class="f">/findings-ux</td><td>Kullanıcı ve UX araştırmacısı</td><td>Boş liste ekranı yönlendirmiyor; kontrast 3.1:1</td></tr>
-        <tr><td class="f">/findings-perf</td><td>Performans ve FinOps</td><td>Panel sayfası 480 KB istemci JS; AI çağrısında max_tokens yok</td></tr>
-        <tr><td class="f">/findings-legal</td><td>Uyum uzmanı (hukuki görüş değildir)</td><td>Vergi numarası veri envanterinde yok; çerez bandı onaydan önce analitik yüklüyor</td></tr>
-        <tr><td class="f">/findings-all</td><td>Seçilenlerin hepsi, paralel</td><td>Birleşik özet ve ortak düzeltme planı</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="note">Önem puanı = etki (40) + olasılık (25) + yayılım (20) + aciliyet (15). Sağlık = 100 − ceza (kritik 15 · yüksek 8 · orta 4 · düşük 1). Raporun sonunda düzeltme planı, ilgili kurul üyesinin görüşü ve hangi bulguların yol haritasına gireceği sorusu var.</p>
-</section>
-
-<section id="yapi">
-  <div class="section-head">
-    <p class="eyebrow">.claude/structure.json · docs/architecture/structure.md</p>
-    <h2>Proje yapısı korunur</h2>
-    <p class="lede">Kod özellik bazlıdır: bir özelliğe ait her şey <code>features/&lt;özellik&gt;/</code> altında. Yeni bir dosya yapı haritası dışına yazılmak istenirse sana sorulur; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir. Deneme işleri <code>sandbox/</code>, eski dokümanlar <code>docs/archive/</code> altına gider.</p>
-  </div>
-<pre class="term">docs/
-  product/       prd · roadmap · glossary · launch · feedback · unit-economics
-  architecture/  overview · stack · structure
-  decisions/     log.md + adr-NNNN-*.md
-  quality/       test-plan · metrics · retros
-  operations/    release-checklist · maintenance · accounts · feature-flags
-  workflow/      progress · decision-protocol · skills · board · usage-limits
-  findings/      /findings-* raporları
-  archive/
-src/features/&lt;özellik&gt;/{components,hooks,server,__tests__}   <span class="c"># web</span>
-sandbox/       <span class="c"># git'e girmez</span></pre>
-  <p class="note">Yapı dört yerde korunur: yazım anında hook, her PR'da CI, kurul Mimarı ve <code>/findings-tech</code>. Haritayı değiştirmek teknik bir karardır; sana sorulur ve ADR olarak kaydedilir.</p>
-</section>
-
-<section id="komutlar">
-  <div class="section-head">
-    <p class="eyebrow">.claude/commands</p>
-    <h2>Komutlar</h2>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Komut</th><th>Ne yapar</th></tr></thead>
-      <tbody>
-        <tr><td class="f">/start [fikir]</td><td>Dokuz adımlı sihirbaz: fikir, tip, kurulum, teknoloji, mimari, kurul, tasarım, yol haritası</td></tr>
-        <tr><td class="f">/adopt</td><td>Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, AGENTS.md ve CLAUDE.md'yi yeniden yazar, kritik akış testleri ve özellik özellik taşıma ile uyum yol haritası</td></tr>
-        <tr><td class="f">/plan-task [görev]</td><td>Karar noktalarını sorar, plan çıkarır, onay alır; 3+ dosyalık işte spec (değişmemesi gereken davranışları kapı denetler)</td></tr>
-        <tr><td class="f">/build [görev]</td><td>Uygular; yeni karar çıkarsa durur; kanıt üretir (arayüzde masaüstü ve mobil ekran görüntüsü); sıradaki adımı sorar</td></tr>
-        <tr><td class="f">/design [kapsam]</td><td>Görsel önizlemeli tasarım kararları ve uygulama</td></tr>
-        <tr><td class="f">/review-changes [aralık]</td><td>code-reviewer + security-auditor + ponytail-review; düzeltilecekleri çoklu seçimle sorar</td></tr>
-        <tr><td class="f">/fix-bug [belirti]</td><td>diagnosing-bugs döngüsü: yeniden üret, kanıtla, kırmızı test, düzelt, kapı</td></tr>
-        <tr><td class="f">/qa [kriterler]</td><td>Arayüz kriterlerini tarayıcıda Playwright testi olarak koşar; rapor JUnit sonucundan, panoda kart</td></tr>
-        <tr><td class="f">/freeze &lt;klasör&gt; | off</td><td>Düzenlemeyi tek klasöre kilitler; iş başka dosyalara yayılmaz</td></tr>
-        <tr><td class="f">/rollback [nokta]</td><td>Son çalışan hale güvenle döner: yarım iş saklanır, geçmiş silinmez, geri dönüş de geri alınabilir</td></tr>
-        <tr><td class="f">/wrap-up</td><td>İlerleme, kararlar, CHANGELOG ve dashboard.html</td></tr>
-        <tr><td class="f">/dashboard</td><td>Ayrıntılı rapor ve pano</td></tr>
-        <tr><td class="f">/ask-mode [kapat|ac] [konu]</td><td>Soru modu</td></tr>
-        <tr><td class="f">/board [kur|topla]</td><td>Uzman kurulunu kurar, değiştirir, toplar</td></tr>
-        <tr><td class="f">/release [ilk]</td><td>Denetimler, otomatik kontroller, sana sorulan panel maddeleri</td></tr>
-        <tr><td class="f">/maintain [periyot]</td><td>Haftalık, aylık, çeyreklik bakım</td></tr>
-        <tr><td class="f">/retro</td><td>Dersler projeye; kit önerileri kit reposunda bir dala</td></tr>
-        <tr><td class="f">/findings-&lt;tür&gt;</td><td>tech · business · security · ux · perf · legal · all: puanlı bulgu raporu</td></tr>
-        <tr><td class="f">/user-feedback</td><td>Kullanıcı geri bildirimini temalara ayırır, yol haritasına aldırır</td></tr>
-        <tr><td class="f">/research [konu]</td><td>Makaleler, GitHub'daki benzer projeler ve rakip ürünler; benzer/farklı yön tablosu; seçilen özellikler PRD'ye ve yol haritasına</td></tr>
-        <tr><td class="f">/handoff [devral]</td><td>Projeyi başka kişiye veya hesaba devreder (devir notu) ya da devralır (ortamı kurar, sıradaki görevi söyler)</td></tr>
-        <tr><td class="f">/tools [ac|kapat|olc|komutlar]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer; komut listesini hafif veya tam yapar</td></tr>
-        <tr><td class="f">/kit-update</td><td>Projeyi kitin son sürümüne çeker; çakışmaları sorar; <code>--tool</code> ile araç ekler</td></tr>
-      </tbody>
-    </table>
-  </div>
+<section id="skiller">
+  <p class="path">docs/workflow/skills.md</p>
+  <h2>Hangi işte hangi skill</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>İş</th><th>Skill</th></tr></thead>
+    <tbody>
+      <tr><td>Her kod değişikliği</td><td class="f">ponytail:ponytail</td></tr>
+      <tr><td>Kritik akış (auth, ödeme, veri)</td><td class="f">mattpocock-skills:tdd</td></tr>
+      <tr><td>Hata ayıklama</td><td class="f">mattpocock-skills:diagnosing-bugs · /freeze &lt;klasör&gt;</td></tr>
+      <tr><td>Fikri ve büyük planları sorgulamak</td><td class="f">mattpocock-skills:grilling</td></tr>
+      <tr><td>Sözlük, karar kaydı, veri modeli</td><td class="f">mattpocock-skills:domain-modeling</td></tr>
+      <tr><td>Modül sınırları, mimari</td><td class="f">mattpocock-skills:codebase-design</td></tr>
+      <tr><td>Elle yapılacak kurulum (DNS, panel, mağaza)</td><td class="f">mattpocock-skills:wizard</td></tr>
+      <tr><td>Değişebilen bilgi: sürüm, fiyat, mevzuat, rakip</td><td class="f">source-research · Context7</td></tr>
+      <tr><td>Stil yönüne göre arayüz</td><td class="f">taste-skill:*</td></tr>
+      <tr><td>Ürün bağlamı, tasarım sistemi, critique/audit/polish</td><td class="f">impeccable:impeccable</td></tr>
+      <tr><td>Palet, yazı tipi, belirteçler</td><td class="f">ui-ux-pro-max:*</td></tr>
+      <tr><td>Kullanıcıya görünen her metin</td><td class="f">humanizer:humanizer</td></tr>
+      <tr><td>Logo, ikon, marka paketi</td><td class="f">logo-design</td></tr>
+      <tr><td>Uygulama içi hareket</td><td class="f">ui-motion</td></tr>
+      <tr><td>Kaydırma animasyonu (cesur yön)</td><td class="f">gsap-skills</td></tr>
+      <tr><td>3D sahne (seçilirse)</td><td class="f">threejs-fundamentals · threejs-performance · threejs-react-three-fiber</td></tr>
+      <tr><td>Tanıtım videosu</td><td class="f">motion-video</td></tr>
+      <tr><td>Durum blokları, ilerleme notları</td><td class="f">caveman:caveman</td></tr>
+      <tr><td>React/Next performansı · React Native</td><td class="f">react-best-practices · composition-patterns · react-native-guidelines</td></tr>
+      <tr><td>Veritabanı şeması, sorgu, indeks</td><td class="f">postgres-best-practices · supabase</td></tr>
+      <tr><td>Expo build, yükseltme, mağaza</td><td class="f">expo</td></tr>
+      <tr><td>Core Web Vitals, erişilebilirlik, SEO</td><td class="f">web-quality-skills</td></tr>
+      <tr><td>CLAUDE.md denetimi · oturum dersleri</td><td class="f">claude-md-improver · /revise-claude-md</td></tr>
+      <tr><td>"Bunu bir daha yapma" → kalıcı kural</td><td class="f">/hookify</td></tr>
+      <tr><td>İnceleme · denetim · borç listesi</td><td class="f">ponytail-review · ponytail-audit · ponytail-debt</td></tr>
+      <tr><td>Derin güvenlik taraması</td><td class="f">/claude-security · Trail of Bits</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><b>Bağlam paketleri:</b> Skill listesi bağlamın %1'iyle sınırlı; taşınca skill'ler kaçırılır. Çekirdek eklentiler hep açık; tasarım, güvenlik, yayın ve video paketleri kapalı gelir ve ilgili komut gerektiğinde açmayı sorar (<code>/tools</code>). Yeni eklenti eklemek teknik bir karardır; üçüncü taraf skill'ler kurulmadan önce okunur.</div>
+  <div class="note"><b>Bilerek eklenmeyenler:</b> superpowers, gstack, spec-kit, BMAD, GSD, OpenSpec kitin soru, plan ve kurul akışının yerine geçer; iyi fikirleri kitin kendi kurallarına işlendi. claude-mem ve Serena, kitin ilerleme dosyası ve kod haritasıyla aynı işi yapar.</div>
 </section>
 
 <section id="araclar">
-  <div class="section-head">
-    <p class="eyebrow">Başka araçla</p>
-    <h2>Codex ve Antigravity</h2>
-    <p class="lede">Kit Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul ajanları, soru arayüzü ve durum çubuğu çalışmaz.</p>
-  </div>
+  <p class="path">Başka araçla</p>
+  <h2>Codex ve Antigravity</h2>
+  <p class="lead">TillerHand Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü ve durum çubuğu bu araçlarda yok.</p>
 <pre class="term">node vibe-kit/kit/kit.mjs init --tool codex          <span class="c"># ya da antigravity, ya da claude,codex</span>
 <span class="c"># var olan projeye araç eklemek</span>
 /kit-update --tool claude,codex</pre>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Parça</th><th>Claude Code</th><th>Codex</th><th>Antigravity</th></tr></thead>
-      <tbody>
-        <tr><td>Kurallar</td><td>CLAUDE.md (AGENTS.md'yi içe alır)</td><td>AGENTS.md</td><td>AGENTS.md</td></tr>
-        <tr><td>Komutlar</td><td class="f">/start, /build…</td><td>Skill: <code>$start</code> ya da <code>/skills</code></td><td>Skill: <code>/start</code></td></tr>
-        <tr><td>Korumalar: sır, kalkan, yapı, kilit, test, düzenleme turu, paket</td><td>.claude/settings.json</td><td>.codex/hooks.json</td><td>.agents/hooks.json</td></tr>
-        <tr><td>"Sor" kararı (main'e push, harita dışı dosya)</td><td>Onay penceresi</td><td>Engellenir; AI sana sorar, onaylarsan işlemi sen yaparsın</td><td>Onay penceresi</td></tr>
-        <tr><td>İzin listesi: rm -rf, reset --hard, push --force, .env; kural ve koruma dosyalarına yazma</td><td>settings.json izinleri</td><td>Hook: engellenir</td><td>Hook: engellenir veya sorulur</td></tr>
-        <tr><td>Seçenekli sorular</td><td>AskUserQuestion</td><td>Numaralı düz metin</td><td>ask_question</td></tr>
-        <tr><td>Kurul ve konsey</td><td>Ayrı ajanlar ve modeller</td><td>Tek model rolleri sırayla üstlenir</td><td>Tek model</td></tr>
-        <tr><td>Durum çubuğu, limit, pano yenileme, commit kapısı</td><td>Var</td><td>Yok</td><td>Yok</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="note">Komutların kaynağı tektir (<code>.claude/commands/</code>). <code>.agents/skills/</code> altındaki kopyaları <code>init</code>, <code>install</code> ve <code>update</code> üretir; kopyayı değil kaynağı düzenle. Codex proje hook'larını sadece klasöre güvendiğinde ve <code>/hooks</code> ile onayladığında çalıştırır. İlk oturumda bir sır yazma denemesiyle korumaların çalıştığını gör. Kabuk komutuyla yeni dosya yazmak yapı koruyucuya takılmaz; kilit ve kapsam kalkanı kabuk komutunun hedefine de bakar, sır taraması komut metninde de yapılır.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Parça</th><th>Claude Code</th><th>Codex</th><th>Antigravity</th></tr></thead>
+    <tbody>
+      <tr><td>Kurallar</td><td>CLAUDE.md (AGENTS.md'yi içe alır)</td><td>AGENTS.md</td><td>AGENTS.md</td></tr>
+      <tr><td>Komutlar</td><td class="f">/start, /build…</td><td>Skill: <code>$start</code> ya da <code>/skills</code></td><td>Skill: <code>/start</code></td></tr>
+      <tr><td>Korumalar</td><td>.claude/settings.json</td><td>.codex/hooks.json</td><td>.agents/hooks.json</td></tr>
+      <tr><td>"Sor" kararı</td><td>Onay penceresi</td><td>Engellenir; AI sana sorar, onaylarsan işlemi sen yaparsın</td><td>Onay penceresi</td></tr>
+      <tr><td>Seçenekli sorular</td><td>AskUserQuestion</td><td>Numaralı düz metin</td><td>ask_question</td></tr>
+      <tr><td>Kurul ve konsey</td><td>Ayrı ajanlar ve modeller</td><td>Tek model rolleri sırayla üstlenir</td><td>Tek model</td></tr>
+      <tr><td>Durum çubuğu, limit, pano yenileme, commit kapısı</td><td>Var</td><td>Yok</td><td>Yok</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">Komutların kaynağı tektir (<code>.claude/commands/</code>); <code>.agents/skills/</code> altındaki kopyaları <code>init</code>, <code>install</code> ve <code>update</code> üretir. Codex proje hook'larını sadece klasöre güvendiğinde ve <code>/hooks</code> ile onayladığında çalıştırır; bunu ilk oturumda yap. İlk kullanımda bir sır yazma denemesiyle korumaların çalıştığını gör.</div>
+</section>
+
+<section id="komutlar">
+  <p class="path">.claude/commands</p>
+  <h2>Komutlar</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Komut</th><th>Ne yapar</th></tr></thead>
+    <tbody>
+      <tr><td class="f">/start [fikir]</td><td>Dokuz adımlı sihirbaz: fikir, tip, kurulum, teknoloji, mimari, kurul, tasarım, yol haritası</td></tr>
+      <tr><td class="f">/adopt</td><td>Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, AGENTS.md ve CLAUDE.md'yi yeniden yazar, kritik akış testleri ve özellik özellik taşıma ile uyum yol haritası</td></tr>
+      <tr><td class="f">/plan-task [görev]</td><td>Karar noktalarını sorar, kurul görüşüyle plan çıkarır, onay alır; 3+ dosyalık işte spec yazar</td></tr>
+      <tr><td class="f">/build [görev]</td><td>Önce kabul testleri, sonra kod; yeni karar çıkarsa durur; kanıt (arayüzde masaüstü ve mobil ekran görüntüsü) ve kurul denetimi</td></tr>
+      <tr><td class="f">/design [kapsam]</td><td>Görsel önizlemeli tasarım kararları ve uygulama</td></tr>
+      <tr><td class="f">/review-changes [aralık]</td><td>code-reviewer + security-auditor + ponytail-review; düzeltilecekleri çoklu seçimle sorar</td></tr>
+      <tr><td class="f">/fix-bug [belirti]</td><td>Yeniden üret, kanıtla, hata spec'i ve kırmızı test, düzelt, kapı; aynı hata sınıfı tekrar ederse kural önerir</td></tr>
+      <tr><td class="f">/qa [kriterler]</td><td>Arayüz kriterlerini tarayıcıda Playwright testi olarak koşar; rapor test sonucundan, panoda kart</td></tr>
+      <tr><td class="f">/freeze &lt;klasör&gt; | off</td><td>Düzenlemeyi tek klasöre kilitler; iş başka dosyalara yayılmaz</td></tr>
+      <tr><td class="f">/rollback [nokta]</td><td>Son çalışan hale güvenle döner: yarım iş saklanır, geçmiş silinmez</td></tr>
+      <tr><td class="f">/findings-&lt;tür&gt;</td><td>tech · business · security · ux · perf · legal · all: puanlı bulgu raporu</td></tr>
+      <tr><td class="f">/board [setup|convene|council]</td><td>Uzman kurulunu kurar, toplar; <code>council &lt;soru&gt;</code> karar konseyi</td></tr>
+      <tr><td class="f">/ask-mode [on|off] [konu]</td><td>Soru modunu yönetir</td></tr>
+      <tr><td class="f">/dashboard</td><td>Ayrıntılı rapor ve kontrol paneli</td></tr>
+      <tr><td class="f">/wrap-up</td><td>İlerleme, kararlar, CHANGELOG ve pano; oturumu kapatır</td></tr>
+      <tr><td class="f">/release [first]</td><td>Canlıya alma kontrolleri; <code>first</code> hosting, alan adı, yedek ve geri almayı sağlayıcıya göre adım adım kurdurur</td></tr>
+      <tr><td class="f">/maintain [weekly|monthly|quarterly]</td><td>Düzenli bakım</td></tr>
+      <tr><td class="f">/user-feedback</td><td>Kullanıcı geri bildirimini temalara ayırır, yol haritasına aldırır</td></tr>
+      <tr><td class="f">/retro</td><td>Dersleri projeye yazar; kite önerileri TillerHand reposunda bir dala</td></tr>
+      <tr><td class="f">/research [konu]</td><td>Makaleler, GitHub'daki benzer projeler ve rakip ürünler; fark tablosu; seçilen özellikler PRD'ye</td></tr>
+      <tr><td class="f">/handoff [devral]</td><td>Projeyi başka kişiye veya hesaba devreder ya da devralır; aynı yerden devam</td></tr>
+      <tr><td class="f">/tools [ac|kapat|olc|komutlar]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer; komut listesini hafif veya tam yapar</td></tr>
+      <tr><td class="f">/kit-update</td><td>Projeyi TillerHand'in son sürümüne çeker; çakışmaları sorar; <code>--tool</code> ile araç, <code>--addons</code> ile ek ekler</td></tr>
+    </tbody>
+  </table></div>
 </section>
 
 <section id="kit">
-  <div class="section-head">
-    <p class="eyebrow">Kit de bir proje</p>
-    <h2>Kitin bakımı</h2>
+  <p class="path">TillerHand de bir proje</p>
+  <h2>Güncelleme ve bakım</h2>
+  <p class="lead">Projelerde öğrenilen dersler kite geri döner; kitin yeni sürümleri projelere güvenle gelir.</p>
+  <div class="flow" role="list" aria-label="Kit geri bildirim döngüsü">
+    <span role="listitem">/retro</span><i aria-hidden="true">→</i>
+    <span role="listitem">TillerHand reposunda dal</span><i aria-hidden="true">→</i>
+    <span role="listitem">onayla push / PR</span><i aria-hidden="true">→</i>
+    <span role="listitem">VERSION + CHANGELOG + tag</span><i aria-hidden="true">→</i>
+    <span role="listitem">/kit-update</span>
   </div>
-  <div class="loop" role="list" aria-label="Kit geri bildirim döngüsü">
-    <span class="step" role="listitem">/retro</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">kit reposunda dal</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">onayla push / PR</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">SURUM + CHANGELOG + tag</span><span class="arrow" aria-hidden="true">→</span>
-    <span class="step" role="listitem">/kit-update</span>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Dosya türü</th><th>Güncellemede ne olur</th></tr></thead>
-      <tbody>
-        <tr><td>Kitin dosyaları: komutlar, ajanlar, hook'lar, KARAR-PROTOKOLU, SKILLER, GUVENLIK, CANLIYA-ALMA, BAKIM, YASAL-KVKK</td><td>Sen değiştirmediysen yenisiyle değişir. Değiştirdiysen seninki kalır, yeni hali <code>.kit-new</code> olarak gelir ve nasıl birleştirileceği sorulur.</td></tr>
-        <tr><td>Projenin dosyaları: AGENTS.md, CLAUDE.md, PRD, STACK, TASARIM, settings.json…</td><td>Dokunulmaz. CHANGELOG'daki "elle uyarla" maddeleri tek tek sorulur.</td></tr>
-        <tr><td>Codex ve Antigravity skill kopyaları (<code>.agents/skills/</code>)</td><td>Her güncellemede komutlardan yeniden üretilir.</td></tr>
-        <tr><td>Kitte yeni eklenmiş dosya</td><td>Projede yoksa eklenir. Daha önce bilerek sildiysen geri getirilmez.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="note"><b>Kit değerlendirmesi:</b> <code>node kit/eval/run.mjs</code> aynı görevi kitli ve kitsiz çalıştırır, gizli kabul ve saldırgan testleriyle puanlar. Son ölçümde (3.18.2, Sonnet, 6 görev, koşul başına 24 koşu) iki koşul da bütün gizli testleri geçti. Fark testlerin kalitesinde çıktı: kitin testleri koda bilerek eklenen hataların %63'ünü yakaladı, kitsiz koşununkiler %31'ini. Kit her koşuda testi koddan önce yazdı. Bedeli yaklaşık 2 kat maliyet ve 1,8 kat süre.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Dosya türü</th><th>Güncellemede ne olur</th></tr></thead>
+    <tbody>
+      <tr><td>Kitin dosyaları: komutlar, ajanlar, hook'lar, decision-protocol, skills, güvenlik kontrol listesi, release-checklist, deploy-setup, maintenance, privacy-kvkk</td><td>Sen değiştirmediysen yenisiyle değişir. Değiştirdiysen seninki kalır, yeni hali <code>.kit-new</code> olarak gelir ve nasıl birleştirileceği sorulur.</td></tr>
+      <tr><td>Projenin dosyaları: AGENTS.md, CLAUDE.md, PRD, stack, tasarım, settings.json…</td><td>Dokunulmaz. CHANGELOG'daki "elle uyarla" maddeleri tek tek sorulur.</td></tr>
+      <tr><td>Codex ve Antigravity skill kopyaları (<code>.agents/skills/</code>)</td><td>Her güncellemede komutlardan yeniden üretilir.</td></tr>
+      <tr><td>Kitte yeni eklenmiş dosya</td><td>Projede yoksa eklenir. Daha önce bilerek sildiysen geri getirilmez.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><b>Değerlendirme:</b> <code>node kit/eval/run.mjs</code> aynı görevi kitli ve kitsiz çalıştırır, gizli kabul ve saldırgan testleriyle puanlar. Son ölçüm yukarıda, <a href="#olcum">Ölçüm</a> bölümünde.</div>
 </section>
 
 <section id="kurallar">
-  <div class="section-head">
-    <p class="eyebrow">Her projede</p>
-    <h2>Altın kurallar</h2>
-  </div>
+  <p class="path">Her projede</p>
+  <h2>Altın kurallar</h2>
   <ol class="rules">
-    <li><div><b>Kararı sen verirsin.</b><span>AI önerir ve gerekçelendirir; seçim senin. "Sorma" demediğin konuda kendi başına seçmez.</span></div></li>
-    <li><div><b>Tasarımı görerek seç.</b><span>Yazıyla tarif edilen stil değil, önizlemedeki ekran seçilir.</span></div></li>
-    <li><div><b>Önce yaz, sonra kodlat.</b><span>PRD ve kapsam dışı listesi olmadan kod yok.</span></div></li>
-    <li><div><b>Tek görev, tek oturum.</b><span>Büyük görevi böl.</span></div></li>
-    <li><div><b>Her çalışan adım bir commit.</b><span>AI yolunu kaybederse oraya dönersin.</span></div></li>
-    <li><div><b>İlk gün canlıya al.</b><span>Deploy hattı ve CI baştan çalışsın.</span></div></li>
-    <li><div><b>Bağlam dosyada yaşar.</b><span><code>/wrap-up</code> ve <code>/clear</code> alışkanlık olsun.</span></div></li>
-    <li><div><b>"Çalışıyor" değil, kanıt.</b><span>Ekran görüntüsü, istek/yanıt, test çıktısı.</span></div></li>
-    <li><div><b>İki deneme kuralı.</b><span>Aynı hata iki kez çözülmediyse dur, geri al, yeniden planla.</span></div></li>
-    <li><div><b>Sır istemciye gitmez.</b><span>Tarayıcıya ve mobil pakete giden her şey herkese açıktır.</span></div></li>
-    <li><div><b>Denenmemiş yedek, yedek değildir.</b><span>Geri yüklemeyi lansmandan önce dene.</span></div></li>
-    <li><div><b>Tekrarlayan hatayı kurala çevir.</b><span><code>/retro</code> ile kite yaz; mümkünse hook veya CI adımına dönüştür.</span></div></li>
+    <li><b>Kararı sen verirsin.</b><span>AI önerir ve gerekçelendirir; seçim senin. "Sorma" demediğin konuda kendi başına seçmez.</span></li>
+    <li><b>Tasarımı görerek seç.</b><span>Yazıyla tarif edilen stil değil, önizlemedeki ekran seçilir.</span></li>
+    <li><b>Önce yaz, sonra kodlat.</b><span>PRD ve kapsam dışı listesi olmadan kod yok.</span></li>
+    <li><b>Tek görev, tek oturum.</b><span>Büyük görevi böl.</span></li>
+    <li><b>Her çalışan adım bir commit.</b><span>AI yolunu kaybederse oraya dönersin.</span></li>
+    <li><b>İlk gün canlıya al.</b><span>Deploy hattı ve CI baştan çalışsın.</span></li>
+    <li><b>Bağlam dosyada yaşar.</b><span><code>/wrap-up</code> ve <code>/clear</code> alışkanlık olsun.</span></li>
+    <li><b>"Çalışıyor" değil, kanıt.</b><span>Ekran görüntüsü, istek/yanıt, test çıktısı.</span></li>
+    <li><b>İki deneme kuralı.</b><span>Aynı hata iki kez çözülmediyse dur, geri al, yeniden planla.</span></li>
+    <li><b>Sır istemciye gitmez.</b><span>Tarayıcıya ve mobil pakete giden her şey herkese açıktır.</span></li>
+    <li><b>Denenmemiş yedek, yedek değildir.</b><span>Geri yüklemeyi lansmandan önce dene.</span></li>
+    <li><b>Tekrarlayan hatayı kurala çevir.</b><span><code>/retro</code> ile kite yaz; mümkünse hook veya CI adımına dönüştür.</span></li>
   </ol>
 </section>
 
+  </div>
+</div>
+
+</main>
+
 <footer>
-  <p>Kaynak: <code>github.com/burakdogrul/TillerHand</code> · Kit 3.26.0 · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</p>
+  <div class="container">
+    <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
+    <span>Sürüm 3.26.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+  </div>
 </footer>
 
-</div>
+<script>
+document.querySelectorAll('.copy').forEach((b) => b.addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent); b.textContent = 'Kopyalandı'; setTimeout(() => (b.textContent = 'Kopyala'), 1500); } catch {}
+}));
+const links = [...document.querySelectorAll('.side a')];
+const spy = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) links.forEach((a) => a.classList.toggle('on', a.hash === '#' + e.target.id));
+}, { rootMargin: '-20% 0px -70% 0px' });
+document.querySelectorAll('.doc section').forEach((s) => spy.observe(s));
+</script>
+</body>
+</html>
