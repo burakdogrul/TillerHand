@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.26.0] - 2026-10-25
+
+### Değişen
+- **Supabase anahtarları yeni adlarla** (web-saas, mobile). Supabase eski `anon` ve `service_role` anahtarlarını 2026 sonuna kadar kullanımdan kaldırıyor (supabase.com/docs/guides/api/api-keys, 2026-10-25). Yeni projelerde `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_…`) ve `SUPABASE_SECRET_KEY` (`sb_secret_…`, sadece sunucu); mobilde `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. İstemci koduna gizli anahtar giren yer uyarısı iki adı da yakalar. RLS saldırgan testi iki türü de zaten okuyordu.
+  - Elle uyarla (isteğe bağlı): Supabase panelinde yeni anahtarları oluştur; `.env.example`, barındırma panelindeki değişkenler, GitHub → Variables (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) ve koddaki `process.env` okumaları aynı adla değişir. Eski adları korursan yeni anahtarı eski adlı değişkene girebilirsin.
+
 ## [3.25.1] - 2026-10-25
 
 ### Düzeltilen

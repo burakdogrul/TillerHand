@@ -2,9 +2,9 @@
   "patterns": [
     {
       "rule_name": "supabase_service_role_client",
-      "regex": "(service_role|SUPABASE_SERVICE_ROLE)",
+      "regex": "(service_role|SUPABASE_SERVICE_ROLE|SUPABASE_SECRET_KEY|sb_secret_)",
       "paths": ["**/src/app/**/*.tsx", "**/src/components/**", "**/src/features/**/components/**", "**/app/**/*.tsx"],
-      "reminder": "Supabase service_role anahtarı istemci koduna girmez; RLS'yi atlar. Sunucu tarafına (server action, route handler, edge function) taşı."
+      "reminder": "Supabase gizli anahtarı (sb_secret_…, eski service_role) istemci koduna girmez; RLS'yi atlar. Sunucu tarafına (server action, route handler, edge function) taşı."
     },
     {
       "rule_name": "public_env_secret",

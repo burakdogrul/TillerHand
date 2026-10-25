@@ -67,3 +67,14 @@ test('F-01 3.13.1 CI templates: GITHUB_TOKEN is read-only, the supabase status o
     assert.match(ci, /sir-taramasi:\n.*\n.*\n {4}permissions:\n {6}contents: read\n {6}pull-requests: read/, `${t}: gitleaks reads PR commits in a private repo`);
   }
 });
+
+test('Supabase keys use the new names (legacy anon/service_role are retired by the end of 2026); the client pattern catches both', () => {
+  for (const f of ['kit/templates/web-saas/.env.example', 'kit/templates/mobile/.env.example', 'kit/templates/web-saas/.github/workflows/ci.yml']) {
+    assert.doesNotMatch(read(f), /SUPABASE_(ANON_KEY|SERVICE_ROLE_KEY)/, f);
+  }
+  assert.match(read('kit/templates/web-saas/.env.example'), /^NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=.*\n^SUPABASE_SECRET_KEY=/m);
+  assert.match(read('kit/templates/mobile/.env.example'), /^EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/m);
+  const rule = JSON.parse(read('.claude/security-patterns.json')).patterns.find((p) => p.rule_name === 'supabase_service_role_client');
+  for (const s of ['process.env.SUPABASE_SECRET_KEY', 'service_role', 'process.env.SUPABASE_SERVICE_ROLE_KEY']) assert.match(s, new RegExp(rule.regex), s);
+  assert.doesNotMatch('process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', new RegExp(rule.regex));
+});
