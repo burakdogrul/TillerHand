@@ -239,7 +239,6 @@ The same tasks were run with and without the kit through `claude -p` and scored 
 - Both conditions passed every hidden test.
 - The kit's tests caught **63%** of bugs deliberately injected into the code; the tests written without the kit caught **31%**.
 - With the kit, tests came before the code in every run; without it, in none.
-- The cost: about 2× the spend and 1.8× the time.
 
 ## License
 

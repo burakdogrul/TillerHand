@@ -237,7 +237,6 @@ Aynı görevler kitli ve kitsiz `claude -p` ile koşuldu, gizli testlerle puanla
 - İki koşul da gizli testlerin hepsini geçti.
 - Kitin yazdığı testler, koda bilerek eklenen hataların **%63**'ünü yakaladı; kitsiz koşunun testleri **%31**'ini.
 - Kit her koşuda testi koddan önce yazdı; kitsiz koşu hiçbirinde yazmadı.
-- Bedeli: yaklaşık 2 kat maliyet ve 1,8 kat süre.
 
 ## Lisans
 
