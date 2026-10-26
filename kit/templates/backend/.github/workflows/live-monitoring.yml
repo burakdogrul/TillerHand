@@ -31,7 +31,7 @@ jobs:
           awk -v t="$t" -v max="$MAX" 'BEGIN { exit (t > max) }'
         env:
           MAX: ${{ vars.LIVE_MAX_SECONDS || '2' }}
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2 (no floating v10 tag)
         if: hashFiles('tests/live/**') != ''
       - name: Kritik uçlar (canlı)
         if: hashFiles('tests/live/**') != ''

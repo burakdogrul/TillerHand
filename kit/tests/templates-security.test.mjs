@@ -106,3 +106,15 @@ test('template copies stay identical (one fix must reach every type)', () => {
   for (const [file, types] of same)
     for (const t of types.slice(1)) assert.equal(read(`kit/templates/${t}/${file}`), read(`kit/templates/${types[0]}/${file}`), `${t}/${file} differs from ${types[0]}`);
 });
+
+test('every action ref in the kit and template workflows is one that was checked to resolve', () => {
+  // Checked 2026-10-26 with: gh api repos/<owner>/<repo>/commits/<ref>. A new or bumped ref must be checked the same way and
+  // added here (3.28.4 shipped astral-sh/setup-uv@v10, a tag that does not exist: every backend CI run failed to start).
+  const CHECKED = new Set(['actions/checkout@v7', 'actions/setup-node@v7', 'gitleaks/gitleaks-action@v3', 'anthropics/claude-code-action@v1',
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1',
+    'astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e', 'anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13']);
+  const files = [...fs.readdirSync(path.join(ROOT, '.github/workflows')).map((f) => `.github/workflows/${f}`),
+    ...fs.readdirSync(path.join(ROOT, 'kit/templates'), { recursive: true }).map((f) => `kit/templates/${f.replaceAll('\\', '/')}`).filter((f) => /\.github\/workflows\/.+\.ya?ml$/.test(f))];
+  for (const f of files) for (const [, ref] of read(f).matchAll(/^\s*-?\s*uses:\s*([^\s#]+)/gm))
+    assert.ok(CHECKED.has(ref), `${f}: ${ref} is not a checked ref`);
+});

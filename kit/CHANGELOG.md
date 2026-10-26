@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.28.5] - 2026-10-26
+
+### Düzeltilen
+- **Backend şablonunun CI ve canlı izleme işleri 3.28.4'te hiç başlamıyordu.** `astral-sh/setup-uv@v10` diye bir tag yok; yalnızca tam sürüm tag'leri var. Action artık v10.3.2'nin commit SHA'sına sabit. Kitteki ve şablonlardaki her `uses:` satırı, gerçekten çözüldüğü doğrulanmış referanslar listesiyle test ediliyor.
+  - Elle uyarla: 3.28.4 ile güncellenmiş bir backend projesinde `.github/workflows/ci.yml` ve `live-monitoring.yml` dosyalarını değiştirdiysen, `setup-uv` satırını `.kit-new` dosyasından al.
+
 ## [3.28.4] - 2026-10-26
 
 ### Değişen

@@ -28,7 +28,7 @@ jobs:
       DATABASE_URL: postgresql+psycopg://app:app@localhost:5432/app_test
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2 (no floating v10 tag)
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
