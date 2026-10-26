@@ -33,13 +33,24 @@ export function changes() {
   const partial = [...new Set([...files.filter((f) => staged.has(f) && unstaged.has(f)), ...hidden])].sort();
   const blobs = new Map(partial.length ? list('ls-files -s -z').map((l) => [l.slice(l.indexOf('\t') + 1), l.split(' ')[1]]) : []);
   const h = crypto.createHash('sha256');
+  // Per-file digest too: after an approval, only the files whose digest changed need review again
+  const hashes = new Map();
   for (const f of files) {
     h.update(`\0${f}\0`);
-    try { h.update(fs.readFileSync(path.join(root, f))); } catch { h.update('\0silindi'); }
+    let body = null;
+    try { body = fs.readFileSync(path.join(root, f)); } catch { /* deleted */ }
+    h.update(body ?? '\0silindi');
+    hashes.set(f, body ? crypto.createHash('sha256').update(body).digest('hex').slice(0, 16) : 'silindi');
   }
-  for (const f of partial) h.update(`\0index:${f}:${blobs.get(f)}`);
-  return { files, signature: h.digest('hex') };
+  for (const f of partial) {
+    h.update(`\0index:${f}:${blobs.get(f)}`);
+    hashes.set(f, `${hashes.get(f)}:${blobs.get(f)}`);
+  }
+  return { files, signature: h.digest('hex'), hashes: Object.fromEntries(hashes) };
 }
+
+// Files changed since the approval (all of them for an approval written before 3.32.0, which has no digests)
+export const sinceApproval = (approval, d) => d.files.filter((f) => !approval?.hashes || !Object.hasOwn(approval.hashes, f) || approval.hashes[f] !== d.hashes[f]);
 
 // git's global options may come before commit: git --no-pager commit, git -C x commit, git --git-dir=x commit; git.exe on Windows
 const commitRe = (verbs) => new RegExp(`\\bgit(?:\\.exe)?["']?(?:\\s+(?:-[cC]\\s+\\S+|--?[\\w-]+(?:=\\S+)?))*\\s+(?:${verbs.join('|')})(?=\\s|$|["';&|)])`);
@@ -109,9 +120,9 @@ function approve(note) {
 }
 
 function save(note) {
-  const { signature, files } = changes();
+  const { signature, files, hashes } = changes();
   fs.mkdirSync(path.dirname(approvalFile), { recursive: true });
-  fs.writeFileSync(approvalFile, JSON.stringify({ signature, note, files, date: new Date().toISOString() }));
+  fs.writeFileSync(approvalFile, JSON.stringify({ signature, note, files, hashes, date: new Date().toISOString() }));
   console.log(`Commit kapısı açıldı (${files.length} dosya). Not: ${note}`);
 }
 
@@ -125,7 +136,20 @@ function readGate() {
 }
 function readApproval() {
   const a = readJson(approvalFile);
-  return a && { signature: a.signature, note: a.note };
+  return a && { signature: a.signature, note: a.note, date: a.date,
+    hashes: a.hashes && typeof a.hashes === 'object' && !Array.isArray(a.hashes) ? a.hashes : null };
+}
+
+// --status: has this change already been reviewed? /review-changes and the commit board read this before convening
+function status() {
+  let d;
+  try { d = changes(); } catch { console.log('Git deposu değil.'); return; }
+  if (!d.files.length) { console.log('Değişiklik yok.'); return; }
+  const approval = readApproval(), gate = readGate();
+  const gateText = gate?.signature !== d.signature ? 'kapı bu değişiklikler için çalışmadı' : gate.passed ? 'kapı yeşil' : 'kapı kırmızı';
+  if (!approval) console.log(`Onay yok: bu değişiklikler için kurul denetimi yapılmadı (${d.files.length} dosya) · ${gateText}.`);
+  else if (approval.signature === d.signature) console.log(`Onay geçerli (${approval.note}, ${approval.date ?? '-'}): bu değişiklikler denetlendi, yeniden inceleme gerekmez · ${gateText}.`);
+  else console.log(`Onay eski (${approval.note}). Son onaydan sonra değişen: ${sinceApproval(approval, d).join(', ')}. Yalnız bunları incele · ${gateText}.`);
 }
 
 // This project's own commit-gate.mjs, resolved from the shell's folder ($CLAUDE_PROJECT_DIR, absolute, relative or ./ spelling),
@@ -215,8 +239,12 @@ async function hook() {
     process.exit(2);
   }
 
+  const delta = approval ? sinceApproval(approval, d) : [];
   process.stderr.write(
-    `Commit durduruldu: Bu değişiklikler için kurul denetimi yapılmadı (${d.files.length} dosya).\n` +
+    (delta.length && delta.length < d.files.length
+      ? `Commit durduruldu: son onaydan (${approval.note}) sonra değişen dosyalar denetlenmedi: ${delta.join(', ')}.\n` +
+        'Kurul yalnız bu dosyaların farkına bakar; önceki onaylı dosyalar yeniden incelenmez.\n'
+      : `Commit durduruldu: Bu değişiklikler için kurul denetimi yapılmadı (${d.files.length} dosya).\n`) +
       '0. node .claude/hooks/gate.mjs --run ile deterministik kapıyı (lint, tip, test, Semgrep) çalıştır; çıktısını üyelere ver.\n' +
       '1. .claude/board/rules.md §3\'e göre değişen dosyalara ilgili en fazla 2 kurul üyesini model "haiku" ile, sadece diff üzerinde çalıştır.\n' +
       '2. RET yoksa: node .claude/hooks/commit-gate.mjs --approve "<katılan üyeler>" ve commit\'i tekrar dene.\n' +
@@ -230,5 +258,6 @@ if (isMain(import.meta.url)) {
   const i = process.argv.indexOf('--approve'), j = process.argv.indexOf('--skip');
   if (i > -1) approve(process.argv[i + 1] || 'belirtilmedi');
   else if (j > -1) save(`atlandı: ${process.argv[j + 1] || 'kullanıcı isteği'}`);
+  else if (process.argv.includes('--status')) status();
   else hook();
 }

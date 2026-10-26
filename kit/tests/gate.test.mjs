@@ -438,3 +438,37 @@ test('B9 Codex/Antigravity: a commit message that names --skip is text, not a ca
     assert.ok(permissionEquivalent(c), c);
   assert.equal(permissionEquivalent('git add -A && git commit -qm "docs: gate.mjs --approve ve commit-gate.mjs --skip anlatıldı"'), null, 'git add && git commit');
 });
+
+test('3.32.0 one review per change: the task-end approval covers the commit; after a change only the changed files are reviewed', () => {
+  const status = () => spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs'), '--status'], { encoding: 'utf8', env: env() });
+  agents('node -e "process.exit(0)"');
+  sh('git add -A && git commit -qm base');
+  fs.rmSync(path.join(p, '.claude/state/commit-approval.json'), { force: true });
+  write('b.js', '1');
+  write('c.js', '1');
+  assert.match(status().stdout, /Onay yok/);
+  runGate();
+  assert.equal(approve('görev sonu: board-qa, code-reviewer').status, 0);
+  const ok = status();
+  assert.equal(ok.status, 0);
+  assert.match(ok.stdout, /Onay geçerli.*görev sonu: board-qa, code-reviewer/s);
+  assert.match(ok.stdout, /yeniden inceleme gerekmez/);
+  assert.equal(commit().status, 0, 'the commit passes on the task-end approval: no second board');
+  write('c.js', '2');
+  write('d.js', 'yeni');
+  const stale = status();
+  assert.match(stale.stdout, /Son onaydan sonra değişen: c\.js, d\.js/);
+  assert.doesNotMatch(stale.stdout.split('değişen:')[1], /b\.js/, 'an unchanged reviewed file is not reviewed again');
+  const r = commit();
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /c\.js, d\.js/);
+  assert.match(r.stderr, /yalnız/);
+  sh('git add -A && git commit -qm t');
+  assert.match(status().stdout, /Değişiklik yok/);
+  // the commands use it: task-end approval opens the commit; /review-changes and the commit board check first
+  const read = (f) => fs.readFileSync(path.join(HOOKS, '..', f), 'utf8');
+  assert.match(read('commands/build.md'), /commit-gate\.mjs --approve "görev sonu: /);
+  assert.match(read('commands/review-changes.md'), /commit-gate\.mjs --status/);
+  assert.match(read('board/rules.md'), /commit-gate\.mjs --status/);
+  assert.ok(JSON.parse(read('settings.json')).permissions.allow.includes('Bash(node .claude/hooks/commit-gate.mjs --status)'));
+});

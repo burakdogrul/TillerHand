@@ -7,6 +7,7 @@ argument-hint: [boş = commit edilmemiş değişiklikler | main..HEAD | commit h
 
 Kendi yazdığın kodu kendin inceleme; bağımsız ajanlara ver.
 
+0. **Zaten denetlendi mi?** Aralık boşsa (commit edilmemiş değişiklikler) `node .claude/hooks/commit-gate.mjs --status` çalıştır. "Onay geçerli" diyorsa bu değişiklikler görev sonu toplantısında denetlendi: yeniden inceleme yapma, onayı ve kapı durumunu bildir; kullanıcı açıkça isterse yine incele. "Son onaydan sonra değişen: …" diyorsa aşağıdaki adımları yalnız o dosyalarla yap.
 1. `git diff --stat` ile değişen dosyaları gör.
 2. **`code-reviewer`** alt ajanını inceleme rolünün `model` ve `effort`'uyla çalıştır (`docs/workflow/models.md`; adım 3 de öyle). Ona aralığı ve (biliniyorsa) görev kodunu ver. Görevin `docs/product/specs/` altında spec'i varsa onu da ver: beklenen davranış karşılandı mı, değişmemesi gereken davranış bozuldu mu?
 3. Değişiklik şunlardan birine dokunuyorsa **`security-auditor`** alt ajanını da paralel çalıştır: auth, yetki, ödeme, webhook, dosya yükleme, kişisel veri, DB erişim kuralları, ortam değişkenleri, AI/LLM çağrıları.

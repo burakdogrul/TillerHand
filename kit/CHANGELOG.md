@@ -3,6 +3,15 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.32.0] - 2026-10-26
+
+### Değişen
+- **Aynı değişiklik iki kez denetlenmez.** Görev sonu kurul toplantısı artık değişikliğin tek tam denetimi: ilgili üyeler ve `code-reviewer` (hassas yolda `security-auditor` da) birlikte bakar. Toplantı onay verirse ve kapı yeşilse commit kapısı aynı değişiklikler için açılır; commit'te kurul yeniden toplanmaz, `/review-changes` ayrıca önerilmez.
+  - Onaydan sonra bir dosya değişirse yalnız o dosyalar incelenir. Commit kapısı hangi dosyaların son onaydan sonra değiştiğini söyler.
+  - Yeni: `node .claude/hooks/commit-gate.mjs --status` bu değişikliklerin denetlenip denetlenmediğini, kapının durumunu ve son onaydan beri değişen dosyaları gösterir. `/review-changes` ve commit toplantısı önce buna bakar.
+  - Kurul kurulmamışsa akış aynı: görev sonunda `/review-changes` önerilir.
+  - İzin satırı `/kit-update` ile eklenir.
+
 ## [3.31.2] - 2026-10-26
 
 ### Düzeltilen
