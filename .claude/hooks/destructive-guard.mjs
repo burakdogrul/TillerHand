@@ -205,7 +205,9 @@ export function scopeIssue(command, dir, root) {
   const vk = path.join(os.userInfo().homedir, '.vibe-kit');
   const touchesApproval = (y) => VIBE_KIT.test(y) || !/^\.\.|^$/.test(path.relative(y, vk)) && !path.isAbsolute(path.relative(y, vk));
   for (const h of targets) {
-    if (touchesApproval(h) || touchesApproval(realPath(h))) return { decision: 'ask', reason: `${h}: kapı komut onayı kaydı (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/gate.mjs --approve kullanılır. Kullanıcı onayı gerekli.` };
+    if (touchesApproval(h) || touchesApproval(realPath(h))) return { decision: 'ask', reason: /tercihler\.md$/i.test(h)
+      ? `${h}: kişisel tercih dosyası (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/prefs.mjs --add / --remove kullanılır. Kullanıcı onayı gerekli.`
+      : `${h}: kapı komut onayı kaydı (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/gate.mjs --approve kullanılır. Kullanıcı onayı gerekli.` };
     const rel = relPath(realPath(h), groot);
     const k = protectedRule(rel) ?? protectedRule(`${rel}/`);
     if (k) return { decision: k[0], reason: k[0] === 'deny' ? `${rel}: ${k[2]}`
@@ -253,6 +255,7 @@ const PERMISSION_EQUIVALENT = [
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-save\b/i, 'Kapsam kalkanının dosya listesi yazılıyor'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-end\b/i, 'Kapsam kalkanı kapatılıyor'],
   ['ask', /commit-gate\.mjs['"]?\s+['"]?--skip\b/i, 'Commit kapısı ve kurul denetimi atlanıyor'],
+  ['ask', /prefs\.mjs['"]?\s+['"]?--(add|remove)\b/i, 'Kişisel tercih dosyası (~/.vibe-kit/tercihler.md) değişiyor'],
   ['ask', /(?<!(?:^|[\s'"=])(?:\.[\\/]|\$\{?CLAUDE_PROJECT_DIR\}?[\\/]?)?\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked
   // (.git: the gate command approval and git hooks live there)

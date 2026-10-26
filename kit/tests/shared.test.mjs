@@ -28,7 +28,7 @@ const command = (tool, root, c) => ({
 
 // Codex and Antigravity do not set CLAUDE_PROJECT_DIR: the root must come from the input (cwd / workspacePaths)
 const envFor = (tool, root) => {
-  const env = { ...process.env };
+  const env = { ...process.env, HOME: root, USERPROFILE: root }; // the developer's own ~/.vibe-kit preferences stay out of the test
   delete env.CLAUDE_PROJECT_DIR;
   if (tool === 'claude') env.CLAUDE_PROJECT_DIR = root;
   return env;

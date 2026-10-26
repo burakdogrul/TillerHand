@@ -8,6 +8,7 @@ import { execSync } from 'node:child_process';
 import { readStatus } from './status-read.mjs';
 import { readLimits, summary } from './usage.mjs';
 import { detectTool, findRoot, sessionNote } from './shared.mjs';
+import { prefsNote } from './prefs.mjs';
 
 const notes = [];
 let next = '';
@@ -64,5 +65,8 @@ try {
 } catch {
   // not a git repo, or before the first commit
 }
+
+// The user's preferences from every project (~/.vibe-kit/tercihler.md), short; a broken file must not stop the session
+try { const p = prefsNote(); if (p) notes.push(p.length > 1500 ? `${p.slice(0, 1500)}…` : p); } catch { /* no preferences */ }
 
 if (notes.length) console.log(sessionNote(tool, '[Kit] ' + notes.join('\n[Kit] '), next && `[Kit] ${next}`));

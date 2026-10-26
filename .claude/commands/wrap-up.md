@@ -20,6 +20,7 @@ Bu oturumu kapatıyoruz. Bir sonraki oturum (veya `/clear` sonrası) sıfır ba�
 7. `node .claude/hooks/cost.mjs` ve `node .claude/hooks/dashboard.mjs` ile `dashboard.html`'i yenile.
 7b. Bu oturumda AI'nın bilmediği için hata yaptığı proje bilgisi çıktıysa `AGENTS.md`'ye eklemeyi öner (onayla; sadece Claude Code'a özelse `/revise-claude-md` ile `CLAUDE.md`'ye). Aynı düzeltmeyi kullanıcı iki kez yaptıysa `/hookify <kural>` ile kalıcı kural öner. Kural `AGENTS.md`'de "Öğrenilen kurallar" bölümüne gider; biçim ve kaynak/tarih satırı `/fix-bug` 8. adımdaki gibi (kaynak: bu oturumdaki olay).
 8. Commit edilmemiş iş varsa commit mesajı öner. Commit'i onayımla at. Testler yeşilse çalışan nokta kaydet: `node .claude/hooks/checkpoint.mjs --save "oturum sonu: <kısa özet>"`.
+8b. **Kişisel tercihler** (AGENTS.md → kural 9, varsa): Bu oturumda kullanıcı bir davranışı düzelttiyse ya da tercih söylediyse, notları AskUserQuestion ile çoklu seçim olarak sor ve seçilenleri `node .claude/hooks/prefs.mjs --add` ile yaz. Not yoksa bu adımı atla, soru sorma.
 9. Faz bittiyse sırayla öner: `/findings-tech` (teknik borç taraması), `/board convene phase-end` (tam kurul, tahmini maliyetiyle birlikte), sonra `/retro`.
 10. Limiti ve bağlamı oku. Kalan 5 saatlik payı, sıfırlanma saatini ve bağlam %50'yi geçtiyse `/clear` önerisini sıradaki adımla birlikte söyle.
 

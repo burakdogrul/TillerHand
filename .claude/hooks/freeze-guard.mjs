@@ -129,7 +129,9 @@ function hook() {
   const paths = g.files.map(({ path: p }) => realPath(path.resolve(g.dir, p)));
   // Gate command approval record (gate.mjs, in the user folder ~/.vibe-kit/): the AI must not write it by hand
   const approval = paths.find((p) => /[\\/]\.vibe-kit([\\/]|$)/i.test(p));
-  if (approval) decide(g.tool, 'ask', `${approval}: kapı komut onayı kaydı; elle yazılmaz, node .claude/hooks/gate.mjs --approve kullanılır.`);
+  if (approval) decide(g.tool, 'ask', /tercihler\.md$/i.test(approval)
+    ? `${approval}: kişisel tercih dosyası; elle yazılmaz, node .claude/hooks/prefs.mjs --add / --remove kullanılır.`
+    : `${approval}: kapı komut onayı kaydı; elle yazılmaz, node .claude/hooks/gate.mjs --approve kullanılır.`);
   if (g.tool !== 'claude') {
     for (const p of paths) {
       const k = protectedRule(relPath(p, groot));

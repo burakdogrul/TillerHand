@@ -22,7 +22,8 @@
       "Bash(node .claude/hooks/tools.mjs)",
       "Bash(node .claude/hooks/tools.mjs --required:*)",
       "Bash(node .claude/hooks/tools.mjs --measure)",
-      "Bash(node .claude/hooks/tools.mjs --disable:*)"
+      "Bash(node .claude/hooks/tools.mjs --disable:*)",
+      "Bash(node .claude/hooks/prefs.mjs --list)"
     ],
     "ask": [
       "Bash(git push:*)",
@@ -32,6 +33,8 @@
       "Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)",
       "Bash(node .claude/hooks/freeze-guard.mjs --plan-end)",
       "Bash(node .claude/hooks/commit-gate.mjs --skip:*)",
+      "Bash(node .claude/hooks/prefs.mjs --add:*)",
+      "Bash(node .claude/hooks/prefs.mjs --remove:*)",
       "Bash(node .claude/hooks/gate.mjs --approve)",
       "Edit(./CLAUDE.md)",
       "Edit(./AGENTS.md)",

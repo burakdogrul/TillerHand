@@ -26,6 +26,8 @@ Yapıldı: … · Kurul: … · Otomatik kararlar: …
 Sıradaki: … · bekleyen karar: …
 ```
 
+9. **Kullanıcıyı tanı.** Oturum başında gelen "Kişisel tercihler"e uy (proje kuralı önce gelir). Kullanıcı bir davranışını düzeltirse ya da nasıl çalışmak istediğini söylerse (konuşma, soru sıklığı, rapor biçimi, kod tarzı, kaçınılacaklar) kısaca not al; akışı bölme. Görev sonunda (`/build`) ve oturum sonunda (`/wrap-up`) notları AskUserQuestion ile çoklu seçim olarak sor ("Tercih olarak kaydedeyim mi?"). Seçilenleri `node .claude/hooks/prefs.mjs --add <konusma|sorular|raporlar|kod|kacin> "<tercih>"` ile yaz. Onaysız yazma. Sır, kişisel veri ya da proje adı yazma. Projeye özgü kural bu dosyaya değil "Öğrenilen kurallar"a gider.
+
 <!-- kit:other-tools -->
 ## Codex ve Antigravity'de
 

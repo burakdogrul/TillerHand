@@ -3,6 +3,18 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.30.0] - 2026-10-26
+
+### Yeni
+- **Kişisel tercih hafızası.** Kit nasıl çalışmak istediğini öğrenir: konuşma tarzı, soru sıklığı, rapor biçimi, kod tarzı, kaçınılacaklar.
+  - Bir davranışı düzelttiğinde ya da tercih söylediğinde AI not alır. Görev sonunda (`/build`) ve oturum sonunda (`/wrap-up`) notlar çoklu seçimle "tercih olarak kaydedeyim mi?" diye sorulur. Onaylamadığın hiçbir şey yazılmaz.
+  - Tercihler tek bir dosyada durur: `~/.vibe-kit/tercihler.md`. Tüm projelerinde geçerlidir, her oturum başında yüklenir (Claude Code, Codex, Antigravity), git'e girmez.
+  - Yazma yalnız `node .claude/hooks/prefs.mjs --add <kategori> "<tercih>"` ile yapılır ve her seferinde sorulur. Listeleme: `--list`, silme: `--remove <no>`.
+  - Sır gibi görünen tercih reddedilir. En fazla 40 tercih tutulur. Proje kuralı kişisel tercihten önce gelir; projeye özgü kurallar yine "Öğrenilen kurallar"a gider.
+  - Dosyayı makinedeki herhangi bir program yazabilir. Bu yüzden okurken de aynı denetimler uygulanır: uzun satır, sır ya da kontrol karakteri içeren satır yüklenmez, 64 KB'tan büyük dosya okunmaz. Tercihler oturuma "üslup tercihi" olarak girer; izinleri, güvenlik kurallarını ya da komut kurallarını değiştiremez.
+  - Elle düzenleme desteklenir; başlıklarda büyük/küçük harf ve Türkçe harf farkı önemsenmez. Okunamayan bir satır varsa betik dosyayı yeniden yazmaz, satırı silmemek için durur ve satırı gösterir.
+  - Elle uyarla: AGENTS.md projeye ait. Yeni kural "9. Kullanıcıyı tanı" maddesi; projendeki AGENTS.md'ye eklemek istersen `.kit-new` dosyasından al. İzin satırları `/kit-update` ile eklenir.
+
 ## [3.29.0] - 2026-10-26
 
 ### Yeni

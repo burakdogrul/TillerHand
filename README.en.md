@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.29.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.30.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -45,6 +45,7 @@
 | **Sourced facts** | Anything that changes (versions, prices, regulations) is checked against a primary source, with link and date. |
 | **Rollback** | `/rollback` returns to the last working state; history is kept, unfinished work is saved. |
 | **Narrator mode** | Optionally explains every change in plain language, as if to someone who doesn't code. |
+| **Learns how you work** | Picks up how you like to work (tone, questions, reports, code style). Preferences you approve apply to all your projects and stay on your computer. |
 
 ## Step by step for beginners
 

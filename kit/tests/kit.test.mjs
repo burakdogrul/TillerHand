@@ -225,7 +225,7 @@ test('update: an old .kit.json with an absolute kit path is moved to .kit.local.
 
 test('session start: the next command is shown to the user (after /clear)', () => {
   const oturum = (p) => JSON.parse(spawnSync(process.execPath, [path.join(p, '.claude/hooks/session-start.mjs')], {
-    encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p },
+    encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p, HOME: p, USERPROFILE: p }, // not the developer's preferences
   }).stdout);
   const p = cloneKit('oturum');
   assert.match(oturum(p).systemMessage, /\/start/);
