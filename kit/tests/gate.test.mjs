@@ -427,11 +427,14 @@ test('B9 Codex/Antigravity: a commit message that names --skip is text, not a ca
     'git commit -m "a" ; node .claude/hooks/commit-gate.mjs --skip x',
     // PowerShell and cmd do not treat \ as an escape: "a\" closes the string there
     'git commit -m "a\\"; node .claude/hooks/commit-gate.mjs --skip x; echo \\""',
-    'git add -A && git commit -m "a\\" && node .claude/hooks/commit-gate.mjs --skip x && echo \\""'])
+    'git add -A && git commit -m "a\\" && node .claude/hooks/commit-gate.mjs --skip x && echo \\""',
+    // PowerShell also ends a string at typographic quotes
+    'git commit -m "a”; node .claude/hooks/commit-gate.mjs --skip x; “b"', "git commit -m 'a’; node .claude/hooks/commit-gate.mjs --skip x; ‘b'",
+    'git commit -m "a„; node .claude/hooks/commit-gate.mjs --skip x; “b"'])
     assert.equal(permissionEquivalent(c)?.decision, 'ask', c);
   // the same trick must not hide any other rule either
   for (const c of ['echo "git commit -m "; node .claude/hooks/gate.mjs --approve; echo "e"', 'echo "git commit -m "; rm -rf /tmp/x; echo "e"',
-    'echo "git commit -m "; node .claude/hooks/prefs.mjs --add kacin x; echo "e"', 'git commit -m "a\\"; rm -rf /tmp/x; echo \\""'])
+    'echo "git commit -m "; node .claude/hooks/prefs.mjs --add kacin x; echo "e"', 'git commit -m "a\\"; rm -rf /tmp/x; echo \\""', 'git commit -m "a”; rm -rf /tmp/x; “b"'])
     assert.ok(permissionEquivalent(c), c);
   assert.equal(permissionEquivalent('git add -A && git commit -qm "docs: gate.mjs --approve ve commit-gate.mjs --skip anlatıldı"'), null, 'git add && git commit');
 });

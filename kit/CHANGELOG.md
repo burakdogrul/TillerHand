@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.31.2] - 2026-10-26
+
+### Düzeltilen
+- **Codex ve Antigravity: commit mesajı yoluyla koruma atlatılamıyor.** 3.31.1'de düz commit mesajı komut sayılmıyordu. PowerShell akıllı tırnakları (`“ ” ‘ ’ „`) da dizge sınırı saydığı için böyle tırnaklı bir mesajın arkasına gizlenen komut onaysız geçebiliyordu. Artık mesaj yalnız bash, PowerShell ve cmd'de aynı şekilde tek dizge kalıyorsa boşaltılır: akıllı tırnak, `\`, `$`, ters tırnak, satır sonu ya da `; & | < > ^ % !` içeren mesaj yine denetlenir.
+
 ## [3.31.1] - 2026-10-26
 
 ### Düzeltilen

@@ -273,9 +273,10 @@ const strictest = (...s) => s.filter(Boolean).sort((a, b) => RANK[b.decision] - 
 // A commit message that only names a command (git commit -m "commit-gate.mjs --skip anlatıldı") is text, not a call.
 // Emptied only when the WHOLE command is one plain commit (optionally after "git add … &&") and the message is its last
 // word: then nothing else can hide in it. No quote, $, `, (, #, <, > before the message: a quote opened earlier
-// would make a real command look like the message. A message with $( or ` runs code and keeps its text; one with \ too
-// (PowerShell and cmd do not escape with \, so "a\" ends the string there).
-const PLAIN_COMMIT = /^(\s*(?:git(?:\.exe)?\s+add\s[^;&|\n$`()"'\\#<>]*&&\s*)?git(?:\.exe)?\s[^;&|\n$`()"'\\#<>]*?\bcommit(?![\w.-])[^;&|\n$`()"'\\#<>]*?\s(?:-[a-zA-Z]*m|--message)(?:\s+|=))("[^"\\$`]*"|'[^']*')\s*$/;
+// would make a real command look like the message. The message must be safe in bash, PowerShell and cmd alike: no
+// $ ` (code), no \ (PowerShell and cmd do not escape with it, "a\" ends the string), no typographic quotes U+2018-U+201F
+// (PowerShell ends strings at them), no newline and no ; & | < > ^ % !. Anything else keeps its text and is checked.
+const PLAIN_COMMIT = /^(\s*(?:git(?:\.exe)?\s+add\s[^;&|\n$`()"'\\#<>\u2018-\u201f]*&&\s*)?git(?:\.exe)?\s[^;&|\n$`()"'\\#<>\u2018-\u201f]*?\bcommit(?![\w.-])[^;&|\n$`()"'\\#<>\u2018-\u201f]*?\s(?:-[a-zA-Z]*m|--message)(?:\s+|=))("[^"\\$`\u2018-\u201f\r\n;&|<>^%!]*"|'[^'\u2018-\u201f\r\n;&|<>^%!]*')\s*$/;
 export function permissionEquivalent(command) {
   const c = command.replace(PLAIN_COMMIT, '$1""');
   return strictest(permissionOne(c), permissionOne(unquote(c)), permissionOne(blankQuoted(c)));
