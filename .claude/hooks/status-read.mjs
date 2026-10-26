@@ -5,7 +5,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const readText = (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '');
+// Only a regular file: a folder or a link to a folder named like a test or report file must not throw (EISDIR)
+export const readText = (p) => { try { return fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : ''; } catch { return ''; } };
 
 export function sections(text, level = '## ') {
   const result = {};
@@ -34,13 +35,17 @@ export const tableRows = (body = '', minCols = 2) =>
     .slice(1)
     .filter((c) => c.some(Boolean));
 
+// Control characters (ESC sequences) are dropped: these values reach the terminal status line and must not move the
+// cursor, rewrite the line or set the clipboard (OSC 52)
+export const clean = (s) => s.replace(/[\u0000-\u001f\u007f-\u009f]/g, '');
+
 export const labels = (text) => {
   const a = {};
-  for (const [, k, v] of text.matchAll(/^\*\*(.+?):\*\*\s*(.*)$/gm)) a[k.trim()] = v.trim();
+  for (const [, k, v] of text.matchAll(/^\*\*(.+?):\*\*\s*(.*)$/gm)) a[clean(k).trim()] = clean(v).trim();
   return a;
 };
 
-const rows = (b) => (b ?? '').split('\n').map((s) => s.trim())
+const rows = (b) => (b ?? '').split('\n').map((s) => clean(s).trim())
   .filter((s) => /^([-*]|\d+\.)\s+\S/.test(s)).map((s) => s.replace(/^([-*]|\d+\.)\s+/, '').replace(/^\[[ x]\]\s*/i, ''));
 
 export function readStatus(root) {

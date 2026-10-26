@@ -156,7 +156,7 @@ const dayCounts = Object.fromEntries(days.map((g) => [g, 0]));
 for (const c of git?.commits ?? []) { const g = dayKey(c.date); if (g in dayCounts) dayCounts[g]++; }
 const last7 = days.slice(7).reduce((t, g) => t + dayCounts[g], 0);
 const last30 = (git?.commits ?? []).filter((c) => Date.now() - new Date(c.date) < 30 * 864e5);
-const kindCounts = last30.reduce((m, c) => ((m[c.kind] = (m[c.kind] ?? 0) + 1), m), {});
+const kindCounts = last30.reduce((m, c) => ((m[c.kind] = (m[c.kind] ?? 0) + 1), m), Object.create(null)); // a "constructor:" commit is a plain key
 const fixRatio = (kindCounts.feat ?? 0) + (kindCounts.fix ?? 0) ? Math.round(((kindCounts.fix ?? 0) / ((kindCounts.feat ?? 0) + (kindCounts.fix ?? 0))) * 100) : null;
 
 const feed = [
@@ -173,7 +173,7 @@ const mvpCriteria = mvp.reduce((t, o) => ({ done: t.done + o.done, total: t.tota
 const avgCost = Object.entries(cost.reduce((m, r) => {
   if (!Number.isNaN(r.diff)) (m[r.size] ??= []).push(r.diff);
   return m;
-}, {})).map(([size, l]) => ({ size, avg: l.reduce((t, x) => t + x, 0) / l.length, n: l.length }));
+}, Object.create(null))).map(([size, l]) => ({ size, avg: l.reduce((t, x) => t + x, 0) / l.length, n: l.length }));
 
 // ---------- helpers ----------
 const e = (s = '') => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -519,5 +519,7 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
 </body></html>
 `;
 
+// A committed dashboard.html link (to ~/.bashrc, say) must not be written through
+try { if (fs.lstatSync(file('dashboard.html')).isSymbolicLink()) fs.unlinkSync(file('dashboard.html')); } catch { /* not there yet */ }
 fs.writeFileSync(file('dashboard.html'), html);
 if (!quiet) console.log(`dashboard.html güncellendi · ${d.taskCount.done}/${d.taskCount.total} görev · ${d.decisions.length} karar · ${alerts.length} dikkat`);

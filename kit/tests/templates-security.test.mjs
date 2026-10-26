@@ -110,11 +110,41 @@ test('template copies stay identical (one fix must reach every type)', () => {
 test('every action ref in the kit and template workflows is one that was checked to resolve', () => {
   // Checked 2026-10-26 with: gh api repos/<owner>/<repo>/commits/<ref>. A new or bumped ref must be checked the same way and
   // added here (3.28.4 shipped astral-sh/setup-uv@v10, a tag that does not exist: every backend CI run failed to start).
-  const CHECKED = new Set(['actions/checkout@v7', 'actions/setup-node@v7', 'gitleaks/gitleaks-action@v3', 'anthropics/claude-code-action@v1',
+  const CHECKED = new Set(['actions/checkout@v7', 'actions/setup-node@v7', 'gitleaks/gitleaks-action@v3',
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1',
     'astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e', 'anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13']);
   const files = [...fs.readdirSync(path.join(ROOT, '.github/workflows')).map((f) => `.github/workflows/${f}`),
     ...fs.readdirSync(path.join(ROOT, 'kit/templates'), { recursive: true }).map((f) => `kit/templates/${f.replaceAll('\\', '/')}`).filter((f) => /\.github\/workflows\/.+\.ya?ml$/.test(f))];
   for (const f of files) for (const [, ref] of read(f).matchAll(/^\s*-?\s*uses:\s*([^\s#]+)/gm))
     assert.ok(CHECKED.has(ref), `${f}: ${ref} is not a checked ref`);
+});
+
+test('workflows: no ${{ }} expression inside run: (values go through env, so a value is never shell code)', () => {
+  const files = [...fs.readdirSync(path.join(ROOT, '.github/workflows')).map((f) => `.github/workflows/${f}`),
+    ...fs.readdirSync(path.join(ROOT, 'kit/templates'), { recursive: true }).map((f) => `kit/templates/${f.replaceAll('\\', '/')}`).filter((f) => /\.github\/workflows\/.+\.ya?ml$/.test(f))];
+  const found = [];
+  for (const f of files) {
+    let runIndent = -1;
+    read(f).split('\n').forEach((line, i) => {
+      const indent = line.match(/^\s*/)[0].length;
+      const run = line.match(/^(\s*)(?:-\s*)?run:\s*(.*)$/);
+      if (run) { runIndent = /^[|>]/.test(run[2]) ? run[1].length : -1; if (/\$\{\{/.test(run[2])) found.push(`${f}:${i + 1}`); return; }
+      if (runIndent >= 0 && line.trim() && indent <= runIndent) runIndent = -1;
+      if (runIndent >= 0 && /\$\{\{/.test(line)) found.push(`${f}:${i + 1}`);
+    });
+  }
+  assert.deepEqual(found, []);
+});
+
+test('CI repair agent: works on the commit CI saw, skips Dependabot and red security jobs, pinned action', () => {
+  const y = read('kit/templates/web-saas/.github/workflows/claude-ci-fix.yml');
+  assert.match(y, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/);
+  assert.doesNotMatch(y, /ref: \$\{\{ github\.event\.workflow_run\.head_branch \}\}/, 'a branch can move after CI');
+  assert.match(y, /actor\.login != 'dependabot\[bot\]'/);
+  assert.match(y, /semgrep\|sir-taramasi\|rls/);
+  assert.match(y, /claude-code-action@[0-9a-f]{40} # v1/);
+  for (const t of ['web-saas', 'mobile', 'backend']) {
+    const jobs = [...read(`kit/templates/${t}/.github/workflows/ci.yml`).matchAll(/^ {2}([a-z-]+):$/gm)].map((m) => m[1]);
+    for (const j of ['semgrep', 'sir-taramasi']) assert.ok(jobs.includes(j), `${t}: the repair skip list names ${j}, which must exist`);
+  }
 });

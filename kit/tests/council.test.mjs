@@ -107,3 +107,15 @@ test('council: the dashboard reads the minutes (decision, consensus, ranking wit
     assert.match(fs.readFileSync(path.join(root, `.claude/agents/${agent}.md`), 'utf8'), new RegExp(`^model: ${model}$`, 'm'), agent);
   }
 });
+
+test('council audit: a partial or unknown-letter ranking does not count; an unvoted critical finding is not "kabul"', () => {
+  const minutes = MEETING.replace('SIRALAMA:\n1. Görüş B\n2. Görüş A\n', 'SIRALAMA:\n1. Görüş B\n')
+    .replace('SIRALAMA:\n1. Görüş A\n2. Görüş C\n', 'SIRALAMA:\n1. Görüş A\n2. Görüş Z\n');
+  const s = countVotes(minutes);
+  assert.deepEqual(s.invalid.sort(), ['B', 'C']);
+  assert.deepEqual(s.ranking.map((r) => [r.opinion, r.votes]), [['B', 1], ['C', 1]], 'only A\'s full ranking counts');
+  const none = countVotes(MEETING.replace(/OYLAR:[\s\S]*?(?=SIRALAMA:)/g, ''));
+  const a1 = none.findings.find((f) => f.id === 'A1');
+  assert.equal(a1.unvoted, true);
+  assert.match(writeMinutes('', none), /\| A1 \| KRİTİK \| 0 \| 0 \| 0 \| oy yok · kullanıcıya sor \|/);
+});

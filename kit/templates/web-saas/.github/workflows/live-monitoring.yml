@@ -45,5 +45,5 @@ jobs:
           if [ -z "$(gh issue list --label live-monitoring --state open --json number -q '.[].number')" ]; then
             gh label create live-monitoring --color D03B3B --force
             gh issue create --label live-monitoring --title "Canlı izleme: kritik akış bozuk" \
-              --body "Çalışma kaydı: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              --body "Çalışma kaydı: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           fi

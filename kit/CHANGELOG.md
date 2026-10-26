@@ -3,6 +3,29 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.28.6] - 2026-10-26
+
+### Düzeltilen
+- **CI otomatik tamiri (şablonlar) daha dar çalışıyor:**
+  - Düzeltmeyi CI'ın kırmızı gördüğü commit'te yapar. Dal o arada ilerlediyse push reddedilir; böylece CI'dan geçmemiş commit'ler yazma yetkili ajana girmez.
+  - Dependabot PR'larında çalışmaz.
+  - Güvenlik işleri (Semgrep, sır taraması, RLS) kırmızıysa tamir denemez; bunlar insan incelemesi ister.
+  - `claude-code-action` commit SHA'sına sabit.
+  - Haftalık bakım ajanının `git log` ve `gh run list` izinleri daraltıldı; PR başlıkları gibi dışarıdan gelen metin ajana gitmiyor.
+- **Şablon iş akışlarında `run:` içinde `${{ }}` ifadesi kalmadı** (backend canlı izlemede `LIVE_URL` kabuk koduna gömülüyordu). Değerler ortam değişkeniyle geçiyor; bunu bir test denetliyor.
+- **Konsey sayımı:** Eksik ya da bilinmeyen harf içeren bir sıralama (`1. Görüş D` tek satır) artık geçersiz sayılıyor; önceden sıralamayı yapan tek kişinin oyuyla o görüşe en iyi ortalamayı veriyordu. Hiç oy almayan bulgu "kabul" değil "oy yok" yazılıyor; KRİTİK ise kullanıcıya sorulması isteniyor.
+- **Durum çubuğu:** `progress.md`'deki kontrol karakterleri (ESC dizileri) terminale geçmiyor. Bu karakterlerle panoya yazılabiliyor ya da satırın üzerine sahte metin basılabiliyordu.
+- **Pano:**
+  - Önbellekteki GitHub bağlantıları yalnız `https` olabiliyor, geleceğe tarihli önbellek bayat sayılıyor.
+  - Başarısız bir testin çıktısında geçen `<skipped` yazısı testi atlanmış göstermiyor.
+  - `-` ya da `yok` yazılmış bir prod ref yalancı KRİTİK uyarı üretmiyor.
+  - Test ya da rapor adında bir klasör panoyu ve kapıyı çökertmiyor.
+  - `constructor:` gibi bir commit türü sayımı bozmuyor.
+  - `dashboard.html` bir bağlantıysa üzerinden yazılmıyor.
+  - Panonun depo metinlerini kaçışlı yazdığı artık testle denetleniyor.
+- **`/qa` kanıtı:** Bir `shots/<id>.png` bağlantısı yerel bir dosyayı `.previews/` altına kopyalamıyor.
+  - Elle uyarla: Projedeki `claude-ci-fix.yml`, `claude-maintenance.yml` ya da `live-monitoring.yml` dosyasını değiştirdiysen, `/kit-update` yeni sürümü `.kit-new` olarak bırakır.
+
 ## [3.28.5] - 2026-10-26
 
 ### Düzeltilen

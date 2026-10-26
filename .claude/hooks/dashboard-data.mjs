@@ -54,10 +54,12 @@ export function* junitCases(xml) {
   for (const m of xml.matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g)) {
     const name = (m[1].match(/\bname="([^"]*)"/)?.[1] ?? '') + ' ' + (m[1].match(/\bclassname="([^"]*)"/)?.[1] ?? '');
     const body = m[2] ?? '';
-    if (/<skipped/.test(body)) continue;
+    // Tags are read outside CDATA and the captured output: a failing test that prints "<skipped" is not skipped
+    const tags = body.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '').replace(/<system-(out|err)\b[\s\S]*?<\/system-\1>/g, '');
+    if (/<skipped\b/.test(tags)) continue;
     // Any failure/error tag fails the case (an unescaped ">" in an attribute or a missing end tag must not turn it green);
     // the stricter match only reads the reason
-    const failed = /<(failure|error)\b/.test(body);
+    const failed = /<(failure|error)\b/.test(tags);
     const f = body.match(/<(failure|error)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/);
     const reason = failed ? xmlText((f?.[3] ?? '').trim() || (f?.[2].match(/\bmessage="([^"]*)"/)?.[1] ?? '')) : null;
     yield { keys: [...name.matchAll(CRITERION_ID)].map((k) => key(k[1], k[2])), failed, reason };
@@ -168,7 +170,8 @@ export function accounts(text, now = Date.now()) {
 export function envWarnings(root) {
   const u = [];
   const prodRef = tableRows(sections(readText(path.join(root, 'docs/operations/accounts.md')))['Ortamlar (dev / prod)'], 4)
-    .find(([environment, , ref]) => environment === 'prod' && ref && !ref.startsWith('['))?.[2];
+    // A real ref (Supabase: 20 characters); "-", "yok", "n/a" would match anywhere in .mcp.json
+    .find(([environment, , ref]) => environment === 'prod' && /^[a-z0-9][a-z0-9._:/-]{7,}$/i.test(ref ?? ''))?.[2];
   if (prodRef && readText(path.join(root, '.mcp.json')).includes(prodRef)) {
     u.push({ sev: 'critical', text: `Prod projesinin ref'i (${prodRef}) .mcp.json'da: AI prod'a bağlanabiliyor.`, action: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)' });
   }
@@ -327,9 +330,15 @@ export function costSummary(data) {
 // ---------- GitHub (if gh exists, 5 min cache) ----------
 export function githubStatus(root, now = Date.now()) {
   const file = path.join(root, '.claude', 'state', 'github-cache.json');
+  // Links go into href: only https (a hand-written cache must not bring javascript:); a cache time in the future is stale
+  const safe = (data) => {
+    for (const x of [...(data?.runs ?? []), ...(data?.prs ?? []), ...(data?.liveMonitoring ?? []), data?.liveRun].filter(Boolean))
+      if (!/^https:\/\//.test(String(x.url ?? ''))) x.url = '';
+    return data;
+  };
   try {
     const o = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (now - o.time < 5 * 60e3) return o.data;
+    if (now - o.time >= 0 && now - o.time < 5 * 60e3) return safe(o.data);
   } catch { /* no cache */ }
   const gh = (...a) => JSON.parse(execFileSync('gh', a, { cwd: root, encoding: 'utf8', timeout: 8000, stdio: ['ignore', 'pipe', 'ignore'] }));
   let data = null;
@@ -345,7 +354,7 @@ export function githubStatus(root, now = Date.now()) {
   // Separate call: the live workflow may be missing (mobile) or older than the last 8 runs; a failure here must not hide the rest
   if (data) try { data.liveRun = gh('run', 'list', '--workflow', 'live-monitoring.yml', '--limit', '1', '--json', 'conclusion,status,createdAt,url')[0] ?? null; } catch { data.liveRun = null; }
   try { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify({ time: now, data })); } catch { /* sessiz */ }
-  return data;
+  return safe(data);
 }
 
 export function readContext(root) {

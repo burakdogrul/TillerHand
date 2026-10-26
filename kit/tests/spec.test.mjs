@@ -23,7 +23,7 @@ const AGENTS = '# X\n\n## Komutlar\n\n```bash\ntest:        node write-junit.mjs
 before(() => {
   p = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-'));
   write('AGENTS.md', AGENTS);
-  write('write-junit.mjs', "import fs from 'node:fs';\nif (fs.existsSync('fixture.xml')) { fs.mkdirSync('test-results', { recursive: true }); fs.copyFileSync('fixture.xml', 'test-results/junit.xml'); }\n");
+  write('write-junit.mjs', "import fs from 'node:fs';\nif (fs.existsSync('fixture.xml')) { fs.mkdirSync('test-results', { recursive: true }); fs.writeFileSync('test-results/junit.xml', fs.readFileSync('fixture.xml')); }\n"); // written, not copied: a Windows copy keeps the old mtime
   write('tests/notes.test.mjs', "test('Ö-01.1 not kaydedilir', () => {}); test('Ö-01.2 başkasının notu görünmez', () => {});");
   write('docs/product/specs/_template.md', spec('- Ö-09.9: şablon satırı'));
   gate('--approve');

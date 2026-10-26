@@ -149,3 +149,47 @@ test('spend alarms: a row without an amount is unset, an old check is flagged', 
   assert.equal(a[1].unset, true);
   assert.equal(a[1].stale, true);
 });
+
+test('status labels: control characters from the repo never reach the terminal status line', async () => {
+  const { labels } = await import('../../.claude/hooks/status-read.mjs');
+  const a = labels('**Aktif faz:** Faz\u001b]52;c;ZXZpbA==\u0007 1\n**Aktif görev:** \u001b[2K\u001b[1GG-01\n');
+  assert.equal(a['Aktif faz'], 'Faz]52;c;ZXZpbA== 1');
+  assert.equal(a['Aktif görev'], '[2K[1GG-01');
+  assert.ok(!/[\u0000-\u001f\u007f-\u009f]/.test(Object.values(a).join('')));
+});
+
+test('3.28.6 audit: JUnit output that mentions <skipped does not skip a failing case; a placeholder prod ref is not critical', async () => {
+  const { junitCases } = await import('../../.claude/hooks/dashboard-data.mjs');
+  const xml = '<testcase name="Ö-01.1 kayıt"><failure message="x"/><system-out><![CDATA[log: <skipped/> yazıldı]]></system-out></testcase>';
+  assert.equal([...junitCases(xml)].length, 1, 'the failing case is still counted');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'ortam2-'));
+  fs.mkdirSync(path.join(p, 'docs/operations'), { recursive: true });
+  fs.writeFileSync(path.join(p, 'docs/operations/accounts.md'), '## Ortamlar (dev / prod)\n\n| Ortam | Servis | Proje ref / URL | Kim bağlanır |\n|---|---|---|---|\n| prod | Supabase | - | x |\n');
+  fs.writeFileSync(path.join(p, '.mcp.json'), '{"args":["-y","x"]}');
+  assert.deepEqual(envWarnings(p), [], '"-" is not a ref');
+  fs.rmSync(p, { recursive: true, force: true });
+});
+
+test('3.28.6 audit: the dashboard escapes repo text (commit messages, progress, roadmap) and drops non-https cache links', async () => {
+  const { spawnSync, execFileSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const { githubStatus } = await import('../../.claude/hooks/dashboard-data.mjs');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'pano-xss-'));
+  const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); fs.writeFileSync(path.join(p, f), s); };
+  const XSS = '<img src=x onerror=alert(1)>';
+  write('docs/workflow/progress.md', `**Aktif faz:** ${XSS}\n**Aktif görev:** <script>alert(2)</script>\n\n## Sıradaki adım\n\n1. ${XSS}\n`);
+  write('docs/product/roadmap.md', `## Faz 1\n\n- [ ] G-001 ${XSS}\n`);
+  const git = (...a) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { cwd: p, stdio: 'ignore' });
+  git('init', '-q');
+  git('add', '-A');
+  git('commit', '-qm', `feat: ${XSS}`);
+  const now = Date.now();
+  write('.claude/state/github-cache.json', JSON.stringify({ time: now, data: { runs: [{ workflowName: 'CI', url: 'javascript:alert(3)', conclusion: 'success' }], prs: [], liveMonitoring: [] } }));
+  assert.equal(githubStatus(p, now).runs[0].url, '', 'javascript: link dropped');
+  const r = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks', 'dashboard.mjs'), p, '--quiet'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const html = fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8');
+  assert.ok(!html.includes(XSS) && !html.includes('<script>alert(2)') && !html.includes('javascript:alert'), 'no raw repo HTML or script link');
+  assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'), 'the text is shown escaped');
+  fs.rmSync(p, { recursive: true, force: true });
+});

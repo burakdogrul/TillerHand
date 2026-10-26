@@ -40,8 +40,17 @@ export function countVotes(minutes) {
   const reviews = Object.entries(sections(findSection(b, '2.'), '### '))
     .map(([title, body]) => ({ reviewer: title.match(/İnceleyen:\s*([A-Z])/u)?.[1] ?? '?', ranking: parseRanking(body), ballots: parseBallots(body) }));
 
+  // A ranking counts only as a full order of the other opinions (or of all of them), each once: a partial
+  // "1. Görüş D" would give D a perfect average, and a letter with no opinion means nothing
+  const labels = Object.keys(opinions);
+  const complete = (i) => {
+    const want = labels.filter((g) => g !== i.reviewer);
+    const got = [...new Set(i.ranking)];
+    return got.length === i.ranking.length && [want, labels].some((w) => w.length === got.length && w.every((g) => got.includes(g)));
+  };
+  const valid = labels.length ? reviews.filter(complete) : reviews;
   const positions = {};
-  for (const i of reviews) i.ranking.forEach((g, n) => (positions[g] ??= []).push(n + 1));
+  for (const i of valid) i.ranking.forEach((g, n) => (positions[g] ??= []).push(n + 1));
   const ranking = Object.entries(positions)
     .map(([opinion, k]) => ({ opinion, average: Math.round((k.reduce((a, x) => a + x, 0) / k.length) * 100) / 100, votes: k.length }))
     .sort((x, y) => x.average - y.average || x.opinion.localeCompare(y.opinion));
@@ -50,7 +59,8 @@ export function countVotes(minutes) {
     const s = { DOĞRU: 0, YANLIŞ: 0, ABARTILI: 0 };
     for (const i of reviews) if (i.ballots[f.id]) s[i.ballots[f.id]]++;
     const objections = s.YANLIŞ + s.ABARTILI;
-    return { ...f, ...s, disputed: objections > 0 && objections >= s.DOĞRU };
+    // No vote at all is not acceptance: a reviewer skipped OYLAR or the id
+    return { ...f, ...s, disputed: objections > 0 && objections >= s.DOĞRU, unvoted: objections + s.DOĞRU === 0 };
   });
 
   const proposals = Object.values(opinions).map((g) => g.proposal).filter(Boolean);
@@ -63,7 +73,7 @@ export function countVotes(minutes) {
   const consensus = options.length
     ? Math.round((options[0].votes / proposals.length) * 100)
     : totalVotes ? Math.round((findings.reduce((t, f) => t + f.DOĞRU, 0) / totalVotes) * 100) : null;
-  const invalid = reviews.filter((i) => !i.ranking.length).map((i) => i.reviewer);
+  const invalid = reviews.filter((i) => !valid.includes(i)).map((i) => i.reviewer);
   return { ranking, findings, options, consensus, reviewerCount: reviews.length, invalid };
 }
 
@@ -71,7 +81,7 @@ export function renderSection(s) {
   const lines = [];
   lines.push(`**Uzlaşma:** ${s.consensus == null ? '-' : `%${s.consensus}`}`);
   lines.push(`**Tartışmalı:** ${s.findings.filter((f) => f.disputed).length}`, '');
-  if (s.invalid?.length) lines.push(`> Uyarı: ${s.invalid.join(', ')} incelemesinde biçimli SIRALAMA yok; sıralamaya katılmadı (oyları sayıldı). İnceleyenden SIRALAMA'yı yeniden iste.`, '');
+  if (s.invalid?.length) lines.push(`> Uyarı: ${s.invalid.join(', ')} incelemesinde biçimli ve eksiksiz SIRALAMA yok (her görüş bir kez); sıralamaya katılmadı (oyları sayıldı). İnceleyenden SIRALAMA'yı yeniden iste.`, '');
   if (s.ranking.length) {
     lines.push('| Görüş | Ortalama sıra | Sıralayan |', '|---|---|---|');
     for (const r of s.ranking) lines.push(`| ${r.opinion} | ${r.average} | ${r.votes} |`);
@@ -84,7 +94,7 @@ export function renderSection(s) {
   }
   if (s.findings.length) {
     lines.push('| Bulgu | Önem | Doğru | Yanlış | Abartılı | Durum |', '|---|---|---|---|---|---|');
-    for (const f of s.findings) lines.push(`| ${f.id} | ${f.severity} | ${f.DOĞRU} | ${f.YANLIŞ} | ${f.ABARTILI} | ${f.disputed ? (f.severity === 'KRİTİK' ? 'tartışmalı · kullanıcıya sor' : 'tartışmalı') : 'kabul'} |`);
+    for (const f of s.findings) lines.push(`| ${f.id} | ${f.severity} | ${f.DOĞRU} | ${f.YANLIŞ} | ${f.ABARTILI} | ${f.unvoted ? (f.severity === 'KRİTİK' ? 'oy yok · kullanıcıya sor' : 'oy yok') : f.disputed ? (f.severity === 'KRİTİK' ? 'tartışmalı · kullanıcıya sor' : 'tartışmalı') : 'kabul'} |`);
     lines.push('');
   }
   return lines.join('\n');

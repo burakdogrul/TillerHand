@@ -42,7 +42,10 @@ export function qaReport(root, junit = 'test-results-qa/junit.xml', now = new Da
     const r = results.get(k.key);
     let evidence = '';
     const shot = path.join(root, path.dirname(junit), 'shots', `${k.id}.png`);
-    if (r && !linked && fs.existsSync(shot)) {
+    // Only a real screenshot file: a shots/<id>.png link would copy any local file into .previews/
+    let real = false;
+    try { real = fs.lstatSync(shot).isFile(); } catch { /* no screenshot */ }
+    if (r && !linked && real) {
       fs.mkdirSync(shots, { recursive: true });
       fs.copyFileSync(shot, path.join(shots, `${k.id}.png`));
       evidence = `.previews/qa-${stamp}/${k.id}.png`;
