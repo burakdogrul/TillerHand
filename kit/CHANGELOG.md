@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.39.2] - 2026-10-26
+
+### Değişen
+- **Web SaaS kataloğunda barındırma ve e-posta kısıtları kaynaklı.** Vercel'in ücretsiz Hobby planının ticari kullanıma kapalı olduğu, Cloudflare Workers ve Resend ücretsiz sınırları kaynak ve tarihle yazıldı. Ödeme alacak bir ürün için Vercel Hobby'nin yetmeyeceği artık seçenek açıklamasında.
+
 ## [3.39.1] - 2026-10-26
 
 ### Değişen
