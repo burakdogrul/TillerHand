@@ -3,6 +3,16 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.34.0] - 2026-10-26
+
+### Eklenen
+- **Alt ajan yalnız karlıysa.** Alt ajan soğuk başlar: istemini ve dosyaları yeniden okur. Küçük bir görevde bu, kazandırdığından pahalıdır. Yeni `node .claude/hooks/flow.mjs` görev büyüklüğüne (dosya sayısı), bağlama ve limite bakıp akışı söyler, token harcamaz:
+  - 1-2 dosya: kod ve doküman işi ana oturumda. 3 ve üstü ya da bağlam %50'nin üstündeyse kod rolü alt ajanda.
+  - Görev sonu kurulu 1, 2 ya da 3 üye + `code-reviewer` (hassas yolda `security-auditor` da). Limit sarıda üye sayısı yarıya iner, kırmızıda tek üye sırayla çalışır.
+  - Bağlam %50'nin üstündeyse önce `/clear` önerilir.
+  - `/build` (adım 2a) ve kurul kuralları bunu kullanır. Masaüstü uygulamasında durum çubuğu olmadığı için bağlam ve limit `--context`, `--limit` ile verilir.
+  - İzin satırı `/kit-update` ile eklenir.
+
 ## [3.33.0] - 2026-10-26
 
 ### Değişen

@@ -26,7 +26,8 @@
       "Bash(node .claude/hooks/prefs.mjs --list)",
       "Bash(node .claude/hooks/models.mjs --show)",
       "Bash(node .claude/hooks/models.mjs --set:*)",
-      "Bash(node .claude/hooks/commit-gate.mjs --status)"
+      "Bash(node .claude/hooks/commit-gate.mjs --status)",
+      "Bash(node .claude/hooks/flow.mjs:*)"
     ],
     "ask": [
       "Bash(git push:*)",
