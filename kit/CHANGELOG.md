@@ -3,6 +3,15 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.33.0] - 2026-10-26
+
+### Değişen
+- **Ana oturumun bağlamı küçük kalıyor.** Her tur oturumdaki bütün bağlamı yeniden okur; bağlama giren her satır sonraki turlarda yeniden ödenir.
+  - Aynı adımın birbirinden bağımsız soruları tek soru turunda sorulur (en fazla 4).
+  - Kapı kırmızıda son 30 satırı gösterir; daha uzun çıktının tamamı `.claude/state/gate-log/<kontrol>.log` dosyasına yazılır ve yalnız gerekirse okunur.
+  - Kurul üyeleri, `code-reviewer`, `security-auditor` ve kod alt ajanı en fazla ~15 satırlık rapor verir, bulgu başına tek satır.
+  - `/build` görev bitip commit atılınca `/clear` önerir (görev = oturum); yeni oturum `progress.md`'den devam eder. Büyük dosyada önce arama, sonra yalnız gereken satırlar okunur.
+
 ## [3.32.1] - 2026-10-26
 
 ### Düzeltilen

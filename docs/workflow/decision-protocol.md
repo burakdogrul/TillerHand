@@ -28,7 +28,7 @@ Emin değilsen karar noktasıdır, sor.
 3. **2-4 seçenek.** En uygun gördüğün **ilk sırada** ve etiketinin sonunda **"(Önerilen)"**.
 4. **Her seçeneğin açıklamasında:** Ne olduğu, hangi durumda daha iyi olduğu ve bedeli. Örnek: "Next.js — SEO ve sunucu tarafı gereken ürünlerde en iyisi, AI bu ekosistemi en iyi bilir; öğrenme eğrisi ve barındırma maliyeti Vite SPA'dan yüksek."
 5. **Önerinin gerekçesi bu projeye özel olsun:** PRD'deki kullanıcıya, bütçeye, ölçeğe ve kullanıcının daha önceki kararlarına dayan. Genel geçer "en popüler" gerekçe yetmez.
-6. **Tur başına en fazla 4 soru.** Birbirine bağlı kararları sırayla sor (önce framework, sonra ona bağlı kütüphane).
+6. **Tur başına en fazla 4 soru.** Aynı adımın birbirinden bağımsız sorularını tek AskUserQuestion çağrısında topla: her ayrı çağrı bir tur daha demek ve her tur bütün bağlamı yeniden okur. Birbirine bağlı kararları sırayla sor (önce framework, sonra ona bağlı kütüphane).
 7. Kullanıcı "Other" ile serbest cevap verirse onu da değerlendir. Riskli bulursan bir kez nedenini söyle, ısrar ederse uygula ve kayda geç.
 8. **Güncellik:** Sürüm, fiyat, kullanımdan kaldırma gibi değişebilen bilgiye dayanan seçeneklerde hafızana güvenme. Gerekirse önce araştır (`docs/workflow/skills.md` → araştırma).
 9. **Tasarım kararlarında görsel önizleme zorunlu.** Bkz. bölüm 5.

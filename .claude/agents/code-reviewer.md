@@ -28,7 +28,7 @@ Emin olmadığın bir şeyi bulgu olarak yazma; şüpheliyse "DOĞRULANMADI" eti
 
 ## Çıktı
 
-Övgü ve özet yok. Sadece bulgular, en ciddiden başlayarak:
+Övgü ve özet yok. Sadece bulgular, en ciddiden başlayarak; toplam en fazla ~15 satır, bulgu başına tek satır:
 
 ```
 [KRİTİK|ÖNEMLİ|KÜÇÜK] dosya:satır — Sorun. Somut senaryo (hangi girdiyle ne olur). Öneri.

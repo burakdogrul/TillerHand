@@ -54,6 +54,7 @@ Max planda yüzdeler daha düşüktür. Günlük doldukça tahmin kendini düzel
    - **Kurulu hafiflet:** Plan ve görev sonu toplantılarına sadece `security-auditor` + `board-architect` katılır. Commit denetimini sadece kod dosyalarında yap, tek üyeyle.
 3. **Haftalık limit sarı veya kırmızıysa** ayrıca tek satırla uyar: Haftalık limit geç yenilenir.
 4. Kullanıcı bir seçenek seçtiyse kararı `docs/decisions/log.md` günlüğüne `maliyet` konusu olarak yaz.
+5. **Görev = oturum.** Her tur, oturumdaki bütün bağlamı yeniden okur; önceki görevin dosyaları ve çıktıları sonraki görevde boşuna para tutar. Görev bitip commit atılınca `/clear` öner (bağlam yüzdesinden bağımsız). Yeni oturum `docs/workflow/progress.md`'den devam eder.
 
 ## 4. Çalışırken limit uyarıları
 

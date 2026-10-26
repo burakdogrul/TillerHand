@@ -64,6 +64,13 @@ test('F-03 gate: a red check shows its last lines, a green one writes no output,
   const state = JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8'));
   assert.equal(state.passed, false);
   assert.match(state.signature, /^[0-9a-f]{64}$/);
+  // 3.33.0: a long red output shows its last 30 lines; the whole output is kept in a file, read only if the tail is not enough
+  agents('node -e "for (let i = 1; i <= 50; i++) console.log(\'satir \' + i); process.exit(1)"');
+  const long = runGate().stdout;
+  assert.match(long, /satir 50/);
+  assert.doesNotMatch(long, /satir 20\b/);
+  assert.match(long, /tamamı \.claude\/state\/gate-log\/test\.log/);
+  assert.match(fs.readFileSync(path.join(p, '.claude/state/gate-log/test.log'), 'utf8'), /satir 1\n[\s\S]*satir 50/);
   agents('node -e "process.exit(0)"');
   const green = runGate();
   assert.equal(green.status, 0);

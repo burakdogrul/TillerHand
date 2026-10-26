@@ -26,7 +26,16 @@ const CHECKS = ['lint', 'tip kontrol', 'test'];
 const APPROVED = [...CHECKS, 'geliştirme', 'önizleme'];
 const TIMEOUT = 10 * 60 * 1000;
 const BUFFER = 64 * 1024 * 1024;
-const tail = (s) => s.trimEnd().split(/\r?\n/).slice(-30).join('\n');
+// A red check shows its last 30 lines; a longer output is kept whole in a file, read only when the tail is not enough
+function failed(root, name, r) {
+  const all = `${r.error ? `${r.error.message}\n` : ''}${r.stdout ?? ''}${r.stderr ?? ''}`.trimEnd();
+  const lines = all.split(/\r?\n/);
+  if (lines.length <= 30) return { output: all };
+  const rel = `.claude/state/gate-log/${name.toLowerCase().replace(/\s+/g, '-')}.log`;
+  fs.mkdirSync(path.join(root, path.dirname(rel)), { recursive: true });
+  fs.writeFileSync(path.join(root, rel), all);
+  return { output: lines.slice(-30).join('\n'), note: `son 30 satır; tamamı ${rel}` };
+}
 
 // Only the "## Komutlar" section is read: a "test:" line elsewhere must not count as a command
 export function readCommands(md, names = CHECKS) {
@@ -70,7 +79,7 @@ function check(root, { name, command }) {
   const r = spawnSync(command, { cwd: root, shell: true, encoding: 'utf8', timeout: TIMEOUT, maxBuffer: BUFFER });
   const sec = Math.round((Date.now() - start) / 1000);
   if (r.status === 0) return { name, command, status: 'passed', sec };
-  return { name, command, status: 'failed', sec, output: tail(`${r.error ? `${r.error.message}\n` : ''}${r.stdout ?? ''}${r.stderr ?? ''}`) };
+  return { name, command, status: 'failed', sec, ...failed(root, name, r) };
 }
 
 function semgrep(root, files) {
@@ -93,7 +102,7 @@ function semgrep(root, files) {
   }
   const sec = Math.round((Date.now() - start) / 1000);
   if (r.status === 0) return { name, status: 'passed', sec };
-  return { name, status: 'failed', sec, output: tail(`${r.error ? `${r.error.message}\n` : ''}${r.stdout ?? ''}${r.stderr ?? ''}`) };
+  return { name, status: 'failed', sec, ...failed(root, name, r) };
 }
 
 // A path that only exists on this machine in a changed line breaks the code, tests and docs on every other machine.
