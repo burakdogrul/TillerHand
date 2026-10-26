@@ -15,7 +15,7 @@
 | 4 | Kimlik doğrulama | **Dış sağlayıcının JWT'si** (Supabase Auth / Clerk; kullanıcı yönetimini sen yazmazsın) · API anahtarı (servisler arası, B2B API) · Kendi oturum/JWT'n (tam kontrol; güvenlik yükü sende) |
 | 5 | Arka plan işleri | **Platform cron'u** (önerilen basit zamanlanmış işler için) · ARQ / Celery + Redis (kuyruk, yeniden deneme, yoğun iş) · Temporal / Inngest (çok adımlı, uzun süren iş akışları) · Yok |
 | 6 | API stili | **REST + OpenAPI** (önerilen) · GraphQL (çok farklı istemci, esnek sorgu) · tRPC (sadece TypeScript istemci) |
-| 7 | Barındırma | **Railway** (önerilen: en kolay, Postgres dahil) · Fly.io (kullanıcıya yakın bölge, ölçekleme) · Render · Google Cloud Run (istek başı ödeme, sıfıra ölçeklenir) · VPS + Coolify (sabit maliyet, bakım sende) |
+| 7 | Barındırma | **Railway** (önerilen: en kolay, Postgres dahil; ücretsiz kalıcı katman yok, Hobby aylık 5 dolar ve 5 dolarlık kullanım içerir (kaynak: https://docs.railway.com/pricing/plans, 2026-10-26)) · Fly.io (kullanıcıya yakın bölge, ölçekleme) · Render · Google Cloud Run (istek başı ödeme, sıfıra ölçeklenir) · VPS + Coolify (sabit maliyet, bakım sende) |
 | 8 | Paket yönetimi | **uv** (önerilen Python için: çok hızlı, kilit dosyası) · Poetry |
 | 9 | Gözlem | **Sentry + yapılandırılmış log** (Better Stack / Axiom) · OpenTelemetry (dağıtık servisler) |
 | 10 | Test | **pytest + httpx** (önerilen) · Node seçildiyse: Vitest + supertest |

@@ -3,6 +3,14 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.39.3] - 2026-10-26
+
+### Düzeltilen
+- **Mobil katalog: doğrudan StoreKit + Play Billing "komisyon yok" değil.** Mağaza komisyonu yine kesilir; kalkan yalnız RevenueCat ücreti.
+
+### Değişen
+- **Mobil ve backend kataloglarında kaynaklı fiyatlar.** RevenueCat (aylık izlenen gelir 2.500 dolara kadar ücretsiz, üstünde %1) ve Railway (Hobby aylık 5 dolar) kaynak ve tarihle yazıldı.
+
 ## [3.39.2] - 2026-10-26
 
 ### Değişen

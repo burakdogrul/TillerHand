@@ -14,7 +14,7 @@
 | 3 | Backend | **Supabase** (önerilen: auth + Postgres + storage + RLS) · Firebase (gerçek zamanlı, çevrimdışı senkron güçlü) · Kendi API'n (karmaşık iş mantığı; ayrı backend projesi) · Yok (tamamen cihazda) |
 | 4 | Yerel veri | **SecureStore + MMKV** (önerilen: ayar ve token) · SQLite / expo-sqlite (çevrimdışı çok veri) · WatermelonDB (çevrimdışı öncelikli, senkron) |
 | 5 | Veri ve durum yönetimi | **TanStack Query + Zustand** (önerilen) · Redux Toolkit (büyük ekip, katı yapı) |
-| 6 | Uygulama içi satın alma | Yok · **RevenueCat** (önerilen: iki mağaza tek API, abonelik analitiği) · Doğrudan StoreKit + Play Billing (komisyon yok, çok iş) |
+| 6 | Uygulama içi satın alma | Yok · **RevenueCat** (önerilen: iki mağaza tek API, abonelik analitiği; aylık izlenen gelir 2.500 dolara kadar ücretsiz, üstünde gelirin %1'i (kaynak: https://www.revenuecat.com/pricing, 2026-10-26)) · Doğrudan StoreKit + Play Billing (RevenueCat ücreti yok, mağaza komisyonu yine kesilir; çok iş) |
 | 7 | Bildirim | **expo-notifications** (önerilen) · OneSignal (pazarlama kampanyaları, segmentasyon) · Yok |
 | 8 | UI bileşenleri | **Kendi bileşenlerin + tema dosyası** (önerilen: DESIGN.md'ye tam uyum) · Tamagui (web + mobil ortak) · React Native Paper (Material hazır bileşenler) |
 | 9 | Analitik ve hata | **Sentry + PostHog** (önerilen) · Firebase Analytics + Crashlytics (Firebase seçildiyse) |
