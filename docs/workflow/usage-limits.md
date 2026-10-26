@@ -76,4 +76,4 @@ Max planda yüzdeler daha düşüktür. Günlük doldukça tahmin kendini düzel
 
 ## 5. Maliyet günlüğü (tahmini kalibre etmek için)
 
-`/build` ve tam kurul toplantıları başlangıçta ve sonda 5 saatlik yüzdeyi okur ve `docs/workflow/cost-log.md`'ye bir satır ekler: `node .claude/hooks/progress.mjs --cost "<iş>" <boyut> <başlangıç %> <bitiş %> <dk>` (fark hesaplanır; pencere arada yenilendiyse `?`). Limit okunamıyorsa satır eklenmez.
+`/build` ve tam kurul toplantıları başlangıçta ve sonda 5 saatlik yüzdeyi okur ve `docs/workflow/cost-log.md`'ye bir satır ekler: başta `node .claude/hooks/progress.mjs --start`, sonda `--cost "<iş>" <boyut>` (yüzdeler, fark ve süre hesaplanır; pencere arada yenilendiyse fark `?`; masaüstünde iki çağrıya da `--limit <%>`). Yüzdeler elle de verilebilir: `--cost "<iş>" <boyut> <başlangıç %> <bitiş %> <dk>`. Limit okunamıyorsa satır eklenmez.

@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.38.0] - 2026-10-26
+
+### Değişen
+- **Maliyet günlüğü satırı kendiliğinden doluyor.** `/build` görev başında `progress.mjs --start` ile 5 saatlik yüzdeyi ve saati kaydeder. Görev sonunda `--cost "<iş>" <boyut>` başlangıcı, bitişi, farkı ve süreyi kendisi yazar. Başlangıç bir kez kullanılır, sonraki göreve karışmaz. Masaüstü uygulamasında durum çubuğu olmadığı için yüzde `--limit` ile verilir.
+
 ## [3.37.1] - 2026-10-26
 
 ### Değişen

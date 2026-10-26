@@ -2,6 +2,8 @@
 // Mechanical doc writes at task end, by script instead of a model call (0 tokens, the format cannot drift).
 //   node .claude/hooks/progress.mjs --done G-012                     roadmap: [ ] → [x]
 //   node .claude/hooks/progress.mjs --cost "<iş>" <K|O|B|BOARD|DESIGN|FINDINGS> <başlangıç %> <bitiş %> <dk> ["<not>"]
+//   node .claude/hooks/progress.mjs --start [--limit N]           at task start: keeps the 5-hour % and the time
+//   node .claude/hooks/progress.mjs --cost "<iş>" <boyut> ["<not>"] [--limit N]  start from --start, end now (once)
 //   node .claude/hooks/progress.mjs --task "<aktif görev>" --did "<yapılan>" --next "<sıradaki adım>"
 //   node .claude/hooks/progress.mjs --check                          progress.md labels the status line and dashboard read
 // Every progress write also sets **Son güncelleme:** to today. Flags can be combined in one call.
@@ -9,10 +11,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot, isMain } from './shared.mjs';
 import { clean, labels } from './status-read.mjs';
+import { readLimits } from './usage.mjs';
 
 const LABELS = ['Son güncelleme', 'Aktif faz', 'Aktif görev', 'Başlangıç adımı', 'Soru modu', 'Profil'];
 const SIZES = ['K', 'O', 'B', 'BOARD', 'DESIGN', 'FINDINGS'];
-const USAGE = 'Kullanım: node .claude/hooks/progress.mjs [--done G-NNN] [--cost "<iş>" <K|O|B|BOARD|DESIGN|FINDINGS> <başlangıç %> <bitiş %> <dk> ["<not>"]] [--task "<metin>"] [--did "<metin>"] [--next "<metin>"] [--check]';
+const USAGE = 'Kullanım: node .claude/hooks/progress.mjs [--done G-NNN] [--start] [--cost "<iş>" <K|O|B|BOARD|DESIGN|FINDINGS> [<başlangıç %> <bitiş %> <dk>] ["<not>"]] [--limit N] [--task "<metin>"] [--did "<metin>"] [--next "<metin>"] [--check]';
 // One line per value: a newline would break a label, a list item or a table row
 const line = (s) => clean(String(s).replace(/\s*\r?\n\s*/g, ' ')).trim();
 const today = () => new Date().toLocaleDateString('sv-SE');
@@ -69,13 +72,32 @@ if (isMain(import.meta.url)) {
     console.log(r.note);
   }
 
+  // 5-hour %: --limit (desktop app: from get_usage) or the status line's .claude/state/usage.json
+  const limit = () => { const v = value('--limit'); const n = v != null ? Number(v) : readLimits(root)?.five_hour?.percent; return Number.isFinite(n) ? n : null; };
+  const startFile = file('.claude/state/task-start.json');
+  if (argv.includes('--start')) {
+    const percent = limit() ?? fail('Limit okunamadı: --limit <5 saatlik %> ver (masaüstünde get_usage).');
+    fs.mkdirSync(path.dirname(startFile), { recursive: true });
+    fs.writeFileSync(startFile, JSON.stringify({ percent, at: Date.now() }));
+    console.log(`Görev başlangıcı kaydedildi: 5s %${percent}.`);
+  }
+
   const c = argv.indexOf('--cost');
   if (c > -1) {
     const args = [];
     for (let i = c + 1; i < argv.length && !argv[i].startsWith('--'); i++) args.push(argv[i]);
+    const auto = args.length <= 3;
+    if (auto) {
+      // Only job and size (and a note): the start comes from --start, used once so an old start never leaks into the next task
+      let start;
+      try { start = JSON.parse(fs.readFileSync(startFile, 'utf8')); } catch { fail('Görev başlangıcı yok: görev başında progress.mjs --start çalıştır ya da yüzdeleri ver.'); }
+      const end = limit() ?? fail('Limit okunamadı: --limit <5 saatlik %> ver (masaüstünde get_usage).');
+      args.splice(2, 0, String(start.percent), String(end), String(Math.round((Date.now() - start.at) / 60000)));
+    }
     const row = costRow(args) ?? fail(USAGE);
     const log = file('docs/workflow/cost-log.md');
     fs.writeFileSync(log, `${fs.readFileSync(log, 'utf8').trimEnd()}\n${row}\n`);
+    if (auto) fs.rmSync(startFile, { force: true });
     console.log(`Maliyet satırı eklendi: ${row}`);
   }
 

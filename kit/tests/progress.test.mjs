@@ -31,6 +31,13 @@ test('3.35.0 progress.mjs: marks the roadmap, adds a cost row, updates progress 
   assert.match(run('--cost', 'x', 'Q', '1', '2', '3').stderr, /Kullanım/);
   assert.match(run('--cost', 'x', 'K', '90', '5', '3').stdout, /\| \? \|/, 'the window renewed: the difference is unknown');
 
+  // 3.38.0: --start keeps the start; --cost with only job and size fills start, end and minutes itself
+  assert.match(run('--cost', 'x', 'K').stderr, /--start/, 'no start saved yet');
+  assert.equal(run('--start', '--limit', '30').status, 0);
+  assert.equal(run('--cost', 'G-003 lint', 'K', '--limit', '34').status, 0);
+  assert.ok(read('docs/workflow/cost-log.md', p).trimEnd().endsWith(`| ${today} | G-003 lint | K | 30 | 34 | 4 | 0 |  |`));
+  assert.match(run('--cost', 'y', 'K').stderr, /--start/, 'the start is used once');
+
   assert.equal(run('--task', 'G-003 lint', '--did', 'G-002 bitti', '--next', '/build G-003').status, 0);
   const prog = read('docs/workflow/progress.md', p);
   assert.match(prog, new RegExp(`^\\*\\*Son güncelleme:\\*\\* ${today}$`, 'm'));
