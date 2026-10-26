@@ -254,7 +254,7 @@ const PERMISSION_EQUIVALENT = [
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-add\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-save\b/i, 'Kapsam kalkanının dosya listesi yazılıyor'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-end\b/i, 'Kapsam kalkanı kapatılıyor'],
-  ['ask', /commit-gate\.mjs['"]?\s+['"]?--skip\b/i, 'Commit kapısı ve kurul denetimi atlanıyor'],
+  ['ask', /commit-gate\.mjs\b[^;&|\n]*--skip\b/i, 'Commit kapısı ve kurul denetimi atlanıyor'],
   ['ask', /prefs\.mjs['"]?\s+['"]?--(add|remove)\b/i, 'Kişisel tercih dosyası (~/.vibe-kit/tercihler.md) değişiyor'],
   ['ask', /(?<!(?:^|[\s'"=])(?:\.[\\/]|\$\{?CLAUDE_PROJECT_DIR\}?[\\/]?)?\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked
@@ -270,8 +270,15 @@ export const unquote = (s) => s.replace(/\$'((?:[^'\\]|\\.)*)'/g, '$1').replace(
 const RANK = { deny: 2, ask: 1 };
 const strictest = (...s) => s.filter(Boolean).sort((a, b) => RANK[b.decision] - RANK[a.decision])[0] ?? null;
 
+// A commit message that only names a command (git commit -m "commit-gate.mjs --skip anlatıldı") is text, not a call.
+// Emptied only when the WHOLE command is one plain commit (optionally after "git add … &&") and the message is its last
+// word: then nothing else can hide in it. No quote, $, `, (, #, <, > before the message: a quote opened earlier
+// would make a real command look like the message. A message with $( or ` runs code and keeps its text; one with \ too
+// (PowerShell and cmd do not escape with \, so "a\" ends the string there).
+const PLAIN_COMMIT = /^(\s*(?:git(?:\.exe)?\s+add\s[^;&|\n$`()"'\\#<>]*&&\s*)?git(?:\.exe)?\s[^;&|\n$`()"'\\#<>]*?\bcommit(?![\w.-])[^;&|\n$`()"'\\#<>]*?\s(?:-[a-zA-Z]*m|--message)(?:\s+|=))("[^"\\$`]*"|'[^']*')\s*$/;
 export function permissionEquivalent(command) {
-  return strictest(permissionOne(command), permissionOne(unquote(command)), permissionOne(blankQuoted(command)));
+  const c = command.replace(PLAIN_COMMIT, '$1""');
+  return strictest(permissionOne(c), permissionOne(unquote(c)), permissionOne(blankQuoted(c)));
 }
 function permissionOne(command) {
   const k = command.replace(/\s+/g, ' ').replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, ''); // an error redirect is not a write

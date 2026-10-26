@@ -193,3 +193,21 @@ test('3.28.6 audit: the dashboard escapes repo text (commit messages, progress, 
   assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'), 'the text is shown escaped');
   fs.rmSync(p, { recursive: true, force: true });
 });
+
+test('a date-only entry (decision log) shows the same day in every time zone', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'pano-tarih-'));
+  const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); fs.writeFileSync(path.join(p, f), s); };
+  write('docs/decisions/log.md', '## Karar günlüğü\n\n| # | Tarih | Aşama | Konu | Soru | Seçilen | Kapı | Karar veren |\n|---|---|---|---|---|---|---|---|\n| 1 | 2026-10-26 | Başlangıç | teknik | Veritabanı? | Postgres | tek | kullanıcı |\n');
+  const hook = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks', 'dashboard.mjs');
+  for (const TZ of ['America/New_York', 'Pacific/Kiritimati']) {
+    const r = spawnSync(process.execPath, [hook, p, '--quiet'], { encoding: 'utf8', env: { ...process.env, TZ } });
+    assert.equal(r.status, 0, r.stderr);
+    const html = fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8');
+    assert.match(html, /26 Eki · teknik · kullanıcı/, `${TZ}: no day shift in the feed`);
+    const today = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', timeZone: TZ });
+    assert.equal([...html.matchAll(/data-tip="([^"]+): \d+ commit"/g)].at(-1)?.[1], today, `${TZ}: the last commit bar is today`);
+  }
+  fs.rmSync(p, { recursive: true, force: true });
+});

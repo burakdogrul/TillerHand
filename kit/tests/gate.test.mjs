@@ -409,3 +409,29 @@ test('3.29.0 a path of this machine in a changed file turns the gate red; kit:yo
   fs.rmSync(path.join(p, 'src/b.js'));
   fs.rmSync(path.join(p, 'src/yol.test.js'));
 });
+
+test('B9 Codex/Antigravity: a commit message that names --skip is text, not a call; a real one is still asked', () => {
+  for (const c of ['git commit -am "docs: commit-gate.mjs --skip anlatıldı"', "git commit -m 'commit-gate.mjs --skip notu'", 'git commit --message="node .claude/hooks/commit-gate.mjs --skip x"'])
+    assert.equal(permissionEquivalent(c), null, c);
+  for (const c of ['git commit -m "$(node .claude/hooks/commit-gate.mjs --skip x)"', 'git commit -m "`node .claude/hooks/commit-gate.mjs --skip x`"',
+    'git commit -m x && node .claude/hooks/commit-gate.mjs --skip y', 'node .claude/hooks/commit-gate.mjs "--skip" x', "git commit -m $'commit-gate.mjs --skip'",
+    // --skip given to commit-gate itself after an -m, not to git commit
+    "node .claude/hooks/commit-gate.mjs -m '--skip' x", "git commit -m x $(node .claude/hooks/commit-gate.mjs -m '--skip' y)",
+    "git commit -m x `node .claude/hooks/commit-gate.mjs -m '--skip' y`",
+    // a quote opened before "git commit -m" turns the real command into the "message" (audit)
+    'echo "git commit -m "; node .claude/hooks/commit-gate.mjs --skip x; echo "end"',
+    "echo 'git commit -m '; node .claude/hooks/commit-gate.mjs --skip x; echo ' end'",
+    '# git commit -m "\nnode .claude/hooks/commit-gate.mjs --skip x\n# "',
+    "FOO='git commit -m ' node .claude/hooks/commit-gate.mjs --skip x ' \"'",
+    ": <<'ZZ'\ngit commit -m \"\nZZ\nnode .claude/hooks/commit-gate.mjs --skip x\n: \"",
+    'git commit -m "a" ; node .claude/hooks/commit-gate.mjs --skip x',
+    // PowerShell and cmd do not treat \ as an escape: "a\" closes the string there
+    'git commit -m "a\\"; node .claude/hooks/commit-gate.mjs --skip x; echo \\""',
+    'git add -A && git commit -m "a\\" && node .claude/hooks/commit-gate.mjs --skip x && echo \\""'])
+    assert.equal(permissionEquivalent(c)?.decision, 'ask', c);
+  // the same trick must not hide any other rule either
+  for (const c of ['echo "git commit -m "; node .claude/hooks/gate.mjs --approve; echo "e"', 'echo "git commit -m "; rm -rf /tmp/x; echo "e"',
+    'echo "git commit -m "; node .claude/hooks/prefs.mjs --add kacin x; echo "e"', 'git commit -m "a\\"; rm -rf /tmp/x; echo \\""'])
+    assert.ok(permissionEquivalent(c), c);
+  assert.equal(permissionEquivalent('git add -A && git commit -qm "docs: gate.mjs --approve ve commit-gate.mjs --skip anlatıldı"'), null, 'git add && git commit');
+});

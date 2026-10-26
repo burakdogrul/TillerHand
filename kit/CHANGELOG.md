@@ -3,6 +3,13 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.31.1] - 2026-10-26
+
+### Düzeltilen
+- **Pano tarihleri saat dilimine göre kaymıyor.** Karar, kurul ve bakım günlüğündeki yalnız tarih olan satırlar (`2026-10-26`) UTC gece yarısı sayılıyordu; UTC'nin batısında bir önceki gün görünüyordu. Artık yerel gün olarak okunur. Commit grafiğinin gün etiketleri de aynı şekilde düzeldi.
+- **Codex ve Antigravity: commit mesajında geçen `--skip` onay sormuyor.** `git commit -m "… commit-gate.mjs --skip …"` gibi bir mesaj, "commit kapısı atlanıyor" diye boşuna onaya düşüyordu. Tek başına (ya da `git add … &&` ardından) çalışan bir commit'in düz metin mesajı artık komut sayılmaz. İçinde `$(…)`, ters tırnak ya da `\` olan mesaj ve başka komutla zincirlenen commit yine sorulur; gerçek `--skip` çağrısı her yazımda sorulmaya devam eder.
+- **Codex ve Antigravity: `commit-gate.mjs` ile `--skip` arasına başka argüman girince de soruluyor** (`commit-gate.mjs -m '--skip' x` gibi). Önceden bu yazım onaysız geçiyordu; Claude Code'daki kapı zaten soruyordu.
+
 ## [3.31.0] - 2026-10-26
 
 ### Yeni

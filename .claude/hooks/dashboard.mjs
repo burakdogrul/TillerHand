@@ -151,6 +151,8 @@ alerts.sort((x, y) => SEVERITY_ORDER[x.sev] - SEVERITY_ORDER[y.sev]);
 const health = alerts.some((x) => x.sev === 'critical') ? 'critical' : alerts.some((x) => x.sev === 'warn') ? 'warn' : 'good';
 
 // Activity: commit count for the last 14 days and the merged feed
+// "2026-10-26" alone is read as UTC midnight (the day before west of UTC): a date-only text is local midnight
+const toDate = (t) => new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(t).trim()) ? `${String(t).trim()}T00:00` : t);
 const dayKey = (t) => { const z = new Date(t); return `${z.getFullYear()}-${String(z.getMonth() + 1).padStart(2, '0')}-${String(z.getDate()).padStart(2, '0')}`; };
 const days = [...Array(14)].map((_, i) => { const z = new Date(); z.setDate(z.getDate() - (13 - i)); return dayKey(z); });
 const dayCounts = Object.fromEntries(days.map((g) => [g, 0]));
@@ -165,8 +167,8 @@ const feed = [
   ...d.decisions.map((k) => ({ time: k.date, kind: 'karar', title: `${k.question} → ${k.chosen}`, extra: `${k.topic} · ${k.decidedBy}` })),
   ...d.board.meetings.map((t) => ({ time: t.date, kind: 'kurul', title: `${t.kind}: ${t.scope} → ${t.result}`, extra: t.attendees })),
   ...maintenance.map((b) => ({ time: b.date, kind: 'bakım', title: `${b.kind}: ${b.findings}`, extra: b.work })),
-].filter((x) => x.time && !Number.isNaN(new Date(x.time).getTime()))
-  .sort((x, y) => new Date(y.time) - new Date(x.time)).slice(0, 50);
+].filter((x) => x.time && !Number.isNaN(toDate(x.time).getTime()))
+  .sort((x, y) => toDate(y.time) - toDate(x.time)).slice(0, 50);
 
 const autoDecisions = d.decisions.filter((k) => /otomatik/i.test(k.decidedBy)).length;
 const rejectCount = d.board.meetings.filter((t) => /RET/.test(t.result) && !/KOŞULLU/.test(t.result)).length;
@@ -184,7 +186,7 @@ const progressBar = (b, t, cls = '') => `<div class="bar ${cls}" role="img" aria
 const empty = (text, action = '') => `<p class="empty">${md(text)}${action ? ` <code>${e(action)}</code>` : ''}</p>`;
 const SEV = { critical: ['⛔', 'Kritik'], warn: ['⚠', 'Dikkat'], info: ['ℹ', 'Bilgi'], good: ['✓', 'Yolunda'] };
 const badge = (sev, caption) => `<span class="badge ${sev}"><span class="ic" aria-hidden="true">${SEV[sev][0]}</span> ${e(caption ?? SEV[sev][1])}</span>`;
-const fmtDate = (t) => { const z = new Date(t); return Number.isNaN(z.getTime()) ? e(t) : z.toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: t.length > 10 ? '2-digit' : undefined, minute: t.length > 10 ? '2-digit' : undefined }); };
+const fmtDate = (t) => { const z = toDate(t); return Number.isNaN(z.getTime()) ? e(t) : z.toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: t.length > 10 ? '2-digit' : undefined, minute: t.length > 10 ? '2-digit' : undefined }); };
 const limitSeverity = (p, k) => (p == null ? 'info' : p >= THRESHOLDS[k].red ? 'critical' : p >= THRESHOLDS[k].yellow ? 'warn' : 'good');
 const TOPICS = ['urun', 'teknik', 'tasarim', 'icerik', 'veri', 'guvenlik', 'maliyet'];
 
@@ -256,8 +258,8 @@ ${lastRetro ? `<p class="muted small">Son retro: ${e(lastRetro)}</p>` : ''}</sec
 const maxDay = Math.max(1, ...Object.values(dayCounts));
 const activity = `
 <section class="card"><h3>Commit · son 14 gün <span class="muted small">(toplam ${days.reduce((t, g) => t + dayCounts[g], 0)})</span></h3>
-  <div class="spark" role="img" aria-label="Son 14 günde günlük commit sayısı">${days.map((g) => `<div class="sb" data-tip="${new Date(g).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' })}: ${dayCounts[g]} commit"><span style="height:${dayCounts[g] ? Math.max(6, (dayCounts[g] / maxDay) * 100) : 0}%"></span></div>`).join('')}</div>
-  <div class="spark-x muted small"><span>${new Date(days[0]).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</span><span>bugün</span></div>
+  <div class="spark" role="img" aria-label="Son 14 günde günlük commit sayısı">${days.map((g) => `<div class="sb" data-tip="${toDate(g).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' })}: ${dayCounts[g]} commit"><span style="height:${dayCounts[g] ? Math.max(6, (dayCounts[g] / maxDay) * 100) : 0}%"></span></div>`).join('')}</div>
+  <div class="spark-x muted small"><span>${toDate(days[0]).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</span><span>bugün</span></div>
   <details class="tablo-gor"><summary class="muted small">Tablo olarak göster</summary><div class="tw"><table><thead><tr><th>Gün</th><th>Commit</th></tr></thead><tbody>${days.map((g) => `<tr><td class="num">${g}</td><td class="num">${dayCounts[g]}</td></tr>`).join('')}</tbody></table></div></details>
 </section>
 <section class="card"><h3>Akış</h3>${feed.length ? `<ul class="feed">${feed.map(feedRow).join('')}</ul>` : empty('Henüz hareket yok.')}</section>`;
