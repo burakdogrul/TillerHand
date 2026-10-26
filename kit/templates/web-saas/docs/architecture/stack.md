@@ -5,7 +5,7 @@
 
 ## Karar noktaları
 
-`/start` bu kararları sırayla sorar (`docs/workflow/decision-protocol.md`). Her kararda bu projeye en uygun 2-4 seçeneği sun; **önerilen** etiketi varsayılandır, ama PRD'ye göre başka seçenek daha uygunsa onu öner ve nedenini söyle.
+`/start` bu kararları sırayla sorar (`docs/workflow/decision-protocol.md`). Her kararda bu projeye en uygun 2-4 seçeneği sun; **önerilen** etiketi varsayılandır, ama PRD'ye göre başka seçenek daha uygunsa onu öner ve nedenini söyle. Fiyat, ücretsiz katman ve kısıt gibi değişebilen iddiaların yanında `(kaynak: <adres>, YYYY-AA-GG)` notu varsa ve 90 günden yeniyse yeniden araştırılmaz.
 
 | # | Karar | Seçenekler (ne zaman daha iyi) |
 |---|---|---|

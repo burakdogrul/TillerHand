@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.39.0] - 2026-10-26
+
+### Değişen
+- **`/start` yalnız değişeni doğrular.** Teknoloji kararlarında karar başına ayrı araştırma yapılmaz. Sunulacak seçeneklerdeki fiyat, ücretsiz katman ve kısıt iddiaları adımın başında tek bir araştırma turunda toplanır. Katalogda kaynağı ve tarihi 90 günden yeni olan iddia yeniden araştırılmaz; doğrulanan iddia projenin `stack.md`'sine kaynak ve tarihle yazılır.
+  - Elle uyarla: Kurulmuş projede `docs/architecture/stack.md` → "Karar noktaları" giriş paragrafına aynı not eklenebilir; zorunlu değil.
+
 ## [3.38.0] - 2026-10-26
 
 ### Değişen

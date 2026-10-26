@@ -101,7 +101,7 @@ npx -y tillerhand@<sürüm> install --type <web-saas|mobile|backend> [--addons a
 
 `docs/architecture/stack.md` → **"Karar noktaları"** bölümündeki her kararı sırayla sor (birbirine bağlı olanlar sırayla, bağımsızlar aynı turda, en fazla 4).
 - Katalogdaki seçeneklerden bu projeye en uygun 2-4 tanesini seç. Önerini PRD'ye dayandır (kitle, bütçe, ölçek, ekip bilgisi, SEO ihtiyacı vb.).
-- Sürüm, fiyat veya ücretsiz katman bilgisine dayanan seçeneklerde emin değilsen önce `mattpocock-skills:research` ile güncel durumu kontrol et.
+- Sürüm, fiyat veya ücretsiz katman bilgisine dayanan seçeneklerde yalnız değişeni doğrula: katalogda `(kaynak: <adres>, YYYY-AA-GG)` notu 90 günden yeni olan iddiayı yeniden araştırma. Notsuz ya da eski iddiaları, kullanıcıya sunacağın seçeneklerle sınırlı olarak, adımın başında tek bir `source-research` turunda topla (karar başına ayrı araştırma yok). Doğruladığın iddianın yanına bu projenin `stack.md`'sinde kaynak ve tarih notunu yaz.
 - Kullanıcı "hangisi daha iyi, emin değilim" derse farkları somut bir örnekle anlat ve tekrar sor.
 
 Bütün kararlar bitince:
