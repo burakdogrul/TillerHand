@@ -14,11 +14,11 @@
 
 | Toplantı | Ne zaman | Kim katılır | Model |
 |---|---|---|---|
-| **Plan** | `/plan-task` sonunda, kullanıcı onayından önce | `board-product` + `board-architect` + değişikliğe ilgili üyeler (en fazla 4) | üyenin kendi modeli |
-| **Görev sonu** | `/build` sonunda, "bitti" demeden önce | Değişikliğe ilgili üyeler (en fazla 3) | üyenin kendi modeli |
-| **Commit (hafif)** | Her `git commit` öncesi (hook zorunlu kılar) | Değişen dosyalara ilgili en fazla 2 üye; sadece değişen satırları (diff) inceler | her zaman `haiku` |
-| **Faz sonu** | Faz bitince (`/wrap-up` önerir) veya `/board convene phase-end` | Tüm kurul | üyenin kendi modeli |
-| **Canlıya alma** | `/release ilk` | Tüm kurul | üyenin kendi modeli |
+| **Plan** | `/plan-task` sonunda, kullanıcı onayından önce | `board-product` + `board-architect` + değişikliğe ilgili üyeler (en fazla 4) | inceleme rolü (`docs/workflow/models.md`) |
+| **Görev sonu** | `/build` sonunda, "bitti" demeden önce | Değişikliğe ilgili üyeler (en fazla 3) | inceleme rolü (`docs/workflow/models.md`) |
+| **Commit (hafif)** | Her `git commit` öncesi (hook zorunlu kılar) | Değişen dosyalara ilgili en fazla 2 üye; sadece değişen satırları (diff) inceler | her zaman `haiku`, effort `low` |
+| **Faz sonu** | Faz bitince (`/wrap-up` önerir) veya `/board convene phase-end` | Tüm kurul | inceleme rolü (`docs/workflow/models.md`) |
+| **Canlıya alma** | `/release ilk` | Tüm kurul | inceleme rolü (`docs/workflow/models.md`) |
 
 Sadece dokümantasyon değişikliği (`.md`, `docs/`) içeren commit'ler denetimden muaftır.
 
@@ -45,7 +45,7 @@ Kurulda olmayan bir üyeyi çağırma; ilgili alan kurulda yoksa durum bloğunda
 
 1. **Limit kontrolü** (`docs/workflow/usage-limits.md`): Seviye sarıysa üye sayısını yarıya indir; kırmızıysa kullanıcıya sor (kurulu hafiflet seçeneği dahil).
 1b. **Deterministik kapı** (commit, görev sonu, faz sonu; plan toplantısında yok): `node .claude/hooks/gate.mjs --run`. AGENTS.md → Komutlar'daki lint, tip kontrolü ve test ile Semgrep çalışır; sonuç değişiklik imzasıyla saklanır. Kırmızıysa veya boşsa (hiçbir kontrol çalışmadı) commit kapısı açılmaz: önce düzelt ya da Komutlar'ı doldur. Kullanıcı ara commit için açıkça isterse `node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"` (her zaman onaya sorulur). Kapı "komut onayı gerekli" derse komutları kullanıcıya göster; onaylarsa `node .claude/hooks/gate.mjs --approve` (yeni veya değişen komut onaysız çalışmaz).
-2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu, kabul kriterleri ve kapı çıktısı (varsa). Commit toplantısında `model: "haiku"` ver.
+2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu, kabul kriterleri ve kapı çıktısı (varsa). Çağrıda inceleme rolünün `model` ve `effort`'unu ver (`node .claude/hooks/models.mjs --show`); commit toplantısında `model: "haiku"`, `effort: "low"` ver.
 2b. **Konsey toplantısıysa** (§2) `.claude/board/council.md` aşama 1-4'ü uygula. Sentezi başkanın kararından kur; görüş ayrılığı satırına azınlık görüşünü yaz.
 3. **Sentezle** (ana ajan; konseyde başkanın kararına göre):
 
@@ -68,9 +68,9 @@ Kullanıcı commit denetimini o an için atlamak isterse açıkça söylemesi ge
 
 1. Proje tipine ve PRD'ye göre öneri (aşağıdaki tablo). AI eki varsa `board-ai`, kişisel veri varsa `board-privacy` mutlaka önerilir.
 2. Kullanıcıya **çoklu seçimle** sor (önerilenler işaretli). "Other" ile yeni bir uzman isteyebilir. Örneğin "Erişilebilirlik uzmanı", "Oyun tasarımcısı" veya "Fintech uyum uzmanı". Bu durumda mevcut şablon yapısıyla yeni bir `board-<ad>.md` yaz.
-3. Model dağılımını onaylat. Önerilen karma: Mimar ve Güvenlik güçlü model (`sonnet`), diğerleri `haiku`.
+3. Model sorulmaz: üyeler inceleme rolünün modeli ve effort'uyla çalışır (`docs/workflow/models.md`).
 4. Seçilen her üye için `.claude/board/board-<role>.md` dosyasını `.claude/agents/board-<role>.md`'ye kopyala ve **"Bu proje" bölümünü doldur**: ürün özeti, seçilen stack, kritik akışlar, bu role özel riskler. `security-auditor` zaten `.claude/agents/` altında.
-5. `docs/workflow/board.md` → durum, üye tablosu ve commit denetimi satırını doldur.
+5. `docs/workflow/board.md` → durum, üye tablosu (Model sütununa "inceleme rolü") ve commit denetimi satırını doldur.
 6. Kullanıcıya kurulu tanıt: Her üye ne yapar, ne zaman devreye girer, tahmini maliyeti nedir (tek satır).
 7. Yeni ajanlar oturum yeniden başlatıldığında yüklenir. Kullanıcıya bunu söyle; bu oturumda gerekirse üyeyi genel amaçlı alt ajana rol dosyasının içeriğini vererek çalıştır.
 

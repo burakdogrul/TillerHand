@@ -12,7 +12,7 @@ Konu: $ARGUMENTS (boşsa `docs/product/prd.md` → problem ve değer önerisi)
 1. Konuyu tek cümleyle tekrar et ve 3-6 arama terimi çıkar (Türkçe ve İngilizce).
 2. Limiti oku ve derinliği tahmini maliyetle sor:
    - **Hızlı (Önerilen, Pro'da):** Kategori başına en fazla 5 kaynak. 5 saatlik limitin yaklaşık %10-15'i.
-   - **Derin:** Kategori başına 10-15 kaynak, üç kategori paralel alt ajanlarla. Yaklaşık %25-35.
+   - **Derin:** Kategori başına 10-15 kaynak, üç kategori paralel alt ajanlarla (doküman rolünün `model` ve `effort`'u, `docs/workflow/models.md`). Yaklaşık %25-35.
 3. Kategorileri çoklu seçimle onaylat: akademik makaleler, GitHub projeleri, ticari ürünler.
 
 ## 1. Akademik makaleler

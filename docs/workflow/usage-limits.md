@@ -50,7 +50,7 @@ Max planda yüzdeler daha düşüktür. Günlük doldukça tahmin kendini düzel
    - **Hepsini başlat, kesilirse yenilenince devam:** §4'teki uyarılarla devam et. Yenilenince devam için:
      - Masaüstü uygulamasında sıfırlanma saatine zamanlanmış görev kur (scheduled tasks). Görevin içeriği: "Bu projeyi aç, `docs/workflow/progress.md` → Kaldığı yer'den `/build` ile devam et."
      - Terminalde oturum açık kalacaksa sıfırlanma saatine tek seferlik bir hatırlatma/cron kur. Kalmayacaksa kullanıcıya sıfırlanma saatini söyle; tekrar açtığında oturum başı notu kaldığı yeri hatırlatır.
-   - **Ucuz modele geçerek devam:** Kalan uygulama işini `model: "haiku"` (veya `"sonnet"`) verilen alt ajana devret. Ana ajan sadece koordine eder ve sonucu doğrular. Güvenlik, veri modeli ve mimari kararlar güçlü modelde kalır.
+   - **Ucuz modele geçerek devam:** Kod rolünü bir alt modele al (örn. `node .claude/hooks/models.mjs --set code=haiku:medium`; `docs/workflow/models.md`). Ana ajan sadece koordine eder ve sonucu doğrular. Güvenlik, veri modeli ve mimari kararlar planlama rolünde kalır.
    - **Kurulu hafiflet:** Plan ve görev sonu toplantılarına sadece `security-auditor` + `board-architect` katılır. Commit denetimini sadece kod dosyalarında yap, tek üyeyle.
 3. **Haftalık limit sarı veya kırmızıysa** ayrıca tek satırla uyar: Haftalık limit geç yenilenir.
 4. Kullanıcı bir seçenek seçtiyse kararı `docs/decisions/log.md` günlüğüne `maliyet` konusu olarak yaz.

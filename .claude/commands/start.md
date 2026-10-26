@@ -12,7 +12,7 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
 **Kararlar anında kaydedilir:** Her kararı verildiği anda `docs/decisions/log.md` → Karar günlüğüne yaz (adım sonunu bekleme). Pano kararları ve adım ilerlemesini oradan canlı gösterir.
 
 **Pahalı adımlar** (Adım 4'teki karar konseyi, Adım 6 kurul, Adım 7 tasarım): Başlamadan tahmini maliyeti (`docs/workflow/usage-limits.md` tablosu) ve kalan limiti tek satırla söyle. Adım kaldırılmaz; seçim kullanıcıdadır. Ayrıntılı derinlikte bildir ve yap. Hızlı ve Standart'ta sor: **Yap** / **Hafif yap** / **Sonraya bırak**. Önerilen: Hızlı'da "Sonraya bırak", Standart'ta "Hafif yap".
-- Hafif yap: Adım 4'te konsey yerine tek danışman görüşü; Adım 6'da önerilen 3 üye tek onayla, hepsi `haiku`; Adım 7'de tek önizleme turu (stil yönü), renk ve yazı tipi o yönün önerilen setinden.
+- Hafif yap: Adım 4'te konsey yerine tek danışman görüşü; Adım 6'da önerilen 3 üye tek onayla; Adım 7'de tek önizleme turu (stil yönü), renk ve yazı tipi o yönün önerilen setinden.
 - Sonraya bırak: Adım 4'te tek yönlü kararı yine kullanıcı verir (önerilen + gerekçe ile). Adım 6 ve 7 için Faz 0'a görev eklenir (`/board setup`, `/design genel`).
 
 ---
@@ -40,6 +40,7 @@ Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gib
     - **Kapalı (Önerilen):** Projenin hafızası `AGENTS.md`, `progress.md` ve karar günlüğünde; görünür ve git'te. Tekrarlayan hatalar `/fix-bug` ile "Öğrenilen kurallar"a önerilir. `.claude/settings.json`'a `"autoMemoryEnabled": false` ekle (dosyayı birleştir).
     - **Açık:** Tercihlerin oturumlar arasında kendiliğinden hatırlanır; notlar `AGENTS.md` ile çelişebilir. Ayara dokunma.
     Seçimi `**Profil:**` satırına ekle (örn. `hafıza: kapalı`). Kaynak: code.claude.com/docs/en/memory (2026-10-25).
+0e. **Model ve effort** (`docs/workflow/models.md`): `/build` adım 0b'deki iki ekranı sor ve kaydet. Planlama işleri ana oturumda, araştırma ve tarama doküman rolünde, kurul inceleme rolünde çalışır; Adım 6'da model ayrıca sorulmaz.
 1. Ortamı kontrol et ve tek satırla raporla: `node --version`, `git --version` ve kitin yeri. İki kurulum yolu var: kökte `kit/kit.mjs` (template yolu) ya da `.kit.json` → `kit` alanındaki klasör (`init` ile kurulmuş, `type` boş). `kit` alanı `npx:tillerhand@<sürüm>` ise kit npm paketinden kurulmuştur. `local` ise klasörün bu makinedeki yolu git dışı `.kit.local.json` → `kit`'tedir; o dosya yoksa kullanıcıya kit klasörünü sor ya da `npx -y tillerhand@<.kit.json → version>` kullan. Klasörde zaten uygulama kodu varsa (`package.json`, `pyproject.toml`, `src/` vb.) dur ve `/adopt` öner.
 2. `docs/workflow/skills.md`'deki plugin'lerin skill'leri senin skill listende var mı bak. LSP eklentisi dil sunucusu ister: web ve mobil için `npm i -g typescript-language-server typescript`, backend için `npm i -g pyright` (global kurulum; kullanıcı onayıyla). **Eklentiler:** Proje ayarı eklentileri açar ama indirmez; kurulmamış olanlar yükleme hatası verir ve skill'leri gelmez. Kullanıcıya listeyi göster ve sor: "Proje ayarındaki eklentiler kurulsun mu?" Önce `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele; onay gelirse `node .claude/hooks/plugins-sync.mjs --install` çalıştır. Betik eksikleri proje kapsamında kurar, `false` olanları (paket eklentileri: tasarım, güvenlik, yayın, video) kurup kapatır. Kullanıcıya tek cümleyle söyle: "Paketler kapalı gelir, ilgili komut gerektiğinde açmayı sorar; durum için `/tools`." Sonra kullanıcıdan `/reload-plugins` çalıştırmasını iste. claude CLI yoksa eksik eklentilerin `/plugin install x@y` komutlarını ver ve "Kurup devam edelim mi, eksik skill olmadan mı?" diye sor.
 3. `caveman:caveman` skill'ini yükle (rapor dili).
@@ -131,7 +132,7 @@ Pahalı adım: önce maliyeti söyle ve derinliğe göre sor (yukarıdaki "Pahal
 `.claude/board/rules.md` §5'i uygula:
 1. Tipe, PRD'ye ve seçilen stack'e göre kurul öner. Kurulun ne olduğunu kısaca anlat: Uzman ajanlar planı, görevi, her commit'i ve fazı denetler. Danışmandır; kritik bulguda durdurur; karar her zaman kullanıcıda.
 2. Üyeleri **çoklu seçimle** onaylat; yeni uzman eklenebileceğini söyle.
-3. Model dağılımını onaylat (önerilen karma: Mimar + Güvenlik `sonnet`, diğerleri `haiku`). Pro planda tam kurul toplantısının tahmini maliyetini söyle (`docs/workflow/usage-limits.md`).
+3. Üyeler inceleme rolünün modeli ve effort'uyla çalışır (Adım 0e, `docs/workflow/models.md`); ayrıca sorma. Pro planda tam kurul toplantısının tahmini maliyetini söyle (`docs/workflow/usage-limits.md`).
 4. Commit denetimi açık mı kalsın? Varsayılan açık ve hafif: en fazla 2 üye, `haiku`, sadece diff.
 5. Ajan dosyalarını üret ve "Bu proje" bölümlerini doldur. `docs/workflow/board.md`'yi doldur.
 6. Yeni ajanların bir sonraki oturumda yükleneceğini söyle.

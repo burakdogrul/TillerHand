@@ -23,7 +23,7 @@ Hangi toplantı ve kararın konseye gideceğini proje profili belirler (`docs/wo
 
 | Durum (profil izin veriyorsa) | Konsey türü | Aşama 1 üyeleri | Başkan |
 |---|---|---|---|
-| Plan, faz sonu, canlıya alma toplantısı | **Toplantı konseyi** | rules.md §3'e göre seçilen kurul üyeleri (kendi modelleriyle) | `board-chair` |
+| Plan, faz sonu, canlıya alma toplantısı | **Toplantı konseyi** | rules.md §3'e göre seçilen kurul üyeleri (inceleme rolünün modeliyle) | `board-chair` |
 | Görev sonu toplantısında RET çıktı | Toplantı konseyi (sadece aşama 2 ve 3) | RET veren üye + o toplantının diğer üyeleri | `board-chair` |
 | Tek yönlü kapı kararı (Hafif/Standart: sadece veritabanı ve auth; Tam: hepsi; `docs/workflow/decision-protocol.md` §2a) veya her profilde `/board council <soru>` | **Karar konseyi** | 3 × `council-advisor`: `haiku`, `sonnet`, `opus` (aynı soru, farklı model) | `board-chair` |
 

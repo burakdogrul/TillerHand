@@ -36,6 +36,7 @@ Kit Claude Code için yazıldı; bu iki araçta şu karşılıklar geçerli:
 - **Komutlar** (`/start`, `/build`…) `.agents/skills/` altında skill olarak durur: Codex'te `$start` ya da `/skills`, Antigravity'de `/start`. Kaynakları `.claude/commands/`; skill kopyaları kit güncellemesinde yeniden üretilir, düzenleme kaynakta yapılır.
 - **AskUserQuestion** geçen her yerde: Antigravity'de `ask_question` aracı. Seçenekli soru aracı yoksa (Codex) seçenekleri numaralı liste olarak yaz, önerileni ilk sıraya koy ve "(Önerilen)" diye işaretle, cevabı bekle. Karar yine kullanıcınındır.
 - **Alt ajanlar** (kurul üyeleri, konsey, inceleme ajanları `.claude/agents/`): Çalıştıramıyorsan ilgili tanımı oku, o rolle kendin değerlendir ve raporda "tek model" diye belirt.
+- **Model ve effort** (`docs/workflow/models.md`): Alt ajanı rolün karşılığıyla başlat (Codex: istemde model ve reasoning effort; Antigravity: `inherit`, `flash` ya da `pro`). Yapamıyorsan rolü kendin yürüt, modeli metinle öner.
 - **Korumalar** (sır engeli, yıkıcı komut kalkanı, yapı koruyucu, düzenleme kilidi, test koruması, düzenleme turu sayacı, paket kapısı ve Claude Code izin listesinin karşılığı) hook olarak çalışır: Codex `.codex/hooks.json`, Antigravity `.agents/hooks.json`. Kural ve koruma dosyalarına (`AGENTS.md`, `.claude/`, `.codex/`, `.agents/hooks.json`) yazma onaya bağlıdır. Engellenen işlemi başka yoldan (örneğin kabuk komutuyla) yapmaya çalışma; nedenini kullanıcıya söyle.
 - Claude Code eklentilerine ait skill'ler (adı `eklenti:skill` biçiminde) bu araçlarda yok: o adımı atla. Limit okuma ve durum çubuğu da yok: durum bloğunda limit "-" kalır.
 <!-- /kit:other-tools -->
@@ -50,6 +51,7 @@ Kit Claude Code için yazıldı; bu iki araçta şu karşılıklar geçerli:
 | `docs/product/roadmap.md` | Görev seçerken ve işaretlerken |
 | `docs/design/design-guide.md`, `DESIGN.md`, `PRODUCT.md` | Arayüz işinde |
 | `docs/quality/test-plan.md`, `docs/security/checklist.md` | Kritik akış, auth, veri, ödeme koduna dokunurken |
+| `docs/workflow/models.md` | Alt ajan çağırırken (rolün modeli ve effort'u) |
 | `docs/ai/guide.md` (varsa) | Prompt veya model çağrısı işinde |
 | `docs/operations/accounts.md`, `docs/product/unit-economics.md` | Yeni dış servis, fiyat veya maliyet kararı |
 | `docs/operations/feature-flags.md` | Ödeme, AI, toplu bildirim, veri silen veya büyük arayüz değişikliği |

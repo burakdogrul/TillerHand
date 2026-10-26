@@ -44,7 +44,7 @@ const PERSONAL = /(^|\/)(\.env(\.(?!example(\.|$))[^/]*)?|secrets\/.*|\.claude\/
 // The rest belong to the project (CLAUDE.md, PRD, stack, settings.json...); the update only adds them if missing.
 const KIT_OWNED = [
   /^\.claude\/(commands|agents|hooks|board|findings|skills)\//,
-  /^docs\/(security\/checklist|operations\/(release-checklist|maintenance|deploy-setup)|legal\/(privacy-kvkk|turkiye)|workflow\/(decision-protocol|skills|usage-limits))\.md$/,
+  /^docs\/(security\/checklist|operations\/(release-checklist|maintenance|deploy-setup)|legal\/(privacy-kvkk|turkiye)|workflow\/(decision-protocol|skills|usage-limits|models))\.md$/,
 ];
 const isKitOwned = (rel) => KIT_OWNED.some((re) => re.test(rel));
 

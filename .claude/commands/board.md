@@ -7,8 +7,8 @@ argument-hint: [boş | setup | convene <plan|task|phase-end|release|konu> | coun
 
 Önce `.claude/board/rules.md` ve `docs/workflow/board.md`'yi oku.
 
-- **Boş:** Kurulun durumunu göster: üyeler, modelleri, son 5 toplantı ve sonuçları, açık kritik bulgular, commit denetimi açık/kapalı. Kurul kurulmamışsa `/board setup` öner.
-- **`setup`:** rules.md §5'i uygula. Kurul zaten varsa, ne yapılacağını sor: üye ekle / üye çıkar / model değiştir / "Bu proje" bölümlerini güncel stack'e göre yenile.
+- **Boş:** Kurulun durumunu göster: üyeler, inceleme rolünün modeli (`node .claude/hooks/models.mjs --show`), son 5 toplantı ve sonuçları, açık kritik bulgular, commit denetimi açık/kapalı. Kurul kurulmamışsa `/board setup` öner.
+- **`setup`:** rules.md §5'i uygula. Kurul zaten varsa, ne yapılacağını sor: üye ekle / üye çıkar / "Bu proje" bölümlerini güncel stack'e göre yenile. Model buradan değişmez: üyeler inceleme rolüyle çalışır (`docs/workflow/models.md`).
 - **`convene <tür>`:** rules.md §4'ü uygula.
   - `plan`: son onaylanmamış plan
   - `task`: aktif görevin değişiklikleri (`git diff`)

@@ -3,6 +3,22 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.31.0] - 2026-10-26
+
+### Yeni
+- **Rol bazlı model ve effort.** İş dört role ayrıldı: planlama ve mimari, kod yazma, inceleme ve denetim, doküman ve araştırma. Her rolün modelini ve effort'unu sen seçersin (`docs/workflow/models.md`).
+  - `/build` her görevin başında iki ekranda sorar: önce dört rolün modeli (Opus / Sonnet / Haiku), sonra effort'u (düşük / orta / yüksek / ekstra yüksek). Önerilen: planlama Opus yüksek, kod Sonnet yüksek, inceleme Sonnet yüksek, doküman Haiku yüksek. `/start`, `/adopt` ve `/release` de başlarken aynı soruyu sorar.
+  - Seçim `node .claude/hooks/models.mjs --set …` ile `.claude/state/models.json`'a yazılır (git'e girmez); `--show` güncel seçimi gösterir.
+  - Kabul testleri ve kod seçilen kod modelinde çalışan bir alt ajana gider; ana oturum diff'i okur ve kapıyı kendisi koşar. Kurul, `code-reviewer` ve `security-auditor` inceleme rolüyle, görev sonundaki roadmap, maliyet günlüğü ve progress yazımı doküman rolüyle çalışır.
+  - Kod alt ajanı sana soru soramaz: karar noktasında durur, soruyu ana oturum sorar ve günlüğe yazar.
+  - Planlama ana oturumda kalır. Kit oturumun modelini değiştiremez; seçtiğin plan modeli ya da effort'u farklıysa AI `/model <ad>` ve `/effort <düzey>` önerir.
+  - Soru modunda `maliyet` konusunu kapattıysan soru gelmez, son seçimin geçerli kalır.
+  - `/findings-all` raporları inceleme rolüyle, `/research` derin araştırması doküman rolüyle çalışır.
+  - Kurul kurulurken model artık ayrıca sorulmaz; `/board setup`'taki "model değiştir" seçeneği kalktı. Commit kurul denetimi her commit'te çalıştığı için `haiku` ve düşük effort'ta kalır; karar konseyi bilerek farklı modelleri karşılaştırdığı için rol seçimi ona uygulanmaz.
+  - Pano: "Limit ve maliyet" sekmesinde rollerin güncel model ve effort seçimi görünür.
+  - Codex ve Antigravity karşılıkları `docs/workflow/models.md`'de, kaynak ve tarihle.
+  - Elle uyarla: AGENTS.md projeye ait. "Codex ve Antigravity'de" bölümüne model maddesi ve "Gerektiğinde oku" tablosuna `docs/workflow/models.md` satırı eklendi; istersen `.kit-new` dosyasından al. İzin satırları `/kit-update` ile eklenir.
+
 ## [3.30.0] - 2026-10-26
 
 ### Yeni

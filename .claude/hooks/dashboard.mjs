@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { readStatus, readText, sections, findSection, tally, tableRows } from './status-read.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
+import { readModels, modelsFile, modelsNote, ROLES } from './models.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
@@ -297,7 +298,8 @@ const limitCard = (name, k) => {
 const limitSection = `
 <section class="card"><h3>Kullanım limiti</h3><div class="grid2 tight">${limitCard('5 saatlik', 'five_hour')}${limitCard('Haftalık', 'seven_day')}</div>
 <p class="muted small">${e(summary(limit))}</p>
-<h4>Bağlam penceresi</h4>${context ? `<div class="lim"><div class="lim-h"><b>Son oturum</b>${badge(context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good', `%${context.percent}`)}</div><div class="bar big ${context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good'}"><span style="width:${Math.min(100, context.percent)}%"></span><i style="left:50%"></i><i style="left:70%"></i></div><div class="muted small">%50'de /wrap-up + /clear önerilir · ${new Date(context.readAt).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla</div></div>` : empty('Bağlam bilgisi yok (durum çubuğu yazar).')}</section>
+<h4>Bağlam penceresi</h4>${context ? `<div class="lim"><div class="lim-h"><b>Son oturum</b>${badge(context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good', `%${context.percent}`)}</div><div class="bar big ${context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good'}"><span style="width:${Math.min(100, context.percent)}%"></span><i style="left:50%"></i><i style="left:70%"></i></div><div class="muted small">%50'de /wrap-up + /clear önerilir · ${new Date(context.readAt).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla</div></div>` : empty('Bağlam bilgisi yok (durum çubuğu yazar).')}
+<h4>Model ve effort · rol bazında</h4><div class="tw"><table><tbody>${Object.entries(readModels(modelsFile(root))).map(([r, v]) => `<tr><td>${e(ROLES[r])}</td><td class="nw">${e(v.replace(':', ' · '))}</td></tr>`).join('')}</tbody></table></div><p class="muted small">${modelsNote(modelsFile(root)) ? `${e(modelsNote(modelsFile(root)))}. ` : ''}/build her görevin başında sorar (docs/workflow/models.md).</p></section>
 <section class="card"><h3>Token ve maliyet · son 30 gün</h3>${tokenCost?.days.length ? (() => {
   const latest = tokenCost.days.slice(-14);
   const maxTokens = Math.max(...latest.map((g) => g.token));

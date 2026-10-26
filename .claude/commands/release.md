@@ -7,6 +7,7 @@ Mod: $ARGUMENTS (boş = sadece A bölümü, her sürüm; `first` = A + B bölüm
 
 Kaynak listeler: `docs/operations/release-checklist.md`, `docs/architecture/stack.md` → "Canlıya alma", `docs/security/checklist.md` (ilk lansmanda tamamı), varsa `docs/ai/guide.md` → "Canlıya alma" ve `docs/product/launch.md`.
 
+0. **Model ve effort** (`docs/workflow/models.md`): `/build` adım 0b'deki iki ekranı sor ve kaydet. Denetim ajanları (kurul, `security-auditor`) inceleme rolüyle çalışır.
 1. **Otomatik kontrol edebildiklerini çalıştır:**
    - `first` modunda önce limiti oku; tam denetim pahalıdır (`docs/workflow/usage-limits.md`). `node .claude/hooks/tools.mjs --required guvenlik` kapalıysa açmayı sor. Kurul kurulduysa **canlıya alma kurul toplantısı** (tüm kurul, `.claude/board/rules.md`) yap.
    - `first` modunda önce `/findings-all security,legal,perf` öner (tahmini maliyetiyle); raporlardaki Kritik bulgular yayını engeller.
