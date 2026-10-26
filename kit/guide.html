@@ -287,7 +287,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.34.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.35.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="install"><span id="cmd">npx tillerhand init</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
@@ -894,7 +894,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <article class="tile"><h3>Dağıtım kurulumu</h3><p class="stack">/release first · deploy-setup.md</p><ul><li>Hosting, ortam değişkenleri, alan adı ve DNS, yedek, geri alma provası</li><li>Vercel, Supabase, Railway, EAS; adımlar kaynaklı ve tarihli</li><li>Sırrı sen panelde girersin; sohbete ve dosyaya yazılmaz</li></ul></article>
     <article class="tile"><h3>Öğrenen kurallar</h3><p class="stack">/fix-bug · /retro · hookify · AGENTS.md</p><ul><li>Aynı hata sınıfı ikinci kez gelince /fix-bug kural önerir; panoda da uyarı çıkar</li><li>Mekanik kural hookify'a, gerisi AGENTS.md'ye; sen onaylamadan yazılmaz</li><li>Her kuralda kaynak ve tarih; /maintain 90 günden eskileri sorar</li><li>Auto memory /start'ta sorulur, önerilen kapalı</li></ul></article>
     <article class="tile"><h3>Kişisel tercihler</h3><p class="stack">~/.vibe-kit/tercihler.md · prefs.mjs</p><ul><li>Bir davranışı düzelttiğinde ya da nasıl çalışmak istediğini söylediğinde AI not alır</li><li>Görev ve oturum sonunda "tercih olarak kaydedeyim mi?" diye sorar; onaylamadığın yazılmaz</li><li>Tercihler tüm projelerinde geçerli, her oturumda yüklenir; git'e girmez</li><li>Listele: <code>node .claude/hooks/prefs.mjs --list</code>, sil: <code>--remove &lt;no&gt;</code></li></ul></article>
-    <article class="tile"><h3>Rol bazlı model</h3><p class="stack">docs/workflow/models.md · models.mjs</p><ul><li>Dört rol: planlama, kod yazma, inceleme, doküman ve araştırma</li><li>Her görevin başında iki ekran: önce rollerin modeli, sonra effort'u</li><li>Önerilen: Opus yüksek, Sonnet yüksek, Sonnet yüksek, Haiku yüksek</li><li>Kod, inceleme ve doküman işleri seçilen modelle alt ajanda; plan ana oturumda</li><li>Alt ajan yalnız karlıysa: <code>flow.mjs</code> görev büyüklüğüne, bağlama ve limite bakar; küçük görev ana oturumda kalır, kurul üye sayısı limite göre azalır</li></ul></article>
+    <article class="tile"><h3>Rol bazlı model</h3><p class="stack">docs/workflow/models.md · models.mjs</p><ul><li>Dört rol: planlama, kod yazma, inceleme, doküman ve araştırma</li><li>Her görevin başında iki ekran: önce rollerin modeli, sonra effort'u</li><li>Önerilen: Opus yüksek, Sonnet yüksek, Sonnet yüksek, Haiku yüksek</li><li>Kod, inceleme ve doküman işleri seçilen modelle alt ajanda; plan ana oturumda</li><li>Roadmap işareti, maliyet satırı ve progress etiketleri <code>progress.mjs</code> ile yazılır; model çağrısı harcanmaz, biçim bozulmaz</li><li>Alt ajan yalnız karlıysa: <code>flow.mjs</code> görev büyüklüğüne, bağlama ve limite bakar; küçük görev ana oturumda kalır, kurul üye sayısı limite göre azalır</li></ul></article>
     <article class="tile"><h3>Türkiye eki</h3><p class="stack">--addons tr · docs/legal/turkiye.md</p><ul><li>KVKK yurt dışı aktarım: standart sözleşme, 5 iş günü bildirim</li><li>e-Fatura ve e-Arşiv eşikleri (GİB)</li><li>iyzico ve PayTR bildirim imzası kodu ve saldırgan testi</li><li>İ/ı ve Türkçe sıralama testleri; hukuki görüş değildir</li></ul></article>
     <article class="tile"><h3>Tarayıcıda QA ve önizleme</h3><p class="stack">/qa · preview.mjs · Playwright CLI</p><ul><li>Arayüz kriterleri gerçek tarayıcıda test olarak koşar</li><li>Rapor test sonucundan yazılır, panoda kart</li><li>/build arayüz görevinde masaüstü ve mobil ekran görüntüsü</li></ul></article>
     <article class="tile"><h3>Spec ve sapma kontrolü</h3><p class="stack">docs/product/specs/ · gate.mjs</p><ul><li>Mevcut, beklenen ve değişmemesi gereken davranış</li><li>"Değişmemesi gereken" satırların testi kapıda denetlenir</li><li>3+ dosyalık işte /plan-task, her hatada /fix-bug yazar</li></ul></article>
@@ -1055,7 +1055,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.34.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.35.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

@@ -11,7 +11,7 @@
 | Planlama ve mimari | `plan` | Plan, mimari ve veri modeli kararları; PRD, README ve kullanıcıya görünen metin. Ana oturumda yürür. | Opus · yüksek |
 | Kod yazma | `code` | Kabul testleri ve uygulama kodu. Alt ajana devredilir. | Sonnet · yüksek |
 | İnceleme ve denetim | `review` | Kurul üyeleri, `code-reviewer`, `security-auditor`, bulgu raporları (`/findings-all`). | Sonnet · yüksek |
-| Doküman ve araştırma | `docs` | Görev sonunda roadmap, progress ve maliyet günlüğü; CHANGELOG, rapor özeti; kod tarama, web araştırması (`/research` derin). Karar günlüğü karar anında ana oturumda yazılır. | Haiku · yüksek |
+| Doküman ve araştırma | `docs` | CHANGELOG, rapor özeti; kod tarama, web araştırması (`/research` derin). Karar günlüğü karar anında ana oturumda yazılır. | Haiku · yüksek |
 
 Effort ölçeği: düşük = `low`, orta = `medium`, yüksek = `high`, ekstra yüksek = `xhigh`. Effort arttıkça cevap yavaşlar ve limitten daha çok yer.
 

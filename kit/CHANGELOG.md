@@ -3,6 +3,16 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.35.0] - 2026-10-26
+
+### Değişen
+- **Görev sonu belge yazımı betikle.** Roadmap işareti, maliyet günlüğü satırı ve progress etiketleri mekanik iş; artık alt ajana verilmiyor. Yeni `node .claude/hooks/progress.mjs` bunları tek komutta yazar, token harcamaz:
+  - `--done G-012` roadmap'te görevi işaretler.
+  - `--cost "<iş>" <K|O|B> <başlangıç %> <bitiş %> <dk>` maliyet günlüğüne satır ekler, farkı hesaplar. Pencere arada yenilendiyse fark `?` yazılır.
+  - `--task`, `--did`, `--next` progress.md'yi günceller, son güncelleme tarihini kendisi koyar.
+  - `--check` durum çubuğunun ve panonun okuduğu kalın etiketlerin sağlam olduğunu denetler.
+  - `/build` adım 8 bunu kullanır. İzin satırı `/kit-update` ile eklenir.
+
 ## [3.34.0] - 2026-10-26
 
 ### Eklenen

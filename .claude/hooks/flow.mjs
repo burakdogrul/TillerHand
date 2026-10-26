@@ -27,7 +27,7 @@ export function flowText(f) {
   return [
     `Akış: ${f.files} dosya · ${f.size} · bağlam ${f.context == null ? 'bilinmiyor' : `%${f.context}`} · limit ${LEVEL_LABEL[f.level]}`,
     `Kod: ${where(f.code)}${f.code === 'ana' ? '' : ' (kod rolü)'}`,
-    `Doküman (roadmap, progress, cost-log): ${where(f.docs)}${f.docs === 'ana' ? '' : ' (doküman rolü)'}`,
+    `Doküman işi (roadmap, progress, maliyet günlüğü progress.mjs ile; bu satır diğerleri için): ${where(f.docs)}${f.docs === 'ana' ? '' : ' (doküman rolü)'}`,
     `Kurul: ${f.members} üye + code-reviewer, ${f.parallel ? 'paralel' : 'sırayla'} (hassas yolda + security-auditor)`,
     ...(f.clear ? [`Önce /clear öner: bağlam %${f.context}, her tur bunu yeniden okur.`] : []),
   ].join('\n');
