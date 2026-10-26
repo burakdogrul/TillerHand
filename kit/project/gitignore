@@ -18,6 +18,8 @@ CLAUDE.local.md
 
 # Kit güncellemesinden gelen, birleştirilmeyi bekleyen dosyalar
 *.kit-new
+# Kit klasörünün bu makinedeki yolu (yerel kit klonu)
+.kit.local.json
 
 # Loglar
 *.log

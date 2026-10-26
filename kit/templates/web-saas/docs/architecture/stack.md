@@ -134,6 +134,7 @@ npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-resul
 
 ## Sık yapılan AI hataları (bunlara dikkat)
 
+- Koda, teste veya ayara bu makineye özel mutlak yol yazmak (`C:\Users\<ad>\…`, `/home/<ad>/…`, proje klasörünün tam yolu): başka makinede çalışmaz. Yolu `import.meta.url` / `__dirname`, `path.join(process.cwd(), …)` veya `os.tmpdir()` ile türet. Deterministik kapı bunu yakalar.
 - Client component içinde Supabase admin istemcisi veya sır kullanmak.
 - Sayfayı middleware ile koruyup server action'ı korumasız bırakmak.
 - RLS'i "çalışmıyor" diye kapatmak.

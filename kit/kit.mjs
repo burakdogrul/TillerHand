@@ -31,7 +31,7 @@ const ADDONS = fs.readdirSync(path.join(TEMPLATES, 'addons'));
 const TOOLS = ['claude', 'codex', 'antigravity'];
 // Root entries that are not part of the common layer (the kit itself, generated and temporary files)
 // CLAUDE.local.md is personal (in .gitignore); it must not be carried into a project installed from a local folder
-const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md', 'LICENSE', 'README.en.md', 'package.json']);
+const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', '.kit.local.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md', 'LICENSE', 'README.en.md', 'package.json']);
 // Files that only make sense in the kit repo and are not carried into projects
 const KIT_ONLY = ['.github/workflows/kit-tests.yml', '.github/workflows/npm-publish.yml'];
 // Run from the npm package (npx tillerhand): the kit lives in the npx cache, which can be cleared, so the record names
@@ -202,6 +202,19 @@ function writeRecord(projectDir, data) {
   fs.writeFileSync(path.join(projectDir, '.kit.json'), JSON.stringify(data, null, 2) + '\n');
 }
 
+// A local kit clone outside the project is a folder on this machine only: its path goes to the git-ignored
+// .kit.local.json and .kit.json says "local", so a clone of the project on another machine never points at this one.
+// Returns the value for .kit.json → kit; an old record with an absolute path is moved the same way on install/update.
+// A path written on another OS (D:\Kit read on Linux) counts too; one that does not exist here is not copied into
+// .kit.local.json: /start and /adopt then ask for the kit folder instead of using another machine's path.
+export function portableKit(projectDir, kit) {
+  if (typeof kit !== 'string' || !(path.win32.isAbsolute(kit) || path.posix.isAbsolute(kit))) return kit;
+  if (!fs.existsSync(kit)) return 'local';
+  fs.writeFileSync(path.join(projectDir, '.kit.local.json'), JSON.stringify({ kit }, null, 2) + '\n');
+  appendLine(path.join(projectDir, '.gitignore'), '.kit.local.json');
+  return 'local';
+}
+
 function validateTools(tools) {
   for (const a of tools) if (!TOOLS.includes(a)) throw new Error(`Geçersiz araç: ${a}. Seçenekler: ${TOOLS.join(', ')}`);
   return tools.length ? tools : ['claude'];
@@ -319,7 +332,7 @@ function init({ project, tool }) {
   installTools(projectDir, tools, files, conflicts);
   const today = new Date().toISOString().slice(0, 10);
   // type: null = kit installed, no type chosen yet (/start step 3 or /adopt)
-  writeRecord(projectDir, { version: VERSION, source: SOURCE, kit: VIA_NPX ? `npx:tillerhand@${VERSION}` : inside ? kitRel : ROOT, type: null, addons: [], tool: tool.length ? tools : null, created: today, updated: today, files });
+  writeRecord(projectDir, { version: VERSION, source: SOURCE, kit: VIA_NPX ? `npx:tillerhand@${VERSION}` : inside ? kitRel : portableKit(projectDir, ROOT), type: null, addons: [], tool: tool.length ? tools : null, created: today, updated: today, files });
 
   console.log(`Kit ${VERSION} kuruldu: ${projectDir} · araç: ${tool.length ? tools.join(', ') : 'seçilmedi (Claude Code dosyaları kuruldu; /start ve /adopt sorar, Codex/Antigravity için --tool)'}`);
   console.log(`Kit klasörü: ${VIA_NPX ? `npm paketi tillerhand@${VERSION}` : inside ? `${kitRel} (.gitignore'a eklendi)` : ROOT} · git deposu: ${git}`);
@@ -347,7 +360,7 @@ function installIntoProject(projectDir, type, addons, tool) {
   for (const p of patches) applyPatch(projectDir, p);
   const tools = tool.length ? validateTools(tool) : (j.tool ?? ['claude']);
   installTools(projectDir, tools, files, conflicts);
-  writeRecord(projectDir, { ...j, version: VERSION, type, addons, tool: tool.length ? tools : (j.tool ?? null), updated: new Date().toISOString().slice(0, 10), files });
+  writeRecord(projectDir, { ...j, kit: portableKit(projectDir, j.kit), version: VERSION, type, addons, tool: tool.length ? tools : (j.tool ?? null), updated: new Date().toISOString().slice(0, 10), files });
   console.log(`Kuruldu: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${VERSION}) · ${projectDir}`);
   conflictReport(conflicts);
 }
@@ -442,7 +455,11 @@ function update({ project, addons: newAddons, tool }) {
   const tools = tool.length ? validateTools(tool) : (j.tool ?? ['claude']);
   installTools(project, tools, record, report.conflicts);
 
-  writeRecord(project, { ...j, version: VERSION, addons: allAddons, tool: tool.length ? tools : (j.tool ?? null), updated: new Date().toISOString().slice(0, 10), files: record });
+  const kit = portableKit(project, j.kit);
+  if (kit !== j.kit) console.log(fs.existsSync(path.join(project, '.kit.local.json'))
+    ? 'Kit klasörünün bu makinedeki yolu .kit.json\'dan .kit.local.json\'a taşındı (git dışı).'
+    : '.kit.json\'daki kit klasörü yolu bu makinede yok (başka makinede yazılmış); kaldırıldı. /start ve /adopt kit klasörünü sorar.');
+  writeRecord(project, { ...j, kit, version: VERSION, addons: allAddons, tool: tool.length ? tools : (j.tool ?? null), updated: new Date().toISOString().slice(0, 10), files: record });
 
   console.log(`Kit ${j.version} -> ${VERSION}`);
   const printList = (title, list) => list.length && console.log(`${title} (${list.length}):\n  ${list.join('\n  ')}`);

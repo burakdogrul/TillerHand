@@ -41,7 +41,7 @@ Bulguları kısa bir tablo halinde göster. Hızlı taramada kodun içine dalma:
 ## Adım 2: Tip ve kurulum
 
 1. Taramaya göre tipi öner ve onaylat (web-saas / mobile / backend; AI özelliği var mı; Türkiye'de satış veya Türk kullanıcı varsa Türkiye eki `tr`, ayrıntı `/start` Adım 2).
-2. Kur: `node <kit klasörü>/kit/kit.mjs install --type <tip> [--addons ai,tr] --project .` (kit klasörü `.kit.json` → `kit` alanında; alan `npx:tillerhand@<sürüm>` ise `npx -y tillerhand@<sürüm> install ...`; sürüm tam olarak `1.2.3` biçiminde ve `.kit.json` → `version` ile aynı değilse dur ve sor). Araç `init`'te seçilmediyse Adım 0'daki seçimi `--tool <liste>` olarak ekle.
+2. Kur: `node <kit klasörü>/kit/kit.mjs install --type <tip> [--addons ai,tr] --project .` (kit klasörü `.kit.json` → `kit` alanında; alan `local` ise klasör git dışı `.kit.local.json` → `kit`'te, o dosya yoksa proje başka makinede açılmıştır: kullanıcıya kit klasörünü sor ya da `npx -y tillerhand@<.kit.json → version>` kullan; alan `npx:tillerhand@<sürüm>` ise `npx -y tillerhand@<sürüm> install ...`; sürüm tam olarak `1.2.3` biçiminde ve `.kit.json` → `version` ile aynı değilse dur ve sor). Araç `init`'te seçilmediyse Adım 0'daki seçimi `--tool <liste>` olarak ekle.
 3. **`.kit-new` dosyaları:** Her biri için (`CLAUDE.md` ve `AGENTS.md` hariç, onlar Adım 4'te) farkı özetle ve karar olarak sor: kitinkini al / projeninkini koru / birleştir. Örnekler: `.env.example` genelde birleştirilir; `ci.yml` için mevcut CI'ın yaptıklarını kitinkiyle karşılaştır. Sonra `.kit-new` dosyasını sil.
 
 ## Adım 3: Belgeleri koddan çıkar

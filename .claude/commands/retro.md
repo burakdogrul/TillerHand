@@ -28,7 +28,7 @@ Amaç: Bu projede öğrendiklerini kaybetmemek ve kiti (bundan sonraki tüm proj
    - Kural ekleme > kural değiştirme > kural silme sırasıyla tercih et; kiti şişirme. Aynı amaçlı mevcut kural varsa onu güçlendir. Metni `mattpocock-skills:writing-for-agents` ilkeleriyle yaz.
    - Önerileri **çoklu seçimle** onaylat.
 6. Onaylananları kite uygula:
-   1. `.kit.json` → `kaynak` reposunu geçici klasöre klonla.
+   1. `.kit.json` → `source` reposunu geçici klasöre klonla.
    2. `retro/<proje>-<tarih>` dalı aç.
    3. Değişiklikleri yap, `kit/CHANGELOG.md` → "[Yayınlanmamış]" bölümüne ekle.
    4. `node --test "kit/tests/*.test.mjs"` çalıştır, commit at.

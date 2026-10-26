@@ -3,6 +3,20 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.29.0] - 2026-10-26
+
+### Yeni
+- **Deterministik kapıda "Mutlak yol" kontrolü.** Eklenen bir satırda bu makinenin proje klasörünün ya da ev klasörünün tam yolu varsa kapı kırmızı olur; yol düz, ters bölü ya da kaçışlı yazılmış olabilir. Böyle bir yol başka makinede çalışmaz. Kapı satırları listeler ve yolun nasıl türetileceğini söyler.
+  - `C:\Users\<ad>`, `/home/<ad>/` gibi genel kullanıcı klasörü kalıpları yalnız not olarak listelenir, commit'i engellemez. `/home/node/app` gibi konteyner yolları ve `/users/42` gibi route'lar bu yüzden sorun çıkarmaz.
+  - Yalnız eklenen satırlar taranır, yeni dosyalar baştan sona taranır. Git'e girmeyen dosyalara bakılmaz.
+  - Bilinçli bir örnek (belgede örnek yol, test girdisi) satıra ya da bir üst satıra `kit:yol-izinli` yazarak geçer. Üst satır seçeneği Dockerfile ve JSON gibi satır içi yorum alamayan dosyalar içindir.
+- AGENTS.md (Asla) ve üç tipin stack belgesine (Sık yapılan AI hataları) aynı kural eklendi.
+
+### Düzeltilen
+- **Kit, projenin dışındaki yerel bir klondan kurulunca kit klasörünün bu makinedeki tam yolu `.kit.json`'a yazılıyordu.** `.kit.json` commit edildiği için projeyi başka makinede açan kişi var olmayan bir yolu görüyordu. Yol artık git dışı `.kit.local.json` dosyasında; `.kit.json` → `kit` alanı `local` yazar. Eski kayıtlar `/kit-update` sırasında kendiliğinden taşınır. Kayıttaki yol bu makinede yoksa (başka makinede yazılmışsa) taşınmaz, yalnız kaldırılır. `/start` ve `/adopt` dosya yoksa kit klasörünü sorar ya da npm paketini kullanır.
+- Rehberin alt bilgisindeki sürüm numarası eskide kalmıştı. Rehberdeki ve README rozetlerindeki sürüm artık testle denetleniyor.
+  - Elle uyarla: `docs/architecture/stack.md` projeye ait. Yeni madde "Sık yapılan AI hataları" bölümünde; istersen kendi stack belgene ekle. `.gitignore`'a `.kit.local.json` satırı güncellemede eklenir.
+
 ## [3.28.6] - 2026-10-26
 
 ### Düzeltilen

@@ -122,6 +122,7 @@ uv run pytest --junitxml=test-results/junit.xml
 
 ## Sık yapılan AI hataları (bunlara dikkat)
 
+- Koda, teste veya ayara bu makineye özel mutlak yol yazmak (`C:\Users\<ad>\…`, `/home/<ad>/…`, proje klasörünün tam yolu): başka makinede çalışmaz. Yolu `Path(__file__).parent`, ayardan gelen kök veya testte `tmp_path` ile türet. Deterministik kapı bunu yakalar.
 - Pydantic v1 sözdizimini (`class Config`, `.dict()`) v2 ile karıştırmak.
 - Dış API çağrısında timeout koymamak, hatayı yutmak (`except: pass`).
 - CORS'u `allow_origins=["*"]` ile kimlik bilgisiyle birlikte açmak.

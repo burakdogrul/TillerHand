@@ -78,3 +78,18 @@ test('Ö-09.1 npx tillerhand init sets up a project from the package: .gitignore
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test('the kit version is the same in the guide (top pill and footer) and both README badges', () => {
+  const v = read('kit/VERSION').trim();
+  const guide = read('kit/guide.html');
+  assert.match(guide, new RegExp(`<b>v${v.replace(/\./g, '\\.')}</b>`), 'guide pill');
+  assert.match(guide, new RegExp(`<span>Sürüm ${v.replace(/\./g, '\\.')} ·`), 'guide footer');
+  for (const f of ['README.md', 'README.en.md']) assert.ok(read(f).includes(`-${v}-2a78d6`), `${f} badge`);
+});
+
+test('3.29.0 no tracked file of the kit carries a path of the machine it was written on', async () => {
+  const { absPathCheck } = await import('../../.claude/hooks/gate.mjs');
+  const files = spawnSync('git', ['ls-files', '-z'], { cwd: REPO, encoding: 'utf8' }).stdout.split('\0').filter(Boolean);
+  const r = absPathCheck(REPO, files);
+  assert.equal(r.status, 'passed', r.output);
+});

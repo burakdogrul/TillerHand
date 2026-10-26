@@ -81,6 +81,7 @@ build:       [ ]
 - Onay almadan (soru modundan bağımsız): veri silme/sıfırlama, `git push --force`, `git reset --hard`, toplu dosya silme, prod deploy, para harcatan işlem.
 - Testi geçirmek için testi silme veya zayıflatma (test koruması hook'u sorar). Var olmayan API veya paket uydurma.
 - Hook'ları (sır engeli, commit kapısı) atlatmaya çalışma. Kullanıcı adına karar verip sonradan bildirme.
+- Koda, teste veya belgeye bu makineye özel mutlak yol yazma (`C:\Users\<ad>\…`, `/home/<ad>/…`, proje klasörünün tam yolu). Yolu proje kökünden, betiğin konumundan veya geçici klasörden türet; kapı yakalar. Bilinçli bir örnekse satıra `kit:yol-izinli` yaz.
 
 ## Git
 

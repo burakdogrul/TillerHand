@@ -128,6 +128,7 @@ maestro test .maestro/ --format junit --output test-results/junit-e2e.xml
 
 ## Sık yapılan AI hataları (bunlara dikkat)
 
+- Koda, teste veya ayara bu makineye özel mutlak yol yazmak (`C:\Users\<ad>\…`, `/home/<ad>/…`, proje klasörünün tam yolu): başka makinede çalışmaz. Yolu `import.meta.url` / `__dirname`, `path.join(process.cwd(), …)` veya `os.tmpdir()` ile türet. Deterministik kapı bunu yakalar.
 - Web'e özel API veya paket kullanmak (DOM, `window`, sadece web çalışan kütüphaneler).
 - `npm install` ile SDK ile uyumsuz sürüm kurmak.
 - Token'ı AsyncStorage'a yazmak.

@@ -191,6 +191,36 @@ test('init: in a non-empty folder it does not touch the project\'s files', () =>
   assert.equal(k.status, 0, k.stderr);
   assert.equal(read(path.join(p, '.env.example')), file['.env.example'], 'the project\'s .env.example is still there');
   assert.ok(fs.existsSync(path.join(p, '.env.example.kit-new')));
+  // 3.29.0: the kit clone outside the project is this machine's path: it stays out of the committed .kit.json
+  const kitDir = path.join(tmp, 'eski-kit');
+  assert.equal(record(p).kit, 'local');
+  assert.ok(!read(path.join(p, '.kit.json')).includes(path.basename(tmp)), 'no machine path in .kit.json');
+  assert.equal(JSON.parse(read(path.join(p, '.kit.local.json'))).kit, kitDir);
+  assert.match(read(path.join(p, '.gitignore')), /^\.kit\.local\.json$/m);
+});
+
+test('update: an old .kit.json with an absolute kit path is moved to .kit.local.json', () => {
+  const p = cloneKit('eski-yol');
+  assert.equal(installType(p, '--type', 'backend', '--keep-kit').status, 0);
+  const old = { ...record(p), kit: path.join(tmp, 'eski-kit') }; // a kit folder that exists on this machine
+  fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify(old));
+  fs.rmSync(path.join(p, '.kit.local.json'), { force: true });
+  const r = update(p);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /\.kit\.local\.json/);
+  assert.equal(record(p).kit, 'local');
+  assert.equal(JSON.parse(read(path.join(p, '.kit.local.json'))).kit, old.kit);
+  assert.match(read(path.join(p, '.gitignore')), /^\.kit\.local\.json$/m);
+  // Written on another machine (another OS's form too): not copied into .kit.local.json, /start and /adopt ask
+  fs.rmSync(path.join(p, '.kit.local.json'));
+  for (const elsewhere of ['Z:\\baska\\makine\\kit', '/baska/makine/kit']) {
+    fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify({ ...old, kit: elsewhere }));
+    const u = update(p);
+    assert.equal(u.status, 0, u.stderr);
+    assert.match(u.stdout, /bu makinede yok/, elsewhere);
+    assert.equal(record(p).kit, 'local');
+    assert.ok(!fs.existsSync(path.join(p, '.kit.local.json')));
+  }
 });
 
 test('session start: the next command is shown to the user (after /clear)', () => {

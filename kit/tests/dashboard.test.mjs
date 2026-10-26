@@ -131,7 +131,7 @@ test('produced assets: brand kit, video output, research title', async () => {
 test('cost: ccusage project name and daily summary (date/period fields)', async () => {
   const { ccusageProjectName, costSummary } = await import('../../.claude/hooks/dashboard-data.mjs');
   if (process.platform === 'win32') assert.equal(ccusageProjectName(String.raw`D:\Claude Projeler\Vibe_Kit`), 'D--Claude-Projeler-Vibe-Kit');
-  else assert.equal(ccusageProjectName('/home/a/my.app'), '-home-a-my-app');
+  else assert.equal(ccusageProjectName('/home/a/my.app'), '-home-a-my-app'); // kit:yol-izinli
   const o = costSummary({ projects: { x: [{ date: '2026-10-11', totalTokens: 2e6, totalCost: 3 }, { date: '2026-10-09', totalTokens: 1e6, totalCost: 1.5 }] }, totals: {} });
   assert.deepEqual(o.days.map((g) => g.date), ['2026-10-09', '2026-10-11']);
   assert.deepEqual(o.total, { token: 3e6, cost: 4.5 });

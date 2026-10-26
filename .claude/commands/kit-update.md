@@ -5,7 +5,7 @@ argument-hint: [boş | --addons ai,tr | --tool claude,codex,antigravity]
 
 Ek argüman: $ARGUMENTS
 
-1. `.kit.json`'u oku: mevcut sürüm, `kaynak` (kit repo adresi), tip, ekler.
+1. `.kit.json`'u oku: mevcut sürüm, `source` (kit repo adresi), tip, ekler.
 2. Commit edilmemiş değişiklik varsa dur ve önce commit etmeyi öner (güncelleme dosya yazar).
 3. Kiti geçici bir klasöre klonla ve güncellemeyi çalıştır:
 

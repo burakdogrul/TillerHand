@@ -367,3 +367,45 @@ test('3.28.3 git.exe and commit aliases are commits too', () => {
   sh('git config --unset alias.kabuk');
   fs.rmSync(path.join(p, 'alias.js'));
 });
+
+test('3.29.0 a path of this machine in a changed file turns the gate red; kit:yol-izinli allows a deliberate one', async () => {
+  const { absPathCheck } = await import('../../.claude/hooks/gate.mjs');
+  agents('node -e "process.exit(0)"');
+  sh('git add -A && git commit -qm ara-yol --allow-empty');
+  const fwd = p.replace(/\\/g, '/');
+  write('src/yol.test.js', `const f = '${fwd}/fixtures/a.json';\n`);
+  const red = runGate();
+  assert.equal(red.status, 1, red.stdout);
+  assert.match(red.stdout, /❌ Mutlak yol[\s\S]*src\/yol\.test\.js:1/);
+  write('src/yol.test.js', "const f = path.join(import.meta.dirname, 'fixtures', 'a.json');\n");
+  assert.equal(runGate().status, 0, 'a derived path is fine');
+  // red = this machine's path (blocks), note = looks like a user folder (listed, does not block), ok = nothing
+  for (const [text, want] of [
+    [`const r = "${p.replace(/\\/g, '\\\\')}\\\\x";`, 'red'], // JSON / JS escaped backslashes
+    // No path boundary: another folder that starts the same way (still red where the temp folder is under home, as on Windows)
+    [`const r = '${p.replace(/\\/g, '/')}-eski/x';`, path.relative(os.homedir(), p).startsWith('..') ? 'ok' : 'red'],
+    ["cwd: 'C:\\Users\\ayse\\proje'", 'note'], // kit:yol-izinli
+    ['const t = "/home/mehmet/proje/a";', 'note'], // kit:yol-izinli
+    ['WORKDIR /home/node/app', 'note'], // kit:yol-izinli
+    ['const t = "/Users/zeynep/Desktop/x";', 'note'], // kit:yol-izinli
+    ["fetch('/users/42/posts')", 'ok'],
+    ["router.push('/home/settings')", 'ok'],
+    ['// örnek: /home/<ad>/proje', 'ok'],
+    ["const u = 'https://example.com/home/page/';", 'ok'],
+  ]) {
+    write('src/b.js', `${text}\n`);
+    const r = absPathCheck(p, ['src/b.js']);
+    assert.equal(r.status === 'failed' ? 'red' : r.note ? 'note' : 'ok', want, text);
+  }
+  write('src/b.js', `// kit:yol-izinli\n"${p.replace(/\\/g, '/')}/a"\n`);
+  assert.equal(absPathCheck(p, ['src/b.js']).status, 'passed', 'the marker on the line above (Dockerfile, JSON)');
+  // Only added lines: an old path already committed in the file is not this change's
+  write('src/eski.js', `const a = '${p.replace(/\\/g, '/')}/eski';\n`);
+  sh('git add -A && git commit -qm eski-yol --no-verify');
+  write('src/eski.js', `const a = '${p.replace(/\\/g, '/')}/eski';\nconst b = 1;\n`);
+  assert.equal(absPathCheck(p, ['src/eski.js']).status, 'passed', 'an unrelated added line');
+  fs.rmSync(path.join(p, 'src/eski.js'));
+  sh('git add -A && git commit -qm eski-yol-sil --no-verify');
+  fs.rmSync(path.join(p, 'src/b.js'));
+  fs.rmSync(path.join(p, 'src/yol.test.js'));
+});

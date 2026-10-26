@@ -7,6 +7,7 @@
 //   The result goes to .claude/state/gate.json with the same change signature as the commit gate; the commit gate stops
 //   the commit on a red or stale result. A green check's output is not written, the last 30 lines of a red one are.
 //   If no check passed (commands empty, no Semgrep) the result is EMPTY: the commit gate stays closed.
+//   "Mutlak yol": an added line with this machine's project or home path is red; a generic C:\Users\<name>, /home/<name> is a note.
 //   node .claude/hooks/gate.mjs --approve   saves the commands with user approval. A new or changed command does not run unapproved:
 //   an untrusted repo's AGENTS.md must not run code through the gate. The approval lives in the user folder (~/.vibe-kit/).
 import fs from 'node:fs';
@@ -95,6 +96,55 @@ function semgrep(root, files) {
   return { name, status: 'failed', sec, output: tail(`${r.error ? `${r.error.message}\n` : ''}${r.stdout ?? ''}${r.stderr ?? ''}`) };
 }
 
+// A path that only exists on this machine in a changed line breaks the code, tests and docs on every other machine.
+//   Red: this project's folder or the home folder (at least two levels, so /app or /root alone is not matched; a path
+//   boundary after it; any slash style, JSON-escaped too; case-insensitive only on Windows).
+//   Note only: a generic C:\Users\<name>, /home/<name>/, /Users/<name>/ (a container path like /home/node/app or a route
+//   is not a machine path, so it never blocks).
+// "kit:yol-izinli" on the line or the line above allows a deliberate one (Dockerfile and JSON take no inline comment).
+// Only added lines of tracked files are read (an old path elsewhere in the file is not this change's); a new file is
+// read whole. Paths are read from the git top level, so a project in a monorepo subfolder is checked too.
+const ESCAPE = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export function absPathCheck(root, files) {
+  const name = 'Mutlak yol';
+  const git = (...a) => spawnSync('git', a, { cwd: root, encoding: 'utf8', maxBuffer: BUFFER });
+  const top = git('rev-parse', '--show-toplevel').stdout?.trim() || root;
+  const variants = (p) => { const f = p.replace(/\\/g, '/').replace(/\/+$/, ''); return [f, f.replace(/\//g, '\\'), f.replace(/\//g, '\\\\')]; };
+  const deep = (p) => p.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '').split('/').filter(Boolean).length >= 2;
+  const own = [...new Set([root, top, os.homedir()].filter((p) => p && deep(p)).flatMap(variants))].map(ESCAPE);
+  const mine = own.length ? new RegExp(`(?:${own.join('|')})(?=[\\\\/'"\`\\s,;:)\\]}]|$)`, process.platform === 'win32' ? 'i' : '') : null;
+  const generic = /\b[A-Za-z]:(?:\\\\|\\|\/)Users(?:\\\\|\\|\/)[^\\/\s'"<>:]+|(?<![\w.-])\/(?:Users|home)\/[^/\s'"<>:]+\//;
+  // Added line numbers per file from one diff against HEAD (staged and unstaged); a file not in it is new: read whole
+  const added = new Map();
+  let file = null;
+  for (const l of (git('diff', 'HEAD', '-U0', '--no-color', '--no-renames', '--no-ext-diff').stdout ?? '').split('\n')) {
+    const f = l.match(/^\+\+\+ b\/(.+)$/);
+    if (f) { file = f[1]; added.set(file, new Set()); continue; }
+    const h = file && l.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+    if (h) for (let n = +h[1]; n < +h[1] + +(h[2] ?? 1); n++) added.get(file).add(n);
+  }
+  const red = [], notes = [];
+  for (const f of files) {
+    if (/^\.claude\/state\/|(^|\/)\.kit\.local\.json$/.test(f)) continue;
+    let lines;
+    try {
+      const b = fs.readFileSync(path.join(top, f));
+      if (b.length > 2e6 || b.subarray(0, 8000).includes(0)) continue;
+      lines = b.toString('utf8').split(/\r?\n/);
+    } catch { continue; }
+    lines.forEach((l, i) => {
+      if (added.has(f) && !added.get(f).has(i + 1)) return;
+      if (l.includes('kit:yol-izinli') || lines[i - 1]?.includes('kit:yol-izinli')) return;
+      const at = `${f}:${i + 1}: ${l.trim().slice(0, 120)}`;
+      if (mine?.test(l)) red.push(at); else if (generic.test(l)) notes.push(at);
+    });
+  }
+  const list = (a) => [...a.slice(0, 15), a.length > 15 ? `… ve ${a.length - 15} satır daha` : ''].filter(Boolean).join('\n');
+  if (red.length) return { name, status: 'failed', note: 'bu makineye özel yol; import.meta.url, __dirname, path.join(kök, …), os.tmpdir() kullan. Bilinçliyse satıra ya da üstüne kit:yol-izinli yaz',
+    output: list(red) };
+  return { name, status: 'passed', ...(notes.length && { note: `${notes.length} satırda kullanıcı klasörüne benzeyen yol var; makineye özelse düzelt (engellemez)`, output: list(notes) }) };
+}
+
 export const approvalNeeded = (list) => `komut onayı gerekli\nAGENTS.md → Komutlar yeni veya değişmiş; bu komutlar onaysız çalışmaz:\n${commandList(list)}\n` +
   'Komutları kullanıcıya göster ve sor. Onaylarsa: node .claude/hooks/gate.mjs --approve, sonra komutu tekrar çalıştır.';
 
@@ -128,6 +178,7 @@ export function runGate(root) {
   const empty = !checks.some((k) => k.status === 'passed');
   const spec = specCheck(root, start); // after the test command, which may have refreshed the JUnit report; it does not fill an empty gate
   if (spec) checks.push(spec);
+  checks.push(absPathCheck(root, files)); // after "empty": it does not fill a gate with no lint/test either
   const passed = !empty && checks.every((k) => k.status !== 'failed');
   const file = path.join(root, '.claude', 'state', 'gate.json');
   fs.mkdirSync(path.dirname(file), { recursive: true });
