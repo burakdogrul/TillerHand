@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.32.1] - 2026-10-26
+
+### Düzeltilen
+- **Atlanan denetim "denetlendi" sayılmıyor.** `--skip` ile atlanan bir commit'te `commit-gate.mjs --status` "bu değişiklikler denetlendi" diyordu. Ardından bir dosya değişince kapı yalnız o dosyanın incelenmesini istiyordu; atlanan dosyalar hiç denetlenmeden kalıyordu. Artık `--status` "denetim atlandı, denetlenmedi" der; değişiklik olursa bütün fark incelenir.
+
 ## [3.32.0] - 2026-10-26
 
 ### Değişen

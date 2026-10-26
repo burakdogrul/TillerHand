@@ -146,8 +146,11 @@ function status() {
   try { d = changes(); } catch { console.log('Git deposu değil.'); return; }
   if (!d.files.length) { console.log('Değişiklik yok.'); return; }
   const approval = readApproval(), gate = readGate();
+  // A skipped review covers no file: it is not "reviewed", and after a change the whole diff is still to be reviewed
+  const skipped = SKIPPED.test(String(approval?.note ?? ''));
   const gateText = gate?.signature !== d.signature ? 'kapı bu değişiklikler için çalışmadı' : gate.passed ? 'kapı yeşil' : 'kapı kırmızı';
-  if (!approval) console.log(`Onay yok: bu değişiklikler için kurul denetimi yapılmadı (${d.files.length} dosya) · ${gateText}.`);
+  if (skipped && approval.signature === d.signature) console.log(`Denetim atlandı (${approval.note}, ${approval.date ?? '-'}): bu değişiklikler denetlenmedi · ${gateText}.`);
+  else if (!approval || skipped) console.log(`Onay yok: bu değişiklikler için kurul denetimi yapılmadı (${d.files.length} dosya) · ${gateText}.`);
   else if (approval.signature === d.signature) console.log(`Onay geçerli (${approval.note}, ${approval.date ?? '-'}): bu değişiklikler denetlendi, yeniden inceleme gerekmez · ${gateText}.`);
   else console.log(`Onay eski (${approval.note}). Son onaydan sonra değişen: ${sinceApproval(approval, d).join(', ')}. Yalnız bunları incele · ${gateText}.`);
 }
@@ -239,7 +242,7 @@ async function hook() {
     process.exit(2);
   }
 
-  const delta = approval ? sinceApproval(approval, d) : [];
+  const delta = approval && !skipped ? sinceApproval(approval, d) : [];
   process.stderr.write(
     (delta.length && delta.length < d.files.length
       ? `Commit durduruldu: son onaydan (${approval.note}) sonra değişen dosyalar denetlenmedi: ${delta.join(', ')}.\n` +

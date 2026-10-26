@@ -465,6 +465,16 @@ test('3.32.0 one review per change: the task-end approval covers the commit; aft
   assert.match(r.stderr, /yalnız/);
   sh('git add -A && git commit -qm t');
   assert.match(status().stdout, /Değişiklik yok/);
+  // a skipped review covers no file: it is not "reviewed" and a later change does not narrow the review to the delta
+  write('e.js', '1');
+  write('f.js', '1');
+  assert.equal(skip('kullanıcı isteği').status, 0);
+  assert.match(status().stdout, /atlandı.*denetlenmedi/s);
+  assert.doesNotMatch(status().stdout, /Onay geçerli/);
+  write('f.js', '2');
+  assert.match(status().stdout, /Onay yok.*2 dosya/s, 'the skipped e.js is still to be reviewed');
+  assert.doesNotMatch(commit().stderr, /yalnız/);
+  sh('git add -A && git commit -qm t2');
   // the commands use it: task-end approval opens the commit; /review-changes and the commit board check first
   const read = (f) => fs.readFileSync(path.join(HOOKS, '..', f), 'utf8');
   assert.match(read('commands/build.md'), /commit-gate\.mjs --approve "görev sonu: /);
