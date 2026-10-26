@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.39.1] - 2026-10-26
+
+### Değişen
+- **Web SaaS teknoloji kataloğunda ilk kaynaklı iddialar.** Supabase ve Clerk ücretsiz katmanı, Stripe'ın Türkiye durumu ve Plausible fiyatı kaynak ve tarihle yazıldı; `/start` bunları 90 gün boyunca yeniden araştırmaz.
+  - Elle uyarla: Kurulmuş projede `docs/architecture/stack.md` projeye aittir, güncellemeyle değişmez.
+
 ## [3.39.0] - 2026-10-26
 
 ### Değişen
