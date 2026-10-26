@@ -7,7 +7,7 @@ Fikir: $ARGUMENTS
 
 Bu bir **9 adımlı sihirbaz** (0-9). Kullanıcı hiçbir şeyi bilmiyormuş gibi davran: Her kararı `docs/workflow/decision-protocol.md`'ye göre sor (AskUserQuestion, önerilen seçenek ilk sırada, her seçeneğin ne zaman daha iyi olduğu açıklamalı). Kendi kafana göre karar verme. Bu oturumda uygulama kodu yazma. Her kararı tek yönlü / çift yönlü kapı olarak sınıfla (`docs/workflow/decision-protocol.md` §2a); veritabanı, auth, ödeme ve veri modeli gibi tek yönlü kararlarda önce kurul görüşü al (veritabanı ve auth'ta karar konseyi; profil kuralı `.claude/board/council.md`).
 
-**Devam etme:** `docs/workflow/progress.md` → `**Başlangıç adımı:**` 0'dan büyükse kaldığın adımdan devam et ve bunu kullanıcıya söyle. Her adım bitince bu satırı (`N/9`) ve `**Son güncelleme:**` satırını güncelle; sonra durum bloğunu yaz.
+**Devam etme:** `docs/workflow/progress.md` → `**Başlangıç adımı:**` 0'dan büyükse kaldığın adımdan devam et ve bunu kullanıcıya söyle. Her adım bitince bu satırı (`N/9`) ve `**Son güncelleme:**` satırını güncelle; sonra durum bloğunu yaz. Ağır adımlardan (1b araştırma, 4, 6, 7) sonra sıradaki adıma geçmeden tek satırla `/clear` öner: adımın sonucu dosyalarda, sonraki adım onları okur; her tur bütün bağlamı yeniden okuduğu için temiz oturum ucuzdur. `/start` yeniden çağrılınca kaldığı adımdan devam eder.
 
 **Kararlar anında kaydedilir:** Her kararı verildiği anda `docs/decisions/log.md` → Karar günlüğüne yaz (adım sonunu bekleme). Pano kararları ve adım ilerlemesini oradan canlı gösterir.
 

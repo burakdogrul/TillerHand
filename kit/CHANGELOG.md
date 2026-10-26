@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.37.1] - 2026-10-26
+
+### Değişen
+- **`/start` ağır adımlardan sonra `/clear` önerir.** Araştırma, teknoloji kararları, kurul ve tasarım yönü adımlarının sonucu dosyalara yazılır; sonraki adım onları okur. Temiz oturumda devam etmek daha ucuz, `/start` kaldığı adımdan sürer.
+
 ## [3.37.0] - 2026-10-26
 
 ### Değişen
