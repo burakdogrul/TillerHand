@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.37.0] - 2026-10-26
+
+### Değişen
+- **Alt ajan ikinci kez soğuk başlamıyor.** Kod alt ajanı ya da kurul üyesi düzeltmeden sonra yeniden bakacaksa yeni ajan başlatılmaz; aynı ajan SendMessage ile sürdürülür ve yalnız düzeltilen fark verilir. Dosyaları yeniden okumaz.
+- **Kurul istemi önbelleğe uygun sırada.** Üyeler arasında aynı olan kısım (toplantı türü, kapsam, kabul kriterleri, kapı çıktısı) önce, üyeye özel kısım sonda yazılır.
+
 ## [3.36.0] - 2026-10-26
 
 ### Değişen
