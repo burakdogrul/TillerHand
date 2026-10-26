@@ -39,6 +39,8 @@ Sadece dokümantasyon değişikliği (`.md`, `docs/`) içeren commit'ler denetim
 | Mobil izin, native modül, mağaza ayarı | board-mobile |
 | Prompt, model çağrısı, eval | board-ai |
 
+Görev sonunda `node .claude/hooks/flow.mjs` üyeleri değişen yollardan önerir (kurulda olanlar, en çok dosyası eşleşen önce; hassas yolda `security-auditor`). Yol tahmindir: değişikliğin anlamı farklıysa (yeni özellik → board-product gibi) tabloya göre düzelt.
+
 Kurulda olmayan bir üyeyi çağırma; ilgili alan kurulda yoksa durum bloğunda "kurulda X uzmanı yok" diye belirt.
 
 ## 4. Toplantı nasıl yapılır
@@ -46,7 +48,7 @@ Kurulda olmayan bir üyeyi çağırma; ilgili alan kurulda yoksa durum bloğunda
 1. **Limit kontrolü** (`docs/workflow/usage-limits.md`): Seviye sarıysa üye sayısını yarıya indir; kırmızıysa kullanıcıya sor (kurulu hafiflet seçeneği dahil). Görev sonu toplantısında üye sayısını ve paralel mi sırayla mı çalışılacağını `node .claude/hooks/flow.mjs` söyler (değişiklik büyüklüğü + limit; `code-reviewer` ve hassas yolda `security-auditor` her zaman katılır).
 1b. **Deterministik kapı** (commit, görev sonu, faz sonu; plan toplantısında yok): `node .claude/hooks/gate.mjs --run`. AGENTS.md → Komutlar'daki lint, tip kontrolü ve test ile Semgrep çalışır; sonuç değişiklik imzasıyla saklanır. Kırmızıysa veya boşsa (hiçbir kontrol çalışmadı) commit kapısı açılmaz: önce düzelt ya da Komutlar'ı doldur. Kullanıcı ara commit için açıkça isterse `node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"` (her zaman onaya sorulur). Kapı "komut onayı gerekli" derse komutları kullanıcıya göster; onaylarsa `node .claude/hooks/gate.mjs --approve` (yeni veya değişen komut onaysız çalışmaz).
 1c. **Commit toplantısında önce** `node .claude/hooks/commit-gate.mjs --status`: "Onay geçerli" ise toplantı yok (görev sonu toplantısı aynı değişiklikleri denetledi). "Son onaydan sonra değişen: …" ise üyelere yalnız o dosyaların farkını ver.
-2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu, kabul kriterleri ve kapı çıktısı (varsa). Çağrıda inceleme rolünün `model` ve `effort`'unu ver (`node .claude/hooks/models.mjs --show`); commit toplantısında `model: "haiku"`, `effort: "low"` ver. Rapor sözleşmesini istemde yaz: en fazla ~15 satır, bulgu başına tek satır, önem sırasıyla; övgü ve özet yok (raporlar ana oturumun bağlamına girer).
+2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu, kabul kriterleri ve kapı çıktısı (varsa). Çağrıda inceleme rolünün `model` ve `effort`'unu ver (`node .claude/hooks/models.mjs --show`); commit toplantısında `model: "haiku"`, `effort: "low"` ver. Rapor sözleşmesini istemde yaz: en fazla ~15 satır ve 5 bulgu (fazlası tek satır: "diğer: N küçük bulgu"), bulgu başına tek satır, önem sırasıyla; övgü ve özet yok (raporlar ana oturumun bağlamına girer).
 2b. **Konsey toplantısıysa** (§2) `.claude/board/council.md` aşama 1-4'ü uygula. Sentezi başkanın kararından kur; görüş ayrılığı satırına azınlık görüşünü yaz.
 3. **Sentezle** (ana ajan; konseyde başkanın kararına göre):
 

@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.36.0] - 2026-10-26
+
+### Değişen
+- **Kurul üyeleri değişen dosyalardan seçiliyor.** `flow.mjs` görev sonunda değişen yollara bakıp kurulda olan üyeleri adıyla önerir: en çok dosyası eşleşen önce, sayı görev büyüklüğüne ve limite göre. Auth, ödeme, webhook, dosya yükleme ya da sır içeren bir yol varsa `security-auditor` da eklenir. Yol bir tahmindir; değişikliğin anlamı farklıysa üye tablosuna göre düzeltilir.
+- **Kurul üyesi en fazla 5 bulgu yazar.** Fazlası tek satırda sayılır ("diğer: N küçük bulgu").
+
 ## [3.35.0] - 2026-10-26
 
 ### Değişen
