@@ -245,3 +245,24 @@ test('test-writer K7c the agent does not copy a ready test text from the prompt;
   const rule = doc.split('\n').find((l) => /kopyala/i.test(l) && /kriter/i.test(l));
   assert.equal(typeof rule, 'string', 'a line in test-writer.md mentions both "kopyala" and "kriter"');
 });
+
+// K8: path tricks cannot slip past the test split.
+test('test-writer K8b hook: a write through a folder link to tests into a nested path that does not exist yet is a test write', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'test-guard-k8-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const target = path.join(root, 'tests');
+  const link = path.join(root, 'lnk');
+  fs.mkdirSync(target, { recursive: true });
+  try { fs.symlinkSync(target, link, 'junction'); } catch (e) {
+    // The link needs OS support or rights (e.g. no junctions, symlinks not allowed); without it there is nothing to check.
+    t.skip(`folder link could not be created: ${e.code}`);
+    return;
+  }
+  const file = path.join(link, 'yeni', 'alt', 'x.ts');
+  assert.equal(fs.existsSync(path.dirname(file)), false, 'the nested folder does not exist yet');
+  const write = (extra) => run({ tool_name: 'Write', cwd: root, ...extra, tool_input: { file_path: file, content: "test('x', () => { expect(1).toBe(1); });\n" } }, { CLAUDE_PROJECT_DIR: root })?.hookSpecificOutput;
+  const out = write({});
+  assert.equal(out?.permissionDecision, 'deny', 'no agent, lnk/yeni/alt/x.ts');
+  assert.match(out.permissionDecisionReason, /test-writer/);
+  assert.notEqual(write({ agent_type: 'test-writer' })?.permissionDecision, 'deny', 'test-writer, lnk/yeni/alt/x.ts');
+});

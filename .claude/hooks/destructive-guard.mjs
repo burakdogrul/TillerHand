@@ -51,7 +51,12 @@ const NEEDS_APPROVAL = [
 // Each part of a command chain is checked alone: "rm -r node_modules && npx vitest run a.test.ts" does not change a test.
 const WRITER = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|touch|ln|dd|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bcurl\b[^;&|]*\s(-o|--output)\b|\bwget\b[^;&|]*\s(-O|--output-document)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
 // Dependency and git internals are not the project's tests; a URL (curl … https://x/tests/a) or a dd input is not a target
-const isTestCode = (t) => !/(^|[/\\])(node_modules|\.git)([/\\]|$)|:\/\/|^if=/i.test(t) && (isTestFile(t) || /(^|[/\\])(tests?|__tests__|e2e|spec)[/\\]?$/i.test(t));
+// Normalized first: node_modules/../tests/a.test.ts is a test path; only a path that stays under them is skipped
+const isTestCode = (t) => {
+  if (/:\/\/|^if=/i.test(t)) return false;
+  const n = path.posix.normalize(t.replace(/\\/g, '/'));
+  return !/(^|\/)(node_modules|\.git)(\/|$)/i.test(n) && (isTestFile(n) || /(^|\/)(tests?|__tests__|e2e|spec)\/?$/i.test(n));
+};
 const isTestPath = (t) => isTestCode(t) || isTestConfig(t);
 function writesTest(command, isPath = isTestPath) {
   return command.split(/&&|\|\||[;|\n]/).some((part) => {

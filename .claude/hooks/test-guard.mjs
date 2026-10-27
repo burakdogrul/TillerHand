@@ -57,9 +57,11 @@ function hook() {
     return [full, rel.startsWith('..') || path.isAbsolute(rel) ? full : rel];
   };
   // The real path too: a link or junction into the test folder, a Windows short name (TESTS~1)
+  // A new nested path (lnk/new/sub/x.ts): resolve the nearest folder that exists and append the rest
   const realOf = (p) => {
-    try { return fs.realpathSync.native(p); } catch { /* a new file */ }
-    try { return path.join(fs.realpathSync.native(path.dirname(p)), path.basename(p)); } catch { return p; }
+    for (let dir = p, rest = ''; ; rest = path.join(path.basename(dir), rest), dir = path.dirname(dir)) {
+      try { return path.join(fs.realpathSync.native(dir), rest); } catch { if (path.dirname(dir) === dir) return p; }
+    }
   };
   for (const f of g.files) {
     if (!f.path) continue;

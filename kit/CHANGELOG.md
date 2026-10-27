@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.42.1] - 2026-10-27
+
+### Düzeltilen
+- **Test ayrımında iki yol kaçağı kapandı.** `node_modules/../tests/a.test.ts` gibi `..` içeren yollar artık normalleştirilip test yolu sayılıyor; test klasörüne giden bir bağın altında henüz var olmayan iç içe bir yola yazım da yakalanıyor.
+
 ## [3.42.0] - 2026-10-27
 
 ### Eklenen

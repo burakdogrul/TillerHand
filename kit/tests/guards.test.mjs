@@ -329,3 +329,25 @@ test('test-writer K7b shield: other shell ways to write a test file are caught; 
   for (const s of notTests) assert.notEqual(evaluate(s, main)?.decision, 'deny', s);
   for (const s of [...deny, ...atLeastAsk, ...notTests]) assert.notEqual(evaluate(s, tw)?.decision, 'deny', `test-writer: ${s}`);
 });
+
+// K8: path tricks cannot slip past the test split.
+test('test-writer K8a shield: a path that goes through a dependency or git folder with .. is normalized and still counts as a test path', () => {
+  const main = { tool: 'claude', agent: '' };
+  for (const s of ['rm tests/../node_modules/../tests/a.test.ts', 'rm node_modules/../src/a.test.ts', 'touch .git/../tests/x.ts']) {
+    const r = evaluate(s, main);
+    assert.equal(r?.decision, 'deny', s);
+    assert.match(r.reason, /test-writer/, s);
+  }
+  for (const s of ['rm -rf node_modules/pkg/test/x', 'rm -rf ./node_modules/pkg/tests']) assert.notEqual(evaluate(s, main)?.decision, 'deny', s);
+});
+
+test('test-writer K8c shield: a path that stays inside a dependency or git folder anywhere in the path is not a project test path', () => {
+  const main = { tool: 'claude', agent: '' };
+  for (const s of ['rm -rf C:\\proj\\node_modules\\x\\tests', 'rm -rf /home/u/p/node_modules/x/tests', // kit:yol-izinli
+    'rm -rf src/node_modules/pkg/tests', 'rm -rf packages/a/.git/x/tests']) {
+    assert.notEqual(evaluate(s, main)?.decision, 'deny', s);
+  }
+  const r = evaluate('rm node_modules/../src/a.test.ts', main);
+  assert.equal(r?.decision, 'deny');
+  assert.match(r.reason, /test-writer/);
+});
