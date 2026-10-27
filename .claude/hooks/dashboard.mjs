@@ -190,7 +190,10 @@ const fmtDate = (t) => { const z = toDate(t); return Number.isNaN(z.getTime()) ?
 const limitSeverity = (p, k) => (p == null ? 'info' : p >= THRESHOLDS[k].red ? 'critical' : p >= THRESHOLDS[k].yellow ? 'warn' : 'good');
 const TOPICS = ['urun', 'teknik', 'tasarim', 'icerik', 'veri', 'guvenlik', 'maliyet'];
 
-const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${SEV[x.sev][1]}: </span>${md(x.text)}</span>${x.action ? `<span class="eylem">→ ${md(x.action)}</span>` : ''}</li>`;
+// The command to paste into Claude: "`/build G-013` …" or "/wrap-up ve /clear" → first command, without its <placeholder> or note
+const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/ ve | ile |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
+const copyBtn = (s) => { const c = cmdOf(s); return c ? ` <button class="kopyala" type="button" data-cmd="${e(c)}" aria-label="${e(c)} komutunu kopyala">Kopyala</button>` : ''; };
+const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${SEV[x.sev][1]}: </span>${md(x.text)}</span>${x.action ? `<span class="eylem">→ ${md(x.action)}${copyBtn(x.action)}</span>` : ''}</li>`;
 const kpi = (label, value, sub = '', bar = '') => `<div class="kpi"><div class="kpi-l">${e(label)}</div><div class="kpi-v">${value}</div>${bar}<div class="kpi-s">${sub}</div></div>`;
 
 // ---------- sections ----------
@@ -370,6 +373,8 @@ code{font:.86em var(--mono);background:var(--sunk);padding:.08em .38em;border-ra
 .now-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 16px}
 .next{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--accent-soft)}
 .next .now-l{color:var(--accent)}
+.kopyala{font:600 .72rem/1 var(--sans);padding:4px 8px;margin-left:6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;vertical-align:1px}
+.kopyala:hover{border-color:var(--accent);color:var(--accent)}
 .att{list-style:none;padding:0;gap:8px}.att li{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;padding:8px 10px;border-radius:8px;background:var(--sunk)}
 .att li.critical{background:var(--crit-bg)}.att li.warn{background:var(--warn-bg)}.att .eylem{grid-column:2;font-size:.8rem;color:var(--muted)}
 .badge{display:inline-flex;gap:4px;align-items:center;font:600 .74rem/1 var(--sans);padding:4px 8px;border-radius:999px;white-space:nowrap}
@@ -447,7 +452,7 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
       <div><div class="now-l">Son güncelleme</div><div class="num">${e(a['Son güncelleme'] ?? '-')}</div></div>
       ${/başlangıç/i.test(a['Aktif faz'] ?? '') ? `<div><div class="now-l">Başlangıç adımı</div><div class="num">${e(a['Başlangıç adımı'] ?? '-')}</div></div>` : ''}
     </div>
-    <div class="next"><div class="now-l">Sıradaki adım</div><div>${md(next)}</div></div>
+    <div class="next"><div class="now-l">Sıradaki adım</div><div>${md(next)}${copyBtn(next)}</div>${cmdOf(next) ? '<div class="muted small">Kopyala, Claude sohbetine yapıştır.</div>' : ''}</div>
     ${d.state ? `<div class="now-l" style="margin-top:14px">Durum</div><p style="margin-top:4px">${md(d.state)}</p>` : ''}
     ${d.lastSession.length ? `<div class="now-l" style="margin-top:10px">Son oturumda</div><ul style="margin-top:4px">${d.lastSession.slice(0, 4).map((x) => `<li>${md(x)}</li>`).join('')}</ul>` : ''}
   </section>
@@ -504,6 +509,16 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
       document.querySelectorAll('#kararlar tbody tr').forEach(function (r) {
         r.hidden = !(k === 'hepsi' || r.dataset.k === k || (k === 'otomatik' && r.dataset.v === 'otomatik') || (k === 'tek' && r.dataset.kapi === 'tek'));
       });
+    });
+  });
+
+  // file:// may refuse the clipboard API: fall back to a selected textarea
+  document.querySelectorAll('.kopyala').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var c = b.dataset.cmd;
+      function done(ok) { b.textContent = ok ? 'Kopyalandı' : 'Kopyalanamadı'; setTimeout(function () { b.textContent = 'Kopyala'; }, 1500); }
+      function fallback() { var t = document.createElement('textarea'); t.value = c; document.body.appendChild(t); t.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (er) {} t.remove(); done(ok); }
+      if (navigator.clipboard) navigator.clipboard.writeText(c).then(function () { done(true); }, fallback); else fallback();
     });
   });
 

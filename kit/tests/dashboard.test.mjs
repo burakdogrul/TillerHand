@@ -211,3 +211,24 @@ test('a date-only entry (decision log) shows the same day in every time zone', a
   }
   fs.rmSync(p, { recursive: true, force: true });
 });
+
+test('3.41.0 copy buttons: the next step and slash-command actions get the bare command, escaped', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'pano-kopya-'));
+  const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); fs.writeFileSync(path.join(p, f), s); };
+  write('docs/workflow/progress.md', '**Aktif faz:** Faz 1\n\n## Sıradaki adım\n\n1. `/build G-013` şifre sıfırlama\n\n## Kaldığı yer\n\n- yarım iş\n\n## Açık sorunlar / bloklayıcılar\n\n- `/fix "x` sorunu\n');
+  const run = () => {
+    const r = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks', 'dashboard.mjs'), p, '--quiet'], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    return fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8');
+  };
+  const html = run();
+  assert.ok(html.includes('data-cmd="/build G-013"'), 'next step command');
+  assert.ok(html.includes('data-cmd="/build"'), '"/build ile devam" gives /build');
+  write('docs/workflow/progress.md', '**Aktif faz:** Faz 1\n\n## Sıradaki adım\n\n1. `/build " onclick="alert(1)` x\n');
+  const bad = run();
+  assert.ok(!bad.includes('onclick="alert(1)'), 'a quote in the command is escaped');
+  assert.ok(bad.includes('data-cmd="/build &quot; onclick=&quot;alert"'), 'escaped, cut at the "(" note');
+  fs.rmSync(p, { recursive: true, force: true });
+});

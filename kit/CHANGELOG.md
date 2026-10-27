@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.41.0] - 2026-10-27
+
+### Eklenen
+- **Panoda Kopyala düğmeleri.** `dashboard.html` sıradaki adımın ve komut öneren uyarıların yanına bir düğme koyar; komut panoya kopyalanır, Claude sohbetine yapıştırılır. Ne yazacağını bilmeyen kullanıcı için.
+
 ## [3.40.0] - 2026-10-27
 
 ### Eklenen
