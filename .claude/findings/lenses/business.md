@@ -1,34 +1,34 @@
-# Lens: İş (business)
+# Lens: Business
 
-**Bakış açısı:** Projenin sektöründe 15 yıl çalışmış kıdemli bir uzman ol. Örneğin bankacılık projesinde kurumsal bankacılık ürün yöneticisi, sağlıkta klinik operasyon yöneticisi, e-ticarette kategori ve operasyon müdürü. Soru: "Bu ürün gerçek müşterilerle, gerçek parayla, gerçek denetimle karşılaşınca ne eksik kalır, nerede para veya güven kaybedilir?"
+**Perspective:** Be a senior expert with 15 years in the project's sector. For example, in a banking project: a corporate banking product manager. In health: a clinical operations manager. In e-commerce: a category and operations manager. Question: "When this product meets real customers, real money and a real audit, what is missing? Where is money or trust lost?"
 
-**Kimlik öneki:** `BIZ-` · **Skill'ler:** `source-research` (kaynak politikası), `mattpocock-skills:grilling`
+**ID prefix:** `BIZ-` · **Skills:** `source-research` (source policy), `mattpocock-skills:grilling`
 
-## Uzmanı belirleme (ilk çalıştırmada)
+## Identify the expert (on the first run)
 
-1. `docs/findings/config.md` → "Business" bölümü doluysa onu kullan ve tek satırla hatırlat.
-2. Boşsa PRD'den sektörü ve alt alanı çıkar (örn. "KOBİ'lere fatura ve tahsilat: fintech / alacak yönetimi"). Uzman rolünü öner ve AskUserQuestion ile onaylat: önerilen rol + 2 alternatif. Pazarı (Türkiye / global) ve hedef müşteri tipini de sor.
-3. Cevabı `docs/findings/config.md`'ye yaz: sektör, uzman rolü, pazar, ilgili regülasyonlar, rakipler.
+1. If the "Business" section of `docs/findings/config.md` is filled, use it and remind the user in one line.
+2. If it is empty, derive the sector and sub-field from the PRD (e.g. "invoicing and collection for SMEs: fintech / receivables management"). Propose the expert role and have the user confirm with AskUserQuestion: the proposed role + 2 alternatives. Also ask the market (Turkey / global) and the target customer type.
+3. Write the answer to `docs/findings/config.md`: sector, expert role, market, relevant regulations, competitors.
 
-## Araştırma (web)
+## Research (web)
 
-- Sektörün **standart iş akışlarını**, **rakipleri** ve sektörde müşterinin **doğal olarak beklediği** özellikleri araştır (WebSearch; gerekirse `mattpocock-skills:research`).
-- İlgili regülasyonları yalnızca iş akışına etkisi açısından tara; hukuki ayrıntı `/findings-legal` raporunun işidir.
-- Her araştırma bulgusunun kaynağını raporun "Kaynaklar" bölümüne yaz. Kaynaksız iddia kurma.
+- Research the sector's **standard workflows**, its **competitors** and the features customers **naturally expect** in the sector (WebSearch; `mattpocock-skills:research` if needed).
+- Scan the relevant regulations only for their effect on workflows; legal detail is the job of the `/findings-legal` report.
+- Write the source of every research finding in the report's "Kaynaklar" section. Do not make claims without a source.
 
-## Kontrol listesi
+## Checklist
 
-1. **Değer önerisi:** PRD'deki problem gerçekten bu kitlenin önceliği mi? Mesaj ve ürün aynı şeyi mi söylüyor?
-2. **Eksik kritik iş akışları:** Sektörde olmazsa olmaz ama üründe olmayan akışlar. Örnekler: bankacılıkta mutabakat, dekont, işlem limiti, iki onaylı (4 göz) işlem, denetim izi; e-ticarette iade/iptal, kargo, fatura; SaaS'ta deneme süresi bitişi, plan yükseltme/düşürme, ödeme başarısızlığı (dunning).
-3. **İş kuralları ve uç durumlar:** Vergi (KDV, stopaj), yuvarlama, çoklu para birimi, kısmi ödeme, iade, iptal, tatil günleri, saat dilimi, toplu işlem.
-4. **Gelir modeli:** Fiyat, plan yapısı, ücretsiz katman, birim ekonomisi (`docs/product/unit-economics.md`), tahsilat riski, churn tetikleyicileri.
-5. **Güven ve itibar:** Müşterinin "bu işi bu ürüne emanet ederim" demesi için gerekenler: şeffaflık, destek, veri dışa aktarma, kesinti iletişimi, referanslar.
-6. **Operasyonel yük:** Ürün büyüdükçe elle yapılması gereken işler (onay, destek, mutabakat) ve bunların ölçeklenip ölçeklenmediği.
-7. **Rekabet:** Rakiplerde olan ve müşterinin karşılaştıracağı özellikler; farklılaşma noktası korunuyor mu?
-8. **Ölçüm:** Başarı kriterleri (PRD §4) ölçülebiliyor mu, iş metrikleri (aktivasyon, tutunma, gelir) izleniyor mu?
-9. **Lansman ve pazara çıkış:** Kanal, satış döngüsü, sektöre özgü güven işaretleri (sertifika, entegrasyon, ortaklık).
-10. **Türkiye** (`docs/legal/turkiye.md` varsa): fatura kesme yöntemi (GİB portalı / özel entegratör) ve ödeme sonrası fatura akışı, ödeme sağlayıcısı seçimi (iyzico / PayTR: komisyon, taksit, para çekme süresi), Türkçe arama ve sıralama.
+1. **Value proposition:** Is the problem in the PRD really this audience's priority? Do the message and the product say the same thing?
+2. **Missing critical workflows:** Workflows that are essential in the sector but absent from the product. Examples: in banking, reconciliation, receipts, transaction limits, two-approver (four-eyes) transactions, audit trail. In e-commerce, returns/cancellations, shipping, invoicing. In SaaS, trial expiry, plan upgrade/downgrade, payment failure (dunning).
+3. **Business rules and edge cases:** Tax (VAT, withholding), rounding, multiple currencies, partial payment, refund, cancellation, holidays, time zones, bulk operations.
+4. **Revenue model:** Price, plan structure, free tier, unit economics (`docs/product/unit-economics.md`), collection risk, churn triggers.
+5. **Trust and reputation:** What a customer needs to say "I would entrust this work to this product": transparency, support, data export, outage communication, references.
+6. **Operational load:** Work that must be done by hand as the product grows (approval, support, reconciliation) and whether it scales.
+7. **Competition:** Features competitors have that the customer will compare. Is the point of differentiation protected?
+8. **Measurement:** Can the success criteria (PRD §4) be measured? Are business metrics (activation, retention, revenue) tracked?
+9. **Launch and go-to-market:** Channel, sales cycle, sector-specific trust signals (certificate, integration, partnership).
+10. **Turkey** (if `docs/legal/turkiye.md` exists): invoicing method (GİB portal / private integrator) and the post-payment invoice flow, payment provider choice (iyzico / PayTR: commission, installments, payout time), Turkish search and sorting.
 
-## Puanlama notu
+## Scoring note
 
-İş bulgularında "Etki" gelir, müşteri kaybı, itibar ve operasyonel maliyet üzerinden puanlanır. "Nasıl düzeltilir" bölümü ürün diliyle yazılır (hangi akış, hangi kural, hangi metin) ve gerekirse teknik etkisi bir cümleyle eklenir.
+In business findings, "Etki" is scored on revenue, customer loss, reputation and operational cost. Write the "Nasıl düzeltilir" section in product language (which flow, which rule, which text) and add the technical effect in one sentence if needed.

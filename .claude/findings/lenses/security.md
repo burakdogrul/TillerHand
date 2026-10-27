@@ -1,41 +1,41 @@
-# Lens: Güvenlik
+# Lens: Security
 
-**Bakış açısı:** Bu ürüne saldırmak isteyen deneyimli bir saldırgan ve onu durdurmakla görevli uygulama güvenliği uzmanı ol. Soru: "Kimse fark etmeden ne çalınabilir, değiştirilebilir veya durdurulabilir?"
+**Perspective:** Be an experienced attacker who wants to attack this product, and the application security expert tasked with stopping them. Question: "What can be stolen, changed or stopped without anyone noticing?"
 
-**Kimlik öneki:** `SEC-` · **Ajan:** `security-auditor` · **Skill:** `security-review`
+**ID prefix:** `SEC-` · **Agent:** `security-auditor` · **Skill:** `security-review`
 
-## Kontrol listesi (OWASP Top 10 temelli)
+## Checklist (based on OWASP Top 10)
 
-1. **Erişim kontrolü:** Her uçta sunucu tarafı yetki; IDOR (başkasının kaydı); rol aşımı; RLS her tabloda açık mı?
-2. **Kimlik doğrulama:** Oturum süresi, şifre sıfırlama akışı, hız sınırı, hesap numaralandırma (kayıtlı e-posta sızdırma).
-3. **Enjeksiyon:** SQL (string birleştirme), komut, şablon, log enjeksiyonu; XSS (HTML olarak basılan kullanıcı içeriği, `dangerouslySetInnerHTML`).
-4. **Sırlar:** Kodda veya geçmişte sır, istemci paketine giden gizli değişken (`NEXT_PUBLIC_`, `EXPO_PUBLIC_`), loglarda token.
-5. **Güvenlik yapılandırması:** CORS `*`, güvenlik başlıkları (CSP, HSTS), prod'da açık debug ve `/docs`, varsayılan şifreler.
-6. **Bağımlılıklar:** Bilinen açıklar, bakımı bırakılmış paketler, çok yeni veya şüpheli paketler.
-7. **Veri koruma:** Hassas verinin şifrelenmesi, yedeklerin erişimi, dosya yükleme (tür, boyut, herkese açık depolama).
-8. **Webhook ve entegrasyonlar:** İmza doğrulaması, tekrar saldırısına karşı idempotency.
-9. **AI ajanı ve LLM güvenliği:** Prompt injection yolları, modelin tetiklediği işlemler, `.mcp.json` ve `.claude/` değişiklikleri, `@latest` MCP sürümleri.
-10. **Saldırgan testleri:** `docs/quality/test-plan.md` §1b'deki testler veri döndüren her uç için var mı?
+1. **Access control:** Server-side authorization on every endpoint; IDOR (someone else's record); role escalation; is RLS on for every table?
+2. **Authentication:** Session lifetime, password reset flow, rate limit, account enumeration (leaking registered emails).
+3. **Injection:** SQL (string concatenation), command, template, log injection; XSS (user content rendered as HTML, `dangerouslySetInnerHTML`).
+4. **Secrets:** Secrets in code or history, secret variables that reach the client bundle (`NEXT_PUBLIC_`, `EXPO_PUBLIC_`), tokens in logs.
+5. **Security configuration:** CORS `*`, security headers (CSP, HSTS), debug and `/docs` open in prod, default passwords.
+6. **Dependencies:** Known vulnerabilities, abandoned packages, very new or suspicious packages.
+7. **Data protection:** Encryption of sensitive data, access to backups, file upload (type, size, public storage).
+8. **Webhooks and integrations:** Signature verification, idempotency against replay attacks.
+9. **AI agent and LLM security:** Prompt injection paths, actions triggered by the model, `.mcp.json` and `.claude/` changes, `@latest` MCP versions.
+10. **Adversarial tests:** Do the tests in `docs/quality/test-plan.md` §1b exist for every endpoint that returns data?
 
-## Trail of Bits skill'leri
+## Trail of Bits skills
 
-| Skill | Ne için |
+| Skill | Used for |
 |---|---|
-| `differential-review` | Son değişikliklerin güvenlik etkisi ve etki alanı (git geçmişiyle) |
-| `insecure-defaults` | Sabit kodlanmış kimlik bilgisi, yedek sırlar, güvensiz varsayılan ayarlar |
-| `sharp-edges` | Hataya açık API'ler ve tehlikeli yapılandırmalar |
-| `static-analysis` | Semgrep ve CodeQL taraması, SARIF ayrıştırma |
-| `supply-chain-risk-auditor` | npm ve PyPI bağımlılıklarının tedarik zinciri riski |
-| `agentic-actions-auditor` | `.github/workflows/` içindeki Claude/AI iş akışlarının güvenliği |
-| `fp-check` | Her aday bulgunun yanlış alarm olmadığını doğrulama (protokol §2) |
+| `differential-review` | Security impact and blast radius of recent changes (with git history) |
+| `insecure-defaults` | Hard-coded credentials, fallback secrets, insecure default settings |
+| `sharp-edges` | Error-prone APIs and dangerous configurations |
+| `static-analysis` | Semgrep and CodeQL scan, SARIF parsing |
+| `supply-chain-risk-auditor` | Supply chain risk of npm and PyPI dependencies |
+| `agentic-actions-auditor` | Security of Claude/AI workflows in `.github/workflows/` |
+| `fp-check` | Verifying that each candidate finding is not a false alarm (protocol §2) |
 
-## Araçlar
+## Tools
 
-| Ne | Komut |
+| What | Command |
 |---|---|
-| Statik analiz | `semgrep scan --config p/default --config p/owasp-top-ten` (veya `docker run --rm -v "$PWD:/src" semgrep/semgrep semgrep scan ...`) |
-| Bağımlılık açıkları | `npm audit --omit=dev` · `uv run --with pip-audit pip-audit` |
-| Sır taraması | `gitleaks detect --source .` (kuruluysa); yoksa `docs/security/checklist.md` §9'daki grep |
-| Yapılandırma | `docs/security/checklist.md` maddeleri tek tek |
+| Static analysis | `semgrep scan --config p/default --config p/owasp-top-ten` (or `docker run --rm -v "$PWD:/src" semgrep/semgrep semgrep scan ...`) |
+| Dependency vulnerabilities | `npm audit --omit=dev` · `uv run --with pip-audit pip-audit` |
+| Secret scan | `gitleaks detect --source .` (if installed); otherwise the grep in `docs/security/checklist.md` §9 |
+| Configuration | The items of `docs/security/checklist.md`, one by one |
 
-Sırların değerini rapora asla yazma; sadece dosya:satır ve türünü yaz.
+Never write the value of a secret in the report; write only file:line and the type.

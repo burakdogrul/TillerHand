@@ -1,27 +1,27 @@
-# Lens: Performans ve maliyet
+# Lens: Performance and cost
 
-**Bakış açısı:** Ürünü 100 kat kullanıcıya hazırlamakla ve faturayı kontrol altında tutmakla görevli bir performans mühendisi ve FinOps uzmanı ol. Soru: "Kullanıcı nerede bekliyor, sistem nerede gereksiz iş yapıyor, para nereye boşa gidiyor?"
+**Perspective:** Be a performance engineer and FinOps expert tasked with preparing the product for 100 times more users and keeping the bill under control. Question: "Where does the user wait, where does the system do needless work, where does money go to waste?"
 
-**Kimlik öneki:** `PERF-` · **Skill:** `ponytail:ponytail-audit` (yük altında kırılacak yerler)
+**ID prefix:** `PERF-` · **Skill:** `ponytail:ponytail-audit` (places that break under load)
 
-## Kontrol listesi
+## Checklist
 
-1. **Kullanıcı tarafı (web):** Core Web Vitals riskleri (LCP, CLS, INP); optimize edilmemiş görseller; gereksiz istemci JavaScript (`"use client"` yayılması); bölünmemiş büyük paketler; font yükleme.
-2. **Kullanıcı tarafı (mobil):** Soğuk açılış süresi, liste performansı (FlashList, memoizasyon), gereksiz yeniden render, büyük görseller.
-3. **Sunucu ve veri:** N+1 sorgu, eksik indeks, sınırsız sorgu, önbellek eksikliği, istek şelalesi (sıralı yapılabilecek paralel istekler), soğuk başlatma.
-4. **Dış çağrılar:** Timeout ve retry eksikliği, gereksiz tekrar çağrı, toplu yapılabilecek tekil çağrılar.
-5. **AI maliyeti (varsa):** Gereksiz büyük model, `max_tokens` eksikliği, prompt önbellekleme kullanılmaması, kullanıcı başı sınır yokluğu.
-6. **Altyapı maliyeti:** Plan seviyesi ile kullanım uyumu, boşta çalışan kaynak, bant genişliği, log ve depolama büyümesi; `docs/product/unit-economics.md` ile karşılaştır.
-7. **Animasyon ve 3D (varsa):** three.js ana pakette mi (tembel yüklenmeli), WebGL sahnesi görünmezken render ediyor mu, `dispose()` eksik mi (sayfa geçişinde bellek artışı), mobilde piksel oranı sınırsız mı; GSAP ScrollTrigger'ın her kaydırmada düzen okuması (layout thrashing), sayfa değişince `kill()` edilmeyen tetikleyiciler.
-8. **Ölçeklenme:** Tek noktada darboğaz, durum bilgisi tutan sunucu, kuyruk birikmesi.
+1. **Client side (web):** Core Web Vitals risks (LCP, CLS, INP); unoptimized images; needless client JavaScript (spread of `"use client"`); large bundles that are not split; font loading.
+2. **Client side (mobile):** Cold start time, list performance (FlashList, memoization), needless re-renders, large images.
+3. **Server and data:** N+1 queries, missing indexes, unbounded queries, missing cache, request waterfalls (sequential requests that could run in parallel), cold start.
+4. **External calls:** Missing timeout and retry, needless repeated calls, single calls that could be batched.
+5. **AI cost (if any):** Needlessly large model, missing `max_tokens`, no prompt caching, no per-user limit.
+6. **Infrastructure cost:** Plan tier vs. usage fit, idle resources, bandwidth, log and storage growth; compare with `docs/product/unit-economics.md`.
+7. **Animation and 3D (if any):** Is three.js in the main bundle (it should load lazily)? Does the WebGL scene render while invisible? Is `dispose()` missing (memory growth on page change)? Is the pixel ratio unlimited on mobile? Does GSAP ScrollTrigger read layout on every scroll (layout thrashing)? Are triggers not `kill()`ed on page change?
+8. **Scaling:** Single-point bottleneck, stateful server, queue buildup.
 
-## Araçlar
+## Tools
 
-| Ne | Komut |
+| What | Command |
 |---|---|
-| Paket boyutu (Next.js) | `npm run build` çıktısındaki rota boyutları; `ANALYZE=true` kuruluysa bundle analizi |
-| Gerçek tarayıcı ölçümü | Chrome DevTools MCP: performans izi (LCP, CLS, INP), ağ şelalesi, ana thread blokları. Oturumda yoksa kullanıcıya sorup ekle (`docs/workflow/mcp-catalog.md`); reddederse Lighthouse CLI veya Playwright CLI `requests` |
+| Bundle size (Next.js) | Route sizes in the `npm run build` output; bundle analysis with `ANALYZE=true` if installed |
+| Real browser measurement | Chrome DevTools MCP: performance trace (LCP, CLS, INP), network waterfall, main thread blocks. If it is not in the session, ask the user and add it (`docs/workflow/mcp-catalog.md`); if they refuse, Lighthouse CLI or Playwright CLI `requests` |
 | Lighthouse | `npx --yes lighthouse <url> --only-categories=performance --quiet --chrome-flags="--headless"` |
-| Sorgular | Kod haritasında veri erişim çağrılarını döngü içinde ara; Supabase/Postgres `pg_stat_statements` (erişim varsa) |
-| Yük denemesi (backend) | `npx --yes autocannon -d 10 <url>/health` veya `k6` |
-| Maliyet | Sağlayıcı panelleri kullanıcıdan sorulur; `docs/workflow/cost-log.md`, `docs/product/unit-economics.md` |
+| Queries | Search the code map for data access calls inside loops; Supabase/Postgres `pg_stat_statements` (if accessible) |
+| Load test (backend) | `npx --yes autocannon -d 10 <url>/health` or `k6` |
+| Cost | Ask the user for provider dashboards; `docs/workflow/cost-log.md`, `docs/product/unit-economics.md` |

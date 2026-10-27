@@ -1,54 +1,54 @@
 ---
 name: ui-motion
-description: Uygulama içi hareket kuralları (mikro etkileşim, geçiş, yükleniyor, liste ve sayfa animasyonları). Arayüzde animasyon veya geçiş eklerken, değiştirirken ya da "daha canlı / akıcı olsun" denildiğinde kullan. Tanıtım videosu için değil (onun için motion-video).
+description: In-app motion rules (micro-interactions, transitions, loading, list and page animations). Use when adding or changing an animation or transition in the interface, or when told to make it "daha canlı / akıcı" (livelier / smoother). Not for promo videos (use motion-video for those).
 ---
 
-# Arayüz hareketi
+# UI motion
 
-Hareketin işi bilgi vermektir: ne değişti, nereden geldi, sistem çalışıyor mu? Süs için hareket yok. Hareket dili `DESIGN.md` → "Motion" bölümünde belirteç olarak tanımlanır; yoksa önce `/design` ile karar alınır (animasyon miktarı: yok / ölçülü / zengin).
+Motion's job is to give information: what changed, where it came from, is the system working? No motion for decoration. The motion language is defined as tokens in `DESIGN.md` → "Motion" section; if missing, get a decision with `/design` first (animation amount: none / measured / rich).
 
-## Kurallar
+## Rules
 
-1. **Sadece `transform` ve `opacity`** animasyonlanır. `width`, `height`, `top`, `left`, `box-shadow`, `filter` animasyonu yok (layout ve boyama maliyeti). Gerekirse FLIP veya layout animasyonu kullan.
-2. **Süreler** (belirteç adlarıyla):
+1. **Animate only `transform` and `opacity`.** Do not animate `width`, `height`, `top`, `left`, `box-shadow` or `filter` (layout and paint cost). Use FLIP or a layout animation if needed.
+2. **Durations** (with token names):
 
-   | Belirteç | Süre | Kullanım |
+   | Token | Duration | Use |
    |---|---|---|
-   | `motion.micro` | 100-150 ms | basma, hover, toggle |
-   | `motion.base` | 200-250 ms | açılır menü, tooltip, kart |
-   | `motion.page` | 300-400 ms | sayfa veya ekran geçişi, modal |
-   | `motion.max` | 500 ms | hiçbir arayüz hareketi bunu geçmez |
+   | `motion.micro` | 100-150 ms | press, hover, toggle |
+   | `motion.base` | 200-250 ms | dropdown, tooltip, card |
+   | `motion.page` | 300-400 ms | page or screen transition, modal |
+   | `motion.max` | 500 ms | no interface motion exceeds this |
 
-3. **Yay (spring) tercih edilir.** Kesintiye uğrayabilen (kullanıcının ortada değiştirebildiği) her hareket yayla yapılır. Yaylar hız korur ve doğal biter. Varsayılan: sönüm 0.75-0.85, oturma süresi 0.3-0.4 s, en fazla çok küçük taşma. Zıplayan (bouncy) yay sadece bilinçli marka tercihiyse.
-4. **Eğriler** (yay kullanılmıyorsa): girişte `ease-out`, çıkışta `ease-in`, yer değiştirmede `ease-in-out`. `linear` sadece ilerleme çubuğu ve döngüsel spinner için.
-5. **Kademeli liste (stagger):** öğe başına 20-40 ms; en fazla ilk 8-10 öğe kademeli girer, gerisi birlikte.
-6. **Yükleniyor:** 300 ms'den kısa işlemlerde gösterge yok; 300 ms-2 s arası iskelet veya spinner; 2 s üstü ilerleme ve ne yapıldığının metni. İskelet ile içerik arasında düzen kayması olmamalı.
-7. **Erişilebilirlik:** `prefers-reduced-motion: reduce` (web) veya sistem "hareketi azalt" (mobil) açıkken yer değiştiren ve ölçeklenen hareketler kapatılır, sadece kısa opaklık geçişi kalır. Otomatik oynayan, 5 saniyeden uzun hareket durdurulabilir olmalı. Saniyede 3'ten fazla yanıp sönme yok.
-8. **Metin ve okunurluk:** Okunması gereken metin hareket ederken okunmaz; hareket bittikten sonra okunur olmalı. Ölçeklenen öğelerde `will-change` kalıcı bırakılmaz (yazıyı bulanıklaştırır).
-9. **Performans:** 60 fps hedefi; düşük seviye cihazda (mobil) dene. Uzun listede her öğeye ayrı animasyon yok.
+3. **Prefer springs.** Any motion that can be interrupted (the user can change it midway) uses a spring. Springs keep velocity and end naturally. Default: damping 0.75-0.85, settling time 0.3-0.4 s, only a very small overshoot at most. Use a bouncy spring only as a deliberate brand choice.
+4. **Curves** (if no spring): `ease-out` on enter, `ease-in` on exit, `ease-in-out` for repositioning. Use `linear` only for progress bars and looping spinners.
+5. **Staggered list (stagger):** 20-40 ms per item; only the first 8-10 items enter staggered, the rest enter together.
+6. **Loading:** no indicator for operations shorter than 300 ms; a skeleton or spinner between 300 ms and 2 s; above 2 s, progress and text saying what is being done. There must be no layout shift between skeleton and content.
+7. **Accessibility:** when `prefers-reduced-motion: reduce` (web) or the system "reduce motion" (mobile) is on, turn off motion that moves position or scales; keep only a short opacity transition. Autoplaying motion longer than 5 seconds must be stoppable. No flashing more than 3 times per second.
+8. **Text and legibility:** Text that must be read cannot be read while it moves; it must be readable after the motion ends. Do not leave `will-change` on permanently for scaling elements (it blurs text).
+9. **Performance:** Target 60 fps; test on a low-end device (mobile). No separate animation on every item in a long list.
 
-## Araçlar
+## Tools
 
-| Stack | Kütüphane |
+| Stack | Library |
 |---|---|
-| Web (React/Next.js) | Basit durumlar için CSS geçişleri; yay, layout ve giriş/çıkış için **Motion** (`motion/react`). GSAP sadece açılış sayfasında kaydırmaya bağlı anlatım gerekiyorsa (`gsap-skills:`, `tasarim` paketi; ücretsiz, ticari dahil, Webflow'a rakip kodsuz animasyon aracında yasak). |
-| Web 3D | **three.js**; React'te **React Three Fiber** + drei. Skill'ler `/start` 3c'de kopyalanır (`threejs-*`). |
-| Mobil (Expo) | **react-native-reanimated** (UI thread'de çalışır) ve `LayoutAnimation` yerine Reanimated layout animasyonları. Haptik geri bildirim önemli eylemlerde. |
+| Web (React/Next.js) | CSS transitions for simple cases; **Motion** (`motion/react`) for springs, layout and enter/exit. GSAP only if a landing page needs scroll-driven storytelling (`gsap-skills:`, `tasarim` package; free, commercial use included, forbidden in a no-code animation tool that competes with Webflow). |
+| Web 3D | **three.js**; **React Three Fiber** + drei in React. The skills are copied in `/start` step 3c (`threejs-*`). |
+| Mobile (Expo) | **react-native-reanimated** (runs on the UI thread); use Reanimated layout animations instead of `LayoutAnimation`. Haptic feedback on important actions. |
 
-Yeni bir animasyon kütüphanesi eklemek `teknik` karardır; sor.
+Adding a new animation library is a `teknik` decision; ask.
 
 ## 3D
 
-1. **Tembel yükle.** three.js ana pakete girmez: sahne görünür alana gelince dinamik `import()` ile yüklenir; Next.js'te `ssr: false`. İlk ekranı (LCP) beklemez.
-2. **Yedek her zaman var.** WebGL yoksa, bağlam kaybolursa (`webglcontextlost`) veya yükleme hata verirse aynı yerde statik görsel gösterilir. Sahne bilgi taşıyorsa aynı bilgi metin olarak da sayfada olur.
-3. **Hareket azaltma.** `prefers-reduced-motion: reduce` açıkken otomatik dönen kamera ve sürekli animasyon durur; sahne sabit kare olarak kalır.
-4. **Mobil GPU.** Piksel oranı `Math.min(devicePixelRatio, 2)`; gölge ve son işlem efektleri mobilde kapalı başlar. Sahne görünmüyorken veya sekme arka plandayken render döngüsü durur (R3F'te `frameloop="demand"` tercih edilir).
-5. **Temizlik.** Bileşen kalkınca geometri, materyal, doku ve renderer `dispose()` edilir; olay dinleyicileri sökülür. Bellek sızıntısını DevTools bellek panelinde iki kez aç-kapa ile dene.
-6. **Ölçü.** Masaüstünde 60 fps, orta seviye telefonda 30 fps altına düşmez; düşüyorsa `threejs-performance` skill'i.
+1. **Lazy load.** three.js does not go in the main bundle: load the scene with dynamic `import()` when it enters the viewport; `ssr: false` in Next.js. It does not wait on the first screen (LCP).
+2. **Always have a fallback.** If WebGL is missing, the context is lost (`webglcontextlost`) or loading fails, show a static image in the same place. If the scene carries information, the same information also appears on the page as text.
+3. **Reduced motion.** When `prefers-reduced-motion: reduce` is on, an auto-rotating camera and continuous animation stop; the scene stays as a still frame.
+4. **Mobile GPU.** Pixel ratio `Math.min(devicePixelRatio, 2)`; shadows and post-processing effects start off on mobile. The render loop stops when the scene is not visible or the tab is in the background (prefer `frameloop="demand"` in R3F).
+5. **Cleanup.** When the component is removed, `dispose()` the geometry, material, textures and renderer; remove event listeners. Test for memory leaks by mounting and unmounting twice in the DevTools memory panel.
+6. **Measure.** 60 fps on desktop; never below 30 fps on a mid-range phone. If it drops, use the `threejs-performance` skill.
 
-## İnceleme
+## Review
 
-Değişiklikten sonra `impeccable:impeccable` → `animate` ve `audit` ile değerlendir. Kanıt olarak:
-- Hareketin başı, ortası ve sonundan birer ekran görüntüsü
-- Hareket azaltma açıkken davranış
-- Gerekirse performans izi (Chrome DevTools MCP; `docs/workflow/mcp-catalog.md`)
+After a change, evaluate with `impeccable:impeccable` → `animate` and `audit`. As evidence:
+- One screenshot each from the start, middle and end of the motion
+- Behavior with reduced motion on
+- A performance trace if needed (Chrome DevTools MCP; `docs/workflow/mcp-catalog.md`)

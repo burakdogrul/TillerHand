@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.46.0] - 2026-10-27
+
+### Değişen
+- **Ajanlar, kurul, bulgu raporları ve skill'ler İngilizce.** `.claude/agents/`, `.claude/board/`, `.claude/findings/`, `.claude/skills/` ve anlatıcı mod (`anlatici`) İngilizceye çevrildi. Kurul ve konseyin yazdığı biçim (`ÜYE:`, `KARAR:`, `Görüş A`, `OYLAR:`, `DOĞRU`/`YANLIŞ`/`ABARTILI`) ve bulgu raporu şablonunun alanları araçlar okuduğu için şimdilik Türkçe kalır. Anlatıcı mod artık sade Türkçe yerine konuşma dilinde anlatır.
+
 ## [3.45.0] - 2026-10-27
 
 ### Değişen

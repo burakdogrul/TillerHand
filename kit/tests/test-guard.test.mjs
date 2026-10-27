@@ -243,8 +243,8 @@ test('test-writer K7a hook: a folder link inside the project that points at test
 test('test-writer K7c the agent does not copy a ready test text from the prompt; it writes from the criteria', () => {
   const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
   const doc = fs.readFileSync(path.join(ROOT, '.claude/agents/test-writer.md'), 'utf8');
-  const rule = doc.split('\n').find((l) => /kopyala/i.test(l) && /kriter/i.test(l));
-  assert.equal(typeof rule, 'string', 'a line in test-writer.md mentions both "kopyala" and "kriter"');
+  const rule = doc.split('\n').find((l) => /copy/i.test(l) && /criteri/i.test(l));
+  assert.equal(typeof rule, 'string', 'a line in test-writer.md mentions both "copy" and "criterion"');
 });
 
 // K8: path tricks cannot slip past the test split.

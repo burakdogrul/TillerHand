@@ -1,30 +1,30 @@
-# Lens: Teknik
+# Lens: Technical
 
-**Bakış açısı:** Projeyi yıllarca bakımını yapacak kıdemli bir yazılım mimarı ve kod incelemecisi gözüyle tara. Soru: "Bu kod 6 ay sonra hâlâ güvenle değiştirilebilir mi, şu an gizli bir hata var mı?"
+**Perspective:** Scan the project as a senior software architect and code reviewer who will maintain it for years. Question: "Can this code still be changed safely in 6 months? Is there a hidden bug now?"
 
-**Kimlik öneki:** `TECH-` · **Skill'ler:** `ponytail:ponytail-audit`, `mattpocock-skills:codebase-design`
+**ID prefix:** `TECH-` · **Skills:** `ponytail:ponytail-audit`, `mattpocock-skills:codebase-design`
 
-## Kontrol listesi
+## Checklist
 
-1. **Hatalar:** Mantık hataları, ele alınmamış hata yolları (yutulan exception, `catch {}`), yanlış async/await, yarış durumları, null/undefined erişimleri, sınır değerleri (boş liste, 0, negatif, çok büyük), tarih/saat dilimi, yuvarlama (para).
-2. **Tekrar eden kod:** Aynı mantığın birden fazla yerde yazılması (özellikle doğrulama, yetki kontrolü, formatlama, sorgular).
-3. **Kullanılmayan kod:** Kullanılmayan dosya, export, bağımlılık, ortam değişkeni, özellik bayrağı, ölü dal.
-4. **Yapı:** `.claude/structure.json` ihlalleri, özellikler arası iç içe geçme (`features/a` → `features/b/internal`), iş mantığının rotalarda veya UI'da kalması, yanlış katman.
-5. **Karmaşıklık:** Çok uzun fonksiyon/dosya, derin iç içe koşullar, gereksiz soyutlama, tek kullanım için yazılmış genel çözümler.
-6. **Tip güvenliği:** `any`, `as` zorlamaları, `@ts-ignore`, tiplenmemiş dış veri (API yanıtı, form) ve şemasız JSON.
-7. **Veri katmanı:** N+1 sorgu, sınırsız liste, eksik indeks, geri alınamayan migration, transaction gereken yerde transaction olmaması.
-8. **Testler:** Kritik akışlarda test yok; kabul kriteri kimliği taşımayan veya sadece mock'u test eden testler; kırılgan (flaky) test.
-9. **Bağımlılıklar:** Eski majör sürümler, kullanılmayan paketler, aynı işi yapan iki paket, bakımı bırakılmış paket.
-10. **Yapılandırma:** `.env.example` ile koddaki değişkenlerin uyumsuzluğu, sabit kodlanmış URL veya anahtar, ortam ayrımı.
-11. **Hata yönetimi ve gözlem:** Kullanıcıya teknik hata gösterme, loglanmayan hatalar, Sentry'ye gitmeyen istisnalar.
+1. **Bugs:** Logic errors, unhandled error paths (swallowed exceptions, `catch {}`), wrong async/await, race conditions, null/undefined access, boundary values (empty list, 0, negative, very large), date/time zone, rounding (money).
+2. **Duplicate code:** The same logic written in more than one place (especially validation, authorization checks, formatting, queries).
+3. **Unused code:** Unused files, exports, dependencies, environment variables, feature flags, dead branches.
+4. **Structure:** Violations of `.claude/structure.json`, entanglement between features (`features/a` → `features/b/internal`), business logic left in routes or UI, wrong layer.
+5. **Complexity:** Very long functions/files, deeply nested conditions, needless abstraction, general solutions written for a single use.
+6. **Type safety:** `any`, `as` casts, `@ts-ignore`, untyped external data (API response, form) and schemaless JSON.
+7. **Data layer:** N+1 queries, unbounded lists, missing indexes, irreversible migrations, no transaction where one is needed.
+8. **Tests:** No tests on critical flows; tests that do not carry an acceptance criterion ID or only test the mock; flaky tests.
+9. **Dependencies:** Old major versions, unused packages, two packages doing the same job, abandoned packages.
+10. **Configuration:** Mismatch between `.env.example` and the variables in code, hard-coded URLs or keys, environment separation.
+11. **Error handling and observability:** Showing technical errors to the user, errors that are not logged, exceptions that do not reach Sentry.
 
-## Araçlar
+## Tools
 
-| Ne | Web / mobil (TS) | Backend (Python) |
+| What | Web / mobile (TS) | Backend (Python) |
 |---|---|---|
-| Tekrar eden kod | `npx --yes jscpd@4 --silent --reporters console .` | aynı |
-| Kullanılmayan kod/bağımlılık | `npx --yes knip` | `uvx vulture app/ --min-confidence 80` |
-| Tip ve lint | `npx tsc --noEmit`, `npm run lint` | `uv run ruff check .` |
-| Yapı | `node .claude/hooks/structure-guard.mjs --check` | aynı |
-| Testler | `npm run test` (JUnit raporlu) | `uv run pytest -q` |
-| Bağımlılık eskiliği | `npm outdated` | `uv tree --outdated` |
+| Duplicate code | `npx --yes jscpd@4 --silent --reporters console .` | same |
+| Unused code/dependencies | `npx --yes knip` | `uvx vulture app/ --min-confidence 80` |
+| Types and lint | `npx tsc --noEmit`, `npm run lint` | `uv run ruff check .` |
+| Structure | `node .claude/hooks/structure-guard.mjs --check` | same |
+| Tests | `npm run test` (with JUnit report) | `uv run pytest -q` |
+| Dependency staleness | `npm outdated` | `uv tree --outdated` |

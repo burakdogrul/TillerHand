@@ -1,56 +1,56 @@
-# Kurul Kuralları
+# Board Rules
 
-> Uzman kurulu, projeye özel ajanlardan oluşur (`.claude/agents/board-*.md` + `security-auditor`).
-> Üyeler ve toplantı günlüğü `docs/workflow/board.md`'de. Bu dosya kitindir ve toplantıların nasıl yapılacağını anlatır.
-> Rol şablonları bu klasörde (`board-*.md`); kurul kurulurken `.claude/agents/`'a kopyalanıp projeye özelleştirilir.
+> The expert board is made of project-specific agents (`.claude/agents/board-*.md` + `security-auditor`).
+> Members and the meeting log live in `docs/workflow/board.md`. This file belongs to the kit and says how to run meetings.
+> Role templates are in this folder (`board-*.md`). When the board is set up, they are copied to `.claude/agents/` and customized for the project.
 
-## 1. Yetki: danışman + kritikte durdurur
+## 1. Authority: advisor, and stops on critical findings
 
-- Kurul görüş, uyarı ve karar önerisi verir. **Kararı kullanıcı verir.**
-- Bir üye **RET** verirse (KRİTİK bulgu: güvenlik açığı, veri kaybı riski, yasal ihlal, kabul kriteri karşılanmadı) iş "bitti" sayılmaz ve commit edilmez. Kullanıcıya bulgu ve seçenekler sunulur: düzelt (önerilen) / riski kabul et ve gerekçeyi kaydet / görevi geri al.
-- Üyeler arasında görüş ayrılığı varsa ana ajan kendi başına seçmez; iki görüşü yan yana koyup kullanıcıya **karar olarak sorar**.
+- The board gives opinions, warnings and decision proposals. **The user decides.**
+- If a member gives **RET** (a KRİTİK finding: security hole, data-loss risk, legal violation, acceptance criterion not met), the work does not count as "done" and is not committed. Show the user the finding and the options: fix (recommended) / accept the risk and record the reason / roll the task back.
+- If members disagree, the main agent does not pick alone. Put both views side by side and **ask the user as a decision**.
 
-## 2. Toplantılar
+## 2. Meetings
 
-| Toplantı | Ne zaman | Kim katılır | Model |
+| Meeting | When | Who attends | Model |
 |---|---|---|---|
-| **Plan** | `/plan-task` sonunda, kullanıcı onayından önce | `board-product` + `board-architect` + değişikliğe ilgili üyeler (en fazla 4) | inceleme rolü (`docs/workflow/models.md`) |
-| **Görev sonu** | `/build` sonunda, "bitti" demeden önce | Değişikliğe ilgili üyeler (en fazla 3) | inceleme rolü (`docs/workflow/models.md`) |
-| **Commit (hafif)** | Her `git commit` öncesi (hook zorunlu kılar) | Değişen dosyalara ilgili en fazla 2 üye; sadece değişen satırları (diff) inceler | her zaman `haiku`, effort `low` |
-| **Faz sonu** | Faz bitince (`/wrap-up` önerir) veya `/board convene phase-end` | Tüm kurul | inceleme rolü (`docs/workflow/models.md`) |
-| **Canlıya alma** | `/release ilk` | Tüm kurul | inceleme rolü (`docs/workflow/models.md`) |
+| **Plan** | At the end of `/plan-task`, before user approval | `board-product` + `board-architect` + members relevant to the change (max 4) | review role (`docs/workflow/models.md`) |
+| **Task end** | At the end of `/build`, before saying "done" | Members relevant to the change (max 3) | review role (`docs/workflow/models.md`) |
+| **Commit (light)** | Before every `git commit` (a hook enforces it) | Max 2 members relevant to the changed files; reviews only the changed lines (diff) | always `haiku`, effort `low` |
+| **Phase end** | When a phase ends (`/wrap-up` suggests it) or `/board convene phase-end` | The whole board | review role (`docs/workflow/models.md`) |
+| **Go-live** | `/release ilk` | The whole board | review role (`docs/workflow/models.md`) |
 
-Sadece dokümantasyon değişikliği (`.md`, `docs/`) içeren commit'ler denetimden muaftır.
+Commits that contain only documentation changes (`.md`, `docs/`) are exempt from review.
 
-**Konsey (üç aşama):** Hangi toplantıların konseyle yapılacağını proje profili belirler (`.claude/board/council.md` → "Ne zaman"). Tam profilde plan, faz sonu ve canlıya alma toplantıları ile RET çıkan görev sonu toplantıları `.claude/board/council.md` protokolüyle yapılır; Standart'ta sadece faz sonu ve canlıya alma; Hafif'te hiçbiri. Önce ilk görüşler alınır, sonra üyeler birbirinin bulgularını anonim olarak oylar ve sıralar, en son `board-chair` karar verir. Görev sonu ve commit toplantıları tek aşamalıdır.
+**Council (three stages):** The project profile decides which meetings go to the council (`.claude/board/council.md` → "Ne zaman"). In the Tam profile, plan, phase-end and go-live meetings, and task-end meetings that end in RET, follow the `.claude/board/council.md` protocol. In Standart, only phase-end and go-live. In Hafif, none. First opinions are collected first. Then members vote on and rank each other's findings anonymously. Last, `board-chair` decides. Task-end and commit meetings are single-stage.
 
-## 3. Kim ilgili? (değişikliğe göre üye seçimi)
+## 3. Who is relevant? (pick members by change)
 
-| Değişiklik | Üye |
+| Change | Member |
 |---|---|
-| Yeni özellik, kapsam, kullanıcı akışı | board-product |
-| Veri modeli, migration, yeni modül, yeni bağımlılık, klasör yapısı | board-architect |
-| Auth, yetki, ödeme, webhook, dosya yükleme, ortam değişkeni, sır | security-auditor |
-| Kişisel veri alanı, yeni dış servis, log içeriği, yasal metin | board-privacy |
-| Arayüz bileşeni, sayfa, ekran, metin | board-ux (+ web'de board-performance) |
-| API ucu, sözleşme, hata biçimi | board-api |
-| Test, kritik akış, hata düzeltmesi | board-qa |
-| CI, deploy, Docker, hosting, yapılandırma | board-devops |
-| Mobil izin, native modül, mağaza ayarı | board-mobile |
-| Prompt, model çağrısı, eval | board-ai |
+| New feature, scope, user flow | board-product |
+| Data model, migration, new module, new dependency, folder structure | board-architect |
+| Auth, authorization, payment, webhook, file upload, environment variable, secret | security-auditor |
+| Personal data field, new external service, log content, legal text | board-privacy |
+| UI component, page, screen, copy | board-ux (+ board-performance on web) |
+| API endpoint, contract, error format | board-api |
+| Test, critical flow, bug fix | board-qa |
+| CI, deploy, Docker, hosting, configuration | board-devops |
+| Mobile permission, native module, store setting | board-mobile |
+| Prompt, model call, eval | board-ai |
 
-Görev sonunda `node .claude/hooks/flow.mjs` üyeleri değişen yollardan önerir (kurulda olanlar, en çok dosyası eşleşen önce; hassas yolda `security-auditor`). Yol tahmindir: değişikliğin anlamı farklıysa (yeni özellik → board-product gibi) tabloya göre düzelt.
+At task end, `node .claude/hooks/flow.mjs` suggests members from the changed paths (only those on the board, the one with the most matching files first; `security-auditor` on a sensitive path). The path is a guess. If the meaning of the change differs (a new feature → board-product, for example), correct it using the table.
 
-Kurulda olmayan bir üyeyi çağırma; ilgili alan kurulda yoksa durum bloğunda "kurulda X uzmanı yok" diye belirt.
+Do not call a member who is not on the board. If the relevant area has no member, write "no X expert on the board" in the status block.
 
-## 4. Toplantı nasıl yapılır
+## 4. How to run a meeting
 
-1. **Limit kontrolü** (`docs/workflow/usage-limits.md`): Seviye sarıysa üye sayısını yarıya indir; kırmızıysa kullanıcıya sor (kurulu hafiflet seçeneği dahil). Görev sonu toplantısında üye sayısını ve paralel mi sırayla mı çalışılacağını `node .claude/hooks/flow.mjs` söyler (değişiklik büyüklüğü + limit; `code-reviewer` ve hassas yolda `security-auditor` her zaman katılır).
-1b. **Deterministik kapı** (commit, görev sonu, faz sonu; plan toplantısında yok): `node .claude/hooks/gate.mjs --run`. AGENTS.md → Komutlar'daki lint, tip kontrolü ve test ile Semgrep çalışır; sonuç değişiklik imzasıyla saklanır. Kırmızıysa veya boşsa (hiçbir kontrol çalışmadı) commit kapısı açılmaz: önce düzelt ya da Komutlar'ı doldur. Kullanıcı ara commit için açıkça isterse `node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"` (her zaman onaya sorulur). Kapı "komut onayı gerekli" derse komutları kullanıcıya göster; onaylarsa `node .claude/hooks/gate.mjs --approve` (yeni veya değişen komut onaysız çalışmaz).
-1c. **Commit toplantısında önce** `node .claude/hooks/commit-gate.mjs --status`: "Onay geçerli" ise toplantı yok (görev sonu toplantısı aynı değişiklikleri denetledi). "Son onaydan sonra değişen: …" ise üyelere yalnız o dosyaların farkını ver.
-2. **Üyeleri paralel çalıştır** (Agent aracı, her üye ayrı alt ajan). Her üyeye şunları ver: toplantı türü, kapsam (plan metni / diff aralığı / faz), görev kodu, kabul kriterleri ve kapı çıktısı (varsa). Çağrıda inceleme rolünün `model` ve `effort`'unu ver (`node .claude/hooks/models.mjs --show`); commit toplantısında `model: "haiku"`, `effort: "low"` ver. Rapor sözleşmesini istemde yaz: en fazla ~15 satır ve 5 bulgu (fazlası tek satır: "diğer: N küçük bulgu"), bulgu başına tek satır, önem sırasıyla; övgü ve özet yok (raporlar ana oturumun bağlamına girer). İstem sırası: üyeler arasında aynı olan kısım (toplantı türü, kapsam, kabul kriterleri, kapı çıktısı) önce, üyeye özel kısım sonda; ortak baş önbellekten okunur. Düzeltmeden sonra yeniden bakılacaksa yeni üye başlatma: aynı üyeyi SendMessage ile sürdür ve yalnız düzeltilen farkı ver (soğuk başlangıç bir kez ödenir).
-2b. **Konsey toplantısıysa** (§2) `.claude/board/council.md` aşama 1-4'ü uygula. Sentezi başkanın kararından kur; görüş ayrılığı satırına azınlık görüşünü yaz.
-3. **Sentezle** (ana ajan; konseyde başkanın kararına göre):
+1. **Limit check** (`docs/workflow/usage-limits.md`): If the level is yellow, halve the member count. If red, ask the user (including the option to lighten the board). For a task-end meeting, `node .claude/hooks/flow.mjs` gives the member count and whether to run in parallel or in sequence (change size + limit; `code-reviewer` always attends, and `security-auditor` on a sensitive path).
+1b. **Deterministic gate** (commit, task end, phase end; not in the plan meeting): `node .claude/hooks/gate.mjs --run`. It runs the lint, type check and test from AGENTS.md → `Komutlar`, plus Semgrep. The result is stored with the change signature. If it is red or empty (no check ran), the commit gate does not open: fix first or fill in `Komutlar`. If the user explicitly asks for an intermediate commit, use `node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"` (it always asks for approval). If the gate says "command approval required", show the commands to the user. If the user approves, run `node .claude/hooks/gate.mjs --approve` (a new or changed command does not run without approval).
+1c. **In a commit meeting, first** run `node .claude/hooks/commit-gate.mjs --status`. If it says "Onay geçerli" (approval valid), there is no meeting (the task-end meeting already reviewed the same changes). If it says "Son onaydan sonra değişen: …" (changed since last approval), give the members only the diff of those files.
+2. **Run the members in parallel** (Agent tool, each member as a separate subagent). Give each member: meeting type, scope (plan text / diff range / phase), task id, acceptance criteria and gate output (if any). In the call, pass the `model` and `effort` of the review role (`node .claude/hooks/models.mjs --show`). In a commit meeting, pass `model: "haiku"`, `effort: "low"`. Write the report contract in the prompt: max ~15 lines and 5 findings (any more as one line: "diğer: N küçük bulgu"), one line per finding, in order of severity, no praise or summary (reports enter the main session's context). Prompt order: the part that is the same for all members (meeting type, scope, acceptance criteria, gate output) first, the member-specific part last; the shared head is read from cache. If a re-check is needed after fixes, do not start a new member. Continue the same member with SendMessage and give only the fixed diff (the cold start is paid once).
+2b. **If it is a council meeting** (§2), apply stages 1-4 of `.claude/board/council.md`. Build the synthesis from the chair's decision. Write the minority view on the disagreement line.
+3. **Synthesize** (main agent; in a council, from the chair's decision):
 
 ```
 ## Kurul: [tür] · [kapsam]
@@ -61,23 +61,23 @@ Görüş ayrılığı: [varsa iki görüş]
 Kullanıcıya sorulacaklar: [üyelerin işaretlediği kararlar]
 ```
 
-4. **Kullanıcıyı bilgilendir ve sor:** Sorulacak kararları AskUserQuestion ile sor. Hangi bulguların düzeltileceğini **çoklu seçimle** sor; KRİTİK olanlar önerilen olarak işaretli olsun.
-5. **Kaydet:** `docs/workflow/board.md` → toplantı günlüğüne bir satır ekle. Kararları `docs/decisions/log.md` günlüğüne ekle. Açık kalan bulguları `docs/workflow/progress.md` → "Açık sorunlar"a yaz.
-6. **Commit toplantısı sonucu ONAY veya KOŞULLU ONAY ise** commit kapısını aç: `node .claude/hooks/commit-gate.mjs --approve "<katılan üyeler>"`. RET ise açma; önce kullanıcıya sor.
+4. **Inform the user and ask:** Ask the decisions with AskUserQuestion. Ask which findings to fix as a **multi-select**, with KRİTİK ones marked as recommended.
+5. **Record:** Add one line to `docs/workflow/board.md` → "Toplantı günlüğü" (meeting log). Add the decisions to the decision log `docs/decisions/log.md`. Write open findings to `docs/workflow/progress.md` → "Açık sorunlar" (open issues).
+6. **If the commit meeting result is ONAY or KOŞULLU ONAY,** open the commit gate: `node .claude/hooks/commit-gate.mjs --approve "<katılan üyeler>"`. If RET, do not open it; ask the user first.
 
-Kullanıcı commit denetimini o an için atlamak isterse açıkça söylemesi gerekir. O durumda `node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"` çalıştır (onaya sorulur) ve günlüğe yaz. Kalıcı olarak kapatmak için: `docs/workflow/board.md` → `**Commit denetimi:** kapalı`.
+If the user wants to skip commit review for now, they must say so explicitly. Then run `node .claude/hooks/commit-gate.mjs --skip "kullanıcı isteği"` (it asks for approval) and write it to the log. To turn it off permanently: `docs/workflow/board.md` → `**Commit denetimi:** kapalı`.
 
-## 5. Kurul nasıl kurulur (`/start` Kurul adımı veya `/board setup`)
+## 5. How to set up the board (`/start` board step or `/board setup`)
 
-1. Proje tipine ve PRD'ye göre öneri (aşağıdaki tablo). AI eki varsa `board-ai`, kişisel veri varsa `board-privacy` mutlaka önerilir.
-2. Kullanıcıya **çoklu seçimle** sor (önerilenler işaretli). "Other" ile yeni bir uzman isteyebilir. Örneğin "Erişilebilirlik uzmanı", "Oyun tasarımcısı" veya "Fintech uyum uzmanı". Bu durumda mevcut şablon yapısıyla yeni bir `board-<ad>.md` yaz.
-3. Model sorulmaz: üyeler inceleme rolünün modeli ve effort'uyla çalışır (`docs/workflow/models.md`).
-4. Seçilen her üye için `.claude/board/board-<role>.md` dosyasını `.claude/agents/board-<role>.md`'ye kopyala ve **"Bu proje" bölümünü doldur**: ürün özeti, seçilen stack, kritik akışlar, bu role özel riskler. `security-auditor` zaten `.claude/agents/` altında.
-5. `docs/workflow/board.md` → durum, üye tablosu (Model sütununa "inceleme rolü") ve commit denetimi satırını doldur.
-6. Kullanıcıya kurulu tanıt: Her üye ne yapar, ne zaman devreye girer, tahmini maliyeti nedir (tek satır).
-7. Yeni ajanlar oturum yeniden başlatıldığında yüklenir. Kullanıcıya bunu söyle; bu oturumda gerekirse üyeyi genel amaçlı alt ajana rol dosyasının içeriğini vererek çalıştır.
+1. Recommend by project type and PRD (table below). If there is an AI add-on, `board-ai` is always recommended. If there is personal data, `board-privacy` is always recommended.
+2. Ask the user as a **multi-select** (recommended ones marked). With "Other" they can ask for a new expert, for example "Accessibility expert", "Game designer" or "Fintech compliance expert". In that case, write a new `board-<name>.md` using the existing template structure.
+3. Do not ask for a model: members work with the model and effort of the review role (`docs/workflow/models.md`).
+4. For each selected member, copy `.claude/board/board-<role>.md` to `.claude/agents/board-<role>.md` and **fill in the "Bu proje" section**: product summary, chosen stack, critical flows, risks specific to this role. `security-auditor` is already under `.claude/agents/`.
+5. In `docs/workflow/board.md`, fill in the status, the member table (write "inceleme rolü" in the Model column) and the commit review line.
+6. Introduce the board to the user: what each member does, when it steps in, the estimated cost (one line).
+7. New agents load when the session restarts. Tell the user this. In this session, if needed, run the member as a general-purpose subagent by giving it the content of the role file.
 
-| Tip | Önerilen kurul |
+| Type | Recommended board |
 |---|---|
 | web-saas | urun, mimar, security-auditor, ux, performans, kvkk, qa (+ devops, + ai) |
 | mobil | urun, mimar, security-auditor, ux, mobil, kvkk, qa (+ devops, + ai) |
