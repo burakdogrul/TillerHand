@@ -4,6 +4,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -265,4 +266,90 @@ test('test-writer K8b hook: a write through a folder link to tests into a nested
   assert.equal(out?.permissionDecision, 'deny', 'no agent, lnk/yeni/alt/x.ts');
   assert.match(out.permissionDecisionReason, /test-writer/);
   assert.notEqual(write({ agent_type: 'test-writer' })?.permissionDecision, 'deny', 'test-writer, lnk/yeni/alt/x.ts');
+});
+
+// K9: test-writer's writes are recorded (PostToolUse --record) so the commit gate can tell them from indirect changes.
+const record = (input, root) => spawnSync(process.execPath, [HOOK, '--record'], { input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root } });
+const digest = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex').slice(0, 16);
+const stateFile = (root) => path.join(root, '.claude', 'state', 'test-writer.json');
+// A missing or unreadable record shows up as a wrong value in the assertion, not as a crash of the test
+const recorded = (root) => {
+  try { return JSON.parse(fs.readFileSync(stateFile(root), 'utf8')).files; } catch (e) { return `kayıt okunamadı: ${e.code ?? e.message}`; }
+};
+const freshRoot = (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'test-guard-k9-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  return root;
+};
+const put = (root, rel, text) => {
+  const file = path.join(root, ...rel.split('/'));
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, text);
+  return file;
+};
+const neverBlocks = (r, label) => {
+  assert.equal(r.status, 0, `${label}: exit 0 (${r.stderr})`);
+  assert.doesNotMatch(r.stdout, /"(deny|block|ask)"/, `${label}: no decision`);
+};
+
+test('test-writer K9a --record: a test file test-writer wrote is recorded by its content on disk (Write, Edit); records merge and refresh', (t) => {
+  const root = freshRoot(t);
+  const a = put(root, 'src/a.test.ts', "test('a', () => { expect(1).toBe(1); });\n");
+  const w = record({ tool_name: 'Write', agent_type: 'test-writer', cwd: root, tool_input: { file_path: a, content: fs.readFileSync(a, 'utf8') } }, root);
+  neverBlocks(w, 'Write');
+  assert.deepEqual(recorded(root), { 'src/a.test.ts': digest(a) });
+  assert.match(recorded(root)['src/a.test.ts'], /^[0-9a-f]{16}$/, 'first 16 hex characters of sha256');
+  // Edit: the tool input has only the changed part; the record is the whole file on disk. Turkish and spaced path, test folder.
+  const b = put(root, 'tests/e2e/ödeme İade.ts', "test('İade ı/i', () => {\n  expect(2).toBe(2);\n});\n");
+  neverBlocks(record({ tool_name: 'Edit', agent_type: 'test-writer', cwd: root, tool_input: { file_path: b, old_string: 'expect(1)', new_string: 'expect(2)' } }, root), 'Edit');
+  assert.deepEqual(recorded(root), { 'src/a.test.ts': digest(a), 'tests/e2e/ödeme İade.ts': digest(b) }, 'the earlier record is kept; path is relative with /');
+  // test-writer changes a recorded file again: its record follows the new content
+  const old = digest(a);
+  fs.appendFileSync(a, "test('a2', () => { expect(3).toBe(3); });\n");
+  neverBlocks(record({ tool_name: 'Edit', agent_type: 'test-writer', cwd: root, tool_input: { file_path: a, old_string: 'x', new_string: 'y' } }, root), 'second Edit');
+  assert.notEqual(digest(a), old);
+  assert.deepEqual(recorded(root), { 'src/a.test.ts': digest(a), 'tests/e2e/ödeme İade.ts': digest(b) });
+});
+
+test('test-writer K9a --record: other agents, the main session, non-test files and test config files are not recorded', (t) => {
+  const root = freshRoot(t);
+  const a = put(root, 'src/a.test.ts', "test('a', () => { expect(1).toBe(1); });\n");
+  neverBlocks(record({ tool_name: 'Write', agent_type: 'test-writer', cwd: root, tool_input: { file_path: a, content: fs.readFileSync(a, 'utf8') } }, root), 'test-writer');
+  const kept = digest(a);
+  const b = put(root, 'src/b.test.ts', "test('b', () => {});\n");
+  const write = (file, extra) => record({ tool_name: 'Write', cwd: root, ...extra, tool_input: { file_path: file, content: fs.readFileSync(file, 'utf8') } }, root);
+  for (const [label, extra] of [['main session (no agent_type)', {}], ['general-purpose', { agent_type: 'general-purpose' }], ['code-reviewer', { agent_type: 'code-reviewer' }], ['not a string', { agent_type: ['test-writer'] }]])
+    neverBlocks(write(b, extra), label);
+  // another agent changes the recorded file: its record is not refreshed
+  fs.appendFileSync(a, '// betik\n');
+  neverBlocks(write(a, {}), 'main session on a recorded file');
+  for (const rel of ['src/a.ts', 'package.json', 'vitest.config.ts', 'docs/test-plan.md'])
+    neverBlocks(write(put(root, rel, '{}\n'), { agent_type: 'test-writer' }), `test-writer, ${rel}`);
+  assert.deepEqual(recorded(root), { 'src/a.test.ts': kept });
+});
+
+test('test-writer K9a --record: a broken or missing state file and a broken input do not crash it', (t) => {
+  const root = freshRoot(t);
+  const a = put(root, 'src/a.test.ts', "test('a', () => { expect(1).toBe(1); });\n");
+  const input = { tool_name: 'Write', agent_type: 'test-writer', cwd: root, tool_input: { file_path: a, content: fs.readFileSync(a, 'utf8') } };
+  for (const broken of ['{bozuk', '', 'null', '[]', '{"files": 5}', '{"files": "x"}']) {
+    put(root, '.claude/state/test-writer.json', broken);
+    neverBlocks(record(input, root), `state file: ${JSON.stringify(broken)}`);
+    assert.deepEqual(recorded(root), { 'src/a.test.ts': digest(a) }, `state file: ${JSON.stringify(broken)}`);
+  }
+  for (const bad of ['', 'json değil', '{"tool_name": "Write"}', JSON.stringify({ tool_name: 'Write', agent_type: 'test-writer', tool_input: { file_path: path.join(root, 'src/yok.test.ts') } })])
+    neverBlocks(record(bad, root), `input: ${bad.slice(0, 30)}`);
+});
+
+test('test-writer K9g test-writer.md says to write tests with Write/Edit (a test written through Bash stops at the commit gate); settings.json runs --record after writes', () => {
+  const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const doc = fs.readFileSync(path.join(ROOT, '.claude/agents/test-writer.md'), 'utf8');
+  const body = doc.replace(/^---\n[\s\S]*?\n---\n/, '');
+  const rule = body.split('\n').find((l) => /\bWrite\b/.test(l) && /\bEdit\b/.test(l) && /\bBash\b/.test(l) && /commit/i.test(l));
+  assert.equal(typeof rule, 'string', 'a line in the body of test-writer.md names Write, Edit, Bash and the commit');
+  const settings = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude/settings.json'), 'utf8'));
+  const groups = (settings.hooks.PostToolUse ?? []).filter((g) => (g.hooks ?? []).some((h) => /test-guard\.mjs"?\s+--record\b/.test(h.command)));
+  assert.equal(groups.length, 1, 'one PostToolUse entry runs test-guard.mjs --record');
+  const matcher = new RegExp(`^(?:${groups[0].matcher})$`);
+  for (const tool of ['Write', 'Edit', 'MultiEdit']) assert.match(tool, matcher, `the matcher covers ${tool}`);
 });

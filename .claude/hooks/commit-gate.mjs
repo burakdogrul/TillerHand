@@ -11,6 +11,8 @@ import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { findRoot, isMain } from './shared.mjs';
 import { unquote } from './destructive-guard.mjs';
+import { isTestFile, isTestConfig, digest, readRecord } from './test-guard.mjs';
+import { isCodeFile } from './edit-rounds.mjs';
 
 // Project root (the script's location) even when called from a subfolder: approval and gate must not be written elsewhere
 const root = findRoot();
@@ -40,7 +42,7 @@ export function changes() {
     let body = null;
     try { body = fs.readFileSync(path.join(root, f)); } catch { /* deleted */ }
     h.update(body ?? '\0silindi');
-    hashes.set(f, body ? crypto.createHash('sha256').update(body).digest('hex').slice(0, 16) : 'silindi');
+    hashes.set(f, body ? digest(body) : 'silindi');
   }
   for (const f of partial) {
     h.update(`\0index:${f}:${blobs.get(f)}`);
@@ -228,6 +230,19 @@ async function hook() {
   // The deterministic gate (gate.mjs) must be green for the same changes; not required if the user said "atlandı"
   const gate = readGate();
   const skipped = SKIPPED.test(String(approval?.note ?? ''));
+  // Test files only test-writer writes (AGENTS.md rule 7): one changed past the PreToolUse guards stops the commit.
+  // Deleted files are left to the guards that ask before a delete. Only code files: snapshots, images and fixtures are
+  // written by the test runner, not by Write/Edit. A partially staged test (git apply --cached, skip-worktree) commits an
+  // index blob the record does not describe, so it always stops.
+  const written = readRecord(root);
+  const foreign = d.files.filter((f) => isTestFile(f) && isCodeFile(f) && !isTestConfig(f) && d.hashes[f] !== 'silindi' && written[f] !== d.hashes[f]);
+  if (foreign.length && !(skipped && approval.signature === d.signature)) {
+    process.stderr.write(`Commit durduruldu: şu test dosyalarını test-writer yazmadı, yazdıktan sonra değişti ya da kısmen hazırlandı: ${foreign.join(', ')}.\n` +
+      'Test dosyalarına yalnız test-writer ajanı Write/Edit ile yazar (AGENTS.md kural 7); patch, betik, kabuk, git mv veya Codex/Antigravity ile yazılan test sayılmaz.\n' +
+      'Değişiklik gerekiyorsa test-writer\'a dosyayı gözden geçirtip Write/Edit ile yeniden yazdır. Değişikliği kullanıcı kendisi yaptıysa ' +
+      've bu commit için denetimi atlamayı açıkça isterse --skip "kullanıcı isteği" kullan.\n');
+    process.exit(2);
+  }
   if (approval?.signature === d.signature && (skipped || (gate?.signature === d.signature && gate.passed === true))) process.exit(0);
   if (approval?.signature === d.signature) {
     const failed = gate?.signature === d.signature ? gate.checks.filter((k) => k.status === 'failed').map((k) => k.name) : null;

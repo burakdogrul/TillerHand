@@ -287,7 +287,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.42.1</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.43.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="install"><span id="cmd">npx tillerhand init</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
@@ -776,7 +776,7 @@ node vibe-kit/kit/kit.mjs init</pre>
       <tr><td>Paket kapısı</td><td>Kurulan ya da <code>npx</code>, <code>uvx</code> ile indirilip çalıştırılan paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur</td></tr>
       <tr><td>Yapı koruyucu</td><td>Harita dışı yeni dosya sorulur; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir</td></tr>
       <tr><td>Yapılandırma onayı</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> ve iş akışı dosyaları onayın olmadan değişmez</td></tr>
-      <tr><td>Test ayrımı</td><td>Testleri kodu yazan değil, ayrı bir ajan (<code>test-writer</code>, farklı model önerilir) koddan önce yazar. Test dosyasına bu ajan dışında kimse yazamaz: ana oturum ve kod ajanı denerse engellenir. Böylece kodu yazan testi kendi koduna göre şekillendiremez</td></tr>
+      <tr><td>Test ayrımı</td><td>Testleri kodu yazan değil, ayrı bir ajan (<code>test-writer</code>, farklı model önerilir) koddan önce yazar. Test dosyasına bu ajan dışında kimse yazamaz: ana oturum ve kod ajanı denerse engellenir. Patch veya betikle dolaylı değişen test dosyası da commit kapısında durur. Böylece kodu yazan testi kendi koduna göre şekillendiremez</td></tr>
       <tr><td>Test koruması</td><td>Beklenti silmek veya yoruma almak, <code>.skip</code>/<code>.only</code>, gevşek beklenti, test dosyasını silmek veya taşımak ve test ayarında kapsamı daraltmak sorulur; kabukla test dosyasına yazmak da</td></tr>
       <tr><td>Deterministik kapı</td><td><code>gate.mjs --run</code>: lint, tip kontrolü, test ve Semgrep çalışır; çıktı kurula girdi olur, kırmızı kontrol RET sayılır. Spec'teki "değişmemesi gereken" davranışların testi yoksa veya kırmızıysa kapı kırmızıdır. Eklenen bir satırda bu makineye özel bir yol (proje klasörünün ya da ev klasörünün tam yolu) varsa da kırmızıdır. Yeni veya değişen komut önce sana gösterilip onaylatılır</td></tr>
       <tr><td>Commit kapısı</td><td>Kurul denetimi ve aynı değişiklikler için yeşil kapı olmadan commit atılmaz; görev sonu onayı commit için de geçerli, aynı değişiklik iki kez denetlenmez; denetimi atlamak (<code>--skip</code>) her seferinde sorulur</td></tr>
@@ -1070,7 +1070,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.42.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.43.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

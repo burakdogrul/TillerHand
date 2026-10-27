@@ -489,3 +489,202 @@ test('3.32.0 one review per change: the task-end approval covers the commit; aft
   assert.match(read('board/rules.md'), /commit-gate\.mjs --status/);
   assert.ok(JSON.parse(read('settings.json')).permissions.allow.includes('Bash(node .claude/hooks/commit-gate.mjs --status)'));
 });
+
+// K9: a test file that reaches the commit by an indirect way (git apply, patch, a script) and not through test-writer stops the commit.
+// test-writer's writes are recorded by test-guard.mjs --record (PostToolUse); the commit gate compares the disk with that record.
+const record = (f) => spawnSync(process.execPath, [path.join(HOOKS, 'test-guard.mjs'), '--record'], {
+  input: JSON.stringify({ tool_name: 'Write', agent_type: 'test-writer', cwd: p, tool_input: { file_path: path.join(p, f), content: fs.readFileSync(path.join(p, f), 'utf8') } }),
+  encoding: 'utf8', env: env(),
+});
+const ready = () => { assert.equal(runGate().status, 0, 'green gate'); assert.equal(approve('board-qa').status, 0, 'board approval'); };
+const dropRecord = () => fs.rmSync(path.join(p, '.claude/state/test-writer.json'), { force: true });
+const k9Start = (name) => { agents('node -e "process.exit(0)"'); sh(`git add -A && git commit -qm ${name} --allow-empty`); dropRecord(); };
+const k9End = (name) => { sh(`git add -A && git commit -qm ${name} --allow-empty`); dropRecord(); };
+
+test('test-writer K9b commit gate: a changed test file test-writer did not write stops the commit even with approval and a green gate', () => {
+  k9Start('ara-k9b');
+  // untracked new files (one with a Turkish, spaced path in a test folder)
+  write('src/k9b.test.js', "test('k9b', () => { expect(1).toBe(1); });\n");
+  write('tests/ödeme/İade ı.test.js', "test('İade', () => { expect(2).toBe(2); });\n");
+  ready();
+  const untracked = commit();
+  assert.equal(untracked.status, 2, 'untracked test files');
+  assert.match(untracked.stderr, /src\/k9b\.test\.js/);
+  assert.match(untracked.stderr, /tests\/ödeme\/İade ı\.test\.js/);
+  assert.match(untracked.stderr, /test-writer/);
+  sh('git add -A && git commit -qm k9b-ekle'); // the user's own commit (no hook)
+  // unstaged change in a tracked test file
+  write('src/k9b.test.js', "test('k9b', () => { expect(1).toBe(1); });\n// betik\n");
+  ready();
+  const unstaged = commit('git commit -am x');
+  assert.equal(unstaged.status, 2, 'unstaged change');
+  assert.match(unstaged.stderr, /src\/k9b\.test\.js/);
+  assert.match(unstaged.stderr, /test-writer/);
+  assert.doesNotMatch(unstaged.stderr, /İade/, 'an unchanged test file is not named');
+  // the same change, staged
+  sh('git add -A');
+  ready();
+  const staged = commit();
+  assert.equal(staged.status, 2, 'staged change');
+  assert.match(staged.stderr, /src\/k9b\.test\.js/);
+  k9End('k9b-son');
+});
+
+test('test-writer K9c commit gate: test files that hold what test-writer wrote do not stop the commit', () => {
+  k9Start('ara-k9c');
+  write('src/k9c.test.js', "test('k9c', () => { expect(1).toBe(1); });\n");
+  write('tests/ödeme/İade ı.test.js', "test('İade', () => { expect(2).toBe(2); expect(3).toBe(3); });\n");
+  assert.equal(record('src/k9c.test.js').status, 0);
+  assert.equal(record('tests/ödeme/İade ı.test.js').status, 0);
+  write('a.js', 'k9c');
+  ready();
+  const r = commit();
+  assert.equal(r.status, 0, r.stderr);
+  sh('git add -A && git commit -qm k9c-ekle');
+  // test-writer changes a tracked test file later: recorded again, still passes
+  write('src/k9c.test.js', "test('k9c', () => { expect(1).toBe(1); });\ntest('k9c 2', () => { expect(2).toBe(2); });\n");
+  assert.equal(record('src/k9c.test.js').status, 0);
+  ready();
+  const again = commit();
+  assert.equal(again.status, 0, again.stderr);
+  k9End('k9c-son');
+});
+
+test('test-writer K9d commit gate: a test file changed after test-writer by another way (a script, git apply) stops the commit', () => {
+  k9Start('ara-k9d');
+  const file = path.join(p, 'src', 'k9d.test.js');
+  const v1 = "test('k9d', () => {\n  expect(1).toBe(1);\n});\n";
+  const v2 = `${v1}test('k9d 2', () => {\n  expect(2).toBe(2);\n});\n`;
+  const v3 = v2.replace('  expect(2).toBe(2);\n', '');
+  write('src/k9d.test.js', v1);
+  sh('git add -A && git commit -qm k9d-v1');
+  write('src/k9d.test.js', v2);
+  assert.equal(record('src/k9d.test.js').status, 0);
+  ready();
+  assert.equal(commit().status, 0, 'what test-writer wrote passes');
+  fs.writeFileSync(file, v3); // a script (node x.js) rewrites the test
+  ready();
+  const script = commit();
+  assert.equal(script.status, 2, 'changed on disk after test-writer');
+  assert.match(script.stderr, /src\/k9d\.test\.js/);
+  assert.match(script.stderr, /test-writer/);
+  fs.writeFileSync(file, v2);
+  ready();
+  assert.equal(commit().status, 0, 'back to exactly what test-writer wrote');
+  // git apply: a patch made elsewhere changes the committed test-writer content
+  sh('git add -A && git commit -qm k9d-v2');
+  fs.writeFileSync(file, v3);
+  const patch = execSync('git diff', { cwd: p });
+  fs.writeFileSync(file, v2);
+  execSync('git apply', { cwd: p, input: patch, stdio: ['pipe', 'ignore', 'ignore'] });
+  assert.notEqual(fs.readFileSync(file, 'utf8'), v2, 'git apply changed the file');
+  ready();
+  const applied = commit();
+  assert.equal(applied.status, 2, 'git apply');
+  assert.match(applied.stderr, /src\/k9d\.test\.js/);
+  assert.match(applied.stderr, /test-writer/);
+  fs.writeFileSync(file, v2);
+  k9End('k9d-son');
+});
+
+test('test-writer K9e commit gate: with a --skip for these changes (the user asked) the commit passes', () => {
+  k9Start('ara-k9e');
+  write('src/k9e.test.js', "test('k9e', () => { expect(1).toBe(1); });\n");
+  ready();
+  assert.equal(commit().status, 2, 'without --skip it stops');
+  assert.equal(skip('kullanıcı isteği').status, 0);
+  const r = commit();
+  assert.equal(r.status, 0, r.stderr);
+  k9End('k9e-son');
+});
+
+test('test-writer K9f commit gate: a commit without a changed test file is not affected; a deleted test file does not stop it', () => {
+  k9Start('ara-k9f');
+  write('src/k9f.test.js', "test('k9f', () => { expect(1).toBe(1); });\n");
+  sh('git add -A && git commit -qm k9f-ekle'); // committed by the user, never recorded
+  write('.claude/state/test-writer.json', '{bozuk');
+  write('a.js', 'k9f');
+  write('vitest.config.ts', 'export default {};\n');
+  ready();
+  const r = commit();
+  assert.equal(r.status, 0, `code and a test config, broken record file: ${r.stderr}`);
+  sh('git add -A && git commit -qm k9f-kod');
+  fs.rmSync(path.join(p, 'src', 'k9f.test.js'));
+  ready();
+  const deleted = commit('git commit -am x');
+  assert.equal(deleted.status, 0, `deleted, unstaged: ${deleted.stderr}`);
+  sh('git add -A');
+  ready();
+  const staged = commit();
+  assert.equal(staged.status, 0, `deleted, staged: ${staged.stderr}`);
+  k9End('k9f-son');
+});
+
+test('test-writer K9h commit gate: a staged copy that differs from what test-writer wrote stops the commit while the disk keeps the recorded content', () => {
+  k9Start('ara-k9h');
+  const rel = 'src/k9h.test.js';
+  const file = path.join(p, 'src', 'k9h.test.js');
+  const v2 = "test('k9h', () => {\n  expect(1).toBe(1);\n  expect(2).toBe(2);\n});\n";
+  const v3 = v2.replace('  expect(2).toBe(2);\n', '');
+  write(rel, v2);
+  assert.equal(record(rel).status, 0);
+  sh(`git add ${rel}`);
+  ready();
+  const same = commit();
+  assert.equal(same.status, 0, `index = disk = test-writer: ${same.stderr}`);
+  const stops = (label) => {
+    assert.equal(fs.readFileSync(file, 'utf8'), v2, `${label}: the disk keeps test-writer's content`);
+    ready();
+    const r = commit();
+    assert.equal(r.status, 2, label);
+    assert.match(r.stderr, /src\/k9h\.test\.js/, `${label}: names the file`);
+  };
+  // git add of another content, then the disk is put back
+  fs.writeFileSync(file, v3);
+  sh(`git add ${rel}`);
+  fs.writeFileSync(file, v2);
+  stops('git add, then the disk restored');
+  sh(`git add ${rel}`);
+  // git apply --cached: the patch goes only into the index
+  fs.writeFileSync(file, v3);
+  const patch = execSync('git diff', { cwd: p });
+  fs.writeFileSync(file, v2);
+  execSync('git apply --cached', { cwd: p, input: patch, stdio: ['pipe', 'ignore', 'ignore'] });
+  stops('git apply --cached');
+  sh(`git add ${rel}`);
+  // skip-worktree hides the index-vs-disk difference from git diff
+  const blob = execSync('git hash-object -w --stdin', { cwd: p, input: v3, encoding: 'utf8' }).trim();
+  sh(`git update-index --cacheinfo 100644,${blob},${rel}`);
+  sh(`git update-index --skip-worktree ${rel}`);
+  stops('skip-worktree');
+  sh(`git update-index --no-skip-worktree ${rel}`);
+  sh(`git add ${rel}`);
+  k9End('k9h-son');
+});
+
+test('test-writer K9i commit gate: non-code files the test runner makes in the test folder are not checked; a code file there still is', () => {
+  k9Start('ara-k9i');
+  const png = (n) => Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, n]);
+  write('tests/__snapshots__/a.test.js.snap', 'exports[`a 1`] = `"İade ı"`;\n');
+  write('tests/x.spec.ts-snapshots/a.png', png(1));
+  write('tests/fixtures/data.json', '{"ad": "Işık"}\n');
+  ready();
+  const added = commit();
+  assert.equal(added.status, 0, `new, unrecorded: ${added.stderr}`);
+  sh('git add -A && git commit -qm k9i-ekle');
+  write('tests/__snapshots__/a.test.js.snap', 'exports[`a 1`] = `"İade i"`;\n');
+  write('tests/x.spec.ts-snapshots/a.png', png(2));
+  write('tests/fixtures/data.json', '{"ad": "ışık"}\n');
+  ready();
+  const changed = commit();
+  assert.equal(changed.status, 0, `changed, unrecorded: ${changed.stderr}`);
+  sh('git add -A && git commit -qm k9i-degisti');
+  write('tests/helpers.js', 'export const yardim = () => 1;\n');
+  write('tests/fixtures/data.json', '{"ad": "IŞIK"}\n');
+  ready();
+  const code = commit();
+  assert.equal(code.status, 2, 'a code file in the test folder without a record');
+  assert.match(code.stderr, /tests\/helpers\.js/);
+  assert.doesNotMatch(code.stderr, /data\.json/, 'the fixture is not named');
+  k9End('k9i-son');
+});

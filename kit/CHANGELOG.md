@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.43.0] - 2026-10-27
+
+### Eklenen
+- **Commit kapısı test dosyasının kaynağını denetler.** `test-writer` bir test dosyasını Write/Edit ile yazınca içeriğin özeti kaydedilir (`.claude/state/test-writer.json`). Commit'e giren bir test dosyası bu kayıtla eşleşmiyorsa commit durur: `git apply`, `patch`, bir betik ya da kabukla yazılan test artık kurul onayıyla da geçmez. Değişikliği kullanıcı kendisi yaptıysa o commit için `--skip` kullanılır. Kısmen hazırlanmış bir test dosyası (`git apply --cached`, `skip-worktree`) her zaman durur. Test klasöründeki kod olmayan dosyalar (snapshot, görsel, fixture) denetlenmez; silinen test dosyaları için silmeden önce soran korumalar geçerli. Yalnız Claude Code'da (ajan kimliği orada var).
+
 ## [3.42.1] - 2026-10-27
 
 ### Düzeltilen

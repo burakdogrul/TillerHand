@@ -7,8 +7,10 @@
 //   test script) changes a field that could narrow the scope. A commented-out expectation counts as deleted.
 //   It does not block: the user approves a justified change.
 //   In Claude Code a test file can only be written by the test-writer subagent (agent_type); anyone else is denied.
+//   --record (PostToolUse): stores the digest of each test file test-writer wrote; commit-gate.mjs checks it.
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { readInput, decide, isMain } from './shared.mjs';
 
 const TEST = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec|e2e-spec)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$|_test\.(py|go)$/i;
@@ -48,6 +50,14 @@ export function configRisk(before, after) {
   return changed.some((s) => RISKY.test(s)) ? 'testlerin kapsamını belirleyen ayar değişiyor (include/exclude, testMatch, passWithNoTests, eşik, test script\'i)' : null;
 }
 
+// The real path too: a link or junction into the test folder, a Windows short name (TESTS~1)
+// A new nested path (lnk/new/sub/x.ts): resolve the nearest folder that exists and append the rest
+const realOf = (p) => {
+  for (let dir = p, rest = ''; ; rest = path.join(path.basename(dir), rest), dir = path.dirname(dir)) {
+    try { return path.join(fs.realpathSync.native(dir), rest); } catch { if (path.dirname(dir) === dir) return p; }
+  }
+};
+
 function hook() {
   const g = readInput();
   if (!g) process.exit(0);
@@ -55,13 +65,6 @@ function hook() {
     const full = path.resolve(g.dir, file);
     const rel = path.relative(g.root, full);
     return [full, rel.startsWith('..') || path.isAbsolute(rel) ? full : rel];
-  };
-  // The real path too: a link or junction into the test folder, a Windows short name (TESTS~1)
-  // A new nested path (lnk/new/sub/x.ts): resolve the nearest folder that exists and append the rest
-  const realOf = (p) => {
-    for (let dir = p, rest = ''; ; rest = path.join(path.basename(dir), rest), dir = path.dirname(dir)) {
-      try { return path.join(fs.realpathSync.native(dir), rest); } catch { if (path.dirname(dir) === dir) return p; }
-    }
   };
   for (const f of g.files) {
     if (!f.path) continue;
@@ -93,4 +96,42 @@ function hook() {
   process.exit(0);
 }
 
-if (isMain(import.meta.url)) hook();
+// What test-writer wrote: the commit gate stops a changed test file whose content on disk is not one of these
+// (git apply, patch or a script writes past the PreToolUse guards). State: .claude/state/test-writer.json → { files: { path: digest } }
+export const digest = (buf) => crypto.createHash('sha256').update(buf).digest('hex').slice(0, 16);
+export const recordPath = (root) => path.join(root, '.claude', 'state', 'test-writer.json');
+export function readRecord(root) {
+  try {
+    const d = JSON.parse(fs.readFileSync(recordPath(root), 'utf8'));
+    return d?.files && typeof d.files === 'object' && !Array.isArray(d.files) ? d.files : {};
+  } catch { return {}; }
+}
+
+// PostToolUse: the file is on disk now, so its digest is what test-writer left
+function record() {
+  const g = readInput();
+  if (!g || g.tool !== 'claude' || g.agent !== 'test-writer') process.exit(0);
+  const files = readRecord(g.root);
+  const rootReal = realOf(g.root);
+  for (const f of g.files) {
+    if (!f.path) continue;
+    const full = path.resolve(g.dir, f.path);
+    let body;
+    try { body = fs.readFileSync(full); } catch { continue; }
+    // The written path and its real path (a link into the test folder): git lists the one it tracks
+    for (const rel of [path.relative(g.root, full), path.relative(rootReal, realOf(full))]) {
+      const key = rel.split(path.sep).join('/');
+      if (!key.startsWith('..') && !path.isAbsolute(rel) && isTestFile(key) && !isTestConfig(key)) files[key] = digest(body);
+    }
+  }
+  // Temp file + rename: a reader never sees half a JSON (it would read {} and drop every record)
+  const tmp = `${recordPath(g.root)}.${process.pid}.tmp`;
+  try {
+    fs.mkdirSync(path.dirname(tmp), { recursive: true });
+    fs.writeFileSync(tmp, JSON.stringify({ files }, null, 2));
+    fs.renameSync(tmp, recordPath(g.root));
+  } catch { fs.rmSync(tmp, { force: true }); /* the commit gate then asks for test-writer again */ }
+  process.exit(0);
+}
+
+if (isMain(import.meta.url)) (process.argv.includes('--record') ? record : hook)();

@@ -20,6 +20,7 @@ Uygulama planını, kod rolüne verilen talimatları ve yarım kalmış uygulama
 - Her kabul kriteri için en az bir test; kriter kimliği test adında (`Ö-01.1`). Yetki, ödeme, kişisel veri varsa saldırgan testi (başka kullanıcı, anonim, bozuk girdi).
 - Uç durumlar: boş, sıfır, çok büyük girdi, Türkçe karakter (`I/İ/ı/i`), tarih ve saat dilimi, eşzamanlı istek; kritere uyanları ekle.
 - Beklentiler sıkı olsun: `toBeTruthy`, `toBeDefined`, matcher'sız `expect` gibi gevşek beklenti yazma. `.skip`/`.only` bırakma.
+- Test dosyalarını Write/Edit ile yaz. Bash, betik veya patch ile yazılan test dosyası commit kapısında durur: kapı yalnız senin Write/Edit ile bıraktığın içeriği tanır.
 - Uygulama kodu yazma; yalnız test dosyaları ve test yardımcıları (fixture, sahte veri). Uygulama dosyası gerekiyorsa (boş fonksiyon iskeleti bile) yazma, raporda söyle.
 - Testleri çalıştır ve **kırmızı** olduklarını göster: her testin neden başarısız olduğu (yok, yanlış değer) beklenen sebep olmalı. Sözdizimi veya içe aktarma hatasıyla kırmızı olan test geçerli değildir; düzelt.
 - Kriter belirsizse veya iki şekilde okunabiliyorsa tahmin etme: soruyu ve seçenekleri raporla, testi yazmadan dur.
