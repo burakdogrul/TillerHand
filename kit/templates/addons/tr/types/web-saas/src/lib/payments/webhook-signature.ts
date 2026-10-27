@@ -9,8 +9,10 @@ const same = (a: string, b: string): boolean => {
   return x.length === y.length && timingSafeEqual(x, y);
 };
 const hmac = (key: string, text: string, encoding: 'hex' | 'base64'): string => createHmac('sha256', key).update(text).digest(encoding);
-// Only non-empty strings and numbers are signed values; anything else (missing, object, boolean) fails the check
-const text = (v: unknown): string | null => ((typeof v === 'string' || typeof v === 'number') && String(v) !== '' ? String(v) : null);
+// Only non-empty strings and safe integers are signed values; anything else (missing, object, boolean) fails the check.
+// iyziPaymentId is a JSON number (long): above 2^53 JSON.parse has already rounded it, so the id is wrong and is rejected.
+// shortcut: such a notification is refused (ids are ~8 digits today); if ids near 2^53, read it with a JSON.parse reviver's context.source.
+const text = (v: unknown): string | null => (typeof v === 'string' ? v || null : Number.isSafeInteger(v) ? String(v) : null);
 
 const IYZICO_DIRECT = ['iyziEventType', 'paymentId', 'paymentConversationId', 'status'];
 const IYZICO_CHECKOUT = ['iyziEventType', 'iyziPaymentId', 'token', 'paymentConversationId', 'status'];

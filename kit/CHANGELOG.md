@@ -3,6 +3,14 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.39.4] - 2026-10-27
+
+### Düzeltilen
+- **Türkiye eki: iyzico ödeme kimliği 2^53 üstünde reddedilir.** `iyziPaymentId` JSON sayısı olarak gelir; JavaScript bu büyüklükte sayıyı yuvarlar ve yanlış kimlikle sipariş sorgulanabilirdi. Web SaaS imza doğrulaması artık yalnız güvenli tamsayıları kabul eder; saldırgan testine iki kontrol eklendi. Elle uyarla: projedeki `src/lib/payments/webhook-signature.ts` ve `tests/security/payment-webhook.mjs`.
+
+### Değişen
+- **`/wrap-up` ilerleme dosyasını betikle yazar.** Tarih, aktif görev, sıradaki adım ve yol haritası işareti `progress.mjs` ile; sonda `--check` etiket biçimini doğrular.
+
 ## [3.39.3] - 2026-10-26
 
 ### Düzeltilen

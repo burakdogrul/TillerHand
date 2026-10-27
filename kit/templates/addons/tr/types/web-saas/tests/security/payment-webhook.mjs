@@ -25,6 +25,15 @@ test('iyzico: a correctly signed notification is accepted (direct and checkout f
   assert.equal(verifyIyzico(direct, iyzicoSign(direct), SECRET), true);
   assert.equal(verifyIyzico(checkout, iyzicoSign(checkout), SECRET), true);
   assert.equal(verifyIyzico(direct, iyzicoSign(direct).toUpperCase(), SECRET), true, 'hex case does not matter');
+  const numeric = { ...checkout, iyziPaymentId: 22416751 };
+  assert.equal(verifyIyzico(numeric, iyzicoSign(numeric), SECRET), true, 'iyziPaymentId as a JSON number (long)');
+});
+
+test('iyzico: a payment id rounded by JSON.parse (above 2^53) is rejected', () => {
+  const body = JSON.parse('{"iyziEventType":"CHECKOUT_FORM_AUTH","iyziPaymentId":9007199254740993,"token":"tok-abc","paymentConversationId":"siparis-43","status":"SUCCESS"}');
+  const sent = { ...body, iyziPaymentId: '9007199254740993' };
+  assert.equal(verifyIyzico(body, iyzicoSign(sent), SECRET), false);
+  assert.equal(verifyIyzico(body, iyzicoSign(body), SECRET), false, 'even when signed over the rounded value');
 });
 
 test('iyzico: forged, altered or unsigned notifications are rejected', () => {

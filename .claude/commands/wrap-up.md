@@ -6,14 +6,10 @@ Bu oturumu kapatıyoruz. Bir sonraki oturum (veya `/clear` sonrası) sıfır ba�
 
 1. `git status` ve `git diff --stat` ile bu oturumdaki değişiklikleri gör.
 2. `docs/workflow/progress.md`'yi güncelle (40 satırı geçmesin):
-   - Son güncelleme tarihi, aktif faz, aktif görev
-   - Şu anki durum: ne çalışıyor, ne yarım
-   - Son oturumda yapılanlar (eskileri sil, sadece bu oturum)
-   - Sıradaki adım: tek, net, hemen başlanabilir
-   - Bekleyen kararlar (sorulup cevap alınamayanlar)
-   - Açık sorunlar ve "AI için notlar"
-   - Kalın etiketli satırların biçimini bozma (durum çubuğu ve pano okur)
-3. `docs/product/roadmap.md`: biten görevler işaretli mi? Görev bittiyse ve kapsam kalkanı açık kaldıysa (`node .claude/hooks/freeze-guard.mjs --status`) kapat: `--plan-end`. Görev sürüyorsa açık kalsın.
+   - Tarih, aktif görev, sıradaki adım betikle yazılır (biçim bozulmaz): `node .claude/hooks/progress.mjs --task "<aktif görev veya ->" --next "<tek, net, hemen başlanabilir adım>"`. `/build` dışında yapılan bir iş varsa aynı çağrıya `--did "<tek satır>"` ekle (`/build` kendi satırını zaten yazdı).
+   - Elle: "Son oturumda yapılanlar"dan önceki oturumların satırlarını sil; aktif faz, şu anki durum (ne çalışıyor, ne yarım), bekleyen kararlar (sorulup cevap alınamayanlar), açık sorunlar ve "AI için notlar"
+   - En sonda `node .claude/hooks/progress.mjs --check`: kalın etiketli satırlar bozulduysa söyler (durum çubuğu ve pano okur)
+3. `docs/product/roadmap.md`: biten görevler işaretli mi? İşaretsizse `node .claude/hooks/progress.mjs --done G-NNN`. Görev bittiyse ve kapsam kalkanı açık kaldıysa (`node .claude/hooks/freeze-guard.mjs --status`) kapat: `--plan-end`. Görev sürüyorsa açık kalsın.
 4. `CHANGELOG.md` → "Yayınlanmamış" bölümüne kullanıcıya görünen değişiklikleri ekle.
 5. Bu oturumdaki tüm kararlar `docs/decisions/log.md` günlüğünde mi? Eksik olanları ekle.
 6. Yapı değiştiyse (yeni tablo, servis, klasör) `docs/architecture/overview.md`'yi güncelle.

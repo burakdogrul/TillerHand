@@ -21,7 +21,8 @@ IYZICO_CHECKOUT = (
 
 
 def _text(value: object) -> str | None:
-    # Only non-empty strings and integers are signed values; anything else fails the check
+    # Only non-empty strings and integers are signed values; anything else fails the check.
+    # json.loads keeps big integers exact, so unlike the TypeScript copy there is no 2^53 limit here.
     if isinstance(value, bool) or not isinstance(value, (str, int)):
         return None
     return str(value) or None
