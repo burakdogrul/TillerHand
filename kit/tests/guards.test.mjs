@@ -261,3 +261,71 @@ test('edit lock: the allowed --set prefix cannot remove or widen the lock, only 
   run('--off');
   assert.equal(fs.existsSync(path.join(root, '.claude/state/freeze.json')), false);
 });
+
+test('test-writer K3 shield: in Claude only the test-writer agent may touch a test file from the shell', () => {
+  const touch = [
+    "sed -i 's/expect/x/' src/a.test.ts", 'rm src/a.test.ts', 'rm -r tests/', 'echo x > src/a.test.ts',
+    "cat >> kit/tests/x.test.mjs <<'EOF'", 'mv tests/a.test.ts src/a.ts', 'git checkout -- tests/a.test.ts',
+    'Set-Content tests\a.test.ts x', 'npm run lint && rm "src/a.test.ts"', 'perl -pi -e s/a/b/ odeme_test.py',
+    "sed -e 's/a/b/' -i tests/a.test.ts", "sed --in-place 's/a/b/' a.test.ts",
+  ];
+  const run = ['npx vitest run src/a.test.ts', 'node --test "kit/tests/*.test.mjs" 2>&1 | grep fail', 'cat tests/a.test.ts',
+    'rm -r node_modules && npx vitest run src/a.test.ts', 'node --test kit/tests/a.test.mjs > sonuc.txt'];
+  const ctxs = [undefined, { tool: 'claude', agent: '' }, { tool: 'claude', agent: 'test-writer' }, { tool: 'claude', agent: 'general-purpose' }, { tool: 'codex', agent: '' }, { tool: 'antigravity', agent: '' }];
+  for (const s of touch) {
+    assert.equal(evaluate(s)?.decision, 'ask', `no ctx (old callers): ${s}`);
+    for (const agent of ['', 'general-purpose']) {
+      const r = evaluate(s, { tool: 'claude', agent });
+      assert.equal(r?.decision, 'deny', `claude, agent "${agent}": ${s}`);
+      assert.match(r.reason, /test-writer/, s);
+    }
+    assert.equal(evaluate(s, { tool: 'claude', agent: 'test-writer' })?.decision, 'ask', `test-writer: ${s}`);
+    assert.equal(evaluate(s, { tool: 'codex', agent: '' })?.decision, 'ask', `codex: ${s}`);
+    assert.equal(evaluate(s, { tool: 'antigravity', agent: '' })?.decision, 'ask', `antigravity: ${s}`);
+  }
+  for (const s of run) for (const ctx of ctxs) assert.equal(evaluate(s, ctx), null, `${s} ${JSON.stringify(ctx)}`);
+});
+
+test('test-writer K3 shield hook: a Claude shell command on a test file is denied outside test-writer', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shield-tw-'));
+  const hook = (extra) => {
+    const r = spawnSync(process.execPath, [path.join(HOOKS, 'destructive-guard.mjs')], {
+      input: JSON.stringify({ tool_name: 'Bash', cwd: root, ...extra, tool_input: { command: 'rm src/a.test.ts' } }),
+      encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+    });
+    return JSON.parse(r.stdout).hookSpecificOutput;
+  };
+  const main = hook({});
+  assert.equal(main.permissionDecision, 'deny');
+  assert.match(main.permissionDecisionReason, /test-writer/);
+  assert.equal(hook({ agent_type: 'test-writer' }).permissionDecision, 'ask');
+});
+
+test('test-writer K6 shield: quoted text with spaces is an argument, a quoted single-word path is still a test write', () => {
+  const ctx = { tool: 'claude', agent: '' };
+  for (const s of ['grep -n "<tr><td>Test koruması</td>" kit/guide.html', `node -e "const s='rm tests/a.test.ts'"`]) {
+    assert.notEqual(evaluate(s, ctx)?.decision, 'deny', s);
+  }
+  for (const s of ['echo x > "src/a.test.ts"', 'rm "tests/a.test.ts"', "rm 'kit/tests/x.test.mjs'"]) {
+    assert.equal(evaluate(s, ctx)?.decision, 'deny', s);
+  }
+  assert.equal(evaluate('cat tests/a.test.ts', ctx), null);
+});
+
+test('test-writer K7b shield: other shell ways to write a test file are caught; dependency and git folders are not test folders', () => {
+  const main = { tool: 'claude', agent: '' };
+  const tw = { tool: 'claude', agent: 'test-writer' };
+  const deny = ['touch src/a.test.ts', 'ln -s a.ts src/b.test.ts', 'dd if=a.ts of=src/a.test.ts',
+    'curl -o tests/x.ts https://example.com/x', 'wget -O tests/x.ts https://example.com/x'];
+  const atLeastAsk = [`node -e "require('fs').writeFileSync('src/a.test.ts','x')"`, `python -c "open('tests/a.py','w').write('x')"`,
+    'bash -c "echo x > tests/a.test.ts"'];
+  const notTests = ['rm -rf node_modules/pkg/test/x', 'rm -rf .git/x/tests/y'];
+  for (const s of deny) {
+    const r = evaluate(s, main);
+    assert.equal(r?.decision, 'deny', s);
+    assert.match(r.reason, /test-writer/, s);
+  }
+  for (const s of atLeastAsk) assert.ok(['ask', 'deny'].includes(evaluate(s, main)?.decision), `at least ask: ${s}`);
+  for (const s of notTests) assert.notEqual(evaluate(s, main)?.decision, 'deny', s);
+  for (const s of [...deny, ...atLeastAsk, ...notTests]) assert.notEqual(evaluate(s, tw)?.decision, 'deny', `test-writer: ${s}`);
+});

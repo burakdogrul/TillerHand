@@ -49,13 +49,16 @@ const NEEDS_APPROVAL = [
 
 // The test guard runs on file tools; changing a test or test config file from the shell (sed -i, rm, >, mv, git checkout) is asked.
 // Each part of a command chain is checked alone: "rm -r node_modules && npx vitest run a.test.ts" does not change a test.
-const WRITER = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
-const isTestPath = (t) => isTestFile(t) || isTestConfig(t) || /(^|[/\\])(tests?|__tests__|e2e|spec)[/\\]?$/i.test(t);
-function writesTest(command) {
+const WRITER = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|touch|ln|dd|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bcurl\b[^;&|]*\s(-o|--output)\b|\bwget\b[^;&|]*\s(-O|--output-document)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
+// Dependency and git internals are not the project's tests; a URL (curl … https://x/tests/a) or a dd input is not a target
+const isTestCode = (t) => !/(^|[/\\])(node_modules|\.git)([/\\]|$)|:\/\/|^if=/i.test(t) && (isTestFile(t) || /(^|[/\\])(tests?|__tests__|e2e|spec)[/\\]?$/i.test(t));
+const isTestPath = (t) => isTestCode(t) || isTestConfig(t);
+function writesTest(command, isPath = isTestPath) {
   return command.split(/&&|\|\||[;|\n]/).some((part) => {
     const p = part.replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, '');
-    const targets = [...p.matchAll(/>{1,2}\s*([^\s;&|<>]+)/g)].map((m) => m[1]);
-    return targets.some(isTestPath) || (WRITER.test(p) && p.split(/\s+/).some(isTestPath));
+    const bare = (s) => s.replace(/^["']+|["']+$/g, '');
+    const targets = [...p.matchAll(/>{1,2}\s*([^\s;&|<>]+)/g)].map((m) => bare(m[1]));
+    return targets.some(isPath) || (WRITER.test(p) && p.split(/\s+/).map(bare).some(isPath));
   });
 }
 
@@ -319,8 +322,20 @@ export function hookScriptIssue(command) {
 
 // Separators inside quotes turned into spaces: a quoted & or | ("a & b") must not split a command so its later flags escape the rules
 const blankQuoted = (s) => s.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => q.replace(/[;&|\n]/g, ' '));
-export function evaluate(command) {
-  return strictest(evaluateOne(command), evaluateOne(unquote(command)), evaluateOne(blankQuoted(command)), obfuscationOne(command), hookScriptIssue(command));
+// Quoted text with spaces is an argument (grep "<td>Test", node -e "… rm …"), not a command: blanked. A one-word quoted
+// path ("src/a.test.ts") is kept. Such commands are still asked through evaluateOne.
+const quotedTextOff = (s) => s.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => (/\s/.test(q) ? ' ' : q.slice(1, -1)));
+const INLINE = /\b(node|deno|bun)\s+(-e|--eval|-p|--print)\b|\bpython[\d.]*\s+-c\b|\b(ruby|perl)\s+-e\b|\b(ba|z|da)?sh\s+-c\b|\b(pwsh|powershell)(\.exe)?\s+(-c|-Command)\b|\bcmd(\.exe)?\s+\/c\b/i;
+const TEST_WRITER_ONLY = 'Test dosyasına yalnız test-writer ajanı yazar: kodu yazan testi değiştiremez (AGENTS.md kural 7). Test eklemek veya değiştirmek gerekiyorsa test-writer ajanını çağır (varsa SendMessage ile sürdür).';
+// ctx: { tool, agent } of the call; only Claude Code tells which subagent runs it. Test files are written by the
+// test-writer agent only; test config files stay a question (evaluateOne).
+export function evaluate(command, ctx = {}) {
+  const testWrite = ctx.tool === 'claude' && ctx.agent !== 'test-writer' && writesTest(quotedTextOff(command).replace(/\s+/g, ' '), isTestCode)
+    ? { decision: 'deny', reason: TEST_WRITER_ONLY } : null;
+  // An inline script (node -e, python -c, bash -c) that names a test path may write it; the shell rules cannot see inside
+  const inline = INLINE.test(command) && command.split(/[\s'"`(),;=<>]+/).some(isTestCode)
+    ? { decision: 'ask', reason: 'Satır içi betik bir test yolunu anıyor; test dosyasına yazıyor olabilir. Test dosyasına yalnız test-writer ajanı yazar (AGENTS.md kural 7). Kullanıcı onayı gerekli.' } : null;
+  return strictest(testWrite, inline, evaluateOne(command), evaluateOne(unquote(command)), evaluateOne(blankQuoted(command)), obfuscationOne(command), hookScriptIssue(command));
 }
 function evaluateOne(command) {
   const k = command.replace(/\s+/g, ' ');
@@ -348,7 +363,7 @@ function evaluateOne(command) {
 if (isMain(import.meta.url)) {
   const g = readInput();
   // Of the lists, the stricter wins (deny > ask)
-  const results = g ? [evaluate(g.command), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root)].filter(Boolean) : [];
+  const results = g ? [evaluate(g.command, g), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root)].filter(Boolean) : [];
   const s = results.find((x) => x.decision === 'deny') ?? results[0];
   if (s) decide(g.tool, s.decision, `Kalkan: ${s.reason}`);
   process.exit(0);

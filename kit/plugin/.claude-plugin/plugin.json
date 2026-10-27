@@ -1,9 +1,13 @@
 {
   "name": "tillerhand",
+  "displayName": "TillerHand",
+  "version": "1.0.0",
   "description": "TillerHand kitini bu klasöre kurar: kurallar, komutlar, korumalar ve proje şablonları. Kurulumdan sonra /start ile başlanır.",
   "author": { "name": "Burak Doğrul" },
   "homepage": "https://github.com/burakdogrul/TillerHand",
   "repository": "https://github.com/burakdogrul/TillerHand",
+  "documentationUrl": "https://burakdogrul.github.io/TillerHand/kit/guide.html",
+  "supportUrl": "https://github.com/burakdogrul/TillerHand/issues",
   "license": "MIT",
   "keywords": ["starter-kit", "vibe-coding", "turkish"]
 }

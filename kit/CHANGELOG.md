@@ -3,6 +3,19 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.42.0] - 2026-10-27
+
+### Eklenen
+- **Testi kodu yazan değil, ayrı bir ajan yazar.** Yeni `test-writer` ajanı kabul ve saldırgan testlerini koddan önce, yalnız kabul kriterlerine, spec'e ve dış arayüze bakarak yazar; uygulama planını görmez. Kodu ve testi aynı ajan yazarsa test koda göre şekillenir; bu ayrım bunu önler.
+- **Test dosyasına yalnız `test-writer` yazabilir.** Claude Code'da ana oturum veya başka bir ajan test dosyasına dosya aracıyla ya da kabukla yazmaya çalışırsa test koruması engeller (test ayar dosyaları eskisi gibi sorulur). Codex ve Antigravity ajan kimliği bildirmediği için orada kural metinde kalır.
+- **Test korumasında atlatma yolları kapandı.** Windows'un aynı dosyaya çözdüğü yazımlar (sonda nokta veya boşluk, `::$DATA`), kısa adlar ve test klasörüne giden bağlar gerçek yoluyla denetlenir. Kabukta `touch`, `ln`, `dd`, `curl -o`, `wget -O` ile test yazımı da engellenir; test yolu anan satır içi betikler (`node -e`, `python -c`, `bash -c`) sorulur. `node_modules/` ve `.git/` altındaki test klasörleri sayılmaz.
+- **Plugin dizin bilgileri.** Plugin'e görünen ad, sürüm, dokümantasyon ve destek bağlantısı eklendi.
+- **Beşinci rol: test.** `docs/workflow/models.md`'ye test rolü eklendi, önerilen model kod rolünden farklı (kod Sonnet, test Opus). Kod ve test aynı modele alınırsa `models.mjs` uyarır.
+
+### Değişen
+- **Görev başındaki model soruları rol başına tek soru.** Model ve effort birlikte sorulur, iki ekranda: önce plan, kod, test; sonra inceleme, doküman. Elle uyarla: yok.
+- **`/build` adımları:** 2b testler (`test-writer`), 2c kod. `/fix-bug` 5. adımda kırmızı testi `test-writer` yazar.
+
 ## [3.41.1] - 2026-10-27
 
 ### Değişen

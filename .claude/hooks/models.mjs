@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 // Model and effort per role (docs/workflow/models.md). /build, /start, /adopt and /release ask the user, then save the answer here.
 //   node .claude/hooks/models.mjs --show                    current choice (the recommended one if nothing is saved)
-//   node .claude/hooks/models.mjs --set plan=opus:high code=sonnet:high review=sonnet:high docs=haiku:high
+//   node .claude/hooks/models.mjs --set plan=opus:high code=sonnet:high test=opus:high review=sonnet:high docs=haiku:high
 // A role left out of --set keeps its current value. File: .claude/state/models.json (git-ignored, this project only).
 // Aliases, not model IDs: in Claude Code opus/sonnet/haiku/fable always point to the newest model of that family.
 import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot, isMain } from './shared.mjs';
 
-export const ROLES = { plan: 'Planlama ve mimari', code: 'Kod yazma', review: 'İnceleme ve denetim', docs: 'Doküman ve araştırma' };
-export const RECOMMENDED = { plan: 'opus:high', code: 'sonnet:high', review: 'sonnet:high', docs: 'haiku:high' };
+export const ROLES = { plan: 'Planlama ve mimari', code: 'Kod yazma', test: 'Test yazma', review: 'İnceleme ve denetim', docs: 'Doküman ve araştırma' };
+// test differs from code on purpose: another model does not share the coder's blind spots (AGENTS.md rule 7)
+export const RECOMMENDED = { plan: 'opus:high', code: 'sonnet:high', test: 'opus:high', review: 'sonnet:high', docs: 'haiku:high' };
 export const MODELS = ['opus', 'sonnet', 'haiku', 'fable'];
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh'];
 
@@ -55,7 +56,8 @@ export const showModels = (file = modelsFile()) => {
   const m = readModels(file);
   const note = modelsNote(file);
   return Object.keys(ROLES).map((r) => `${r}: ${m[r].replace(':', ' / ')} (${ROLES[r]})${m[r] === RECOMMENDED[r] ? '' : ` · önerilen ${RECOMMENDED[r].replace(':', ' / ')}`}`).join('\n')
-    + (note ? `\n(${note})` : '');
+    + (note ? `\n(${note})` : '')
+    + (m.code.split(':')[0] === m.test.split(':')[0] ? '\nUyarı: kod ve test rolü aynı model; farklı model önerilir (aynı model aynı kör noktayı paylaşır).' : '');
 };
 
 if (isMain(import.meta.url)) {
@@ -67,7 +69,7 @@ if (isMain(import.meta.url)) {
   } else if (mode === '--show') {
     console.log(showModels());
   } else {
-    console.error('Kullanım: --show | --set plan=<model>:<effort> code=… review=… docs=…');
+    console.error('Kullanım: --show | --set plan=<model>:<effort> code=… test=… review=… docs=…');
     process.exit(1);
   }
 }

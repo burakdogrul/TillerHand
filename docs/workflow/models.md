@@ -1,7 +1,7 @@
 # Model ve effort (rol bazında)
 
-> Kit işi dört role ayırır. Her rolün modelini ve effort'unu (ne kadar düşüneceğini) sen seçersin.
-> `/build` her görevin başında, `/start`, `/adopt` ve `/release` başlarken iki ekranda sorar: önce dört rolün modeli, sonra effort'u.
+> Kit işi beş role ayırır. Her rolün modelini ve effort'unu (ne kadar düşüneceğini) sen seçersin.
+> `/build` her görevin başında, `/start`, `/adopt` ve `/release` başlarken rol başına tek soru sorar (model ve effort birlikte), iki ekranda: önce plan, kod, test; sonra inceleme, doküman.
 > Seçim `node .claude/hooks/models.mjs --set …` ile `.claude/state/models.json`'a yazılır (git'e girmez). Güncel seçimi `node .claude/hooks/models.mjs --show` gösterir.
 
 ## Roller
@@ -9,9 +9,22 @@
 | Rol | Anahtar | Kapsadığı işler | Önerilen |
 |---|---|---|---|
 | Planlama ve mimari | `plan` | Plan, mimari ve veri modeli kararları; PRD, README ve kullanıcıya görünen metin. Ana oturumda yürür. | Opus · yüksek |
-| Kod yazma | `code` | Kabul testleri ve uygulama kodu. Alt ajana devredilir. | Sonnet · yüksek |
+| Kod yazma | `code` | Uygulama kodu. Test dosyalarına yazamaz. Küçük görevde ana oturumda, yoksa alt ajanda. | Sonnet · yüksek |
+| Test yazma | `test` | Kabul ve saldırgan testleri, koddan önce; `test-writer` ajanı. Kodu yazandan ayrı ajan, önerilen model de farklı: aynı model aynı kör noktayı paylaşır. | Opus · yüksek |
 | İnceleme ve denetim | `review` | Kurul üyeleri, `code-reviewer`, `security-auditor`, bulgu raporları (`/findings-all`). | Sonnet · yüksek |
 | Doküman ve araştırma | `docs` | CHANGELOG, rapor özeti; kod tarama, web araştırması (`/research` derin). Karar günlüğü karar anında ana oturumda yazılır. | Haiku · yüksek |
+
+Her sorudaki seçenekler (ilki önerilen; başka bir kombinasyon "Diğer" ile yazılır):
+
+| Rol | Seçenekler |
+|---|---|
+| `plan` | Opus · yüksek / Opus · ekstra yüksek / Sonnet · yüksek / Sonnet · orta |
+| `code` | Sonnet · yüksek / Opus · yüksek / Sonnet · orta / Haiku · yüksek |
+| `test` | Kod rolünün son seçiminden farklı model ilk sırada: kod Sonnet ise Opus · yüksek, kod Opus ise Sonnet · yüksek, kod Haiku ise Sonnet · yüksek. Sonra öteki iki model ve aynı modelin orta effort'u |
+| `review` | Sonnet · yüksek / Opus · yüksek / Sonnet · orta / Haiku · yüksek |
+| `docs` | Haiku · yüksek / Haiku · orta / Sonnet · yüksek / Sonnet · orta |
+
+Kod ve test aynı modele alınırsa `models.mjs` uyarır ama engellemez (limit darken ikisi de ucuz modele alınabilir).
 
 Effort ölçeği: düşük = `low`, orta = `medium`, yüksek = `high`, ekstra yüksek = `xhigh`. Effort arttıkça cevap yavaşlar ve limitten daha çok yer.
 

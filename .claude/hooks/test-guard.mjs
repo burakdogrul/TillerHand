@@ -6,17 +6,20 @@
 //   file is deleted. It also asks when a test config file (vitest/jest/playwright config, conftest.py, package.json
 //   test script) changes a field that could narrow the scope. A commented-out expectation counts as deleted.
 //   It does not block: the user approves a justified change.
+//   In Claude Code a test file can only be written by the test-writer subagent (agent_type); anyone else is denied.
 import fs from 'node:fs';
 import path from 'node:path';
 import { readInput, decide, isMain } from './shared.mjs';
 
 const TEST = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec|e2e-spec)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$|_test\.(py|go)$/i;
-export const isTestFile = (file) => TEST.test(file.replace(/\\/g, '/'));
+// Windows resolves "a.test.ts.", "a.test.ts " and "a.test.ts::$DATA" (alternate stream) to the same file
+const plain = (file) => file.replace(/\\/g, '/').replace(/:[^/]*$/, '').replace(/[. ]+(?=\/|$)/g, '');
+export const isTestFile = (file) => TEST.test(plain(file));
 // A file the test runner recognizes by name (a file in a test folder whose name does not match does not run)
 const TEST_NAME = /\.(test|spec|e2e-spec)\.[cm]?[jt]sx?$|^test_[^/]*\.py$|_test\.(py|go)$/i;
 
 const CONFIG = /(^|\/)((vitest|vite|jest|playwright|cypress)(\.[\w-]+)?\.config\.([cm]?[jt]s|json)|vitest\.workspace\.[cm]?[jt]s|\.mocharc\.\w+|conftest\.py|noxfile\.py|pytest\.ini|tox\.ini|setup\.cfg|pyproject\.toml|package\.json)$/i;
-export const isTestConfig = (file) => CONFIG.test(file.replace(/\\/g, '/'));
+export const isTestConfig = (file) => CONFIG.test(plain(file));
 // Fields that decide which tests run or whether a failure counts (user decision 2026-10-24)
 const RISKY = /\b(include|exclude|testMatch|testRegex|testPathIgnorePatterns|testIgnore|testDir|testpaths|roots|passWithNoTests|bail|retries|thresholds?|coverageThreshold|grep|grepInvert|addopts|collect_ignore\w*|python_files|norecursedirs|pytest_collection_modifyitems|pytest_runtest_\w+|skip\w*|only|forbidOnly|setupFiles|globalSetup|lines|branches|functions|statements|fail_under|cov-fail-under)\b|"(test|e2e|ci)[\w:.-]*"\s*:/i;
 
@@ -53,12 +56,24 @@ function hook() {
     const rel = path.relative(g.root, full);
     return [full, rel.startsWith('..') || path.isAbsolute(rel) ? full : rel];
   };
+  // The real path too: a link or junction into the test folder, a Windows short name (TESTS~1)
+  const realOf = (p) => {
+    try { return fs.realpathSync.native(p); } catch { /* a new file */ }
+    try { return path.join(fs.realpathSync.native(path.dirname(p)), path.basename(p)); } catch { return p; }
+  };
   for (const f of g.files) {
     if (!f.path) continue;
     const [full, name] = resolveName(f.path);
     const source = f.source && isTestFile(resolveName(f.source)[1]) ? resolveName(f.source)[1] : null;
     const config = isTestConfig(name);
-    if (!source && !config && !isTestFile(name)) continue;
+    const realRel = path.relative(realOf(g.root), realOf(full));
+    if (!source && !config && !isTestFile(name) && !isTestFile(realRel)) continue;
+    // Tests are written by the test-writer agent only (AGENTS.md rule 7): whoever writes the code must not shape the test
+    // to it. Only Claude Code reports the subagent; Codex and Antigravity keep the rule in text. Config files stay a question.
+    if (g.tool === 'claude' && g.agent !== 'test-writer' && !config) {
+      decide(g.tool, 'deny', `Test ayrımı: ${name.split(path.sep).join('/')} bir test dosyası; test dosyalarına yalnız test-writer ajanı yazar, kodu yazan testi değiştiremez (AGENTS.md kural 7). ` +
+        'Test eklemek veya değiştirmek gerekiyorsa test-writer ajanını çağır (varsa SendMessage ile sürdür); kriter değişiyorsa kullanıcıya sor.');
+    }
     let before = f.before;
     if (before === undefined) { try { before = fs.readFileSync(full, 'utf8'); } catch { before = ''; } }
     const after = f.after ?? f.text;

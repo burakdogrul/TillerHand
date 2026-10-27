@@ -69,7 +69,9 @@ export function parseInput(g) {
   const tool = detectTool(g);
   const root = findRoot();
   const session = String(g.session_id ?? g.conversationId ?? '');
-  const result = { tool, root, dir: isText(g.cwd) ? g.cwd : root, session, command: '', files: [], reads: [] };
+  // agent: the subagent the call runs in (Claude Code agent_type; '' in the main session and on other tools)
+  const agent = tool === 'claude' && isText(g.agent_type) ? g.agent_type : '';
+  const result = { tool, root, dir: isText(g.cwd) ? g.cwd : root, session, agent, command: '', files: [], reads: [] };
   if (tool === 'antigravity') {
     const { name, args = {} } = g.toolCall ?? {};
     if (name === 'run_command') result.command = isText(args.CommandLine) ? args.CommandLine : JSON.stringify(args);

@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readModels, setModels, showModels, RECOMMENDED } from '../../.claude/hooks/models.mjs';
+import { readModels, setModels, showModels, RECOMMENDED, ROLES } from '../../.claude/hooks/models.mjs';
 import { evaluate, permissionEquivalent } from '../../.claude/hooks/destructive-guard.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -51,11 +51,44 @@ test('models: the commands ask both screens and hand the role to the subagent; t
   assert.match(build, /docs\/workflow\/models\.md/);
   for (const c of ['start', 'adopt', 'release']) assert.match(read(`.claude/commands/${c}.md`), /docs\/workflow\/models\.md/, c);
   const doc = read('docs/workflow/models.md');
-  for (const r of ['plan', 'code', 'review', 'docs']) assert.match(doc, new RegExp('`' + r + '`'), r);
+  for (const r of ['plan', 'code', 'review', 'test', 'docs']) assert.match(doc, new RegExp('`' + r + '`'), r);
   assert.match(read('kit/kit.mjs'), /workflow\\\/\([^)]*\bmodels\b/, 'models.md is replaced on update (KIT_OWNED)');
   const settings = JSON.parse(read('.claude/settings.json')).permissions;
   assert.ok(settings.allow.includes('Bash(node .claude/hooks/models.mjs --show)'));
   assert.ok(settings.allow.includes('Bash(node .claude/hooks/models.mjs --set:*)'));
   for (const c of ['node .claude/hooks/models.mjs --set code=haiku:low', 'node .claude/hooks/models.mjs --show'])
     assert.equal(permissionEquivalent(c) ?? evaluate(c), null, `Codex/Antigravity: not asked either (${c})`);
+});
+
+test('test-writer K4 models: a test role, recommended opus:high, saved and shown like the others', () => {
+  assert.ok(Object.hasOwn(ROLES, 'test'), 'ROLES.test');
+  assert.equal(RECOMMENDED.test, 'opus:high');
+  const file = tmpFile();
+  assert.equal(readModels(file).test, 'opus:high');
+  assert.equal(setModels(['test=sonnet:high'], file), null);
+  assert.equal(readModels(file).test, 'sonnet:high');
+  assert.match(showModels(file), /^test: sonnet \/ high/m);
+});
+
+test('test-writer K4 models: the CLI warns when the code and test roles share a model, not otherwise', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'model-tw-'));
+  const run = (...args) => spawnSync(process.execPath, [path.join(ROOT, '.claude/hooks/models.mjs'), ...args], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root } });
+  const same = run('--set', 'code=sonnet:high', 'test=sonnet:medium');
+  assert.equal(same.status, 0, same.stderr);
+  assert.match(same.stdout, /aynı model/, '--set warns');
+  assert.equal(readModels(path.join(root, '.claude/state/models.json')).test, 'sonnet:medium', 'the choice is still saved');
+  assert.match(run('--show').stdout, /aynı model/, '--show warns');
+  const diff = run('--set', 'code=sonnet:high', 'test=opus:high');
+  assert.equal(diff.status, 0, diff.stderr);
+  assert.doesNotMatch(diff.stdout, /aynı model/);
+  assert.doesNotMatch(run('--show').stdout, /aynı model/);
+  const fresh = fs.mkdtempSync(path.join(os.tmpdir(), 'model-tw0-'));
+  const show = spawnSync(process.execPath, [path.join(ROOT, '.claude/hooks/models.mjs'), '--show'], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: fresh } });
+  assert.doesNotMatch(show.stdout, /aynı model/, 'recommended values differ (sonnet / opus)');
+});
+
+test('test-writer K4 models: build.md saves the test role', () => {
+  const set = read('.claude/commands/build.md').split('\n').find((l) => /models\.mjs --set/.test(l));
+  assert.ok(set, 'build.md has a --set example');
+  assert.match(set, /models\.mjs --set [^`]*\btest=/);
 });

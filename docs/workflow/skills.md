@@ -139,7 +139,7 @@ Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skil
 | Durum | Skill |
 |---|---|
 | Her kod değişikliği (en küçük tam çözüm, gereksiz soyutlama yok) | `ponytail:ponytail` |
-| Kritik akış (auth, ödeme, veri yazma; `docs/quality/test-plan.md` K1-K5) | `mattpocock-skills:tdd` |
+| Kritik akış (auth, ödeme, veri yazma; `docs/quality/test-plan.md` K1-K5) | `mattpocock-skills:tdd` (kırmızı testi `test-writer` ajanı yazar, yeşile kod tarafı çevirir) |
 | Bozulan projeyi son çalışan hale döndürmek | `/rollback` (`checkpoint.mjs`) |
 | Yeni başlayan kullanıcıya her adımı anlatmak | Anlatıcı mod: `.claude/output-styles/anlatici.md` (`outputStyle: anlatici`) |
 | Hata ayıklama (`/fix-bug`) | `mattpocock-skills:diagnosing-bugs` + `/freeze <klasör>` |
