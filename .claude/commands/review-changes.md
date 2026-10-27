@@ -1,25 +1,25 @@
 ---
-description: Değişiklikleri bağımsız inceleme ajanlarıyla inceler (gerekirse güvenlik denetimi dahil).
-argument-hint: [boş = commit edilmemiş değişiklikler | main..HEAD | commit hash]
+description: Reviews changes with independent review agents (including a security audit when needed).
+argument-hint: [empty = uncommitted changes | main..HEAD | commit hash]
 ---
 
-İncelenecek aralık: $ARGUMENTS (boşsa `git diff HEAD` ve takip edilmeyen yeni dosyalar).
+Range to review: $ARGUMENTS (if empty, `git diff HEAD` and untracked new files).
 
-Kendi yazdığın kodu kendin inceleme; bağımsız ajanlara ver.
+Do not review your own code yourself; hand it to independent agents.
 
-0. **Zaten denetlendi mi?** Aralık boşsa (commit edilmemiş değişiklikler) `node .claude/hooks/commit-gate.mjs --status` çalıştır. "Onay geçerli" diyorsa bu değişiklikler görev sonu toplantısında denetlendi: yeniden inceleme yapma, onayı ve kapı durumunu bildir; kullanıcı açıkça isterse yine incele. "Son onaydan sonra değişen: …" diyorsa aşağıdaki adımları yalnız o dosyalarla yap.
-1. `git diff --stat` ile değişen dosyaları gör.
-2. **`code-reviewer`** alt ajanını inceleme rolünün `model` ve `effort`'uyla çalıştır (`docs/workflow/models.md`; adım 3 de öyle). Ona aralığı ve (biliniyorsa) görev kodunu ver. Görevin `docs/product/specs/` altında spec'i varsa onu da ver: beklenen davranış karşılandı mı, değişmemesi gereken davranış bozuldu mu?
-3. Değişiklik şunlardan birine dokunuyorsa **`security-auditor`** alt ajanını da paralel çalıştır: auth, yetki, ödeme, webhook, dosya yükleme, kişisel veri, DB erişim kuralları, ortam değişkenleri, AI/LLM çağrıları.
-   Kurul kurulduysa değişikliğe ilgili kurul üyelerini de ekle (`.claude/board/rules.md` §3, en fazla 3; limit sarıysa 1).
-   Aynı anda `ponytail:ponytail-review` ile gereksiz kod, aşırı mühendislik ve yük altında kırılacak yerlere bak. Arayüz değiştiyse `impeccable:impeccable` → `audit` da çalışsın.
-4. Ajanların bulgularını birleştir, tekrarları çıkar, önem sırasına koy:
+0. **Already reviewed?** If the range is empty (uncommitted changes), run `node .claude/hooks/commit-gate.mjs --status`. If it says "Onay geçerli", these changes were reviewed in the end-of-task meeting: do not review again, report the approval and the gate status; review anyway if the user explicitly asks. If it says "Son onaydan sonra değişen: …", do the steps below only with those files.
+1. See the changed files with `git diff --stat`.
+2. Run the **`code-reviewer`** subagent with the review role's `model` and `effort` (`docs/workflow/models.md`; step 3 too). Give it the range and (if known) the task id. If the task has a spec under `docs/product/specs/`, give that too: was the expected behavior met, was the must-not-change behavior broken?
+3. If the change touches any of these, also run the **`security-auditor`** subagent in parallel: auth, authorization, payment, webhook, file upload, personal data, DB access rules, environment variables, AI/LLM calls.
+   If the board is set up, also add the board members relevant to the change (`.claude/board/rules.md` §3, at most 3; 1 if the limit is yellow).
+   At the same time, use `ponytail:ponytail-review` to look for unnecessary code, over-engineering and places that will break under load. If the UI changed, also run `impeccable:impeccable` → `audit`.
+4. Merge the agents' findings, remove duplicates, order by severity:
 
 ```
 [KRİTİK|ÖNEMLİ|KÜÇÜK] dosya:satır — sorun. Öneri.
 ```
 
-5. Bulgulara katılmıyorsan nedenini tek satırla yaz; sessizce eleme.
-6. Son satır: **Commit'e hazır** / **Önce düzelt: [maddeler]**.
+5. If you disagree with a finding, write the reason in one line; do not drop it silently.
+6. Last line: **Commit'e hazır** (ready to commit) / **Önce düzelt: [maddeler]** (fix first: items).
 
-Bulguları düzeltme. Hangilerinin düzeltileceğini **çoklu seçimle** sor (KRİTİK olanlar önerilen olarak işaretli). Sonra durum bloğunu yaz.
+Do not fix the findings. Ask which ones to fix with a **multi-select** (KRİTİK ones marked as recommended). Then write the status block.

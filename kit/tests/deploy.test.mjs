@@ -21,7 +21,7 @@ test('Ö-20.1 the wizard writes no secret: rules say so, the docs hold none, the
   // The prod database password stays in the user's terminal: the guide never puts a literal connection string in a command
   assert.match(sections['Supabase (veritabanı + kimlik)'], /kullanıcı kendi terminalinde/);
   assert.doesNotMatch(setup, /postgres(ql)?:\/\/[^\s"`]*:[^\s"`]*@/);
-  assert.match(release, /sır değerini sorma, sohbete veya dosyaya yazma/);
+  assert.match(release, /do not ask for a secret value, do not write it in chat or in a file/);
   assert.deepEqual(findSecrets(setup), []);
   const hook = path.join(REPO, '.claude/hooks/guard-secrets.mjs');
   const input = { tool_name: 'Edit', tool_input: { file_path: 'docs/operations/accounts.md', new_string: `| Supabase | ${'sb_' + 'secret_' + 'e4'.repeat(16)} |` } };
@@ -46,14 +46,14 @@ test('Ö-20.2 every provider has sourced, dated steps for project, env, domain, 
   }
   for (const name of ['Vercel (web)', 'Railway (backend)']) assert.ok(sections[name].includes('**Alan adı.**'), `${name}: domain`);
   assert.match(release, /docs\/operations\/deploy-setup\.md/);
-  assert.match(release, /`source-research` ile yeniden aç/);
+  assert.match(release, /Reopen the section's source pages with `source-research`/);
 });
 
 test('Ö-20.3 prod deploy, rollback drill and restore always need approval', () => {
   // Every prod-changing CLI command the guide names is asked by the shield, not only by the text
   const prodCommands = ['vercel promote https://a.vercel.app', 'vercel --prod', 'vercel rollback', 'eas update --environment production --message x', 'eas update:rollback', 'eas submit --platform ios', 'railway up'];
   for (const c of prodCommands) assert.equal(evaluate(c)?.decision, 'ask', c);
-  assert.match(release, /Prod deploy'u onaysız başlatma/);
-  assert.match(release, /Geri alma provası ve yedekten geri yükleme prod'a dokunur: onaysız başlatma/);
+  assert.match(release, /Do not start a prod deploy without approval/);
+  assert.match(release, /The rollback drill and restore from backup touch prod: do not start them without approval/);
   assert.match(sections.Kurallar, /Prod deploy, geri alma provası ve yedekten geri yükleme onaysız başlamaz/);
 });

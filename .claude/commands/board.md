@@ -1,23 +1,23 @@
 ---
-description: Uzman kurulunu kurar, değiştirir, toplar veya durumunu gösterir.
-argument-hint: [boş | setup | convene <plan|task|phase-end|release|konu> | council <soru>]
+description: Sets up, changes, convenes or shows the status of the expert board.
+argument-hint: [empty | setup | convene <plan|task|phase-end|release|konu> | council <soru>]
 ---
 
-İstek: $ARGUMENTS
+Request: $ARGUMENTS
 
-Önce `.claude/board/rules.md` ve `docs/workflow/board.md`'yi oku.
+First read `.claude/board/rules.md` and `docs/workflow/board.md`.
 
-- **Boş:** Kurulun durumunu göster: üyeler, inceleme rolünün modeli (`node .claude/hooks/models.mjs --show`), son 5 toplantı ve sonuçları, açık kritik bulgular, commit denetimi açık/kapalı. Kurul kurulmamışsa `/board setup` öner.
-- **`setup`:** rules.md §5'i uygula. Kurul zaten varsa, ne yapılacağını sor: üye ekle / üye çıkar / "Bu proje" bölümlerini güncel stack'e göre yenile. Model buradan değişmez: üyeler inceleme rolüyle çalışır (`docs/workflow/models.md`).
-- **`convene <tür>`:** rules.md §4'ü uygula.
-  - `plan`: son onaylanmamış plan
-  - `task`: aktif görevin değişiklikleri (`git diff`)
-  - `phase-end`: aktif fazın tüm değişiklikleri (faz başlangıcından bu yana `git log` ve diff özeti)
-  - `release`: tüm kod tabanı
-  - Diğer metinler: kullanıcının verdiği konu (örn. "ödeme akışı")
+- **Empty:** Show the board's status: members, the review role's model (`node .claude/hooks/models.mjs --show`), the last 5 meetings and their results, open critical findings, commit review on/off. If the board is not set up, propose `/board setup`.
+- **`setup`:** Apply rules.md §5. If the board already exists, ask what to do: add a member / remove a member / refresh the "Bu proje" (this project) sections for the current stack. The model does not change here: members work with the review role (`docs/workflow/models.md`).
+- **`convene <tür>`:** Apply rules.md §4.
+  - `plan`: the last unapproved plan
+  - `task`: the active task's changes (`git diff`)
+  - `phase-end`: all changes of the active phase (`git log` and diff summary since the phase start)
+  - `release`: the whole codebase
+  - Other texts: a topic given by the user (e.g. "payment flow")
 
-- **`council <soru>`:** Karar konseyi (`.claude/board/council.md`). Soruyu ve seçenekleri netleştir, eksikse önce kullanıcıya seçenekleri onaylat. Bitince başkanın önerisiyle kararı AskUserQuestion ile sor.
+- **`council <soru>`:** Decision council (`.claude/board/council.md`). Clarify the question and the options; if options are missing, first have the user confirm them. When done, ask for the decision with AskUserQuestion, using the chair's recommendation.
 
-Toplantıdan önce limiti kontrol et (`node .claude/hooks/usage.mjs`). Tam kurul toplantısı pahalıdır. Seviye sarı veya kırmızıysa tahmini maliyeti tek satırla söyle (`docs/workflow/usage-limits.md` §3). Tam kurul isteğe bağlı bir toplantıysa üye sayısını azaltmayı öner; limit yüzünden toplantıyı durdurma.
+Before a meeting, check the limit (`node .claude/hooks/usage.mjs`). A full board meeting is expensive. If the level is yellow or red, say the estimated cost in one line (`docs/workflow/usage-limits.md` §3). If the full board is an optional meeting, propose reducing the member count; do not stop the meeting because of the limit.
 
-Bitince: kurul sentezi, kullanıcıya sorulan kararlar, günlüğe eklenen satır, durum bloğu.
+When done: board synthesis, decisions asked of the user, the line added to the log, status block.

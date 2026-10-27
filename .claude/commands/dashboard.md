@@ -1,9 +1,9 @@
 ---
-description: Projenin ayrıntılı durum raporunu verir ve dashboard.html panosunu yeniler.
+description: Gives the project's detailed status report and refreshes the dashboard.html dashboard.
 ---
 
-1. `node .claude/hooks/cost.mjs` (son 30 günün token ve maliyeti, ccusage) ve `node .claude/hooks/dashboard.mjs` çalıştır. Bu komut `dashboard.html` kontrol panelini üretir (her Claude cevabından sonra Stop hook'u da otomatik üretir; sayfa açıkken 30 sn'de bir yenilenir). Sekmeler: Genel, Yol haritası, Kararlar, Kurul, Bulgular, Kalite, Aktivite, Ürün ve teknik, Operasyon, Limit ve maliyet. Token ayrıntısı (en pahalı istekler, önbellek) için `/session-report`.
-2. Limiti oku (`docs/workflow/usage-limits.md` §1). `docs/workflow/progress.md`, `docs/product/roadmap.md`, `docs/decisions/log.md` ve `docs/workflow/board.md`'yi oku ve şu raporu ver:
+1. Run `node .claude/hooks/cost.mjs` (tokens and cost of the last 30 days, ccusage) and `node .claude/hooks/dashboard.mjs`. This command produces the `dashboard.html` control panel (the Stop hook also produces it automatically after every Claude answer; while the page is open it refreshes every 30 s). Tabs (Turkish labels): Genel, Yol haritası, Kararlar, Kurul, Bulgular, Kalite, Aktivite, Ürün ve teknik, Operasyon, Limit ve maliyet. For token details (most expensive requests, cache) use `/session-report`.
+2. Read the limit (`docs/workflow/usage-limits.md` §1). Read `docs/workflow/progress.md`, `docs/product/roadmap.md`, `docs/decisions/log.md` and `docs/workflow/board.md`, and give this report:
 
 ```
 ## Durum: [proje] · [tarih]
@@ -21,5 +21,5 @@ description: Projenin ayrıntılı durum raporunu verir ve dashboard.html panosu
 **Önerilen sıradaki adım:** [tek, somut komut]
 ```
 
-3. Tarayıcı aracın varsa `dashboard.html`'i aç. Yoksa dosya yolunu ver.
-4. Bekleyen bir karar varsa raporun sonunda onu hemen sor.
+3. If you have a browser tool, open `dashboard.html`. Otherwise give the file path.
+4. If a decision is pending, ask it right away at the end of the report.

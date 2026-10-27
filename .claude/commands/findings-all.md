@@ -1,18 +1,18 @@
 ---
-description: Tüm bulgu türlerini (teknik, iş, güvenlik, UX, performans, hukuk) tek seferde çalıştırır ve birleşik bir özet çıkarır.
-argument-hint: [boş = hepsi | tür listesi, örn. tech,security]
+description: Runs all finding types (technical, business, security, UX, performance, legal) at once and produces a combined summary.
+argument-hint: [empty = all | type list, e.g. tech,security]
 ---
 
-Türler: $ARGUMENTS (boşsa: tech, business, security, ux, perf, legal)
+Types: $ARGUMENTS (if empty: tech, business, security, ux, perf, legal)
 
-1. **Limit:** Tam set çok pahalıdır (Pro planda 5 saatlik limitin büyük kısmı). Limiti oku. Her tür için tahmini maliyeti göster ve AskUserQuestion ile **çoklu seçimle** sor: hangi türler çalışsın? Seviye sarı veya kırmızıysa en kritik 2 türü (tech + security) öner.
-1b. **Paket:** `security` seçildiyse `node .claude/hooks/tools.mjs --required guvenlik`. Kapalıysa alt ajanları başlatmadan önce bir kez sor (alt ajanlar oturumun eklentilerini kullanır).
-2. **Ön bilgiler:** Business ve legal için `docs/findings/config.md` boşsa sektör ve uzman rolünü şimdi bir kez sor; alt ajanlar tekrar sormasın.
-3. **Paralel çalıştır:** Seçilen her tür için ayrı bir alt ajan başlat (Agent aracı, tek mesajda, arka planda; inceleme rolünün `model` ve `effort`'u, `docs/workflow/models.md`). Her ajana şu talimatı ver: "`.claude/findings/protocol.md` adımlarını `.claude/findings/lenses/<tür>.md` ile uygula; raporu yaz; yol haritası sorusunu SORMA, önerdiğin görevleri raporun düzeltme planında bırak."
-4. **Birleşik özet:** Tüm raporlar bitince `docs/findings/summary-YYYY-AA-GG.md` yaz:
-   - Tür başına sağlık puanı ve önceki ile farkı
-   - Tüm türlerden en yüksek puanlı 10 bulgu (tek liste, puana göre)
-   - Türler arası kesişen konular (örn. aynı sorun hem güvenlik hem legal bulgusu)
-   - Birleşik düzeltme planı: hızlı kazanımlar ve büyük işler
-5. **Aktarma:** Yol haritasına hangi bulguların gireceğini **tek bir çoklu seçimle** sor (protocol §8).
-6. `node .claude/hooks/dashboard.mjs` çalıştır. Özet ve durum bloğu.
+1. **Limit:** The full set is very expensive (most of the 5-hour limit on the Pro plan). Read the limit. Show the estimated cost per type and ask with AskUserQuestion, **multi-select**: which types should run? If the level is yellow or red, recommend the 2 most critical types (tech + security).
+1b. **Package:** If `security` is selected, run `node .claude/hooks/tools.mjs --required guvenlik`. If it is off, ask once before starting the subagents (subagents use the session's plugins).
+2. **Preliminary info:** For business and legal, if `docs/findings/config.md` is empty, ask the sector and expert role once now; the subagents must not ask again.
+3. **Run in parallel:** Start a separate subagent for each selected type (Agent tool, in a single message, in the background; the review role's `model` and `effort`, `docs/workflow/models.md`). Give each agent this instruction: "Apply the steps of `.claude/findings/protocol.md` with `.claude/findings/lenses/<tür>.md`; write the report; do NOT ask the roadmap question, leave the tasks you propose in the report's fix plan."
+4. **Combined summary:** When all reports are done, write `docs/findings/summary-YYYY-AA-GG.md`:
+   - Health score per type and the difference from the previous one
+   - The 10 highest-scoring findings across all types (single list, by score)
+   - Topics that cross types (e.g. the same issue is both a security and a legal finding)
+   - Combined fix plan: quick wins and big jobs
+5. **Transfer:** Ask which findings go into the roadmap with **a single multi-select** (protocol §8).
+6. Run `node .claude/hooks/dashboard.mjs`. Summary and status block.

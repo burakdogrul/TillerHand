@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.45.0] - 2026-10-27
+
+### Değişen
+- **Komutlar ve temel kurallar İngilizce.** `.claude/commands/` altındaki bütün komutlar ile `AGENTS.md` ve `CLAUDE.md` İngilizceye çevrildi. AI bunları her oturumda okuduğu için aynı içerik daha az token tutar. Seninle konuşma dili değişmez: `/start`'ta seçtiğin dilde konuşur. Araçların okuduğu etiketler ve komut argümanları (`## Komutlar`, `**Aktif faz:**`, `/handoff devral`, kurul kararları) şimdilik Türkçe kalır; sonraki sürümlerde tek seferde değişecek.
+- **Elle uyarla:** Projendeki `AGENTS.md` ve `CLAUDE.md` projenin dosyasıdır, güncelleme onlara dokunmaz. İngilizce halini istersen kitin yeni `AGENTS.md`'sini `.kit-new` olarak alıp kendi doldurduğun bölümleri (proje adı, komutlar, öğrenilen kurallar) taşı. `## Komutlar` başlığını değiştirme: commit kapısı komutları oradan okur.
+
 ## [3.44.0] - 2026-10-27
 
 ### Eklenen

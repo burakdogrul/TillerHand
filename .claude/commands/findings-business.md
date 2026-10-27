@@ -1,11 +1,11 @@
 ---
-description: İş (business) bulguları raporu. Projeyi sektörün kıdemli bir uzmanı gözüyle tarar (örn. bankacılıkta bankacı): eksik iş akışları, iş kuralları, gelir modeli, güven, rekabet. Web araştırması yapar. En önemli 20 bulguyu 100 üzerinden puanlar.
-argument-hint: [boş = tüm proje | klasör/özellik | --since <commit|tarih>]
+description: Business findings report. Scans the project through the eyes of a senior expert of the sector (e.g. a banker in banking): missing workflows, business rules, revenue model, trust, competition. Does web research. Scores the 20 most important findings out of 100.
+argument-hint: [empty = whole project | folder/feature | --since <commit|tarih>]
 ---
 
-Tür: **business** · Kapsam: $ARGUMENTS
+Type: **business** · Scope: $ARGUMENTS
 
-1. `.claude/findings/protocol.md` dosyasını oku ve adımlarını sırayla uygula.
-2. Bakış açısı, kontrol listesi ve araçlar için `.claude/findings/lenses/business.md` dosyasını kullan.
-3. Raporu `.claude/findings/report-template.md` biçiminde `docs/findings/business/` altına yaz.
-4. Kod değiştirme. Sadece rapor yaz, sonra hangi bulguların yol haritasına gireceğini sor.
+1. Read `.claude/findings/protocol.md` and apply its steps in order.
+2. Use `.claude/findings/lenses/business.md` for the perspective, checklist and tools.
+3. Write the report in the `.claude/findings/report-template.md` format under `docs/findings/business/`.
+4. Do not change code. Only write the report, then ask which findings go into the roadmap.

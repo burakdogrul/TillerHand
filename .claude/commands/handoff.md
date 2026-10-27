@@ -1,16 +1,16 @@
 ---
-description: Projeyi başka bir kişiye veya hesaba devreder (devir notu yazar) ya da devralır (`/handoff devral`). Ekip arkadaşı, kurumsal hesap veya kapanan hesap sonrası aynı yerden devam için.
-argument-hint: [boş = devret | devral]
+description: Hands the project over to another person or account (writes a handoff note) or takes it over (`/handoff devral`). For a teammate, a company account, or continuing from the same place after an account closes.
+argument-hint: [empty = hand over | devral]
 ---
 
-Mod: $ARGUMENTS (boş = devret, `devral` = devral)
+Mode: $ARGUMENTS (empty = hand over, `devral` = take over)
 
-Projenin durumu sohbette değil dosyalarda ve git'te yaşar. Devir, bu dosyaları eksiksiz ve güncel bırakmak ve devralan tarafta ortamı yeniden kurmaktır. **Sır değerlerini asla nota, koda veya sohbete yazma**; sadece adlarını ve nereden alınacağını yaz.
+The project's state lives in files and git, not in the chat. A handoff means leaving these files complete and current, and rebuilding the environment on the receiving side. **Never write secret values into the note, code or chat**; write only their names and where to get them.
 
-## Devret (argümansız)
+## Hand over (no argument)
 
-1. `/wrap-up` adımlarını uygula (ilerleme, yol haritası, kararlar, CHANGELOG). Yarım iş varsa "Kaldığı yer"i doldur.
-2. `docs/workflow/handoff.md` dosyasını yaz (varsa üzerine):
+1. Apply the `/wrap-up` steps (progress, roadmap, decisions, CHANGELOG). If there is unfinished work, fill in "Kaldığı yer" (where we left off).
+2. Write `docs/workflow/handoff.md` (overwrite if it exists):
 
 ```markdown
 # Devir notu
@@ -35,21 +35,21 @@ Projenin durumu sohbette değil dosyalarda ve git'te yaşar. Devir, bu dosyalar�
 - Bilinen sorunlar, riskli bölgeler, yapılmaması gerekenler
 ```
 
-2b. **İsteğe bağlı, devralan kodu ilk kez görecekse:** Understand-Anything ile tanıtım rehberi (`yayin` paketi: `node .claude/hooks/tools.mjs --required yayin`). `/understand --language en` ilk çalıştırmada bütün kodu okur, büyük projede pahalıdır: maliyeti söyle ve sor. Sonra `/understand-onboard`; çıktının yolunu devir notunun "Devralanın ihtiyacı" bölümüne yaz.
-3. Commit edilmemiş değişiklik varsa commit öner: `docs: devir notu`. Uzak depo varsa push öner (onayla). Push yoksa devralanın projeyi nasıl alacağını söyle (repo daveti veya klasör kopyası; `.env` dosyası kopyalanmaz).
-4. Kullanıcıya devralan kişiye ileteceği tek satırı ver: "Repoyu klonla, Claude Code'da aç, `/handoff devral` yaz."
+2b. **Optional, if the receiver will see the code for the first time:** an onboarding guide with Understand-Anything (`yayin` package: `node .claude/hooks/tools.mjs --required yayin`). `/understand --language en` reads all the code on the first run and is expensive on a large project: state the cost and ask. Then `/understand-onboard`; write the output path into the "Devralanın ihtiyacı" (what the receiver needs) section of the handoff note.
+3. If there are uncommitted changes, suggest a commit: `docs: devir notu`. If a remote repo exists, suggest a push (get approval). If there is no push, tell the receiver how to get the project (repo invite or folder copy; the `.env` file is not copied).
+4. Give the user the single line to pass to the receiver: "Clone the repo, open it in Claude Code, type `/handoff devral`."
 
-## Devral (`/handoff devral`)
+## Take over (`/handoff devral`)
 
-1. `docs/workflow/handoff.md`'yi oku ve özetle: nerede kalındı, bekleyen kararlar, dikkat edilecekler. Notta Understand-Anything tanıtım rehberi varsa yolunu ver; görsel harita için `/understand-dashboard` (`yayin` paketi).
-2. Ortamı kur, her adımı tek satırla raporla:
-   - `node --version`, `git --version`; README'deki çalışma ortamı sürümüyle (`.nvmrc` / `.python-version`) uyuşuyor mu?
-   - Eklentiler: `node .claude/hooks/plugins-sync.mjs` ile eksikleri listele, onayla `--install`, sonra `/reload-plugins`. Paket tercihleri kişiseldir ve devirle gelmez: gerekenleri `/tools` ile göster.
-   - Bağımlılıklar: README → Kurulum'daki kurulum komutu (kilit dosyasından).
-   - Ortam değişkenleri: `.env.example`'daki adları listele. `.env` dosyasını sen oluşturma ve okuma; kullanıcı değerleri kendi girer (nereden alınacağı devir notunda).
-   - Hesaplar: devir notundaki erişimleri liste halinde göster; davet bekleyenleri işaretle.
-   - Kişisel ayarlar: anlatıcı mod (`/start` Adım 0b) ve kod haritası (Adım 5) bu kullanıcı için ayrıca sorulur.
-3. Testleri çalıştır ve sonucu göster. Kırmızıysa devir notundaki "Dikkat" ile karşılaştır.
-4. Bekleyen kararlar varsa şimdi sor.
-5. `docs/workflow/handoff.md` → `**Durum:** devralındı` ve `**Devralan:**` satırını ekle. Commit öner: `docs: devir alındı`.
-6. Son satır: sıradaki komut (`/build G-NNN` ya da "Kaldığı yer" doluysa oradan devam).
+1. Read `docs/workflow/handoff.md` and summarize: where things stand, pending decisions, things to watch. If the note has an Understand-Anything onboarding guide, give its path; for a visual map use `/understand-dashboard` (`yayin` package).
+2. Set up the environment, reporting each step in one line:
+   - `node --version`, `git --version`; do they match the runtime version in the README (`.nvmrc` / `.python-version`)?
+   - Plugins: list the missing ones with `node .claude/hooks/plugins-sync.mjs`, install with approval via `--install`, then `/reload-plugins`. Package preferences are personal and do not come with the handoff: show the ones needed with `/tools`.
+   - Dependencies: the install command in README → "Kurulum" (install) (from the lock file).
+   - Environment variables: list the names in `.env.example`. Do not create or read the `.env` file yourself; the user enters the values (where to get them is in the handoff note).
+   - Accounts: show the accesses in the handoff note as a list; mark those waiting for an invite.
+   - Personal settings: narrator mode (`/start` Step 0b) and the code map (Step 5) are asked separately for this user.
+3. Run the tests and show the result. If red, compare with "Dikkat" (watch out) in the handoff note.
+4. If there are pending decisions, ask them now.
+5. In `docs/workflow/handoff.md`, set `**Durum:** devralındı` and add the `**Devralan:**` line. Suggest a commit: `docs: devir alındı`.
+6. Last line: the next command (`/build G-NNN`, or continue from "Kaldığı yer" if it is filled in).

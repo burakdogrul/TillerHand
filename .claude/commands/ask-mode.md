@@ -1,15 +1,15 @@
 ---
-description: Soru modunu gösterir veya değiştirir (hangi konularda karar sorulacak).
-argument-hint: [boş | off <konu|hepsi> | on <konu|hepsi>]
+description: Shows or changes the question mode (on which topics decisions are asked).
+argument-hint: [empty | off <konu|hepsi> | on <konu|hepsi>]
 ---
 
-İstek: $ARGUMENTS
+Request: $ARGUMENTS
 
-Konular: `urun`, `teknik`, `tasarim`, `icerik`, `veri`, `guvenlik`, `maliyet` (`docs/workflow/decision-protocol.md` §1).
+Topics: `urun`, `teknik`, `tasarim`, `icerik`, `veri`, `guvenlik`, `maliyet` (`docs/workflow/decision-protocol.md` §1).
 
-- **Boşsa:** Mevcut soru modunu, kapalı konuları ve kapalıyken verilen otomatik kararları (`docs/decisions/log.md` → karar veren `otomatik`) göster.
-- **`off <konu|hepsi>`:** `docs/workflow/progress.md` → `**Soru modu:**` satırını güncelle. Örnek: `açık · kapalı konular: tasarim, icerik`. Hepsi kapalıysa: `kapalı · kapalı konular: hepsi`.
-- **`on <konu|hepsi>`:** Konuyu listeden çıkar. Liste boşalırsa: `açık · kapalı konular: yok`.
-- Konu adı listede yoksa en yakın konuyu öner ve sor.
+- **Empty:** Show the current question mode, the closed topics and the automatic decisions made while closed (`docs/decisions/log.md` → deciding party `otomatik`).
+- **`off <konu|hepsi>`:** Update the `**Soru modu:**` line in `docs/workflow/progress.md`. Example: `açık · kapalı konular: tasarim, icerik`. If all are closed: `kapalı · kapalı konular: hepsi`.
+- **`on <konu|hepsi>`:** Remove the topic from the list. If the list becomes empty: `açık · kapalı konular: yok`.
+- If the topic name is not in the list, propose the closest topic and ask.
 
-Değişikliği tek satırla onayla. Ayrıca hatırlat: Veri silme, prod deploy ve para harcatan işlemler soru modundan bağımsız olarak her zaman onay ister.
+Confirm the change in one line. Also remind: Deleting data, prod deploys and actions that spend money always ask for approval, regardless of question mode.

@@ -118,14 +118,14 @@ test('settings 3.12: rea, Understand-Anything, design-md, three.js pinned and wi
   for (const k of ['research', 'adopt']) {
     const md = readText(`.claude/commands/${k}.md`);
     assert.match(md, /\brea\b/, `/${k}: rea`);
-    assert.match(md, /yetkili/, `/${k}: permission warning`);
+    assert.match(md, /authorized/, `/${k}: permission warning`);
   }
   for (const k of ['release', 'handoff', 'adopt']) assert.match(readText(`.claude/commands/${k}.md`), /\/understand/, `/${k}: Understand-Anything`);
   const commands = fs.readdirSync(path.join(ROOT, '.claude/commands')).map((f) => readText(`.claude/commands/${f}`)).join('\n');
   assert.ok(!/\/understand[^\n`]*--auto-update/.test(commands), 'UA --auto-update is not used in commands');
   const design = readText('.claude/commands/design.md');
   assert.ok(design.includes('awesome-design-md/3b605329240ce735b510037cca322f1831fdd7f8/'), '/design: design-md sabit commit');
-  assert.match(design, /takli[dt]/, '/design: no brand imitation');
+  assert.match(design, /No brand imitation/, '/design: no brand imitation');
   const start = readText('.claude/commands/start.md');
   for (const s of ['threejs-fundamentals', 'threejs-performance', 'threejs-react-three-fiber']) assert.ok(start.includes(s), `/start: ${s}`);
   assert.ok(start.includes('threejs-skills/0e181866f095b5f06d005133876e926515390d95/'), '/start: three.js skill\'leri sabit commit');

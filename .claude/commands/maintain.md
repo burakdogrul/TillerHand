@@ -1,26 +1,26 @@
 ---
-description: Düzenli bakım kontrolünü çalıştırır ve bakım kaydına ekler.
+description: Runs the regular maintenance check and adds it to the maintenance log.
 argument-hint: [weekly | monthly | quarterly]
 ---
 
-Bakım türü: $ARGUMENTS (boşsa `weekly`).
+Maintenance type: $ARGUMENTS (`weekly` if empty).
 
-Kaynak: `docs/operations/maintenance.md` ilgili bölüm + `docs/architecture/stack.md` → "Bakım". `monthly` haftalık maddeleri, `quarterly` hepsini kapsar.
+Source: the relevant section of `docs/operations/maintenance.md` + `docs/architecture/stack.md` → "Bakım" (maintenance). `monthly` includes the weekly items, `quarterly` includes all.
 
-1. **Otomatik yapabildiklerini yap:**
-   - Güncel olmayan bağımlılıkları listele (`npm outdated` / `uv tree --outdated` vb.)
-   - Bağımlılık güvenlik taraması
-   - Testler ve build hâlâ geçiyor mu?
-   - Ölü kod, kullanılmayan ortam değişkeni, kullanılmayan bağımlılık taraması
-   - `docs/workflow/progress.md` ve `docs/architecture/overview.md` kodla uyumlu mu?
-   - Açık Dependabot PR'ları (`gh pr list --author app/dependabot`, gh kuruluysa): CI yeşil olanları merge için öner
-   - MCP bağlıysa kendin bak: Sentry'de son dönemin yeni/artan hataları, Supabase'de güvenlik ve performans uyarıları (salt-okunur)
-   - `monthly`: temiz kurulum testi (`/release` → "Temiz kurulum testi" maddesi); `ponytail:ponytail-debt` ile ertelenmiş kısa yollar listesi; `npx --yes jscpd@4 --silent .` ile kopya kod oranı; `docs/quality/metrics.md`'ye dönem satırı (tanımlar dosyada); `docs/product/unit-economics.md` gerçek faturalarla; süresi geçen bayraklar; işlenmemiş geri bildirimler (`/user-feedback`); bağlam bütçesi (`node .claude/hooks/tools.mjs --measure`, kullanıcıya `/context` ve `/skill-doctor` öner; ay boyu açık kalmış ama kullanılmamış paketi kapatmayı öner); öğrenilen kurallar: `AGENTS.md` → "Öğrenilen kurallar" satırları ve `.claude/hookify.*.local.md` dosyalarından tarihi 90 günden eski olanları (tarihsizler dahil) listele, her biri için sor: Tut (tarihi bugüne çek: tarih son gözden geçirmedir) / Güncelle / Sil. "Öğrenilen kurallar" 10 satırı geçtiyse benzerlerini birleştirmeyi öner (her satır her oturumda yüklenir). Yanlış veya artık geçersiz kural birikmesin; onaysız silme
-   - Her türde: `docs/operations/accounts.md`'de 30 gün içinde dolan tarihler
-   - `quarterly`: `/findings-all` (veya en azından tech + security) ile tam tarama; sağlık puanlarını bir önceki çeyrekle karşılaştır
-2. **Erişemediğin maddeleri** (uptime, maliyet panelleri, yedekler, sertifika/kart bitiş tarihleri) AskUserQuestion ile sor (Sorun yok / Sorun var / Bakamadım); cevaplarımı bekle.
-3. Güncellemeler için öneri ver: güvenli olanlar (yama/küçük sürüm) ve riskli olanlar (majör) ayrı. Hangilerinin uygulanacağını **çoklu seçimle** sor. Onaysız güncelleme yapma.
-4. Bulguları `docs/operations/maintenance.md` → "Bakım kaydı" tablosuna bugünün tarihiyle ekle.
-5. Aksiyon gerektirenleri `docs/product/roadmap.md`'ye görev olarak öner.
+1. **Do what you can automatically:**
+   - List outdated dependencies (`npm outdated` / `uv tree --outdated` etc.)
+   - Dependency security scan
+   - Do tests and build still pass?
+   - Scan for dead code, unused environment variables, unused dependencies
+   - Do `docs/workflow/progress.md` and `docs/architecture/overview.md` match the code?
+   - Open Dependabot PRs (`gh pr list --author app/dependabot`, if gh is installed): propose merging the ones with green CI
+   - If MCP is connected, look yourself: new or rising errors of the period in Sentry, security and performance warnings in Supabase (read-only)
+   - `monthly`: clean install test (`/release` → "Temiz kurulum testi" (clean install test) item); list deferred shortcuts with `ponytail:ponytail-debt`; duplicate code ratio with `npx --yes jscpd@4 --silent .`; period row in `docs/quality/metrics.md` (definitions are in the file); `docs/product/unit-economics.md` with real invoices; expired feature flags; unprocessed feedback (`/user-feedback`); context budget (`node .claude/hooks/tools.mjs --measure`, suggest `/context` and `/skill-doctor` to the user; suggest closing a package that stayed open all month but went unused); learned rules: list the lines of `AGENTS.md` → "Öğrenilen kurallar" and the `.claude/hookify.*.local.md` files dated older than 90 days (undated ones included), and ask for each: Keep (set the date to today: the date is the last review) / Update / Delete. If "Öğrenilen kurallar" passed 10 lines, propose merging similar ones (every line loads in every session). Wrong or no-longer-valid rules must not pile up; never delete without approval
+   - In every type: dates in `docs/operations/accounts.md` that expire within 30 days
+   - `quarterly`: full scan with `/findings-all` (or at least tech + security); compare health scores with the previous quarter
+2. **Ask about items you cannot reach** (uptime, cost dashboards, backups, certificate/card expiry dates) with AskUserQuestion (No problem / Problem / Could not check); wait for my answers.
+3. Give proposals for updates: safe ones (patch/minor version) and risky ones (major) separately. Ask which to apply with **multi-select**. Do not update without approval.
+4. Add the findings to the "Bakım kaydı" (maintenance log) table in `docs/operations/maintenance.md` with today's date.
+5. Propose the items that need action as tasks in `docs/product/roadmap.md`.
 
-Özet: 🔴 acil / 🟡 bu ay / 🟢 sorun yok.
+Summary: 🔴 urgent / 🟡 this month / 🟢 no problem.

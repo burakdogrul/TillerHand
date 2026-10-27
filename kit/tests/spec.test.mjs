@@ -102,7 +102,7 @@ test('F-23 audit: test files of other stacks are seen; build/ and kit/ are skipp
 
 test('Ö-23.2 the commands: /plan-task writes a feature spec only for 3+ files, /fix-bug a short bug spec, the template exists', () => {
   const read = (f) => fs.readFileSync(path.join(REPO, f), 'utf8');
-  assert.match(read('.claude/commands/plan-task.md'), /3[^\n]*dosya[^\n]*docs\/product\/specs\//);
+  assert.match(read('.claude/commands/plan-task.md'), /3[^\n]*files[^\n]*docs\/product\/specs\//);
   assert.match(read('.claude/commands/fix-bug.md'), /docs\/product\/specs\//);
   assert.match(read('.claude/commands/review-changes.md'), /docs\/product\/specs\//);
   const t = read('docs/product/specs/_template.md');

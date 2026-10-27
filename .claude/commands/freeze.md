@@ -1,13 +1,13 @@
 ---
-description: Düzenlemeyi tek klasöre kilitler (hata ayıklarken veya riskli bir özellikte işin yayılmasını önler).
-argument-hint: <klasör> | off | (boş = durum)
+description: Locks editing to a single folder (prevents work from spreading while debugging or on a risky feature).
+argument-hint: <folder> | off | (empty = status)
 ---
 
-Kilit: $ARGUMENTS
+Lock: $ARGUMENTS
 
-- **Klasör verildiyse:** `node .claude/hooks/freeze-guard.mjs --set <klasör>` çalıştır. Bundan sonra o klasör dışına dosya aracıyla yazma hook tarafından engellenir (`docs/workflow/progress.md` hariç); kabuk komutuyla (`sed -i`, `mv`, `>`) mevcut bir dosyayı değiştirmek sorulur.
-- **`off` ise:** `node .claude/hooks/freeze-guard.mjs --off`.
-- **Boşsa:** `node .claude/hooks/freeze-guard.mjs --status` ve sonucu tek satırla söyle.
+- **If a folder is given:** Run `node .claude/hooks/freeze-guard.mjs --set <klasör>`. From then on, writing outside that folder with a file tool is blocked by the hook (except `docs/workflow/progress.md`); changing an existing file with a shell command (`sed -i`, `mv`, `>`) asks the user.
+- **If `off`:** `node .claude/hooks/freeze-guard.mjs --off`.
+- **If empty:** `node .claude/hooks/freeze-guard.mjs --status` and report the result in one line.
 
-Kilit varken klasör dışında bir dosyaya gerçekten dokunmak gerekirse kilidi kendin kaldırma: hangi dosya ve neden gerektiğini söyle, kullanıcıya sor.
-`/fix-bug` hatanın kök nedeni bulunduktan sonra ilgili özellik klasörü için kilit önerir.
+If you really must touch a file outside the folder while the lock is on, do not remove the lock yourself: say which file and why it is needed, and ask the user.
+`/fix-bug` suggests a lock for the relevant feature folder after the bug's root cause is found.

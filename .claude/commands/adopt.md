@@ -1,104 +1,104 @@
 ---
-description: Var olan (ilerlemiş, beğenilmeyen veya iyileştirilecek) bir projeyi kite alır. Kodu tarar, belgeleri koddan çıkarır, soru sorarak doğrular, testleri ve yapıyı kitin düzenine getiren bir uyum yol haritası çıkarır.
-argument-hint: [boş | projeyle ilgili kısa not]
+description: Brings an existing project (in progress, disliked or needing improvement) into the kit. Scans the code, derives the docs from the code, verifies by asking questions, and produces an alignment roadmap that brings tests and structure to the kit's layout.
+argument-hint: [empty | short note about the project]
 ---
 
-Not: $ARGUMENTS
+Note: $ARGUMENTS
 
-Bu bir **9 adımlı uyum sihirbazı** (0-9). `/start`'ın var olan kod için olan karşılığıdır. Fikirden değil koddan başlar, ama kararları yine kullanıcı verir: Her kararı `docs/workflow/decision-protocol.md`'ye göre sor ve verildiği anda `docs/decisions/log.md`'ye yaz. Bu oturumda uygulama kodunu değiştirme ve dosya taşıma. Taşıma ve düzeltmeler yol haritasındaki görevlerle, `/build` ile yapılır.
+This is a **9-step alignment wizard** (0-9). It is the counterpart of `/start` for existing code. It starts from the code, not from an idea, but the user still makes the decisions: Ask every decision per `docs/workflow/decision-protocol.md` and write it to `docs/decisions/log.md` the moment it is made. Do not change application code or move files in this session. Moves and fixes are done with the roadmap tasks, through `/build`.
 
-**Önkoşul:** Kit bu klasöre `init` ile kurulmuş olmalı (`.kit.json` var, `type` boş). Kurulmamışsa kullanıcıya kurulum komutunu ver: `node <kit klasörü>/kit/kit.mjs init`. Kurulumdan sonra yeni oturum açılması gerekir.
+**Prerequisite:** The kit must be installed in this folder with `init` (`.kit.json` exists, `type` empty). If not installed, give the user the install command: `node <kit folder>/kit/kit.mjs init`. A new session must be opened after installation.
 
-**Devam etme:** `docs/workflow/progress.md` → `**Aktif faz:** Başlangıç (uyum)` ve `**Başlangıç adımı:**` 0'dan büyükse kaldığın adımdan devam et. Her adım bitince bu satırı (`N/9`) ve `**Son güncelleme:**` satırını güncelle, sonra durum bloğunu yaz.
+**Resuming:** If `docs/workflow/progress.md` → `**Aktif faz:** Başlangıç (uyum)` and `**Başlangıç adımı:**` is greater than 0, resume from that step. When a step ends, update this line (`N/9`) and the `**Son güncelleme:**` line, then write the status block.
 
-**Mevcut koda saygı:** Kurulum projenin dosyalarının üzerine yazmaz; kitin hali yanına `<dosya>.kit-new` olarak konur. Bunları Adım 2'de tek tek ele al.
+**Respect existing code:** Installation does not overwrite the project's files; the kit's version is placed next to it as `<file>.kit-new`. Handle them one by one in Step 2.
 
 ---
 
-## Adım 0: Hazırlık
+## Step 0: Preparation
 
-0. **Dil (her şeyden önce):** `/start` Adım 0'ın başındaki dil sorusunu aynen uygula (İngilizce soru, Turkish / English / Other, `node .claude/hooks/lang.mjs --set <kod>`, gerekirse çeviri). Dil seçiliyse tekrar sorma.
+0. **Language (before anything else):** Apply the language question at the start of `/start` Step 0 exactly (question in English, Turkish / English / Other, `node .claude/hooks/lang.mjs --set <code>`, translation if needed). If a language is already chosen, do not ask again.
 1. `docs/workflow/progress.md` → `**Aktif faz:** Başlangıç (uyum)`, `**Başlangıç adımı:** 0/9`.
-2. `/start` Adım 0'daki şu maddeleri aynen uygula: Profil (0), anlatıcı mod (0b), araç (0c), auto memory (0d), model ve effort (0e, `docs/workflow/models.md`), ortam kontrolü (1), eklentiler (2), caveman (3), kod haritası (5), bildirimler (6), pano (6b). Var olan projede kod haritası daha da faydalıdır; önerilen seçenek "Kur" olsun.
-3. **Tarama derinliği:** Limiti oku ve sor. Tahmini maliyetleri göster:
-   - **Hızlı tarama (Önerilen, Pro'da):** Yapı, stack, testler, git geçmişi, belgeler. 5 saatlik limitin yaklaşık %10-20'si.
-   - **Derin tarama:** Hızlı taramaya ek olarak seçilen bulgu raporları (`/findings-tech`, `-security`, `-ux` vb.). Rapor başına yaklaşık %8-15 daha. Hangi raporların çalışacağını çoklu seçimle sor.
-   Seçimi `**Profil:**` satırına ekle (örn. `Hafif · tarama: Hızlı`).
+2. Apply these items from `/start` Step 0 exactly: Profile (0), narrator mode (0b), tool (0c), auto memory (0d), model and effort (0e, `docs/workflow/models.md`), environment check (1), plugins (2), caveman (3), code map (5), notifications (6), dashboard (6b). The code map is even more useful in an existing project; make "Install" the recommended option.
+3. **Scan depth:** Read the limit and ask. Show the estimated costs:
+   - **Quick scan (Recommended, on Pro):** Structure, stack, tests, git history, docs. About 10-20% of the 5-hour limit.
+   - **Deep scan:** In addition to the quick scan, the selected findings reports (`/findings-tech`, `-security`, `-ux` etc.). About 8-15% more per report. Ask which reports to run with multi-select.
+   Append the choice to the `**Profil:**` line (e.g. `Hafif · tarama: Hızlı`).
 
-## Adım 1: Tara (salt okunur)
+## Step 1: Scan (read-only)
 
-Dosyaları toptan okuma: kod haritası bağlıysa önce onu kullan, yoksa paket dosyalarından, klasör ağacından ve giriş noktalarından başla. Çıkar:
-1. **Stack:** Dil, framework, veritabanı, auth, hosting, paket yöneticisi. Kilit dosyası var mı? Çalışma ortamı sürümü sabit mi (`.nvmrc`, `.python-version`, `engines`)?
-2. **Yapı:** Klasör ağacı (2-3 seviye), giriş noktaları, katmanlar. Kitin özellik bazlı yapısından (`features/<özellik>/`) ne kadar uzak?
-3. **Özellikler:** Rotalar, ekranlar, API uçları ve modellerden kullanıcıya görünen özellik listesi.
-4. **Testler:** Test altyapısı var mı? Testleri çalıştır, sonucu göster: kaç test, kaçı kırmızı, kapsanan alanlar. Doğrulama satırı olmayan ya da her şeyi taklitle (mock) geçen testleri ayrıca işaretle.
-5. **Kurulabilirlik:** README'de kurulum adımı, `.env.example`, sistem bağımlılıkları.
-6. **Git geçmişi:** Son 30 commit'in özeti, aktif dallar, en çok değişen dosyalar (riskli bölgeler).
-7. **Mevcut belgeler:** README, eski `CLAUDE.md` ve `AGENTS.md` (yerinde duruyorlar; kitinkiler `.kit-new` uzantılı), varsa docs klasörü.
-8. **Kaynağı olmayan parçalar:** Repoya girmiş derlenmiş paket, küçültülmüş JS, Electron ASAR veya kaynağı kayıp bağımlılık. Varsa listele. İçini anlamak gerekirse rea CLI öner (`docs/workflow/mcp-catalog.md` → rea): sadece projenin sahibi olduğu veya incelemeye yetkili olduğu parçalar için, lisansını kontrol ederek.
+Do not read files in bulk: if the code map is connected, use it first; otherwise start from the package files, the folder tree and the entry points. Extract:
+1. **Stack:** Language, framework, database, auth, hosting, package manager. Is there a lock file? Is the runtime version pinned (`.nvmrc`, `.python-version`, `engines`)?
+2. **Structure:** Folder tree (2-3 levels), entry points, layers. How far is it from the kit's feature-based structure (`features/<özellik>/`)?
+3. **Features:** The user-visible feature list from routes, screens, API endpoints and models.
+4. **Tests:** Is there a test setup? Run the tests and show the result: how many tests, how many red, which areas are covered. Also flag tests that have no verification line or that pass everything with mocks.
+5. **Installability:** Setup steps in the README, `.env.example`, system dependencies.
+6. **Git history:** Summary of the last 30 commits, active branches, most changed files (risky zones).
+7. **Existing docs:** README, the old `CLAUDE.md` and `AGENTS.md` (they stay in place; the kit's versions have the `.kit-new` extension), the docs folder if any.
+8. **Parts without source:** A compiled package, minified JS, an Electron ASAR or a dependency with lost source that entered the repo. List them if present. If their inside needs to be understood, suggest the rea CLI (`docs/workflow/mcp-catalog.md` → rea): only for parts the project owner owns or is authorized to inspect, checking the license.
 
-Bulguları kısa bir tablo halinde göster. Hızlı taramada kodun içine dalma: sadece yapı ve özet.
+Show the findings as a short table. In a quick scan do not dive into the code: only structure and summary.
 
-## Adım 2: Tip ve kurulum
+## Step 2: Type and installation
 
-1. Taramaya göre tipi öner ve onaylat (web-saas / mobile / backend; AI özelliği var mı; Türkiye'de satış veya Türk kullanıcı varsa Türkiye eki `tr`, ayrıntı `/start` Adım 2).
-2. Kur: `node <kit klasörü>/kit/kit.mjs install --type <tip> [--addons ai,tr] --project .` (kit klasörü `.kit.json` → `kit` alanında; alan `local` ise klasör git dışı `.kit.local.json` → `kit`'te, o dosya yoksa proje başka makinede açılmıştır: kullanıcıya kit klasörünü sor ya da `npx -y tillerhand@<.kit.json → version>` kullan; alan `npx:tillerhand@<sürüm>` ise `npx -y tillerhand@<sürüm> install ...`; sürüm tam olarak `1.2.3` biçiminde ve `.kit.json` → `version` ile aynı değilse dur ve sor). Araç `init`'te seçilmediyse Adım 0'daki seçimi `--tool <liste>` olarak ekle.
-3. **`.kit-new` dosyaları:** Her biri için (`CLAUDE.md` ve `AGENTS.md` hariç, onlar Adım 4'te) farkı özetle ve karar olarak sor: kitinkini al / projeninkini koru / birleştir. Örnekler: `.env.example` genelde birleştirilir; `ci.yml` için mevcut CI'ın yaptıklarını kitinkiyle karşılaştır. Sonra `.kit-new` dosyasını sil.
+1. Propose the type based on the scan and get it approved (web-saas / mobile / backend; is there an AI feature; if there are sales in Turkey or Turkish users, the Turkey add-on `tr`, details in `/start` Step 2).
+2. Install: `node <kit folder>/kit/kit.mjs install --type <type> [--addons ai,tr] --project .` (the kit folder is in the `.kit.json` → `kit` field; if the field is `local`, the folder is in the git-ignored `.kit.local.json` → `kit`, and if that file is missing, the project was opened on another machine: ask the user for the kit folder or use `npx -y tillerhand@<.kit.json → version>`; if the field is `npx:tillerhand@<version>`, `npx -y tillerhand@<version> install ...`; if the version is not exactly in the form `1.2.3` and the same as `.kit.json` → `version`, stop and ask). If the tool was not chosen at `init`, add the choice from Step 0 as `--tool <list>`.
+3. **`.kit-new` files:** For each one (except `CLAUDE.md` and `AGENTS.md`, which are in Step 4), summarize the difference and ask as a decision: take the kit's / keep the project's / merge. Examples: `.env.example` is usually merged; for `ci.yml`, compare what the existing CI does with the kit's. Then delete the `.kit-new` file.
 
-## Adım 3: Belgeleri koddan çıkar
+## Step 3: Derive the docs from the code
 
-Kodun söylediğini taslak olarak yaz, koddan anlaşılmayanı sor (AskUserQuestion, turlar halinde):
-1. **`docs/product/prd.md`:** Problem, hedef kullanıcı, mevcut özellikler (koddan), kabul kriterleri taslağı. Sor: Projenin amacı ve kitlesi doğru anlaşıldı mı? **Neyi beğenmiyorsun, neyi iyileştirmek istiyorsun?** (çoklu seçim + serbest). Eksik veya yarım kalan özellikler hangileri?
-2. **`docs/architecture/stack.md`:** "Seçilen teknolojiler" tablosunu mevcut stack'le doldur. Kitin kataloğundan farklı seçimler hata değildir; değiştirmeyi önermek ayrı bir karardır ve sadece ciddi bir sebep varsa sorulur (güvenlik, bakımı bitmiş sürüm, maliyet).
-3. **`docs/architecture/overview.md`, `docs/product/glossary.md`:** Veri modeli, servisler, ana kavramlar.
-3b. **Araştırma (pahalı adım, isteğe bağlı):** Benzer projeler ve rakiplerle karşılaştırma için `/research` öner (hızlı: limitin yaklaşık %10-15'i). Yap / Sonraya bırak. Seçilen özellikler Adım 8'de Faz 3'e girer.
-4. **README:** Gereksinimler ve Kurulum bölümleri (`/start` Adım 4 madde 3a). Eksik kilit dosyası veya sürüm dosyası Adım 8'de ilk görevlerden biri olur.
+Write what the code says as a draft, ask what cannot be understood from the code (AskUserQuestion, in rounds):
+1. **`docs/product/prd.md`:** Problem, target user, current features (from the code), draft acceptance criteria. Ask: Were the project's purpose and audience understood correctly? **What do you dislike, what do you want to improve?** (multi-select + free text). Which features are missing or unfinished?
+2. **`docs/architecture/stack.md`:** Fill the "Seçilen teknolojiler" (chosen technologies) table with the current stack. Choices different from the kit's catalog are not errors; proposing a change is a separate decision and is asked only if there is a serious reason (security, an end-of-life version, cost).
+3. **`docs/architecture/overview.md`, `docs/product/glossary.md`:** Data model, services, main concepts.
+3b. **Research (expensive step, optional):** Suggest `/research` for comparison with similar projects and competitors (quick: about 10-15% of the limit). Do it / Leave for later. Selected features go into Phase 3 in Step 8.
+4. **README:** The "Gereksinimler" (requirements) and "Kurulum" (installation) sections (`/start` Step 4 item 3a). A missing lock file or version file becomes one of the first tasks in Step 8.
 
-## Adım 4: AGENTS.md ve CLAUDE.md'yi yeniden yaz
+## Step 4: Rewrite AGENTS.md and CLAUDE.md
 
-Ortak kurallar `AGENTS.md`'de (Claude Code, Codex, Antigravity okur); `CLAUDE.md` onu `@AGENTS.md` ile içe alır ve sadece Claude Code'a özel ekleri tutar.
+The shared rules are in `AGENTS.md` (read by Claude Code, Codex, Antigravity); `CLAUDE.md` imports it with `@AGENTS.md` and keeps only Claude Code-specific additions.
 
-1. Kitin `AGENTS.md` (veya `AGENTS.md.kit-new`) dosyasını temel al; proje adı, tek cümle tanım ve Komutlar bölümünü doldur. `CLAUDE.md` kitin `CLAUDE.md.kit-new` haline geçer. `init` projenin `AGENTS.md`'si yüzünden `CLAUDE.md`'ye `@AGENTS.md.kit-new` yazdıysa bu satırı `@AGENTS.md` yap.
-2. Eski `CLAUDE.md`'yi (ve varsa eski `AGENTS.md`'yi) oku ve içindeki projeye özel kuralları listele (kod stili, yasak komutlar, paket yöneticisi, ortam notları, dikkat edilecek yerler). Kitin kurallarıyla aynı olanları ayıkla.
-3. Kalanları **çoklu seçimle** sor: "Eski kurallardan hangileri yeni AGENTS.md'ye girsin?" Kitin kuralıyla çelişen varsa ayrıca belirt.
-4. Seçilenleri `AGENTS.md`'ye `## Proje kuralları` bölümü olarak ekle ("Temel kurallar"dan sonra; sadece Claude Code'a özel olanlar `CLAUDE.md`'ye). Eskileri `docs/archive/claude-md-eski.md` (ve `agents-md-eski.md`) olarak sakla, `.kit-new` dosyalarını sil.
+1. Take the kit's `AGENTS.md` (or `AGENTS.md.kit-new`) as the base; fill the project name, the one-sentence description and the "Komutlar" (commands) section. `CLAUDE.md` becomes the kit's `CLAUDE.md.kit-new` version. If `init` wrote `@AGENTS.md.kit-new` into `CLAUDE.md` because of the project's `AGENTS.md`, change this line to `@AGENTS.md`.
+2. Read the old `CLAUDE.md` (and the old `AGENTS.md` if any) and list the project-specific rules in them (code style, forbidden commands, package manager, environment notes, places to be careful). Filter out those that are the same as the kit's rules.
+3. Ask the rest with **multi-select**: "Which of the old rules should go into the new AGENTS.md?" If any conflicts with a kit rule, point it out separately.
+4. Add the selected ones to `AGENTS.md` as a `## Proje kuralları` section (after "Core rules"; only the Claude Code-specific ones go to `CLAUDE.md`). Keep the old ones as `docs/archive/claude-md-eski.md` (and `agents-md-eski.md`), delete the `.kit-new` files.
 
-## Adım 5: Testler ve kritik akışlar
+## Step 5: Tests and critical flows
 
-1. Adım 1'deki test sonucunu hatırlat. Kırmızı testler ve hiçbir şeyi doğrulamayan testler bulgu olarak kaydedilir.
-2. Kritik akışları öner (giriş, ödeme, veri kaydı ve silme gibi; 3-7 akış) ve çoklu seçimle onaylat. `docs/quality/test-plan.md`'ye yaz.
-3. **Her kritik akışın doğru davranışını kullanıcıya sor** ("Şifre yanlışsa ne olmalı?" gibi somut sorular). Kodun şu anki davranışı test için kaynak değildir: kod yanlış olabilir. Kod ile cevap çelişirse bunu bulgu olarak yaz ve düzeltme görevini Adım 8'e ekle.
-4. Kural: Yapı taşınmadan önce bu akışlara uçtan uca test yazılır. Sonrasında her görev dokunduğu kodun testini kendisi yazar. Bütün projeye toplu test yazılmaz.
+1. Recall the test result from Step 1. Red tests and tests that verify nothing are recorded as findings.
+2. Propose the critical flows (such as sign-in, payment, data save and delete; 3-7 flows) and get them approved with multi-select. Write them to `docs/quality/test-plan.md`.
+3. **Ask the user the correct behavior of every critical flow** (concrete questions such as "What should happen if the password is wrong?"). The code's current behavior is not the source for tests: the code may be wrong. If the code and the answer conflict, write it as a finding and add the fix task to Step 8.
+4. Rule: Before the structure is moved, end-to-end tests are written for these flows. After that, each task writes the test of the code it touches. Tests are not written in bulk for the whole project.
 
-## Adım 6: Derin tarama (seçildiyse)
+## Step 6: Deep scan (if chosen)
 
-Adım 0'da seçilen bulgu raporlarını çalıştır (`/findings-all <türler>` veya tek tek). Kritik ve yüksek bulguları Adım 8'deki yol haritasına aday olarak al.
+Run the findings reports chosen in Step 0 (`/findings-all <types>` or one by one). Take the critical and high findings as candidates for the roadmap in Step 8.
 
-**İnsan için kod haritası (isteğe bağlı):** Kullanıcı kodu kendisi de görsel olarak keşfetmek isterse Understand-Anything öner (`yayin` paketi: `node .claude/hooks/tools.mjs --required yayin`). `/understand` ilk çalıştırmada bütün kodu okur, büyük projede pahalıdır: maliyeti söyle ve sor. Türkçe çıktı yok; `--language en` kullan. Sonra `/understand-dashboard`. Kod haritası (codebase-memory-mcp) ajan içindir, bu insan içindir; biri diğerinin yerine geçmez.
+**Code map for humans (optional):** If the user wants to explore the code visually themselves, suggest Understand-Anything (`yayin` package: `node .claude/hooks/tools.mjs --required yayin`). `/understand` reads all the code on the first run and is expensive in a big project: state the cost and ask. There is no Turkish output; use `--language en`. Then `/understand-dashboard`. The code map (codebase-memory-mcp) is for the agent, this one is for humans; neither replaces the other.
 
-## Adım 7: Kurul ve tasarım (isteğe bağlı)
+## Step 7: Board and design (optional)
 
-Pahalı adımlar: önce maliyeti söyle (`docs/workflow/usage-limits.md`), sonra sor: Yap / Hafif yap / Sonraya bırak.
-1. **Kurul:** `/start` Adım 6.
-2. **Tasarım** (arayüz varsa): Önce mevcut arayüzden `DESIGN.md` çıkar (`impeccable:impeccable` → extract); sonra sor: mevcut tasarımı koru / iyileştir / yeni yön (`/design genel`).
+Expensive steps: state the cost first (`docs/workflow/usage-limits.md`), then ask: Do it / Do it light / Leave for later.
+1. **Board:** `/start` Step 6.
+2. **Design** (if there is a UI): First extract `DESIGN.md` from the existing UI (`impeccable:impeccable` → extract); then ask: keep the current design / improve / new direction (`/design genel`).
 
-## Adım 8: Uyum yol haritası → `docs/product/roadmap.md`
+## Step 8: Alignment roadmap → `docs/product/roadmap.md`
 
-Kitin "Faz 0" şablonunu bu projeye göre yeniden yaz. Sıra önemli:
-1. **Faz 0: Güvenli zemin.** Kilit dosyası ve sürüm dosyası, README kurulum adımları, CI ve pre-commit, kırmızı testlerin durumu. Sonra her kritik akış için ayrı görev: "Ö-xx uçtan uca testi (doğru davranışa göre)".
-2. **Faz 1: Yapıyı taşı.** Proje kitin klasör yapısına (`docs/architecture/structure.md`) taşınır. Her özellik ayrı görevdir (tek oturumluk). Kurallar:
-   - Taşıma ayrı bir dalda yapılır (`uyum/yapi`).
-   - Her görev sonunda testler ve uygulama çalışıyor olmalıdır. Testler yeşilse çalışan nokta kaydedilir (`checkpoint.mjs --save`). Bozulursa `/rollback` ile dönülür.
-   - Taşıma bitene kadar eski klasörler `.claude/structure.json` → `allow` listesine geçici olarak eklenir (CI yapı denetimi kırmızı kalmasın). Bu bir yapı kararıdır: kullanıcıya sor. Faz 1'in son görevi bu geçici satırları silmektir.
-3. **Faz 2: Bulgular.** Kullanıcının beğenmediği şeyler, kod ile doğru davranış arasındaki çelişkiler ve bulgu raporlarının kritik maddeleri, önem sırasıyla.
-4. **Faz 3 ve sonrası:** Yeni özellikler (PRD'deki eksikler).
+Rewrite the kit's "Faz 0" template (Phase 0) for this project. Order matters:
+1. **Phase 0: Safe ground.** Lock file and version file, README setup steps, CI and pre-commit, the state of the red tests. Then a separate task for each critical flow: "Ö-xx end-to-end test (by the correct behavior)".
+2. **Phase 1: Move the structure.** The project is moved to the kit's folder structure (`docs/architecture/structure.md`). Each feature is a separate task (single session). Rules:
+   - The move is done on a separate branch (`uyum/yapi`).
+   - At the end of each task the tests and the app must work. If the tests are green, the working point is saved (`checkpoint.mjs --save`). If it breaks, return with `/rollback`.
+   - Until the move ends, the old folders are temporarily added to the `.claude/structure.json` → `allow` list (so the CI structure check does not stay red). This is a structure decision: ask the user. The last task of Phase 1 is deleting these temporary lines.
+3. **Phase 2: Findings.** Things the user dislikes, conflicts between the code and the correct behavior, and the critical items of the findings reports, in order of importance.
+4. **Phase 3 and after:** New features (gaps in the PRD).
 
-Sor: "Faz 2'de önce hangisiyle başlayalım?" Yol haritasını özetle ve onay al.
+Ask: "Which one should we start with in Phase 2?" Summarize the roadmap and get approval.
 
-## Adım 9: Kapanış
+## Step 9: Closing
 
-1. `docs/workflow/progress.md`: Aktif faz `Faz 0`, aktif görev `G-001`, başlangıç adımı `9/9`, sıradaki adım, bekleyen kararlar.
-2. `node .claude/hooks/dashboard.mjs` çalıştır.
-3. Özet ver: tip ve stack, mevcut test durumu, kritik akışlar, AGENTS.md'ye taşınan kurallar, yapı farkı, en önemli 3 bulgu, ilk görev, kalan limit.
-4. Commit öner: `docs: kit uyumu (adopt)`.
-5. Son satır: "Devam: `/build G-001`".
+1. `docs/workflow/progress.md`: Active phase `Faz 0`, active task `G-001`, start step `9/9`, next step, pending decisions.
+2. Run `node .claude/hooks/dashboard.mjs`.
+3. Give a summary: type and stack, current test state, critical flows, rules moved to AGENTS.md, structure gap, the 3 most important findings, first task, remaining limit.
+4. Suggest a commit: `docs: kit uyumu (adopt)`.
+5. Last line: "Continue: `/build G-001`".

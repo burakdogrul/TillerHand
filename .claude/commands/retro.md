@@ -1,38 +1,38 @@
 ---
-description: Faz veya proje sonunda geriye bakış yapar; kalıcı dersleri kite geri yazmayı önerir.
-argument-hint: [faz adı | proje] (boş = son faz)
+description: Looks back at the end of a phase or project; proposes writing lasting lessons back into the kit.
+argument-hint: [phase name | project] (empty = last phase)
 ---
 
-Retro kapsamı: $ARGUMENTS
+Retro scope: $ARGUMENTS
 
-Amaç: Bu projede öğrendiklerini kaybetmemek ve kiti (bundan sonraki tüm projelerin şablonunu) iyileştirmek.
+Goal: Keep what you learned in this project and improve the kit (the template for all future projects).
 
-1. **Veri topla** (kapsamdaki dönem için):
-   - `git log --oneline` ve `CHANGELOG.md`: ne yapıldı
-   - `docs/workflow/progress.md` açık sorunları, `docs/decisions/log.md` yeni kararlar
-   - `fix:` commit'leri ve `/fix-bug` ile çözülen hatalar: hangi tür hatalar tekrar etti?
-   - `docs/product/roadmap.md`: planlanan ve gerçekleşen görevler; bölünmek zorunda kalan görevler
-2. **Bana sor** (AskUserQuestion, topladığın veriden çıkardığın seçeneklerle, çoklu seçim + serbest cevap):
-   - Neyi iyi yaptık, devam etmeli?
-   - AI nerede en çok zaman kaybettirdi veya yanlış yaptı?
-   - Sorular çok mu, az mı, yerinde mi? Hangi konuda soru modu kapatılmalı/açılmalı?
-   - Hangi kontrol listesi maddesi gereksiz geldi, hangisi eksikti?
-   - Bir dahaki projede neyi baştan farklı yapardın?
-3. **`docs/quality/retros.md`'ye** bugünün tarihiyle kayıt ekle (şablon dosyada). `docs/quality/metrics.md`'ye dönem satırı ekle ve bir önceki dönemle karşılaştır: Görev süresi, düzeltme oranı ve kopya kod artıyor mu? Kullanıcının hissiyle veriler çelişiyorsa bunu açıkça söyle.
-4. **Dersleri sınıflandır:**
-   - **Bu projeye özel** → `AGENTS.md` (sadece Claude Code'a özelse `CLAUDE.md`), `docs/architecture/stack.md` veya ilgili dokümana kural olarak ekle. Önce `claude-md-improver` ile CLAUDE.md'nin güncelliğini denetle. Mekanik olarak denetlenebilen kural ("X dosyasına Y yazma") metin yerine `/hookify` ile hook kuralı olur. Kural `AGENTS.md`'de "Öğrenilen kurallar" bölümüne gider; kaynak ve tarihi `/fix-bug` 8. adımdaki biçimle yaz. Panoda "Aynı hata sınıfı" uyarısı varsa o sınıf için de kural öner; cevabı (eklendi veya gerek yok) spec'lere `**Kural:**` satırı olarak yaz ki uyarı kapansın ve tekrar sorulmasın.
-   - **Tüm projelere genel** → kite önerilecek.
-5. **Kit önerileri:** Her öneri için:
-   - Hangi kit dosyası: Ortak dosyalar kit reposunun kökünde (`AGENTS.md`, `CLAUDE.md`, `docs/...`, `.claude/...`), tipe özel olanlar `kit/templates/<tip>/...`, ekler `kit/templates/addons/<ek>/...`.
-   - Eklenecek/değişecek metin (diff olarak) ve neden (hangi olaydan çıktı).
-   - Kural ekleme > kural değiştirme > kural silme sırasıyla tercih et; kiti şişirme. Aynı amaçlı mevcut kural varsa onu güçlendir. Metni `mattpocock-skills:writing-for-agents` ilkeleriyle yaz.
-   - Önerileri **çoklu seçimle** onaylat.
-6. Onaylananları kite uygula:
-   1. `.kit.json` → `source` reposunu geçici klasöre klonla.
-   2. `retro/<proje>-<tarih>` dalı aç.
-   3. Değişiklikleri yap, `kit/CHANGELOG.md` → "[Yayınlanmamış]" bölümüne ekle.
-   4. `node --test "kit/tests/*.test.mjs"` çalıştır, commit at.
-   5. Sonra sor: "Dalı push edip PR açayım / push edip main'e birleştireyim / sadece yerelde bırakayım". Push etmek için açık onay şart.
-   6. Geçici klasörü sil.
+1. **Collect data** (for the scope period):
+   - `git log --oneline` and `CHANGELOG.md`: what was done
+   - Open issues in `docs/workflow/progress.md`, new decisions in `docs/decisions/log.md`
+   - `fix:` commits and bugs solved with `/fix-bug`: which kinds of bugs repeated?
+   - `docs/product/roadmap.md`: planned vs. completed tasks; tasks that had to be split
+2. **Ask me** (AskUserQuestion, with options drawn from the collected data, multi-select + free answer):
+   - What did we do well and should continue?
+   - Where did the AI waste the most time or get things wrong?
+   - Too many questions, too few, or right? On which topic should question mode be closed or opened?
+   - Which checklist item was unnecessary, which one was missing?
+   - What would you do differently from the start next project?
+3. **Add an entry to `docs/quality/retros.md`** with today's date (the template is in the file). Add a period row to `docs/quality/metrics.md` and compare it with the previous period: are task duration, fix rate and duplicate code rising? If the data contradicts the user's feeling, say so openly.
+4. **Classify the lessons:**
+   - **Specific to this project** → add as a rule to `AGENTS.md` (to `CLAUDE.md` only if specific to Claude Code), `docs/architecture/stack.md` or the relevant doc. First check that CLAUDE.md is current with `claude-md-improver`. A mechanically checkable rule ("do not write Y in file X") becomes a hook rule with `/hookify` instead of text. The rule goes to the "Öğrenilen kurallar" (learned rules) section of `AGENTS.md`; write source and date in the format of `/fix-bug` step 8. If the dashboard shows an "Aynı hata sınıfı" (same bug class) warning, propose a rule for that class too; write the answer (added or not needed) into the specs as a `**Kural:**` line so the warning closes and is not asked again.
+   - **General to all projects** → propose to the kit.
+5. **Kit proposals:** For each proposal:
+   - Which kit file: shared files are in the kit repo root (`AGENTS.md`, `CLAUDE.md`, `docs/...`, `.claude/...`), project-type-specific ones in `kit/templates/<tip>/...`, add-ons in `kit/templates/addons/<ek>/...`.
+   - The text to add/change (as a diff) and why (which event it came from).
+   - Prefer in this order: add a rule > change a rule > delete a rule; do not bloat the kit. If a rule with the same purpose exists, strengthen it. Write the text by the principles of `mattpocock-skills:writing-for-agents`.
+   - Get the proposals approved with **multi-select**.
+6. Apply the approved ones to the kit:
+   1. Clone the `source` repo from `.kit.json` into a temp folder.
+   2. Open a `retro/<proje>-<tarih>` branch.
+   3. Make the changes, add them to `kit/CHANGELOG.md` → "[Yayınlanmamış]" (unreleased) section.
+   4. Run `node --test "kit/tests/*.test.mjs"`, commit.
+   5. Then ask: "Push the branch and open a PR / push and merge to main / leave local only". Pushing needs explicit approval.
+   6. Delete the temp folder.
 
-Bitince: "Projeye eklenen kurallar: N · Kite önerilen: M (onaylanan: K)".
+When done: "Rules added to the project: N · Proposed to the kit: M (approved: K)".

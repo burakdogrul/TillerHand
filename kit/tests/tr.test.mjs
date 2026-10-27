@@ -133,5 +133,5 @@ test('Ö-26.2 every legal item has a primary source and a check date; the note s
   }
   assert.match(doc, /5 iş günü içinde Kuruma bildirilir/);
   for (const f of ['legal', 'business']) assert.match(fs.readFileSync(path.join(REPO, `.claude/findings/lenses/${f}.md`), 'utf8'), /docs\/legal\/turkiye\.md/, f);
-  assert.match(fs.readFileSync(path.join(REPO, '.claude/commands/start.md'), 'utf8'), /Türkiye eki \(`tr`\) önerilir/);
+  assert.match(fs.readFileSync(path.join(REPO, '.claude/commands/start.md'), 'utf8'), /the Turkey add-on \(`tr`\) is recommended/);
 });

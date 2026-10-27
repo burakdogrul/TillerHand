@@ -1,25 +1,25 @@
 ---
-description: Projeyi kitin GitHub'daki son sürümüne günceller (komutlar, ajanlar, hook'lar, kontrol listeleri).
-argument-hint: [boş | --addons ai,tr | --tool claude,codex,antigravity]
+description: Updates the project to the kit's latest version on GitHub (commands, agents, hooks, checklists).
+argument-hint: [empty | --addons ai,tr | --tool claude,codex,antigravity]
 ---
 
-Ek argüman: $ARGUMENTS
+Extra argument: $ARGUMENTS
 
-1. `.kit.json`'u oku: mevcut sürüm, `source` (kit repo adresi), tip, ekler.
-2. Commit edilmemiş değişiklik varsa dur ve önce commit etmeyi öner (güncelleme dosya yazar).
-3. Kiti geçici bir klasöre klonla ve güncellemeyi çalıştır:
+1. Read `.kit.json`: current version, `source` (kit repo address), project type, add-ons.
+2. If there are uncommitted changes, stop and propose committing first (the update writes files).
+3. Clone the kit into a temp folder and run the update:
 
 ```bash
 git clone --depth 1 <kaynak> "<geçici klasör>/vibe-kit"
 node "<geçici klasör>/vibe-kit/kit/kit.mjs" update --project . $ARGUMENTS
 ```
 
-4. Çıktıyı raporla:
-   - **Güncellenen / eklenen** dosyalar.
-   - **Çakışmalar (`.kit-new`):** Her biri için senin değişikliğinle kitin yeni hali arasındaki farkı özetle. Nasıl birleştirileceğini **karar olarak sor**: kitinkini al / benimkini koru / birleştir. Sonra `.kit-new` dosyasını sil.
-   - Klondaki `kit/CHANGELOG.md`'den mevcut sürümden yeni sürüme kadar olan notları özetle. **"Elle uyarla"** maddelerini (AGENTS.md, CLAUDE.md, docs/architecture/stack.md, settings.json gibi projeye ait dosyalar) tek tek göster ve her biri için uygulanıp uygulanmayacağını sor.
-4a. **Dil:**
-   - `.kit.json`'da `lang` alanı yoksa proje dil seçimi gelmeden kurulmuştur (Türkçe varsayılır): dili bir kez sor (mevcut konuşma dilinde; Turkish / English / Other) ve `node .claude/hooks/lang.mjs --set <kod>` çalıştır.
-   - Dil (yeni seçilmiş ya da eskiden beri) `tr` veya `en` değilse her güncellemeden sonra `node .claude/hooks/lang.mjs --check` çalıştır. Eksik anahtar varsa `node .claude/hooks/lang.mjs --export --missing` çıktısını o dile çevir ve `--write`'a stdin ile ver.
-4b. Yeni sürüm yeni eklenti açtıysa `node .claude/hooks/plugins-sync.mjs` ile listele, kullanıcı onaylarsa `--install` ile kur, sonra `/reload-plugins` öner. Paket tanımı değiştiyse (`.claude/hooks/tools.mjs` → `PAKETLER`) `node .claude/hooks/tools.mjs` ile durumu göster.
-5. Geçici klasörü sil. Commit öner: `chore: kit <eski> → <yeni>`.
+4. Report the output:
+   - **Updated / added** files.
+   - **Conflicts (`.kit-new`):** For each, summarize the difference between your change and the kit's new version. Ask how to merge as a **decision**: take the kit's / keep mine / merge. Then delete the `.kit-new` file.
+   - From the clone's `kit/CHANGELOG.md`, summarize the notes from the current version to the new version. Show the **"Elle uyarla"** (adapt manually) items (project-owned files such as AGENTS.md, CLAUDE.md, docs/architecture/stack.md, settings.json) one by one and ask for each whether to apply it.
+4a. **Language:**
+   - If `.kit.json` has no `lang` field, the project was set up before language selection existed (Turkish is assumed): ask the language once (in the current conversation language; Turkish / English / Other) and run `node .claude/hooks/lang.mjs --set <kod>`.
+   - If the language (newly chosen or existing) is not `tr` or `en`, run `node .claude/hooks/lang.mjs --check` after every update. If keys are missing, translate the output of `node .claude/hooks/lang.mjs --export --missing` into that language and pass it to `--write` via stdin.
+4b. If the new version enabled new plugins, list them with `node .claude/hooks/plugins-sync.mjs`; if the user approves, install with `--install`, then suggest `/reload-plugins`. If a package definition changed (`.claude/hooks/tools.mjs` → `PAKETLER`), show the status with `node .claude/hooks/tools.mjs`.
+5. Delete the temp folder. Propose a commit: `chore: kit <eski> → <yeni>`.

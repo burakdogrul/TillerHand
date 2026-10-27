@@ -316,7 +316,7 @@ test('3.15.1 F-13 the Codex/Antigravity section of AGENTS.md is filled only for 
   const kitDir = path.join(tmp, 'kit-clone');
   fs.cpSync(REPO, kitDir, { recursive: true, filter: (src) => !/[\/](\.git|node_modules)$/.test(src) && !src.endsWith('.kit.json') });
   const kitMjs = path.join(kitDir, 'kit', 'kit.mjs');
-  const section = /<!-- kit:other-tools -->\n## Codex ve Antigravity'de/;
+  const section = /<!-- kit:other-tools -->\n## In Codex and Antigravity/;
   const agents = (p) => fs.readFileSync(path.join(p, 'AGENTS.md'), 'utf8');
   const cl = path.join(tmp, 'cl');
   assert.equal(spawnSync(process.execPath, [kitMjs, 'init', '--project', cl], { encoding: 'utf8' }).status, 0);
