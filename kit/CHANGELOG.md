@@ -3,6 +3,12 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.41.1] - 2026-10-27
+
+### Değişen
+- **Kurulum üç seçenekle anlatılıyor.** README ve rehberde npm (önerilen), Claude Code plugin ve git yolları ayrı ayrı, ne zaman hangisinin seçileceğiyle. Yeni başlayanlar için adımlarda plugin yolu da var.
+- **Plugin ikonu.** Logo işareti plugin dizini için kare PNG olarak eklendi.
+
 ## [3.41.0] - 2026-10-27
 
 ### Eklenen

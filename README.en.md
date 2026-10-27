@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.41.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.41.1-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -58,7 +58,9 @@ You don't need to know how to code. Claude handles git, the terminal and install
 
 **2. Create your project**
 1. Make a folder for your project and select it in the **Code** tab of the Claude desktop app.
-2. Type: `run npx tillerhand init in this folder`.
+2. Install the kit. Pick one:
+   - Tell Claude: `run npx tillerhand init in this folder`.
+   - Or use the plugin, in order: `/plugin marketplace add burakdogrul/TillerHand`, `/plugin install tillerhand@tillerhand`, `/tillerhand:init`.
 3. **Start a new session** in the same folder. The kit's commands and guardrails load in the new session.
 
 **3. Start**
@@ -87,13 +89,17 @@ Claude asks its questions one by one. **The first option is always the recommend
 
 **Requirements:** [Claude Code](https://claude.com/claude-code), Git, Node.js 18+
 
+There are three ways to install. All three set the kit up in the project the same way; pick one.
+
+**1. npm (recommended):** the shortest path from a terminal.
+
 ```bash
 mkdir my-app && cd my-app
 npx tillerhand init
 claude
 ```
 
-As a Claude Code plugin (an install skill; the kit is still copied into the project as files):
+**2. Claude Code plugin:** no terminal, all inside Claude Code. The plugin only runs the install; the kit is still copied into the project as files. You can turn the plugin off afterwards.
 
 ```text
 /plugin marketplace add burakdogrul/TillerHand
@@ -101,7 +107,7 @@ As a Claude Code plugin (an install skill; the kit is still copied into the proj
 /tillerhand:init
 ```
 
-With git instead of npm (the kit stays in a `vibe-kit/` folder inside the project and goes into `.gitignore`):
+**3. git:** to read, change or contribute to the kit source. The kit stays in a `vibe-kit/` folder inside the project and goes into `.gitignore`.
 
 ```bash
 git clone https://github.com/burakdogrul/TillerHand.git vibe-kit

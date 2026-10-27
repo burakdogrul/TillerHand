@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.41.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.41.1-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -56,7 +56,9 @@ Kod yazmayı bilmen gerekmez. Git, terminal ve kurulum işlerini Claude yapar; s
 
 **2. Projeni oluştur**
 1. Projen için bir klasör aç ve Claude masaüstü uygulamasında **Code** sekmesinde seç.
-2. Şunu yaz: `bu klasörde npx tillerhand init komutunu çalıştır`.
+2. Kiti kur. İki yoldan birini seç:
+   - Claude'a yaz: `bu klasörde npx tillerhand init komutunu çalıştır`.
+   - Ya da plugin ile, sırayla: `/plugin marketplace add burakdogrul/TillerHand`, `/plugin install tillerhand@tillerhand`, `/tillerhand:init`.
 3. Aynı klasörde **yeni oturum aç**. Kitin komutları ve korumaları yeni oturumda yüklenir.
 
 **3. Başlat**
@@ -85,13 +87,17 @@ Claude sırayla soru sorar. **Her sorunun ilk seçeneği önerilendir**; emin de
 
 **Gereksinimler:** [Claude Code](https://claude.com/claude-code), Git, Node.js 18+
 
+Üç kurulum yolu var. Üçü de kiti projeye aynı şekilde kurar; birini seç.
+
+**1. npm (önerilen):** terminalde en kısa yol.
+
 ```bash
 mkdir yeni-proje && cd yeni-proje
 npx tillerhand init
 claude
 ```
 
-Claude Code plugin olarak (kurulum skill'i; kit yine projeye dosya olarak kopyalanır):
+**2. Claude Code plugin:** terminal açmadan, Claude Code içinden. Plugin yalnız kurulumu yapar; kit yine projeye dosya olarak kopyalanır. Kurulumdan sonra plugin kapatılabilir.
 
 ```text
 /plugin marketplace add burakdogrul/TillerHand
@@ -99,7 +105,7 @@ Claude Code plugin olarak (kurulum skill'i; kit yine projeye dosya olarak kopyal
 /tillerhand:init
 ```
 
-npm yerine git ile (kit, proje içinde `vibe-kit/` klasöründe durur ve `.gitignore`'a girer):
+**3. git:** kitin kaynağını görmek, değiştirmek ya da katkı vermek için. Kit proje içinde `vibe-kit/` klasöründe durur ve `.gitignore`'a girer.
 
 ```bash
 git clone https://github.com/burakdogrul/TillerHand.git vibe-kit

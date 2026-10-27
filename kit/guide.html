@@ -287,7 +287,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.41.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.41.1</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="install"><span id="cmd">npx tillerhand init</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
@@ -524,19 +524,28 @@ Bekleyen karar: e-posta servisi</pre>
   <h2>Kurulum</h2>
   <p class="lead">TillerHand ve projen ayrı klasörlerde durur. <code>init</code> gereken dosyaları (<code>.claude/</code>, <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>docs/</code>) proje klasörüne kopyalar, git deposu açar ve kit klasörüne dokunmaz. Proje tipi kurulumda değil, <code>/start</code> sırasında soruyla seçilir.</p>
   <p><b>Gereksinimler:</b> <a href="https://claude.com/claude-code">Claude Code</a>, Git, Node.js 18+.</p>
-<pre class="term"><span class="c"># 1. Proje klasöründe kiti kur (npm ile, önerilen)</span>
+  <p>Üç kurulum yolu var. Üçü de kiti projeye aynı şekilde kurar; birini seç.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Yol</th><th>Ne zaman</th></tr></thead>
+    <tbody>
+      <tr><td><b>1. npm</b> (önerilen)</td><td>Terminalde en kısa yol</td></tr>
+      <tr><td><b>2. Claude Code plugin</b></td><td>Terminal açmadan, Claude Code içinden. Plugin yalnız kurulumu yapar; sonra kapatılabilir</td></tr>
+      <tr><td><b>3. git</b></td><td>Kitin kaynağını görmek, değiştirmek ya da katkı vermek için</td></tr>
+    </tbody>
+  </table></div>
+<pre class="term"><span class="c"># 1. npm (terminalde, proje klasöründe)</span>
 mkdir yeni-proje &amp;&amp; cd yeni-proje
 npx tillerhand init
 claude
-<span class="c"># ya da Claude Code plugin olarak (Claude Code içinde)</span>
+<span class="c"># 2. plugin (Claude Code içinde, proje klasöründe)</span>
 /plugin marketplace add burakdogrul/TillerHand
 /plugin install tillerhand@tillerhand
 /tillerhand:init
-<span class="c"># ya da git ile: kit proje içinde vibe-kit/ klasöründe durur (.gitignore'a girer)</span>
+<span class="c"># 3. git (terminalde): kit proje içinde vibe-kit/ klasöründe durur (.gitignore'a girer)</span>
 git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
-node vibe-kit/kit/kit.mjs init
-<span class="c"># 2. Claude Code içinde (yeni oturum)</span>
-/start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
+node vibe-kit/kit/kit.mjs init</pre>
+  <p>Kurulumdan sonra aynı klasörde <b>yeni bir Claude Code oturumu</b> aç ve başla:</p>
+<pre class="term">/start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
 <span class="c"># var olan projede /start yerine:</span>
 /adopt</pre>
   <div class="note"><b>Hangi araç:</b> <code>init</code>, Claude Code, Codex ve Antigravity'den hangisiyle (birden fazlası olabilir) çalışacağını sorar. Doğrudan da verebilirsin: <code>init --tool codex</code>. Kit başka bir klasördeyse: <code>node &lt;kit&gt;/kit/kit.mjs init --project &lt;proje&gt;</code>. Türkiye eki için <code>--addons tr</code>.</div>
@@ -552,7 +561,7 @@ node vibe-kit/kit/kit.mjs init
   <ol>
     <li><b>Hesaplar (bir kez):</b> <a href="https://github.com">GitHub</a> hesabı (ücretsiz) ve Claude <b>Pro</b> veya <b>Max</b> aboneliği.</li>
     <li><b>Programlar (bir kez):</b> <a href="https://claude.com/download">Claude masaüstü uygulaması</a>, <a href="https://nodejs.org">Node.js</a> (LTS sürümü), <a href="https://git-scm.com/downloads">Git</a>. İstersen <a href="https://desktop.github.com">GitHub Desktop</a> da kurabilirsin.</li>
-    <li><b>Proje:</b> Projen için bir klasör aç ve Claude masaüstü uygulamasında <b>Code</b> sekmesinde seç. Claude'a yaz: "bu klasörde <code>npx tillerhand init</code> komutunu çalıştır".</li>
+    <li><b>Proje:</b> Projen için bir klasör aç ve Claude masaüstü uygulamasında <b>Code</b> sekmesinde seç. Kiti kur. İki yoldan birini seç: Claude'a "bu klasörde <code>npx tillerhand init</code> komutunu çalıştır" yaz ya da plugin ile sırayla <code>/plugin marketplace add burakdogrul/TillerHand</code>, <code>/plugin install tillerhand@tillerhand</code>, <code>/tillerhand:init</code>.</li>
     <li><b>Aç:</b> Aynı klasörde <b>yeni oturum</b> aç; kitin komutları ve korumaları yeni oturumda yüklenir. Eklentileri kurmayı önerirse kabul et.</li>
     <li><b>Başlat:</b> <code>/start fikrin</code> yaz. <b>Her sorunun ilk seçeneği önerilendir</b>; emin değilsen onu seç. Pro'daysan ilk sorular için öneri: profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (5 saatlik limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
   </ol>
@@ -1060,7 +1069,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.41.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.41.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 
