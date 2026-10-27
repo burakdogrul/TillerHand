@@ -17,6 +17,7 @@ Bu bir **9 adımlı uyum sihirbazı** (0-9). `/start`'ın var olan kod için ola
 
 ## Adım 0: Hazırlık
 
+0. **Dil (her şeyden önce):** `/start` Adım 0'ın başındaki dil sorusunu aynen uygula (İngilizce soru, Turkish / English / Other, `node .claude/hooks/lang.mjs --set <kod>`, gerekirse çeviri). Dil seçiliyse tekrar sorma.
 1. `docs/workflow/progress.md` → `**Aktif faz:** Başlangıç (uyum)`, `**Başlangıç adımı:** 0/9`.
 2. `/start` Adım 0'daki şu maddeleri aynen uygula: Profil (0), anlatıcı mod (0b), araç (0c), auto memory (0d), model ve effort (0e, `docs/workflow/models.md`), ortam kontrolü (1), eklentiler (2), caveman (3), kod haritası (5), bildirimler (6), pano (6b). Var olan projede kod haritası daha da faydalıdır; önerilen seçenek "Kur" olsun.
 3. **Tarama derinliği:** Limiti oku ve sor. Tahmini maliyetleri göster:

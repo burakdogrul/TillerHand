@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot } from './shared.mjs';
+import { readLang } from './lang.mjs';
 
 export const INTERVAL = 12; // every 12 messages
 const root = findRoot();
@@ -20,6 +21,8 @@ data.turnAt = Date.now(); // notify.mjs computes the length of long jobs from th
 try { fs.mkdirSync(path.dirname(counterFile), { recursive: true }); fs.writeFileSync(counterFile, JSON.stringify(data)); } catch { /* not writable: skip silently */ }
 
 const notes = [];
+const lang = readLang(root);
+if (lang) notes.push(`[Kit] Reply in ${lang}.`); // every message: the language rule must not fade in long sessions
 if (data.count % INTERVAL === 0) {
   notes.push('[Kit hatırlatma] Kararları AskUserQuestion ile sor (önerilen ilk sırada). Kapsamı genişletme. Kurul ve limit kurallarına uy. Her cevabın sonuna durum bloğu ekle.');
 }

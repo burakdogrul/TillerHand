@@ -232,3 +232,43 @@ test('3.41.0 copy buttons: the next step and slash-command actions get the bare 
   assert.ok(bad.includes('data-cmd="/build &quot; onclick=&quot;alert"'), 'escaped, cut at the "(" note');
   fs.rmSync(p, { recursive: true, force: true });
 });
+
+// 3.44.0 language selection: the dashboard waits for a language and takes <html lang> from it
+const langDashboard = async (files) => {
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'pano-dil-'));
+  for (const [f, s] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true });
+    fs.writeFileSync(path.join(p, f), typeof s === 'string' ? s : JSON.stringify(s));
+  }
+  // A fresh GitHub cache: an installed project would otherwise call gh
+  fs.mkdirSync(path.join(p, '.claude/state'), { recursive: true });
+  fs.writeFileSync(path.join(p, '.claude/state/github-cache.json'), JSON.stringify({ time: Date.now(), data: { runs: [], prs: [], liveMonitoring: [] } }));
+  const r = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks', 'dashboard.mjs'), p, '--quiet'], { encoding: 'utf8' });
+  const out = fs.existsSync(path.join(p, 'dashboard.html')) ? fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8') : null;
+  fs.rmSync(p, { recursive: true, force: true });
+  return { status: r.status, stderr: r.stderr, html: out };
+};
+const kitRecord = (extra) => ({ version: '3.43.0', type: 'web-saas', addons: [], tool: null, created: '2026-10-01', updated: '2026-10-01', files: {}, ...extra });
+
+test('lang dashboard: not set up and no language chosen: no dashboard is written', async () => {
+  for (const files of [{ 'kit/kit.mjs': '// kit\n' }, { '.kit.json': kitRecord({ type: null }) }]) {
+    const r = await langDashboard(files);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.html, null, `no dashboard.html: ${Object.keys(files).join(', ')}`);
+  }
+});
+
+test('lang dashboard: <html lang> follows the language (.kit.json, state file, tr in old projects)', async () => {
+  const en = await langDashboard({ '.kit.json': kitRecord({ lang: 'en' }) });
+  assert.equal(en.status, 0, en.stderr);
+  assert.ok(en.html?.includes('<html lang="en">'), '.kit.json lang en');
+  const state = await langDashboard({ 'kit/kit.mjs': '// kit\n', '.claude/state/lang.json': { lang: 'pt-BR' } });
+  assert.equal(state.status, 0, state.stderr);
+  assert.ok(state.html?.includes('<html lang="pt-BR">'), 'not set up but a language is chosen: the dashboard is written');
+  const old = await langDashboard({ '.kit.json': kitRecord() });
+  assert.ok(old.html?.includes('<html lang="tr">'), 'installed before 3.44.0: tr');
+  const plain = await langDashboard({});
+  assert.ok(plain.html?.includes('<html lang="tr">'), 'plain folder: tr');
+});

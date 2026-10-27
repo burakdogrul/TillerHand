@@ -10,6 +10,7 @@ import { readStatus, readText, sections, findSection, tally, tableRows } from '.
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
 import { readModels, modelsFile, modelsNote, ROLES } from './models.mjs';
+import { readLang } from './lang.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
@@ -18,6 +19,9 @@ const quiet = args.includes('--quiet');
 if (quiet) process.on('uncaughtException', () => process.exit(0));
 const root = path.resolve(args.find((a) => !a.startsWith('--')) ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
 const file = (f) => path.join(root, f);
+// The dashboard is made in the user's language: none before /start or /adopt asks it
+const lang = readLang(root);
+if (!lang) { if (!quiet) console.log('No language chosen yet: the dashboard is made after /start or /adopt asks it.'); process.exit(0); }
 
 // ---------- data ----------
 const d = readStatus(root);
@@ -346,7 +350,7 @@ const TABS = [
 
 const next = d.next[0] ?? (d.kitPending ? '`/start [fikrin]`' : '-');
 const html = `<!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="${e(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${e(d.project)} · Kontrol paneli</title>
 <style>
 :root{--bg:#f4f6f9;--surface:#fff;--sunk:#eef1f5;--fg:#141b27;--muted:#5b6577;--line:#dde3eb;--accent:#2a78d6;--accent-soft:#e3eefb;

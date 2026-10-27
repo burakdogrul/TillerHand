@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.43.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.44.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -32,11 +32,12 @@
 
 **TillerHand** is a starter kit that takes a product from idea to production and maintenance with [Claude Code](https://claude.com/claude-code). The AI writes the code; **you make the decisions**. At every important step it lays out the options, when each one is the better choice, and what it recommends. An **expert board** reviews the work, **guardrails** stop dangerous actions before they happen, and the project always stays in a **clean folder structure**.
 
-> The kit's commands, prompts and documents are in Turkish.
+> `/start` and `/adopt` first ask which language to talk in: Turkish, English or any other. The kit's own commands are still being moved from Turkish to English.
 
 | | |
 |---|---|
 | **Question-driven** | Product, technical, design, data, security and cost decisions come as reasoned options. Design questions come with visual previews. |
+| **In your language** | Questions, answers and documents come in the language you pick at the start (dashboard texts follow in a later release); `/language` changes it. |
 | **Expert board** | Product, Architect, Security, UX, Privacy, QA and other members review the plan, each task, each commit and each phase. |
 | **A separate agent writes the tests** | Acceptance and adversarial tests are written before the code by a separate agent, not the one writing the code, and they start red. The coder can't touch test files, and a test changed by indirect means can't get into a commit. Nothing is called done without proof that it works. |
 | **Specs and drift checks** | Larger tasks and every bug get a spec of current, expected and must-not-change behavior; if a must-not-change behavior has no test, the gate is red. |
@@ -270,6 +271,7 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | `/retro` | Writes lessons back to the project and the kit |
 | `/handoff` | Hands the project over or takes it over |
 | `/kit-update` | Updates the project to the latest kit |
+| `/language` | Changes the conversation language |
 
 Every command, setting, tool and skill is in the **[guide](https://burakdogrul.github.io/TillerHand/kit/guide.html)**.
 

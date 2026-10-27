@@ -86,6 +86,23 @@ test('install: stops before deleting kit/ when the clone has uncommitted work', 
   assert.equal(installType(p, '--type', 'backend').status, 0, 'committed work can be restored from git: install runs');
 });
 
+test('lang install: the template path carries the chosen language into .kit.json, no lang without a valid choice', () => {
+  const p = cloneKit('dil');
+  fs.mkdirSync(path.join(p, '.claude/state'), { recursive: true });
+  write(path.join(p, '.claude/state/lang.json'), JSON.stringify({ lang: 'en' }));
+  const r = installType(p, '--type', 'backend');
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(record(p).lang, 'en', 'state lang written into .kit.json');
+  for (const [name, state] of [['dil-yok', null], ['dil-bozuk', JSON.stringify({ lang: '../x' })], ['dil-json', '{"lang": ']]) {
+    const q = cloneKit(name);
+    fs.rmSync(path.join(q, '.claude/state/lang.json'), { force: true }); // the developer's own choice must not leak into the clone
+    if (state !== null) write(path.join(q, '.claude/state/lang.json'), state);
+    const s = installType(q, '--type', 'backend');
+    assert.equal(s.status, 0, s.stderr);
+    assert.equal(record(q).lang, undefined, `${name}: no lang field`);
+  }
+});
+
 test('install: does not run twice, an invalid type is rejected', () => {
   const p = cloneKit('iki');
   assert.equal(installType(p, '--type', 'yok').status, 1);

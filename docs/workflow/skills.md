@@ -65,7 +65,7 @@ Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skil
 - Kesin ölçüm: `/context` (Skills satırı), `/doctor`; kullanılmayan skill'ler: `/skill-doctor`. Kaba ölçüm: `/tools olc`. `/maintain monthly` bunu kontrol eder.
 - Bir eklentiyi çekirdeğe almak veya paketten çıkarmak `teknik` karardır.
 
-**Komut listesi (Hafif/Tam):** Kitin komut açıklamaları da aynı listeye girer (~1.600 token). Hafif ve Standart profilde çekirdek dışı 19 komut `skillOverrides` → `name-only` ile sadece adıyla listelenir: `/` menüsünde durur, Claude adıyla çağırabilir, açıklaması bağlama girmez. Açıklamasıyla kalan çekirdek: start, adopt, build, fix-bug, plan-task, design, tools, review-changes, wrap-up, release. Tam profil: `node .claude/hooks/tools.mjs --commands full`; geri dönmek: `--commands light`. Ayar `.claude/settings.json`'dadır (ekip geneli); kendi `skillOverrides` değerlerin korunur. Codex ve Antigravity'de etkisi yoktur. Liste: `.claude/hooks/tools.mjs` → `CORE_COMMANDS`, `LIGHT_COMMANDS`.
+**Komut listesi (Hafif/Tam):** Kitin komut açıklamaları da aynı listeye girer (~1.600 token). Hafif ve Standart profilde çekirdek dışı 20 komut `skillOverrides` → `name-only` ile sadece adıyla listelenir: `/` menüsünde durur, Claude adıyla çağırabilir, açıklaması bağlama girmez. Açıklamasıyla kalan çekirdek: start, adopt, build, fix-bug, plan-task, design, tools, review-changes, wrap-up, release. Tam profil: `node .claude/hooks/tools.mjs --commands full`; geri dönmek: `--commands light`. Ayar `.claude/settings.json`'dadır (ekip geneli); kendi `skillOverrides` değerlerin korunur. Codex ve Antigravity'de etkisi yoktur. Liste: `.claude/hooks/tools.mjs` → `CORE_COMMANDS`, `LIGHT_COMMANDS`.
 
 ## Skill bütçesi
 

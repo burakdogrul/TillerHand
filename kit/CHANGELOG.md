@@ -3,6 +3,17 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.44.0] - 2026-10-27
+
+### Eklenen
+- **Konuşma dilini sen seçersin.** `/start` ve `/adopt` her şeyden önce İngilizce sorar: Turkish / English / Other. Seçilen dil `.kit.json` → `lang`'e yazılır; bundan sonra sorular, cevaplar, durum bloğu ve belge metinleri o dilde olur. Her oturum başında ve her mesajda AI'ya dil hatırlatılır.
+- **Türkçe ve İngilizce dışındaki diller.** Hook'ların doğrudan sana gösterdiği metinleri AI dil seçilince bir kez çevirir (`.claude/i18n/<kod>.json`); çevirisi olmayan metin İngilizce görünür. `node .claude/hooks/lang.mjs --check` eksikleri listeler.
+- **`/language`**: dili sonradan değiştirir, çeviriyi ve panoyu yeniler. Yazılmış belgeler kendiliğinden çevrilmez; komut sorar.
+
+### Değişen
+- **Pano dil seçilmeden üretilmez.** Kurulmamış projede `/start` dili sorana kadar `dashboard.html` yazılmaz. Panonun metinleri sonraki sürümlerde seçilen dile geçecek.
+- **Eski projeler Türkçe kalır.** `lang` alanı olmayan projeler Türkçe sayılır; `/kit-update` dili bir kez sorar. `/start` olmadan doğrudan `kit.mjs install` ile kurulan proje de Türkçe sayılır; dili `/language` ile seç.
+
 ## [3.43.0] - 2026-10-27
 
 ### Eklenen

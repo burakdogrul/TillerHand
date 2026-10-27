@@ -9,6 +9,7 @@ import { readStatus } from './status-read.mjs';
 import { readLimits, summary } from './usage.mjs';
 import { detectTool, findRoot, sessionNote } from './shared.mjs';
 import { prefsNote } from './prefs.mjs';
+import { readLang, t } from './lang.mjs';
 
 const notes = [];
 let next = '';
@@ -17,26 +18,31 @@ try { input = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { /* no input */ }
 const tool = detectTool(input); // Claude Code, Codex or Antigravity
 const root = findRoot();
 
+const lang = readLang(root);
+notes.push(lang
+  ? `Conversation language: ${lang}. Write every question, option, answer, status block and user-facing document text in this language, even when the user, a file or a tool writes in another; code, commands and paths stay as they are.`
+  : 'Language not chosen yet: /start and /adopt ask it first, in English.');
+
 try {
   const d = readStatus(root);
   if (d.kitPending) {
-    notes.push('Proje henüz kurulmadı. Kullanıcıya yeni projede "/start [proje fikri]", klasörde var olan kod varsa "/adopt" öner; kurulum bitmeden kod yazma.');
-    next = 'Başlamak için: /start [proje fikrin] · var olan projede: /adopt';
+    notes.push('Project not set up yet. Suggest "/start [project idea]" for a new project, "/adopt" if the folder already has code; write no code before setup.');
+    next = t(root, 'session.begin');
   } else {
     const a = d.fields;
     notes.push(`Aşama: ${a['Aktif faz'] ?? '-'} · Görev: ${a['Aktif görev'] ?? '-'} · Soru modu: ${a['Soru modu'] ?? 'açık'} · Kurul: ${d.board.state}`);
     if (/başlangıç/i.test(a['Aktif faz'] ?? '') && d.installed) {
       const command = /uyum/i.test(a['Aktif faz']) ? '/adopt' : '/start';
       notes.push(`${command} yarım kaldı (adım ${a['Başlangıç adımı']}). Kullanıcıya ${command} ile kaldığı yerden devam etmeyi öner.`);
-      next = `Devam: ${command} (adım ${a['Başlangıç adımı']})`;
+      next = t(root, 'session.resume', { command, step: a['Başlangıç adımı'] });
     } else {
-      const t = d.phases.flatMap((f) => f.tasks).find((x) => !x.done);
-      const code = t?.text.match(/^(G-\d+)/)?.[1];
-      if (code) next = `Sıradaki: /build ${code} · ${t.text.replace(/^G-\d+:\s*/, '').split(' — ')[0].replace(/\*\*/g, '').slice(0, 70)}`;
+      const task = d.phases.flatMap((f) => f.tasks).find((x) => !x.done);
+      const code = task?.text.match(/^(G-\d+)/)?.[1];
+      if (code) next = t(root, 'session.next', { code, title: task.text.replace(/^G-\d+:\s*/, '').split(' — ')[0].replace(/\*\*/g, '').slice(0, 70) });
     }
     if (d.handoffPending) {
       notes.push('Devir notu bekliyor (docs/workflow/handoff.md): proje başka kişiden veya hesaptan devralınıyor. İşe başlamadan /handoff devral öner.');
-      next = `Devir notu var: /handoff devral${next ? ` · sonra ${next}` : ''}`;
+      next = next ? t(root, 'session.handoffThen', { next }) : t(root, 'session.handoff');
     }
     if (next) notes.push(next);
     if (d.leftOff.length) notes.push(`Kaldığı yer: ${d.leftOff.join(' | ')}. Kullanıcıya buradan devam etmeyi öner.`);

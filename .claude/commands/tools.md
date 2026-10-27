@@ -12,7 +12,7 @@ Neden var: Skill listesi bağlamın %1'iyle sınırlı. Taşınca az kullanılan
 - **`kapat <paket>`:** `node .claude/hooks/tools.mjs --disable <paket>`, sonra `/reload-plugins`.
 - **`olc`:** `node .claude/hooks/tools.mjs --measure` çalıştır. En büyük 5 eklentiyi ve toplamı göster. Kesin değer için kullanıcıya `/context` (Skills satırı) ve `/doctor` öner; kullanılmayan skill'leri bulmak için `/skill-doctor`.
 
-- **`komutlar hafif` / `komutlar tam`:** `node .claude/hooks/tools.mjs --commands light` veya `--commands full`. Hafif: çekirdek dışı 19 komut listede sadece adıyla durur (~1.100 token/oturum az), `/` menüsünde kalır. Tam: bütün açıklamalar listede. Bu ayar `.claude/settings.json`'a yazılır, ekibin hepsini etkiler; profil değişikliğiyle birlikte yapılır (`docs/workflow/progress.md` → `**Profil:**`). Yeni oturumda geçerli olur.
+- **`komutlar hafif` / `komutlar tam`:** `node .claude/hooks/tools.mjs --commands light` veya `--commands full`. Hafif: çekirdek dışı 20 komut listede sadece adıyla durur (~1.100 token/oturum az), `/` menüsünde kalır. Tam: bütün açıklamalar listede. Bu ayar `.claude/settings.json`'a yazılır, ekibin hepsini etkiler; profil değişikliğiyle birlikte yapılır (`docs/workflow/progress.md` → `**Profil:**`). Yeni oturumda geçerli olur.
 
 Açma ve kapama sadece bu makineyi etkiler (`.claude/settings.local.json`, git'e girmez). Herkes için varsayılanı değiştirmek `.claude/settings.json` → `enabledPlugins` düzenlemesidir ve `teknik` karardır.
 

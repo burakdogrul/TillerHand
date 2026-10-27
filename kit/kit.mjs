@@ -20,6 +20,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { readLang } from '../.claude/hooks/lang.mjs';
 
 const KIT = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(KIT);
@@ -387,7 +388,8 @@ function install({ type, addons, keepKit, project, tool }) {
   for (const rel of [...izlenen].sort()) if (fs.existsSync(path.join(ROOT, rel))) files[rel] = hash(path.join(ROOT, rel));
   installTools(ROOT, tools, files, []);
   const today = new Date().toISOString().slice(0, 10);
-  writeRecord(ROOT, { version: VERSION, source: SOURCE, type, addons, tool: tool.length ? tools : null, created: today, updated: today, files });
+  const lang = readLang(ROOT); // chosen by /start before install (.claude/state/lang.json); null if not
+  writeRecord(ROOT, { version: VERSION, source: SOURCE, type, addons, tool: tool.length ? tools : null, ...(lang && { lang }), created: today, updated: today, files });
 
   console.log(`Kuruldu: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${VERSION}) · araç: ${tools.join(', ')}`);
   console.log(`Eklenen/değişen dosya: ${copies.size + patches.length + 1}`);
