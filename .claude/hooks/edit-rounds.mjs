@@ -30,9 +30,9 @@ function writeState(root, d) {
 
 // The AI runs the command in the note: $( ) or ` in a file name must not get into it, so the name is written only if it uses safe characters
 const SAFE = /^[\p{L}\p{N}_@./+-]+$/u;
-const noteText = (rel, n) => `${SAFE.test(rel) ? rel : 'Adı özel karakter içeren bir dosya'} bu oturumda ${n}. kez düzenlendi. Tekrarlanan AI düzenlemeleri güvenlik açığı biriktirebilir: ` +
-  `devam etmeden bu dosyada Semgrep çalıştır (\`semgrep scan --config p/default --config p/owasp-top-ten -- "${SAFE.test(rel) ? rel : '<dosya yolu>'}"\`; kurulu değilse CI'daki semgrep işine bak) ` +
-  've değişikliği security-auditor ile gözden geçir. Aynı hatayı 2 denemede çözemediysen dur ve kullanıcıdan yön iste.';
+const noteText = (rel, n) => `${SAFE.test(rel) ? rel : 'A file whose name has special characters'} has been edited ${n} times in this session. Repeated AI edits can pile up security holes: ` +
+  `before going on, run Semgrep on this file (\`semgrep scan --config p/default --config p/owasp-top-ten -- "${SAFE.test(rel) ? rel : '<file path>'}"\`; if it is not installed, see the semgrep job in CI) ` +
+  'and review the change with security-auditor. If you cannot fix the same error in 2 attempts, stop and ask the user for direction.';
 
 function hook() {
   const g = readInput();

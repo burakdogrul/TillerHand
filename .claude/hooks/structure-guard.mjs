@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readInput, decide, findRoot, isMain } from './shared.mjs';
+import { t } from './lang.mjs';
 
 const root = findRoot();
 
@@ -41,14 +42,13 @@ export function check(rel, map) {
   if (rel.startsWith('sandbox/')) return null;
   const denied = map.deny.find((re) => re.test(rel));
   if (denied) {
-    return { decision: 'deny', reason: `"${rel}" dağınıklık kalıbına uyuyor (yedek, eski sürüm, kopya veya geçici dosya). Git geçmişi zaten yedektir; deneme için sandbox/ kullan.` };
+    return { decision: 'deny', reason: `"${rel}" matches a clutter pattern (backup, old version, copy or temp file). Git history is already the backup; use sandbox/ for experiments.` };
   }
   if (map.allow.some((re) => re.test(rel))) return null;
   const top = [...new Set((map.raw.allow ?? []).map((d) => d.split('/')[0]).filter((d) => !d.includes('.') || d.startsWith('.')))].slice(0, 12);
   return {
     decision: 'ask',
-    reason: `"${rel}" yapı haritasında yok (.claude/structure.json). Doğru yer muhtemelen şunlardan biri: ${top.join(', ')}. ` +
-      'Geçici veya deneme ise sandbox/ altına yaz. Kalıcı yeni bir yer gerekiyorsa bunu teknik karar olarak sor ve haritayı güncelle (docs/architecture/structure.md).',
+    reason: t(root, 'guard.structure.offMap', { rel, top: top.join(', ') }),
   };
 }
 
@@ -62,20 +62,20 @@ function hook() {
     const rel = path.relative(g.root, full);
     if (rel.startsWith('..') || path.isAbsolute(rel)) continue; // outside the project
     const s = check(rel, map);
-    if (s) decide(g.tool, s.decision, `Yapı: ${s.reason}`);
+    if (s) decide(g.tool, s.decision, s.decision === 'ask' ? t(g.root, 'guard.structure.prefix', { reason: s.reason }) : `Structure: ${s.reason}`);
   }
   process.exit(0);
 }
 
 function checkAll() {
   const map = readMap();
-  if (!map) { console.log('Yapı haritası yok (.claude/structure.json); kontrol atlandı.'); return; }
+  if (!map) { console.log('No structure map (.claude/structure.json); check skipped.'); return; }
   const files = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
   const violations = files.map((f) => [f, check(f, map)]).filter(([, s]) => s);
-  if (!violations.length) { console.log(`Yapı uyumlu: ${files.length} dosya.`); return; }
-  console.error(`Yapı ihlali (${violations.length}):`);
-  for (const [f, s] of violations) console.error(`  ${s.decision === 'deny' ? 'YASAK' : 'HARİTA DIŞI'}  ${f}`);
-  console.error('Dosyayı doğru yere taşı, sandbox/ altına al veya haritayı (teknik kararla) güncelle.');
+  if (!violations.length) { console.log(`Structure OK: ${files.length} files.`); return; }
+  console.error(`Structure violations (${violations.length}):`);
+  for (const [f, s] of violations) console.error(`  ${s.decision === 'deny' ? 'FORBIDDEN' : 'OFF MAP'}  ${f}`);
+  console.error('Move the file to the right place, put it under sandbox/, or update the map (as a technical decision).');
   process.exit(1);
 }
 

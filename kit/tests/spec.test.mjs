@@ -51,12 +51,12 @@ test('Ö-23.1 the gate is red when a "must not change" test is missing or red in
   const missing = gate('--run');
   assert.equal(missing.status, 1, missing.stdout);
   assert.match(missing.stdout, /❌ Spec/);
-  assert.match(missing.stdout, /Ö-02\.1.*test yok/);
+  assert.match(missing.stdout, /Ö-02\.1.*no test/);
   write('docs/product/specs/G-07.md', spec('- Ö-01.1: Not kaydedilir\n- Ö-01.2: Başkasının notu görünmez'));
   runResult('<testcase name="Ö-01.1 not kaydedilir"/><testcase name="Ö-01.2 başkasının notu"><failure message="x"/></testcase>');
   const red = gate('--run');
   assert.equal(red.status, 1);
-  assert.match(red.stdout, /Ö-01\.2.*kırmızı/);
+  assert.match(red.stdout, /Ö-01\.2.*test red/);
   runResult('<testcase name="Ö-01.1 not kaydedilir"/><testcase name="Ö-01.2 başkasının notu"/>');
   const green = gate('--run');
   assert.equal(green.status, 0, green.stdout);
@@ -71,7 +71,7 @@ test('F-23 audit: an old red report does not stop the gate when this run writes 
   fs.utimesSync(path.join(p, 'test-results/junit.xml'), week, week);
   const r = gate('--run');
   assert.equal(r.status, 0, r.stdout);
-  assert.match(r.stdout, /bu koşuda sonucu yok/);
+  assert.match(r.stdout, /no result in this run/);
   fs.rmSync(path.join(p, 'test-results'), { recursive: true });
 });
 
@@ -85,7 +85,7 @@ test('Ö-23.2 no spec: no extra step, and a passing Spec check alone does not ma
   write('AGENTS.md', '# X\n\n## Komutlar\n\n```bash\ntest:        [ ]\n```\n');
   const empty = gate('--run');
   assert.equal(empty.status, 1, 'no command ran: still empty');
-  assert.match(empty.stdout, /BOŞ/);
+  assert.match(empty.stdout, /EMPTY/);
   write('AGENTS.md', AGENTS);
   fs.rmSync(path.join(p, 'docs/product/specs/G-07.md'));
 });

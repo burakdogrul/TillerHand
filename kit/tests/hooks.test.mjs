@@ -42,7 +42,7 @@ test('commit gate: with a board an unapproved code commit stops, passes with app
   assert.equal(door('git status').status, 0, 'a non-commit command passes');
   const r = door('git commit -m "feat: x"');
   assert.equal(r.status, 2);
-  assert.match(r.stderr, /kurul denetimi/);
+  assert.match(r.stderr, /the board has not reviewed these changes/);
   assert.equal(approve('board-qa').status, 0);
   // 3.14.1: an empty gate does not open the commit; commands run with user approval
   write('AGENTS.md', '## Komutlar\n\n```bash\ntest: node -e "process.exit(0)"\n```\n');

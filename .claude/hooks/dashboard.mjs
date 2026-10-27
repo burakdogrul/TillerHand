@@ -9,8 +9,8 @@ import { execFileSync } from 'node:child_process';
 import { readStatus, readText, sections, findSection, tally, tableRows } from './status-read.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
-import { readModels, modelsFile, modelsNote, ROLES } from './models.mjs';
-import { readLang } from './lang.mjs';
+import { readModels, modelsFile, modelsNote, roleLabel } from './models.mjs';
+import { readLang, t } from './lang.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
@@ -19,9 +19,15 @@ const quiet = args.includes('--quiet');
 if (quiet) process.on('uncaughtException', () => process.exit(0));
 const root = path.resolve(args.find((a) => !a.startsWith('--')) ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
 const file = (f) => path.join(root, f);
+// Every visible text comes from messages.mjs in the project language (L = t with this project's root)
+const L = (key, vars) => t(root, key, vars);
+const dateKind = (k) => (k === 'bitiş' ? L('dashboard.dateExpiry') : L('dashboard.dateKeyRotation'));
+const kindName = (k) => (Object.hasOwn(FINDING_KINDS, k) ? L(`dashboard.findingKind.${k}`) : k);
 // The dashboard is made in the user's language: none before /start or /adopt asks it
 const lang = readLang(root);
 if (!lang) { if (!quiet) console.log('No language chosen yet: the dashboard is made after /start or /adopt asks it.'); process.exit(0); }
+// Dates follow the conversation language (English when the runtime does not know the code)
+const loc = (() => { try { return Intl.DateTimeFormat.supportedLocalesOf(lang)[0] ?? 'en'; } catch { return 'en'; } })();
 
 // ---------- data ----------
 const d = readStatus(root);
@@ -42,7 +48,7 @@ function gitInfo() {
     info.commits = g('log', '-300', '--since=60.days', '--date=iso-strict', '--pretty=format:%h%x1f%ad%x1f%s')
       .split('\n').filter(Boolean).map((s) => {
         const [hash, date, message] = s.split('\x1f');
-        return { hash, date, message, kind: (message.match(/^(\w+)(\(.+?\))?!?:/)?.[1] ?? 'diğer').toLowerCase() };
+        return { hash, date, message, kind: (message.match(/^(\w+)(\(.+?\))?!?:/)?.[1] ?? L('dashboard.commitKindOther')).toLowerCase() };
       });
     const latest = g('log', '-1', '--format=%H', '--', 'docs/workflow/progress.md');
     if (latest) info.progressStale = Number(g('rev-list', '--count', `${latest}..HEAD`));
@@ -107,48 +113,48 @@ const findings = findingReports(readText(file('docs/findings/README.md')));
 // Things that need attention
 const alerts = [];
 const addAlert = (sev, text, action = '') => alerts.push({ sev, text, action });
-if (d.kitPending) addAlert('info', 'Proje henüz kurulmadı. Var olan kodu kite almak için /adopt.', '/start [fikrin]');
-if (d.handoffPending) addAlert('warn', 'Devir notu bekliyor: proje başka kişiden veya hesaptan devralınıyor (docs/workflow/handoff.md).', '/handoff devral');
+if (d.kitPending) addAlert('info', L('dashboard.alert.kitPending'), L('dashboard.act.startIdea'));
+if (d.handoffPending) addAlert('warn', L('dashboard.alert.handoffPending'), '/handoff devral');
 const lastReject = [...d.board.meetings].reverse().find((t) => /RET/i.test(t.result) && !/KOŞULLU/i.test(t.result));
-if (lastReject && !lastReject.decision) addAlert('critical', `Kurul RET verdi (${lastReject.kind}, ${lastReject.scope}): ${lastReject.critical || 'kritik bulgu'}`, 'Claude\'a sor: düzelt / riski kabul et');
+if (lastReject && !lastReject.decision) addAlert('critical', L('dashboard.alert.boardReject', { kind: lastReject.kind, scope: lastReject.scope, critical: lastReject.critical || L('dashboard.criticalFinding') }), L('dashboard.act.askClaudeFix'));
 const limitLevel = level(limit);
-const limitShort = limit ? [['5 saatlik', limit.five_hour], ['haftalık', limit.seven_day]].filter(([, p]) => p)
-  .map(([name, p]) => `${name} %${Math.round(p.percent)}${p.resetsAt ? ` (yenilenme ${new Date(p.resetsAt * 1000).toLocaleString('tr-TR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })})` : ''}`).join(', ') : '';
-if (limitLevel === 'red') addAlert('critical', `Kullanım limiti kırmızı: ${limitShort}`, 'Yeni işten önce seçenekleri değerlendir (Limit sekmesi)');
-else if (limitLevel === 'yellow') addAlert('warn', `Kullanım limiti sarı: ${limitShort}`, 'Büyük işleri limite göre planla');
-for (const b of d.pending) addAlert('warn', `Bekleyen karar: ${b}`, 'Claude seni bekliyor');
-for (const k of d.leftOff) addAlert('warn', `Yarıda kalan iş: ${k}`, '/build ile devam');
-for (const s of d.issues.slice(0, 5)) addAlert('warn', `Açık sorun: ${s}`);
-for (const r of repeatedBugClasses(root)) addAlert('info', `Aynı hata sınıfı ${r.specs.length} kez: ${r.cls} (${r.specs.join(', ')}). Tekrarı önleyen bir kural eklenebilir.`, '/retro');
-if (git?.changed.length > 15) addAlert('info', `${git.changed.length} dosya commit edilmemiş.`, 'Commit veya /wrap-up');
-if (git?.progressStale >= 3) addAlert('info', `docs/workflow/progress.md ${git.progressStale} commit'tir güncellenmedi.`, '/wrap-up');
+const limitShort = limit ? [[L('dashboard.limit5h'), limit.five_hour], [L('dashboard.limitWeeklyLower'), limit.seven_day]].filter(([, p]) => p)
+  .map(([name, p]) => `${name} %${Math.round(p.percent)}${p.resetsAt ? ` ${L('dashboard.resetsParen', { when: new Date(p.resetsAt * 1000).toLocaleString(loc, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) })}` : ''}`).join(', ') : '';
+if (limitLevel === 'red') addAlert('critical', L('dashboard.alert.limitRed', { short: limitShort }), L('dashboard.act.limitRed'));
+else if (limitLevel === 'yellow') addAlert('warn', L('dashboard.alert.limitYellow', { short: limitShort }), L('dashboard.act.limitYellow'));
+for (const b of d.pending) addAlert('warn', L('dashboard.alert.pendingDecision', { text: b }), L('dashboard.act.claudeWaiting'));
+for (const k of d.leftOff) addAlert('warn', L('dashboard.alert.leftOff', { text: k }), L('dashboard.act.buildContinue'));
+for (const s of d.issues.slice(0, 5)) addAlert('warn', L('dashboard.alert.openIssue', { text: s }));
+for (const r of repeatedBugClasses(root)) addAlert('info', L('dashboard.alert.repeatedBug', { count: r.specs.length, cls: r.cls, specs: r.specs.join(', ') }), '/retro');
+if (git?.changed.length > 15) addAlert('info', L('dashboard.alert.uncommitted', { count: git.changed.length }), L('dashboard.act.commitOrWrapUp'));
+if (git?.progressStale >= 3) addAlert('info', L('dashboard.alert.progressStale', { count: git.progressStale }), '/wrap-up');
 const off = (a['Soru modu'] ?? '').match(/kapalı konular:\s*(.+)$/i)?.[1];
-if (off && !/^yok$/i.test(off)) addAlert('info', `Soru modu kapalı konular: ${off}. Bu konulardaki kararlar otomatik veriliyor.`, '/ask-mode ac <konu>');
-if (d.installed && d.board.state === 'kurulmadı' && !/başlangıç/i.test(a['Aktif faz'] ?? '')) addAlert('info', 'Uzman kurulu kurulmadı.', '/board setup');
-if (github?.liveMonitoring?.length) addAlert('critical', `Canlı izleme: ${github.liveMonitoring[0].title}`, `/fix-bug canlı izleme #${github.liveMonitoring[0].number}`);
-else if (github?.liveRun?.conclusion === 'failure') addAlert('critical', 'Canlı izlemenin son çalışması başarısız.', '/fix-bug canlı izleme');
+if (off && !/^yok$/i.test(off)) addAlert('info', L('dashboard.alert.closedTopics', { topics: off }), L('dashboard.act.askModeOpen'));
+if (d.installed && d.board.state === 'kurulmadı' && !/başlangıç/i.test(a['Aktif faz'] ?? '')) addAlert('info', L('dashboard.alert.boardNotSetUp'), '/board setup');
+if (github?.liveMonitoring?.length) addAlert('critical', L('dashboard.alert.liveMonitoring', { title: github.liveMonitoring[0].title }), L('dashboard.act.fixLive', { number: github.liveMonitoring[0].number }));
+else if (github?.liveRun?.conclusion === 'failure') addAlert('critical', L('dashboard.alert.liveRunFailed'), L('dashboard.act.fixLiveShort'));
 const lastMain = github?.runs?.find((c) => /^(main|master)$/.test(c.headBranch) && c.workflowName === 'CI');
-if (lastMain?.conclusion === 'failure') addAlert('warn', 'main dalında son CI çalışması başarısız.', 'Operasyon sekmesi');
+if (lastMain?.conclusion === 'failure') addAlert('warn', L('dashboard.alert.ciFailed'), L('dashboard.act.operationsTab'));
 for (const h of accountList) for (const t of h.dates) {
-  if (t.left < 0) addAlert('critical', `${h.service}: ${t.kind} tarihi geçti (${t.date}).`, 'docs/operations/accounts.md');
-  else if (t.left <= 30) addAlert('warn', `${h.service}: ${t.kind} ${t.left} gün sonra (${t.date}).`, 'Yenile veya otomatik yenilemeyi aç');
+  if (t.left < 0) addAlert('critical', L('dashboard.alert.dateOverdue', { service: h.service, kind: dateKind(t.kind), date: t.date }), 'docs/operations/accounts.md');
+  else if (t.left <= 30) addAlert('warn', L('dashboard.alert.dateSoon', { service: h.service, kind: dateKind(t.kind), left: t.left, date: t.date }), L('dashboard.act.renew'));
 }
-for (const h of accountList.filter((x) => x.noTwoFactor)) addAlert('warn', `${h.service} hesabında 2FA yok.`, 'docs/operations/accounts.md');
+for (const h of accountList.filter((x) => x.noTwoFactor)) addAlert('warn', L('dashboard.alert.noTwoFactor', { service: h.service }), 'docs/operations/accounts.md');
 for (const o of envWarnings(root)) addAlert(o.sev, o.text, o.action);
-for (const alarm of alarmList.filter((x) => x.unset)) addAlert('warn', `${alarm.service}: harcama tavanı veya uyarısı ayarlanmadı.`, 'docs/operations/spend-alarms.md');
-if (economics && economics.margin < 0) addAlert('critical', `Birim ekonomisi negatif: her ödeyen kullanıcı ${Math.abs(economics.margin).toFixed(1)} ${economics.currency} zarar ettiriyor.`, 'Fiyat veya maliyet kararı (/plan-task)');
-for (const k of acceptance.mismatched.slice(0, 3)) addAlert('warn', `${k.id} PRD'de tamam işaretli ama kabul testi ${k.result === 'failed' ? 'kırmızı' : k.test ? 'sonuçsuz' : 'yok'}.`, 'Testi çalıştır veya işareti kaldır');
+for (const alarm of alarmList.filter((x) => x.unset)) addAlert('warn', L('dashboard.alert.spendUnset', { service: alarm.service }), 'docs/operations/spend-alarms.md');
+if (economics && economics.margin < 0) addAlert('critical', L('dashboard.alert.negativeEconomics', { amount: Math.abs(economics.margin).toFixed(1), currency: economics.currency }), L('dashboard.act.priceDecision'));
+for (const k of acceptance.mismatched.slice(0, 3)) addAlert('warn', L(k.result === 'failed' ? 'dashboard.alert.acceptRed' : k.test ? 'dashboard.alert.acceptNoResult' : 'dashboard.alert.acceptMissing', { id: k.id }), L('dashboard.act.acceptFix'));
 const overdue = flagList.filter((b) => b.isOverdue);
-if (overdue.length) addAlert('info', `Kaldırma tarihi geçen ${overdue.length} bayrak: ${overdue.map((b) => b.name).join(', ')}.`, 'Bayrağı ve eski kod yolunu kaldır');
-if (fb.newCount) addAlert('info', `${fb.newCount} işlenmemiş kullanıcı geri bildirimi var.`, '/user-feedback');
+if (overdue.length) addAlert('info', L('dashboard.alert.flagsOverdue', { count: overdue.length, names: overdue.map((b) => b.name).join(', ') }), L('dashboard.act.removeFlag'));
+if (fb.newCount) addAlert('info', L('dashboard.alert.newFeedback', { count: fb.newCount }), '/user-feedback');
 const enabledPackages = (() => { try { return packageStatus(root).filter((p) => p.enabled).map((p) => p.name); } catch { return []; } })();
-if (enabledPackages.length) addAlert('info', `Açık bağlam paketleri: ${enabledPackages.join(', ')}. Her oturumda skill listesine yük ekler.`, 'Kullanmıyorsan /tools kapat <paket>');
+if (enabledPackages.length) addAlert('info', L('dashboard.alert.packagesOn', { names: enabledPackages.join(', ') }), L('dashboard.act.packagesOff'));
 const cmdMode = (() => { try { return commandMode(root).mode; } catch { return 'light'; } })();
-if (cmdMode !== 'full' && /^Tam\b/.test(a['Profil'] ?? '')) addAlert('info', 'Profil Tam ama komut listesi hafif: seyrek komutların açıklaması bağlamda yok.', '/tools komutlar tam');
-else if (cmdMode !== 'light' && !/^Tam\b/.test(a['Profil'] ?? '')) addAlert('info', `Komut listesi ${cmdMode === 'full' ? 'tam' : 'karışık'}: seyrek komutların açıklaması her oturumda bağlama giriyor (~1.100 token).`, 'Profil Tam değilse /tools komutlar hafif');
-if (assets.codeMapDays > 30) addAlert('info', `İnsan için kod haritası (Understand-Anything) ${assets.codeMapDays} gündür güncellenmedi.`, '/understand (sadece değişenleri okur; yayin paketi)');
-if (context?.percent >= 70 && Date.now() - context.readAt < 3600e3) addAlert('warn', `Bağlam %${context.percent} dolu; yanıt kalitesi düşebilir.`, '/wrap-up ve /clear');
-for (const r of Object.values(findings.latest)) if (r.critical > 0) addAlert('warn', `${FINDING_KINDS[r.kind] ?? r.kind} bulgu raporunda ${r.critical} kritik bulgu var (sağlık ${r.health}/100).`, `docs/findings/${r.kind}/latest.md`);
+if (cmdMode !== 'full' && /^Tam\b/.test(a['Profil'] ?? '')) addAlert('info', L('dashboard.alert.cmdListLight'), L('dashboard.act.cmdFull'));
+else if (cmdMode !== 'light' && !/^Tam\b/.test(a['Profil'] ?? '')) addAlert('info', L('dashboard.alert.cmdListHeavy', { mode: cmdMode === 'full' ? L('dashboard.cmdModeFull') : L('dashboard.cmdModeMixed') }), L('dashboard.act.cmdLight'));
+if (assets.codeMapDays > 30) addAlert('info', L('dashboard.alert.codeMapStale', { days: assets.codeMapDays }), L('dashboard.act.understand'));
+if (context?.percent >= 70 && Date.now() - context.readAt < 3600e3) addAlert('warn', L('dashboard.alert.contextFull', { percent: context.percent }), L('dashboard.act.wrapUpClear'));
+for (const r of Object.values(findings.latest)) if (r.critical > 0) addAlert('warn', L('dashboard.alert.findingsCritical', { kind: kindName(r.kind), critical: r.critical, health: r.health }), `docs/findings/${r.kind}/latest.md`);
 // Severity order: critical > warn > info (same severity keeps insertion order)
 const SEVERITY_ORDER = { critical: 0, warn: 1, info: 2 };
 alerts.sort((x, y) => SEVERITY_ORDER[x.sev] - SEVERITY_ORDER[y.sev]);
@@ -188,170 +194,175 @@ const md = (s) => e(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^
 const percent = (b, t) => (t ? Math.round((b / t) * 100) : 0);
 const progressBar = (b, t, cls = '') => `<div class="bar ${cls}" role="img" aria-label="${b}/${t}"><span style="width:${percent(b, t)}%"></span></div>`;
 const empty = (text, action = '') => `<p class="empty">${md(text)}${action ? ` <code>${e(action)}</code>` : ''}</p>`;
-const SEV = { critical: ['⛔', 'Kritik'], warn: ['⚠', 'Dikkat'], info: ['ℹ', 'Bilgi'], good: ['✓', 'Yolunda'] };
-const badge = (sev, caption) => `<span class="badge ${sev}"><span class="ic" aria-hidden="true">${SEV[sev][0]}</span> ${e(caption ?? SEV[sev][1])}</span>`;
-const fmtDate = (t) => { const z = toDate(t); return Number.isNaN(z.getTime()) ? e(t) : z.toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: t.length > 10 ? '2-digit' : undefined, minute: t.length > 10 ? '2-digit' : undefined }); };
+const SEV = { critical: ['⛔', 'dashboard.sevCritical'], warn: ['⚠', 'dashboard.sevWarn'], info: ['ℹ', 'dashboard.sevInfo'], good: ['✓', 'dashboard.sevGood'] };
+const FEED_KEYS = { commit: 'dashboard.feedCommit', karar: 'dashboard.feedDecision', kurul: 'dashboard.feedBoard', 'bakım': 'dashboard.feedMaintenance' };
+const feedLabel = (k) => (Object.hasOwn(FEED_KEYS, k) ? L(FEED_KEYS[k]) : k);
+const onOff = (v) => (v === 'açık' ? L('dashboard.on') : v === 'kapalı' ? L('dashboard.off') : v);
+// A text for the page's own script: a single-quoted JS string, no tag can end the script block
+const jsStr = (key) => `'${L(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\u003c')}'`;
+const badge = (sev, caption) => `<span class="badge ${sev}"><span class="ic" aria-hidden="true">${SEV[sev][0]}</span> ${e(caption ?? L(SEV[sev][1]))}</span>`;
+const fmtDate = (t) => { const z = toDate(t); return Number.isNaN(z.getTime()) ? e(t) : z.toLocaleString(loc, { day: '2-digit', month: 'short', hour: t.length > 10 ? '2-digit' : undefined, minute: t.length > 10 ? '2-digit' : undefined }); };
 const limitSeverity = (p, k) => (p == null ? 'info' : p >= THRESHOLDS[k].red ? 'critical' : p >= THRESHOLDS[k].yellow ? 'warn' : 'good');
 const TOPICS = ['urun', 'teknik', 'tasarim', 'icerik', 'veri', 'guvenlik', 'maliyet'];
 
 // The command to paste into Claude: "`/build G-013` …" or "/wrap-up ve /clear" → first command, without its <placeholder> or note
-const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/ ve | ile |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
-const copyBtn = (s) => { const c = cmdOf(s); return c ? ` <button class="kopyala" type="button" data-cmd="${e(c)}" aria-label="${e(c)} komutunu kopyala">Kopyala</button>` : ''; };
-const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${SEV[x.sev][1]}: </span>${md(x.text)}</span>${x.action ? `<span class="eylem">→ ${md(x.action)}${copyBtn(x.action)}</span>` : ''}</li>`;
+const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/ ve | ile | and | to |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
+const copyBtn = (s) => { const c = cmdOf(s); return c ? ` <button class="kopyala" type="button" data-cmd="${e(c)}" aria-label="${e(L('dashboard.copyAria', { command: c }))}">${e(L('dashboard.copy'))}</button>` : ''; };
+const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${L(SEV[x.sev][1])}: </span>${md(x.text)}</span>${x.action ? `<span class="eylem">→ ${md(x.action)}${copyBtn(x.action)}</span>` : ''}</li>`;
 const kpi = (label, value, sub = '', bar = '') => `<div class="kpi"><div class="kpi-l">${e(label)}</div><div class="kpi-v">${value}</div>${bar}<div class="kpi-s">${sub}</div></div>`;
 
 // ---------- sections ----------
 const activeIndex = Math.max(0, [{ name: 'Başlangıç' }, ...d.phases].findIndex((f) => (a['Aktif faz'] ?? '').toLowerCase().startsWith(f.name.toLowerCase().split(' ').slice(0, 2).join(' '))));
 const start = (a['Başlangıç adımı'] ?? '0/9').split('/').map(Number);
 const stageStrip = `<ol class="steps">${[{ name: 'Başlangıç', done: start[0] || 0, total: start[1] || 9 }, ...d.phases].map((f, i) =>
-  `<li class="step${i === activeIndex ? ' now' : ''}${f.total && f.done === f.total ? ' done' : ''}"><span class="step-n">${i === 0 ? 'B' : i - 1}</span><div class="step-b"><b>${e(f.name.replace(/\s*\(.*\)$/, ''))}</b>${progressBar(f.done, f.total)}<span class="muted num">${f.done}/${f.total}</span></div></li>`).join('')}</ol>`;
+  `<li class="step${i === activeIndex ? ' now' : ''}${f.total && f.done === f.total ? ' done' : ''}"><span class="step-n">${i === 0 ? e(L('dashboard.stageStartLetter')) : i - 1}</span><div class="step-b"><b>${e(i === 0 ? L('dashboard.stageStart') : f.name.replace(/\s*\(.*\)$/, ''))}</b>${progressBar(f.done, f.total)}<span class="muted num">${f.done}/${f.total}</span></div></li>`).join('')}</ol>`;
 
 const overview = `
 <div class="grid2">
-  <section class="card"><h3>Durum özeti</h3>${d.state ? `<p>${md(d.state)}</p>` : empty('Henüz özet yok.')}
-    <h4>Son oturumda</h4>${d.lastSession.length ? `<ul>${d.lastSession.map((s) => `<li>${md(s)}</li>`).join('')}</ul>` : empty('Kayıt yok.')}</section>
-  <section class="card"><h3>Son hareketler</h3>${feed.length ? `<ul class="feed compact">${feed.slice(0, 7).map(feedRow).join('')}</ul>` : empty('Henüz hareket yok.')}</section>
+  <section class="card"><h3>${L('dashboard.statusSummary')}</h3>${d.state ? `<p>${md(d.state)}</p>` : empty(L('dashboard.noSummary'))}
+    <h4>${L('dashboard.lastSession')}</h4>${d.lastSession.length ? `<ul>${d.lastSession.map((s) => `<li>${md(s)}</li>`).join('')}</ul>` : empty(L('dashboard.noRecords'))}</section>
+  <section class="card"><h3>${L('dashboard.recentActivity')}</h3>${feed.length ? `<ul class="feed compact">${feed.slice(0, 7).map(feedRow).join('')}</ul>` : empty(L('dashboard.noActivity'))}</section>
 </div>
-<section class="card"><h3>Aşamalar</h3>${stageStrip}</section>`;
+<section class="card"><h3>${L('dashboard.stages')}</h3>${stageStrip}</section>`;
 
 function feedRow(x) {
-  return `<li class="feed-i t-${x.kind.replace('ı', 'i')}"><span class="ft">${e(x.kind)}</span><div><div>${md(x.title)}</div><div class="muted small">${fmtDate(x.time)}${x.extra ? ' · ' + e(x.extra) : ''}</div></div></li>`;
+  return `<li class="feed-i t-${x.kind.replace('ı', 'i')}"><span class="ft">${e(feedLabel(x.kind))}</span><div><div>${md(x.title)}</div><div class="muted small">${fmtDate(x.time)}${x.extra ? ' · ' + e(x.extra) : ''}</div></div></li>`;
 }
 
 const roadmapSection = d.phases.length ? d.phases.map((f) => `
 <details class="card faz" ${f.name.toLowerCase().startsWith((a['Aktif faz'] ?? '#').toLowerCase().split(' ').slice(0, 2).join(' ')) ? 'open' : ''}>
   <summary><b>${e(f.name)}</b><span class="faz-bar">${progressBar(f.done, f.total)}<span class="num muted">${f.done}/${f.total}</span></span></summary>
   <ul class="tasks">${f.tasks.map((g) => `<li class="${g.done ? 'ok' : ''}${(a['Aktif görev'] && g.text.startsWith(a['Aktif görev'])) ? ' active' : ''}"><span class="chk" aria-hidden="true">${g.done ? '✓' : ''}</span><span>${md(g.text)}</span></li>`).join('')}</ul>
-</details>`).join('') : empty('Yol haritası henüz yok. `/start` Adım 8\'de oluşur.');
+</details>`).join('') : empty(L('dashboard.noRoadmap'));
 
 const decisionTable = d.decisions.length ? `
-<div class="filters" role="group" aria-label="Konu filtresi"><button class="chip on" data-k="hepsi">Hepsi (${d.decisions.length})</button>${TOPICS.filter((k) => d.decisions.some((x) => x.topic === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.decisions.filter((x) => x.topic === k).length})</button>`).join('')}<button class="chip" data-k="otomatik">otomatik (${autoDecisions})</button><button class="chip" data-k="tek">tek yönlü (${d.decisions.filter((k) => /^tek/i.test(k.door)).length})</button></div>
-<div class="tw"><table id="kararlar"><thead><tr><th>#</th><th>Tarih</th><th>Aşama</th><th>Konu</th><th>Soru</th><th>Seçilen</th><th>Kapı</th><th>Veren</th></tr></thead><tbody>
-${[...d.decisions].reverse().map((k) => `<tr data-k="${e(k.topic)}" data-v="${/otomatik/i.test(k.decidedBy) ? 'otomatik' : ''}" data-kapi="${/^tek/i.test(k.door) ? 'tek' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.date)}</td><td>${e(k.stage)}</td><td><span class="tag">${e(k.topic)}</span></td><td>${md(k.question)}</td><td><b>${md(k.chosen)}</b></td><td>${/^tek/i.test(k.door) ? badge('warn', 'tek yönlü') : k.door ? `<span class="muted small">${e(k.door)}</span>` : ''}</td><td>${/otomatik/i.test(k.decidedBy) ? badge('warn', 'otomatik') : badge('good', 'kullanıcı')}</td></tr>`).join('')}
-</tbody></table></div>` : empty('Henüz karar verilmedi. Kararlar `/start` ile başlar.');
+<div class="filters" role="group" aria-label="${e(L('dashboard.topicFilter'))}"><button class="chip on" data-k="hepsi">${L('dashboard.all')} (${d.decisions.length})</button>${TOPICS.filter((k) => d.decisions.some((x) => x.topic === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.decisions.filter((x) => x.topic === k).length})</button>`).join('')}<button class="chip" data-k="otomatik">${L('dashboard.auto')} (${autoDecisions})</button><button class="chip" data-k="tek">${L('dashboard.oneWay')} (${d.decisions.filter((k) => /^tek/i.test(k.door)).length})</button></div>
+<div class="tw"><table id="kararlar"><thead><tr><th>#</th><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.stage')}</th><th>${L('dashboard.th.topic')}</th><th>${L('dashboard.th.question')}</th><th>${L('dashboard.th.chosen')}</th><th>${L('dashboard.th.door')}</th><th>${L('dashboard.th.decidedBy')}</th></tr></thead><tbody>
+${[...d.decisions].reverse().map((k) => `<tr data-k="${e(k.topic)}" data-v="${/otomatik/i.test(k.decidedBy) ? 'otomatik' : ''}" data-kapi="${/^tek/i.test(k.door) ? 'tek' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.date)}</td><td>${e(k.stage)}</td><td><span class="tag">${e(k.topic)}</span></td><td>${md(k.question)}</td><td><b>${md(k.chosen)}</b></td><td>${/^tek/i.test(k.door) ? badge('warn', L('dashboard.oneWay')) : k.door ? `<span class="muted small">${e(k.door)}</span>` : ''}</td><td>${/otomatik/i.test(k.decidedBy) ? badge('warn', L('dashboard.auto')) : badge('good', L('dashboard.user'))}</td></tr>`).join('')}
+</tbody></table></div>` : empty(L('dashboard.noDecisions'));
 
 const boardSection = `
 <div class="grid2">
-  <section class="card"><h3>Üyeler · ${e(d.board.state)}</h3>${d.board.members.length ? `<ul class="members">${d.board.members.map((u) => `<li><b>${e(u.member)}</b><span class="muted small">${e(u.model)} · ${e(u.focus)}</span></li>`).join('')}</ul>` : empty('Kurul kurulmadı.', '/board setup')}
-    <p class="muted small">Commit denetimi: ${e(d.board.commitReview)}</p></section>
-  <section class="card"><h3>Özet</h3><div class="kpis mini">${kpi('Toplantı', d.board.meetings.length)}${kpi('RET', rejectCount, rejectCount ? badge('critical', 'kritik bulgu') : '')}${kpi('Onay oranı', d.board.meetings.length ? `%${percent(d.board.meetings.filter((t) => /^ONAY/i.test(t.result)).length, d.board.meetings.length)}` : '-')}</div></section>
+  <section class="card"><h3>${L('dashboard.members')} · ${e(d.board.state === 'kuruldu' ? L('dashboard.boardSetUp') : d.board.state === 'kurulmadı' ? L('dashboard.notSetUp') : d.board.state)}</h3>${d.board.members.length ? `<ul class="members">${d.board.members.map((u) => `<li><b>${e(u.member)}</b><span class="muted small">${e(u.model)} · ${e(u.focus)}</span></li>`).join('')}</ul>` : empty(L('dashboard.boardNotSetUp'), '/board setup')}
+    <p class="muted small">${L('dashboard.commitReview', { value: e(onOff(d.board.commitReview)) })}</p></section>
+  <section class="card"><h3>${L('dashboard.summary')}</h3><div class="kpis mini">${kpi(L('dashboard.kpiMeetings'), d.board.meetings.length)}${kpi('RET', rejectCount, rejectCount ? badge('critical', L('dashboard.criticalFinding')) : '')}${kpi(L('dashboard.kpiApproval'), d.board.meetings.length ? `%${percent(d.board.meetings.filter((t) => /^ONAY/i.test(t.result)).length, d.board.meetings.length)}` : '-')}</div></section>
 </div>
-<section class="card"><h3>Konsey · ilk görüş → anonim çapraz oy → başkan</h3>${councils.length ? (() => {
+<section class="card"><h3>${L('dashboard.councilHeading')}</h3>${councils.length ? (() => {
   const latest = councils[0];
-  const decisionBadge = (k) => (!k ? badge('info', 'karar yok') : /KOŞULLU/i.test(k) ? badge('warn', k) : /RET/i.test(k) ? badge('critical', k) : badge('good', k));
-  return `<h4>Son: ${md(latest.topic)}</h4><div class="kpis mini">${kpi('Karar', decisionBadge(latest.decision))}${kpi('Uzlaşma', latest.consensus == null ? '-' : `%${latest.consensus}`, latest.consensus != null && latest.consensus < 60 ? badge('warn', 'düşük') : '')}${kpi('Tartışmalı', latest.disputed)}${kpi('Elenen', latest.eliminated, 'çapraz oyla')}</div>
-  ${latest.ranking.length ? `<h4>Toplu sıralama</h4><div class="rows">${latest.ranking.map((r, i) => `<div class="row"><span><b>${i + 1}.</b> Görüş ${e(r.opinion)}${r.who ? ` <span class="muted small">${e(r.who)}</span>` : ''}</span><span class="num muted">ort. ${e(r.average)}</span></div>`).join('')}</div>` : ''}
-  <div class="tw"><table><thead><tr><th>Tarih</th><th>Tür</th><th>Konu</th><th>Karar</th><th>Uzlaşma</th><th>Tutanak</th></tr></thead><tbody>${councils.slice(0, 10).map((k) => `<tr><td class="num nw">${e(k.date)}</td><td>${e(k.kind)}</td><td>${md(k.topic)}</td><td>${decisionBadge(k.decision)}</td><td class="num">${k.consensus == null ? '-' : `%${k.consensus}`}</td><td><a href="${k.file.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">aç</a></td></tr>`).join('')}</tbody></table></div>`;
-})() : empty('Henüz konsey toplanmadı. Plan, faz sonu, canlıya alma ve tek yönlü kararlarda otomatik toplanır.', '/board council <soru>')}</section>
-<section class="card"><h3>Toplantı günlüğü</h3>${d.board.meetings.length ? `<div class="tw"><table><thead><tr><th>#</th><th>Tarih</th><th>Tür</th><th>Kapsam</th><th>Katılan</th><th>Sonuç</th><th>Kritik</th><th>Kullanıcı kararı</th></tr></thead><tbody>
+  const decisionBadge = (k) => (!k ? badge('info', L('dashboard.noDecision')) : /KOŞULLU/i.test(k) ? badge('warn', k) : /RET/i.test(k) ? badge('critical', k) : badge('good', k));
+  return `<h4>${L('dashboard.latestCouncil', { topic: md(latest.topic) })}</h4><div class="kpis mini">${kpi(L('dashboard.th.decision'), decisionBadge(latest.decision))}${kpi(L('dashboard.th.consensus'), latest.consensus == null ? '-' : `%${latest.consensus}`, latest.consensus != null && latest.consensus < 60 ? badge('warn', L('dashboard.low')) : '')}${kpi(L('dashboard.kpiDisputed'), latest.disputed)}${kpi(L('dashboard.kpiEliminated'), latest.eliminated, L('dashboard.byCrossVote'))}</div>
+  ${latest.ranking.length ? `<h4>${L('dashboard.overallRanking')}</h4><div class="rows">${latest.ranking.map((r, i) => `<div class="row"><span><b>${i + 1}.</b> ${L('dashboard.opinion', { letter: e(r.opinion) })}${r.who ? ` <span class="muted small">${e(r.who)}</span>` : ''}</span><span class="num muted">${L('dashboard.avg', { average: e(r.average) })}</span></div>`).join('')}</div>` : ''}
+  <div class="tw"><table><thead><tr><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.kind')}</th><th>${L('dashboard.th.topic')}</th><th>${L('dashboard.th.decision')}</th><th>${L('dashboard.th.consensus')}</th><th>${L('dashboard.th.minutes')}</th></tr></thead><tbody>${councils.slice(0, 10).map((k) => `<tr><td class="num nw">${e(k.date)}</td><td>${e(k.kind)}</td><td>${md(k.topic)}</td><td>${decisionBadge(k.decision)}</td><td class="num">${k.consensus == null ? '-' : `%${k.consensus}`}</td><td><a href="${k.file.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">${L('dashboard.open')}</a></td></tr>`).join('')}</tbody></table></div>`;
+})() : empty(L('dashboard.noCouncil'), '/board council <soru>')}</section>
+<section class="card"><h3>${L('dashboard.meetingLog')}</h3>${d.board.meetings.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.kind')}</th><th>${L('dashboard.th.scope')}</th><th>${L('dashboard.th.attendees')}</th><th>${L('dashboard.th.result')}</th><th>${L('dashboard.th.critical')}</th><th>${L('dashboard.th.userDecision')}</th></tr></thead><tbody>
 ${[...d.board.meetings].reverse().map((t) => `<tr><td class="num">${e(t.no)}</td><td class="num nw">${e(t.date)}</td><td>${e(t.kind)}</td><td>${md(t.scope)}</td><td>${e(t.attendees)}</td><td>${/KOŞULLU/i.test(t.result) ? badge('warn', t.result) : /RET/i.test(t.result) ? badge('critical', t.result) : badge('good', t.result)}</td><td>${md(t.critical)}</td><td>${md(t.decision)}</td></tr>`).join('')}
-</tbody></table></div>` : empty('Henüz toplantı yapılmadı.')}</section>`;
+</tbody></table></div>` : empty(L('dashboard.noMeetings'))}</section>`;
 
 const quality = `
 <div class="grid2">
-  <section class="card"><h3>Kontrol listeleri</h3><div class="rows">${d.checklists.map((l) => `<div class="row"><span>${e(l.name)}</span>${progressBar(l.done, l.total)}<span class="num muted">${l.done}/${l.total}</span></div>`).join('')}</div></section>
-  <section class="card"><h3>Kod sağlığı · son 30 gün</h3>
-    <div class="kpis mini">${kpi('Commit', last30.length)}${kpi('Düzeltme oranı', fixRatio == null ? '-' : `%${fixRatio}`, 'fix / (feat + fix)')}${kpi('Commit edilmemiş', git ? git.changed.length : '-')}</div>
+  <section class="card"><h3>${L('dashboard.checklists')}</h3><div class="rows">${d.checklists.map((l) => `<div class="row"><span>${e(l.name)}</span>${progressBar(l.done, l.total)}<span class="num muted">${l.done}/${l.total}</span></div>`).join('')}</div></section>
+  <section class="card"><h3>${L('dashboard.codeHealth')}</h3>
+    <div class="kpis mini">${kpi(L('dashboard.th.commit'), last30.length)}${kpi(L('dashboard.fixRate'), fixRatio == null ? '-' : `%${fixRatio}`, 'fix / (feat + fix)')}${kpi(L('dashboard.uncommitted'), git ? git.changed.length : '-')}</div>
     ${Object.keys(kindCounts).length ? `<div class="rows">${Object.entries(kindCounts).sort((x, y) => y[1] - x[1]).map(([t, n]) => `<div class="row"><span><code>${e(t)}</code></span>${progressBar(n, last30.length)}<span class="num muted">${n}</span></div>`).join('')}</div>` : ''}
-    <p class="muted small">Yüksek düzeltme oranı, yeni özelliklerin sık bozulduğunu gösterebilir; retroda konuşulmalı.</p></section>
+    <p class="muted small">${L('dashboard.fixRateNote')}</p></section>
 </div>
-${qa ? `<section class="card"><h3>Son QA · ${e(qa.name)}</h3><div class="kpis mini">${kpi('Geçti', qa.passed)}${kpi('Kaldı', qa.failed, qa.failed ? badge('critical', 'kanıtıyla') : '')}${kpi('Koşulmadı', qa.notRun)}</div>${qa.failures.length ? `<ul>${qa.failures.slice(0, 5).map((x) => `<li>${md(x.criterion)}${x.note ? ` <span class="muted small">${e(x.note)}</span>` : ''}</li>`).join('')}</ul>` : ''}<p class="muted small"><a href="${e(qa.file)}" target="_blank" rel="noopener">raporu aç</a></p></section>` : ''}
-<section class="card"><h3>Kabul testleri</h3>${acceptance.total ? `<div class="kpis mini">${kpi('Kriter', acceptance.total)}${kpi('Testi olan', `${acceptance.tested}/${acceptance.total}`, '', progressBar(acceptance.tested, acceptance.total))}${kpi('Geçen', `${acceptance.passing}/${acceptance.total}`, acceptance.reportTime ? `rapor: ${new Date(acceptance.reportTime).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'JUnit raporu yok', progressBar(acceptance.passing, acceptance.total, 'good'))}</div>` : empty('PRD\'de kimlikli kabul kriteri yok (`Ö-01.1` biçimi).')}</section>
-<section class="card"><h3>Metrikler · aylık</h3>${metricRecords.length ? `<div class="tw"><table><thead><tr><th>Dönem</th><th>Görev</th><th>Ort. süre (dk)</th><th>Ort. limit</th><th>Düzeltme</th><th>Geri alma</th><th>Kopya kod</th><th>Açık kritik</th><th>Kabul</th></tr></thead><tbody>${[...metricRecords].reverse().slice(0, 8).map((m) => `<tr><td class="nw">${e(m.period)}</td><td class="num">${e(m.taskCount)}</td><td class="num">${e(m.duration)}</td><td class="num">${e(m.limit)}</td><td class="num">${e(m.fixes)}</td><td class="num">${e(m.reverts)}</td><td class="num">${e(m.duplicates)}</td><td class="num">${e(m.critical)}</td><td class="num">${e(m.acceptance)}</td></tr>`).join('')}</tbody></table></div>` : empty('Henüz metrik kaydı yok. `/maintain monthly` ve `/retro` ekler.')}</section>
-<section class="card"><h3>Kritik akış testleri</h3>${criticalFlows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>Akış</th><th>Test türü</th><th>Dosya</th><th>Durum</th></tr></thead><tbody>${criticalFlows.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(k.feed)}</td><td>${e(k.kind)}</td><td>${md(k.fileName)}</td><td>${/✅|yeşil|var/i.test(k.state) ? badge('good', 'var') : badge('warn', 'yok')}</td></tr>`).join('')}</tbody></table></div>` : empty('Test planı yok.')}</section>
-<section class="card"><h3>Bakım kaydı</h3>${maintenance.length ? `<ul class="feed compact">${[...maintenance].reverse().slice(0, 8).map((b) => feedRow({ time: b.date, kind: 'bakım', title: `${b.kind}: ${b.findings}`, extra: b.work })).join('')}</ul>` : empty('Henüz bakım yapılmadı.', '/maintain weekly')}
-${lastRetro ? `<p class="muted small">Son retro: ${e(lastRetro)}</p>` : ''}</section>`;
+${qa ? `<section class="card"><h3>${L('dashboard.lastQa', { name: e(qa.name) })}</h3><div class="kpis mini">${kpi(L('dashboard.passed'), qa.passed)}${kpi(L('dashboard.failed'), qa.failed, qa.failed ? badge('critical', L('dashboard.withEvidence')) : '')}${kpi(L('dashboard.notRun'), qa.notRun)}</div>${qa.failures.length ? `<ul>${qa.failures.slice(0, 5).map((x) => `<li>${md(x.criterion)}${x.note ? ` <span class="muted small">${e(x.note)}</span>` : ''}</li>`).join('')}</ul>` : ''}<p class="muted small"><a href="${e(qa.file)}" target="_blank" rel="noopener">${L('dashboard.openReport')}</a></p></section>` : ''}
+<section class="card"><h3>${L('dashboard.acceptanceTests')}</h3>${acceptance.total ? `<div class="kpis mini">${kpi(L('dashboard.th.criterion'), acceptance.total)}${kpi(L('dashboard.kpiTested'), `${acceptance.tested}/${acceptance.total}`, '', progressBar(acceptance.tested, acceptance.total))}${kpi(L('dashboard.kpiPassing'), `${acceptance.passing}/${acceptance.total}`, acceptance.reportTime ? L('dashboard.reportTime', { when: new Date(acceptance.reportTime).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }) : L('dashboard.noJunit'), progressBar(acceptance.passing, acceptance.total, 'good'))}</div>` : empty(L('dashboard.noAcceptanceIds'))}</section>
+<section class="card"><h3>${L('dashboard.metricsMonthly')}</h3>${metricRecords.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.period')}</th><th>${L('dashboard.th.task')}</th><th>${L('dashboard.th.avgMinutes')}</th><th>${L('dashboard.th.avgLimit')}</th><th>${L('dashboard.th.fixes')}</th><th>${L('dashboard.th.reverts')}</th><th>${L('dashboard.th.duplicateCode')}</th><th>${L('dashboard.th.openCritical')}</th><th>${L('dashboard.th.acceptance')}</th></tr></thead><tbody>${[...metricRecords].reverse().slice(0, 8).map((m) => `<tr><td class="nw">${e(m.period)}</td><td class="num">${e(m.taskCount)}</td><td class="num">${e(m.duration)}</td><td class="num">${e(m.limit)}</td><td class="num">${e(m.fixes)}</td><td class="num">${e(m.reverts)}</td><td class="num">${e(m.duplicates)}</td><td class="num">${e(m.critical)}</td><td class="num">${e(m.acceptance)}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noMetrics'))}</section>
+<section class="card"><h3>${L('dashboard.criticalFlowTests')}</h3>${criticalFlows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.flow')}</th><th>${L('dashboard.th.testKind')}</th><th>${L('dashboard.th.file')}</th><th>${L('dashboard.status')}</th></tr></thead><tbody>${criticalFlows.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(k.feed)}</td><td>${e(k.kind)}</td><td>${md(k.fileName)}</td><td>${/✅|yeşil|var/i.test(k.state) ? badge('good', L('dashboard.present')) : badge('warn', L('dashboard.missing'))}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noTestPlan'))}</section>
+<section class="card"><h3>${L('dashboard.maintenanceLog')}</h3>${maintenance.length ? `<ul class="feed compact">${[...maintenance].reverse().slice(0, 8).map((b) => feedRow({ time: b.date, kind: 'bakım', title: `${b.kind}: ${b.findings}`, extra: b.work })).join('')}</ul>` : empty(L('dashboard.noMaintenance'), '/maintain weekly')}
+${lastRetro ? `<p class="muted small">${L('dashboard.lastRetro', { value: e(lastRetro) })}</p>` : ''}</section>`;
 
 const maxDay = Math.max(1, ...Object.values(dayCounts));
 const activity = `
-<section class="card"><h3>Commit · son 14 gün <span class="muted small">(toplam ${days.reduce((t, g) => t + dayCounts[g], 0)})</span></h3>
-  <div class="spark" role="img" aria-label="Son 14 günde günlük commit sayısı">${days.map((g) => `<div class="sb" data-tip="${toDate(g).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' })}: ${dayCounts[g]} commit"><span style="height:${dayCounts[g] ? Math.max(6, (dayCounts[g] / maxDay) * 100) : 0}%"></span></div>`).join('')}</div>
-  <div class="spark-x muted small"><span>${toDate(days[0]).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</span><span>bugün</span></div>
-  <details class="tablo-gor"><summary class="muted small">Tablo olarak göster</summary><div class="tw"><table><thead><tr><th>Gün</th><th>Commit</th></tr></thead><tbody>${days.map((g) => `<tr><td class="num">${g}</td><td class="num">${dayCounts[g]}</td></tr>`).join('')}</tbody></table></div></details>
+<section class="card"><h3>${L('dashboard.commitsLast14')} <span class="muted small">${L('dashboard.totalParen', { total: days.reduce((t, g) => t + dayCounts[g], 0) })}</span></h3>
+  <div class="spark" role="img" aria-label="${e(L('dashboard.sparkAria'))}">${days.map((g) => `<div class="sb" data-tip="${e(L('dashboard.commitTip', { date: toDate(g).toLocaleDateString(loc, { day: 'numeric', month: 'short', weekday: 'short' }), count: dayCounts[g] }))}"><span style="height:${dayCounts[g] ? Math.max(6, (dayCounts[g] / maxDay) * 100) : 0}%"></span></div>`).join('')}</div>
+  <div class="spark-x muted small"><span>${toDate(days[0]).toLocaleDateString(loc, { day: 'numeric', month: 'short' })}</span><span>${L('dashboard.today')}</span></div>
+  <details class="tablo-gor"><summary class="muted small">${L('dashboard.showTable')}</summary><div class="tw"><table><thead><tr><th>${L('dashboard.th.day')}</th><th>${L('dashboard.th.commit')}</th></tr></thead><tbody>${days.map((g) => `<tr><td class="num">${g}</td><td class="num">${dayCounts[g]}</td></tr>`).join('')}</tbody></table></div></details>
 </section>
-<section class="card"><h3>Akış</h3>${feed.length ? `<ul class="feed">${feed.map(feedRow).join('')}</ul>` : empty('Henüz hareket yok.')}</section>`;
+<section class="card"><h3>${L('dashboard.feed')}</h3>${feed.length ? `<ul class="feed">${feed.map(feedRow).join('')}</ul>` : empty(L('dashboard.noActivity'))}</section>`;
 
 const product = `
 <div class="grid2">
-  <section class="card"><h3>Ürün</h3>
-    <h4>Problem</h4>${firstSentence(findSection(prd, '1. Problem')) ? `<p>${md(firstSentence(findSection(prd, '1. Problem')))}</p>` : empty('PRD henüz yazılmadı.', '/start')}
-    <h4>Değer önerisi</h4>${firstSentence(findSection(prd, '3. Değer')) ? `<p>${md(firstSentence(findSection(prd, '3. Değer')))}</p>` : empty('-')}
-    ${outOfScope.length ? `<h4>Kapsam dışı</h4><ul>${outOfScope.map((k) => `<li>${md(k)}</li>`).join('')}</ul>` : ''}</section>
-  <section class="card"><h3>MVP özellikleri</h3>${mvp.length ? `<div class="rows">${mvp.map((o) => `<div class="row"><span>${md(o.title)} ${o.priority ? `<span class="tag">${e(o.priority)}</span>` : ''}</span>${progressBar(o.done, o.total)}<span class="num muted">${o.done}/${o.total}</span></div>`).join('')}</div>` : empty('MVP henüz tanımlanmadı.')}
-  ${acceptance.total ? `<h4>Kabul kriterleri · test sonucu</h4><div class="tw"><table><thead><tr><th>Kriter</th><th>PRD</th><th>Test</th></tr></thead><tbody>${acceptance.list.map((k) => `<tr><td><code>${e(k.id)}</code> ${md(k.text)}</td><td>${k.checked ? '✓' : ''}</td><td>${k.result === 'passed' ? badge('good', 'geçti') : k.result === 'failed' ? badge('critical', 'kaldı') : k.test ? badge('info', 'sonuç yok') : badge('warn', 'test yok')}</td></tr>`).join('')}</tbody></table></div>` : ''}</section>
+  <section class="card"><h3>${L('dashboard.product')}</h3>
+    <h4>${L('dashboard.problem')}</h4>${firstSentence(findSection(prd, '1. Problem')) ? `<p>${md(firstSentence(findSection(prd, '1. Problem')))}</p>` : empty(L('dashboard.noPrd'), '/start')}
+    <h4>${L('dashboard.valueProp')}</h4>${firstSentence(findSection(prd, '3. Değer')) ? `<p>${md(firstSentence(findSection(prd, '3. Değer')))}</p>` : empty('-')}
+    ${outOfScope.length ? `<h4>${L('dashboard.outOfScope')}</h4><ul>${outOfScope.map((k) => `<li>${md(k)}</li>`).join('')}</ul>` : ''}</section>
+  <section class="card"><h3>${L('dashboard.mvpFeatures')}</h3>${mvp.length ? `<div class="rows">${mvp.map((o) => `<div class="row"><span>${md(o.title)} ${o.priority ? `<span class="tag">${e(o.priority)}</span>` : ''}</span>${progressBar(o.done, o.total)}<span class="num muted">${o.done}/${o.total}</span></div>`).join('')}</div>` : empty(L('dashboard.noMvp'))}
+  ${acceptance.total ? `<h4>${L('dashboard.criteriaResults')}</h4><div class="tw"><table><thead><tr><th>${L('dashboard.th.criterion')}</th><th>PRD</th><th>${L('dashboard.th.test')}</th></tr></thead><tbody>${acceptance.list.map((k) => `<tr><td><code>${e(k.id)}</code> ${md(k.text)}</td><td>${k.checked ? '✓' : ''}</td><td>${k.result === 'passed' ? badge('good', L('dashboard.passedBadge')) : k.result === 'failed' ? badge('critical', L('dashboard.failedBadge')) : k.test ? badge('info', L('dashboard.noResult')) : badge('warn', L('dashboard.noTest'))}</td></tr>`).join('')}</tbody></table></div>` : ''}</section>
 </div>
 <div class="grid2">
-  <section class="card"><h3>Teknoloji</h3>${stack.length && !stack.every((s) => !s.choice) ? `<dl class="dl">${stack.map((s) => `<dt>${e(s.layer)}</dt><dd>${md(s.choice || '-')}</dd>`).join('')}</dl>` : empty('Stack seçilmedi.')}</section>
-  <section class="card"><h3>Tasarım</h3>${designDirection.length ? `<dl class="dl">${designDirection.map((t) => `<dt>${e(t.area)}</dt><dd>${md(t.choice)}</dd>`).join('')}</dl>` : empty('Tasarım yönü seçilmedi.', '/design genel')}
-    ${previews.length ? `<h4>Önizlemeler</h4><ul class="links">${previews.map((o) => `<li><b>${e(o.name)}</b> ${o.files.map((f) => `<a href=".previews/${encodeURIComponent(o.name)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f.replace(/\.html$/, ''))}</a>`).join(' ')}</li>`).join('')}</ul>` : ''}</section>
+  <section class="card"><h3>${L('dashboard.technology')}</h3>${stack.length && !stack.every((s) => !s.choice) ? `<dl class="dl">${stack.map((s) => `<dt>${e(s.layer)}</dt><dd>${md(s.choice || '-')}</dd>`).join('')}</dl>` : empty(L('dashboard.noStack'))}</section>
+  <section class="card"><h3>${L('dashboard.design')}</h3>${designDirection.length ? `<dl class="dl">${designDirection.map((t) => `<dt>${e(t.area)}</dt><dd>${md(t.choice)}</dd>`).join('')}</dl>` : empty(L('dashboard.noDesign'), '/design genel')}
+    ${previews.length ? `<h4>${L('dashboard.previews')}</h4><ul class="links">${previews.map((o) => `<li><b>${e(o.name)}</b> ${o.files.map((f) => `<a href=".previews/${encodeURIComponent(o.name)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f.replace(/\.html$/, ''))}</a>`).join(' ')}</li>`).join('')}</ul>` : ''}</section>
 </div>
 <div class="grid2">
-  <section class="card"><h3>Birim ekonomisi</h3>${economics ? `<div class="kpis mini">${kpi('Katkı payı', `${economics.margin.toFixed(1)} ${e(economics.currency)}`, 'ödeyen kullanıcı başı / ay')}${kpi('Başa baş', economics.breakEven ?? '—', economics.breakEven ? 'ödeyen kullanıcı' : 'katkı negatif')}${kpi(`Hedefte (${economics.target} kullanıcı)`, `${economics.profit >= 0 ? '+' : ''}${Math.round(economics.profit)} ${e(economics.currency)}`, 'aylık kâr / zarar')}${economics.variableRatio != null ? kpi('Değişken / fiyat', `%${Math.round(economics.variableRatio)}`, economics.variableRatio > 30 ? badge('warn', '%30 üstü') : '') : ''}</div>` : empty('Girdiler boş.', 'docs/product/unit-economics.md')}</section>
-  <section class="card"><h3>Kullanıcı geri bildirimi</h3>${fb.records.length ? `<div class="kpis mini">${kpi('Toplam', fb.records.length)}${kpi('Yeni', fb.newCount)}${kpi('Planlandı', fb.records.filter((k) => /planland/i.test(k.state)).length)}</div>${fb.themes.length ? `<h4>Öne çıkan temalar</h4><div class="rows">${fb.themes.slice(0, 5).map((t) => `<div class="row"><span>${md(t.theme)}</span>${progressBar(t.count, fb.themes[0].count)}<span class="num muted">${t.count}</span></div>`).join('')}</div>` : ''}` : empty('Henüz geri bildirim yok.', '/user-feedback')}</section>
+  <section class="card"><h3>${L('dashboard.unitEconomics')}</h3>${economics ? `<div class="kpis mini">${kpi(L('dashboard.kpiMargin'), `${economics.margin.toFixed(1)} ${e(economics.currency)}`, L('dashboard.perPayingUserMonth'))}${kpi(L('dashboard.kpiBreakEven'), economics.breakEven ?? '—', economics.breakEven ? L('dashboard.payingUsers') : L('dashboard.negativeMargin'))}${kpi(L('dashboard.atTarget', { target: economics.target }), `${economics.profit >= 0 ? '+' : ''}${Math.round(economics.profit)} ${e(economics.currency)}`, L('dashboard.monthlyProfitLoss'))}${economics.variableRatio != null ? kpi(L('dashboard.variableOverPrice'), `%${Math.round(economics.variableRatio)}`, economics.variableRatio > 30 ? badge('warn', L('dashboard.over30')) : '') : ''}</div>` : empty(L('dashboard.noInputs'), 'docs/product/unit-economics.md')}</section>
+  <section class="card"><h3>${L('dashboard.userFeedback')}</h3>${fb.records.length ? `<div class="kpis mini">${kpi(L('dashboard.kpiTotal'), fb.records.length)}${kpi(L('dashboard.kpiNew'), fb.newCount)}${kpi(L('dashboard.kpiPlanned'), fb.records.filter((k) => /planland/i.test(k.state)).length)}</div>${fb.themes.length ? `<h4>${L('dashboard.topThemes')}</h4><div class="rows">${fb.themes.slice(0, 5).map((t) => `<div class="row"><span>${md(t.theme)}</span>${progressBar(t.count, fb.themes[0].count)}<span class="num muted">${t.count}</span></div>`).join('')}</div>` : ''}` : empty(L('dashboard.noFeedback'), '/user-feedback')}</section>
 </div>
-${learnt ? `<section class="card"><h3>Öğrenme · anlama kontrolü</h3><div class="kpis mini">${kpi('Doğru', learnt.right)}${kpi('Yanlış', learnt.wrong)}${kpi('Başarı', `%${percent(learnt.right, learnt.right + learnt.wrong)}`)}</div>${learnt.missed.length ? `<h4>Sık yanılan kavramlar</h4><div class="rows">${learnt.missed.slice(0, 5).map((m) => `<div class="row"><span>${md(m.concept)}</span>${progressBar(m.count, learnt.missed[0].count)}<span class="num muted">${m.count}</span></div>`).join('')}</div>` : ''}</section>` : ''}
+${learnt ? `<section class="card"><h3>${L('dashboard.learning')}</h3><div class="kpis mini">${kpi(L('dashboard.kpiRight'), learnt.right)}${kpi(L('dashboard.kpiWrong'), learnt.wrong)}${kpi(L('dashboard.kpiSuccess'), `%${percent(learnt.right, learnt.right + learnt.wrong)}`)}</div>${learnt.missed.length ? `<h4>${L('dashboard.oftenMissed')}</h4><div class="rows">${learnt.missed.slice(0, 5).map((m) => `<div class="row"><span>${md(m.concept)}</span>${progressBar(m.count, learnt.missed[0].count)}<span class="num muted">${m.count}</span></div>`).join('')}</div>` : ''}</section>` : ''}
 <div class="grid2">
-  <section class="card"><h3>Marka paketi</h3>${assets.brand.length ? `<p class="muted small"><code>${e(assets.brandDir)}</code> · ${assets.brand.length} dosya${assets.brandGuide ? ' · <a href="docs/design/brand.md" target="_blank" rel="noopener">kullanım kuralları</a>' : ''}</p><ul class="links">${assets.brand.map((f) => `<li><a href="${e(assets.brandDir)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f)}</a></li>`).join('')}</ul>` : empty('Logo henüz yok.', 'logo-design')}</section>
-  <section class="card"><h3>Tanıtım ve araştırma</h3><h4>Videolar</h4>${assets.videos.length ? `<ul class="links">${assets.videos.map((v) => `<li><b>${e(v.name)}</b> ${v.mp4 ? `<a href="${v.mp4.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">mp4</a>` : badge('info', 'render yok')}</li>`).join('')}</ul>` : empty('Video yok.', 'motion-video')}
-    <h4>Araştırma notları</h4>${assets.research.length ? `<ul class="links">${assets.research.slice(0, 8).map((r) => `<li><a href="${r.file.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">${md(r.title)}</a></li>`).join('')}</ul>` : empty('Not yok.', '/research')}</section>
+  <section class="card"><h3>${L('dashboard.brandPack')}</h3>${assets.brand.length ? `<p class="muted small"><code>${e(assets.brandDir)}</code> · ${L('dashboard.filesCount', { count: assets.brand.length })}${assets.brandGuide ? ` · <a href="docs/design/brand.md" target="_blank" rel="noopener">${L('dashboard.usageRules')}</a>` : ''}</p><ul class="links">${assets.brand.map((f) => `<li><a href="${e(assets.brandDir)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f)}</a></li>`).join('')}</ul>` : empty(L('dashboard.noLogo'), 'logo-design')}</section>
+  <section class="card"><h3>${L('dashboard.promoResearch')}</h3><h4>${L('dashboard.videos')}</h4>${assets.videos.length ? `<ul class="links">${assets.videos.map((v) => `<li><b>${e(v.name)}</b> ${v.mp4 ? `<a href="${v.mp4.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">mp4</a>` : badge('info', L('dashboard.noRender'))}</li>`).join('')}</ul>` : empty(L('dashboard.noVideos'), 'motion-video')}
+    <h4>${L('dashboard.researchNotes')}</h4>${assets.research.length ? `<ul class="links">${assets.research.slice(0, 8).map((r) => `<li><a href="${r.file.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">${md(r.title)}</a></li>`).join('')}</ul>` : empty(L('dashboard.noNotes'), '/research')}</section>
 </div>
-<section class="card"><h3>Yayınlanmamış değişiklikler (CHANGELOG)</h3>${unreleased.length ? `<ul>${unreleased.map((s) => `<li>${md(s)}</li>`).join('')}</ul>` : empty('Yayınlanmamış değişiklik yok.')}</section>`;
+<section class="card"><h3>${L('dashboard.unreleased')}</h3>${unreleased.length ? `<ul>${unreleased.map((s) => `<li>${md(s)}</li>`).join('')}</ul>` : empty(L('dashboard.noUnreleased'))}</section>`;
 
 const limitCard = (name, k) => {
   const p = limit?.[k];
   const sev = limitSeverity(p?.percent, k);
-  return `<div class="lim"><div class="lim-h"><b>${name}</b>${badge(sev, p ? `%${Math.round(p.percent)}` : 'bilinmiyor')}</div>
-  <div class="bar big ${sev}"><span style="width:${p ? Math.min(100, p.percent) : 0}%"></span><i style="left:${THRESHOLDS[k].yellow}%" title="sarı eşik"></i><i style="left:${THRESHOLDS[k].red}%" title="kırmızı eşik"></i></div>
-  <div class="muted small">${p?.resetsAt ? `Sıfırlanma: ${new Date(p.resetsAt * 1000).toLocaleString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : p?.renewed ? 'Yenilendi' : '-'} · eşikler %${THRESHOLDS[k].yellow} / %${THRESHOLDS[k].red}</div></div>`;
+  return `<div class="lim"><div class="lim-h"><b>${name}</b>${badge(sev, p ? `%${Math.round(p.percent)}` : L('dashboard.unknown'))}</div>
+  <div class="bar big ${sev}"><span style="width:${p ? Math.min(100, p.percent) : 0}%"></span><i style="left:${THRESHOLDS[k].yellow}%" title="${e(L('dashboard.yellowThreshold'))}"></i><i style="left:${THRESHOLDS[k].red}%" title="${e(L('dashboard.redThreshold'))}"></i></div>
+  <div class="muted small">${p?.resetsAt ? L('dashboard.resetsLabel', { when: new Date(p.resetsAt * 1000).toLocaleString(loc, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }) : p?.renewed ? L('dashboard.renewed') : '-'} · ${L('dashboard.thresholdsNote', { yellow: THRESHOLDS[k].yellow, red: THRESHOLDS[k].red })}</div></div>`;
 };
 const limitSection = `
-<section class="card"><h3>Kullanım limiti</h3><div class="grid2 tight">${limitCard('5 saatlik', 'five_hour')}${limitCard('Haftalık', 'seven_day')}</div>
+<section class="card"><h3>${L('dashboard.usageLimit')}</h3><div class="grid2 tight">${limitCard(L('dashboard.limit5h'), 'five_hour')}${limitCard(L('dashboard.limitWeekly'), 'seven_day')}</div>
 <p class="muted small">${e(summary(limit))}</p>
-<h4>Bağlam penceresi</h4>${context ? `<div class="lim"><div class="lim-h"><b>Son oturum</b>${badge(context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good', `%${context.percent}`)}</div><div class="bar big ${context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good'}"><span style="width:${Math.min(100, context.percent)}%"></span><i style="left:50%"></i><i style="left:70%"></i></div><div class="muted small">%50'de /wrap-up + /clear önerilir · ${new Date(context.readAt).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla</div></div>` : empty('Bağlam bilgisi yok (durum çubuğu yazar).')}
-<h4>Model ve effort · rol bazında</h4><div class="tw"><table><tbody>${Object.entries(readModels(modelsFile(root))).map(([r, v]) => `<tr><td>${e(ROLES[r])}</td><td class="nw">${e(v.replace(':', ' · '))}</td></tr>`).join('')}</tbody></table></div><p class="muted small">${modelsNote(modelsFile(root)) ? `${e(modelsNote(modelsFile(root)))}. ` : ''}/build her görevin başında sorar (docs/workflow/models.md).</p></section>
-<section class="card"><h3>Token ve maliyet · son 30 gün</h3>${tokenCost?.days.length ? (() => {
+<h4>${L('dashboard.contextWindow')}</h4>${context ? `<div class="lim"><div class="lim-h"><b>${L('dashboard.lastSessionShort')}</b>${badge(context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good', `%${context.percent}`)}</div><div class="bar big ${context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good'}"><span style="width:${Math.min(100, context.percent)}%"></span><i style="left:50%"></i><i style="left:70%"></i></div><div class="muted small">${L('dashboard.contextHint', { time: new Date(context.readAt).toLocaleString(loc, { hour: '2-digit', minute: '2-digit' }) })}</div></div>` : empty(L('dashboard.noContext'))}
+<h4>${L('dashboard.modelEffort')}</h4><div class="tw"><table><tbody>${Object.entries(readModels(modelsFile(root))).map(([r, v]) => `<tr><td>${e(roleLabel(root, r))}</td><td class="nw">${e(v.replace(':', ' · '))}</td></tr>`).join('')}</tbody></table></div><p class="muted small">${modelsNote(modelsFile(root), root) ? `${e(modelsNote(modelsFile(root), root))}. ` : ''}${L('dashboard.modelsHint')}</p></section>
+<section class="card"><h3>${L('dashboard.tokenCost')}</h3>${tokenCost?.days.length ? (() => {
   const latest = tokenCost.days.slice(-14);
   const maxTokens = Math.max(...latest.map((g) => g.token));
-  return `<div class="kpis mini">${kpi('Toplam token', `${(tokenCost.total.token / 1e6).toFixed(1)}M`)}${kpi('API karşılığı', `$${tokenCost.total.cost.toFixed(2)}`, 'abonelikte fatura değildir')}${kpi('Günlük ortalama', `$${(tokenCost.total.cost / tokenCost.days.length).toFixed(2)}`, `${tokenCost.days.length} aktif gün`)}</div>
+  return `<div class="kpis mini">${kpi(L('dashboard.totalTokens'), `${(tokenCost.total.token / 1e6).toFixed(1)}M`)}${kpi(L('dashboard.apiEquivalent'), `$${tokenCost.total.cost.toFixed(2)}`, L('dashboard.notBilled'))}${kpi(L('dashboard.dailyAvg'), `$${(tokenCost.total.cost / tokenCost.days.length).toFixed(2)}`, L('dashboard.activeDays', { count: tokenCost.days.length }))}</div>
   <div class="rows">${latest.map((g) => `<div class="row"><span class="num nw">${e(g.date.slice(5))}</span>${progressBar(g.token, maxTokens)}<span class="num muted">${(g.token / 1e6).toFixed(1)}M · $${g.cost.toFixed(2)}</span></div>`).join('')}</div>
-  <p class="muted small">ccusage · ${fmtDate(tokenCost.readAt)} itibarıyla · ayrıntı için <code>/session-report</code></p>`;
-})() : empty('Veri yok.', 'node .claude/hooks/cost.mjs')}</section>
-<section class="card"><h3>Maliyet günlüğü</h3>${avgCost.length ? `<div class="kpis mini">${avgCost.map((m) => kpi(`Ortalama · ${m.size}`, `%${m.avg.toFixed(1)}`, `${m.n} kayıt`)).join('')}</div>
-<div class="tw"><table><thead><tr><th>Tarih</th><th>İş</th><th>Boyut</th><th>5s kullanım</th></tr></thead><tbody>${[...cost].reverse().slice(0, 15).map((m) => `<tr><td class="num nw">${e(m.date)}</td><td>${md(m.job)}</td><td>${e(m.size)}</td><td class="num">${Number.isNaN(m.diff) ? '-' : `%${m.diff}`}</td></tr>`).join('')}</tbody></table></div>` : empty('Henüz kayıt yok. `/build` her görevin limit maliyetini buraya yazar.')}</section>`;
+  <p class="muted small">${L('dashboard.ccusageNote', { when: fmtDate(tokenCost.readAt) })}</p>`;
+})() : empty(L('dashboard.noData'), 'node .claude/hooks/cost.mjs')}</section>
+<section class="card"><h3>${L('dashboard.costLog')}</h3>${avgCost.length ? `<div class="kpis mini">${avgCost.map((m) => kpi(L('dashboard.avgSize', { size: m.size }), `%${m.avg.toFixed(1)}`, L('dashboard.recordsCount', { count: m.n }))).join('')}</div>
+<div class="tw"><table><thead><tr><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.job')}</th><th>${L('dashboard.th.size')}</th><th>${L('dashboard.th.usage5h')}</th></tr></thead><tbody>${[...cost].reverse().slice(0, 15).map((m) => `<tr><td class="num nw">${e(m.date)}</td><td>${md(m.job)}</td><td>${e(m.size)}</td><td class="num">${Number.isNaN(m.diff) ? '-' : `%${m.diff}`}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noCostRecords'))}</section>`;
 
-const daysBadge = (t) => (t.left < 0 ? badge('critical', `${-t.left} gün geçti`) : t.left <= 30 ? badge('warn', `${t.left} gün`) : badge('good', `${t.left} gün`));
+const daysBadge = (t) => (t.left < 0 ? badge('critical', L('dashboard.daysOverdue', { days: -t.left })) : t.left <= 30 ? badge('warn', L('dashboard.daysLeft', { days: t.left })) : badge('good', L('dashboard.daysLeft', { days: t.left })));
 const operations = `
-<section class="card"><h3>Hesaplar ve son tarihler</h3>${accountList.length ? `<div class="tw"><table><thead><tr><th>Servis</th><th>Amaç</th><th>Sahip</th><th>2FA</th><th>Plan</th><th>Tarihler</th></tr></thead><tbody>${accountList.map((h) => `<tr><td><b>${e(h.service)}</b></td><td>${e(h.purpose)}</td><td>${e(h.owner)}</td><td>${h.noTwoFactor ? badge('warn', 'yok') : e(h.twoFactor)}</td><td>${e(h.plan)}</td><td>${h.dates.map((t) => `<div class="nw">${e(t.kind)}: ${e(t.date)} ${daysBadge(t)}</div>`).join('') || '<span class="muted">-</span>'}</td></tr>`).join('')}</tbody></table></div>` : empty('Hesap envanteri boş.', 'docs/operations/accounts.md')}</section>
-<section class="card"><h3>Harcama alarmları</h3>${alarmList.length ? `<div class="tw"><table><thead><tr><th>Servis</th><th>Tür</th><th>Tutar</th><th>Uyarı eşikleri</th><th>Son kontrol</th></tr></thead><tbody>${alarmList.map((alarm) => `<tr><td><b>${e(alarm.service)}</b></td><td>${e(alarm.kind)}</td><td>${alarm.unset ? badge('warn', 'ayarlanmadı') : e(alarm.amount)}</td><td>${e(alarm.thresholds)}</td><td class="nw">${e(alarm.lastCheck || '-')} ${alarm.stale ? badge('info', 'kontrol et') : ''}</td></tr>`).join('')}</tbody></table></div>` : empty('Ücretli servis için alarm kaydı yok.', 'docs/operations/spend-alarms.md')}</section>
-<section class="card"><h3>Özellik bayrakları</h3>${flagList.length ? `<div class="tw"><table><thead><tr><th>Bayrak</th><th>Amaç</th><th>Durum</th><th>Kaldırma</th><th>Acil kapatma</th></tr></thead><tbody>${flagList.map((b) => `<tr><td><code>${e(b.name)}</code></td><td>${md(b.purpose)}</td><td>${e(b.state)}</td><td class="nw">${e(b.removal)} ${b.isOverdue ? badge('warn', 'gecikti') : ''}</td><td>${b.untested ? badge('warn', 'denenmedi') : badge('good', 'denendi')}</td></tr>`).join('')}</tbody></table></div>` : empty('Bayrak yok.', 'docs/operations/feature-flags.md')}</section>
+<section class="card"><h3>${L('dashboard.accountsDeadlines')}</h3>${accountList.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.service')}</th><th>${L('dashboard.th.purpose')}</th><th>${L('dashboard.th.owner')}</th><th>2FA</th><th>Plan</th><th>${L('dashboard.th.dates')}</th></tr></thead><tbody>${accountList.map((h) => `<tr><td><b>${e(h.service)}</b></td><td>${e(h.purpose)}</td><td>${e(h.owner)}</td><td>${h.noTwoFactor ? badge('warn', L('dashboard.none')) : e(h.twoFactor)}</td><td>${e(h.plan)}</td><td>${h.dates.map((t) => `<div class="nw">${e(dateKind(t.kind))}: ${e(t.date)} ${daysBadge(t)}</div>`).join('') || '<span class="muted">-</span>'}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noAccounts'), 'docs/operations/accounts.md')}</section>
+<section class="card"><h3>${L('dashboard.spendAlarms')}</h3>${alarmList.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.service')}</th><th>${L('dashboard.th.kind')}</th><th>${L('dashboard.th.amount')}</th><th>${L('dashboard.th.alertThresholds')}</th><th>${L('dashboard.th.lastCheck')}</th></tr></thead><tbody>${alarmList.map((alarm) => `<tr><td><b>${e(alarm.service)}</b></td><td>${e(alarm.kind)}</td><td>${alarm.unset ? badge('warn', L('dashboard.notSet')) : e(alarm.amount)}</td><td>${e(alarm.thresholds)}</td><td class="nw">${e(alarm.lastCheck || '-')} ${alarm.stale ? badge('info', L('dashboard.checkIt')) : ''}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noSpendAlarms'), 'docs/operations/spend-alarms.md')}</section>
+<section class="card"><h3>${L('dashboard.flagsHeading')}</h3>${flagList.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.flag')}</th><th>${L('dashboard.th.purpose')}</th><th>${L('dashboard.status')}</th><th>${L('dashboard.th.removal')}</th><th>${L('dashboard.th.killSwitch')}</th></tr></thead><tbody>${flagList.map((b) => `<tr><td><code>${e(b.name)}</code></td><td>${md(b.purpose)}</td><td>${e(b.state)}</td><td class="nw">${e(b.removal)} ${b.isOverdue ? badge('warn', L('dashboard.overdue')) : ''}</td><td>${b.untested ? badge('warn', L('dashboard.untested')) : badge('good', L('dashboard.tested'))}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noFlags'), 'docs/operations/feature-flags.md')}</section>
 <section class="card"><h3>GitHub</h3>${github ? `
-  ${github.liveRun ? `<p><b>Canlı izleme</b> · son çalışma ${fmtDate(github.liveRun.createdAt)} ${github.liveRun.conclusion === 'skipped' ? `${badge('info', 'kurulmadı')} <span class="muted small">GitHub → Settings → Variables'a LIVE_URL ekle</span>` : github.liveRun.conclusion === 'success' ? badge('good', 'başarılı') : github.liveRun.conclusion === 'failure' ? `${badge('critical', 'başarısız')} <span class="muted small">/fix-bug</span>` : badge('info', github.liveRun.conclusion || github.liveRun.status)} <a href="${e(github.liveRun.url)}" target="_blank" rel="noopener">kayıt</a></p>` : ''}
-  ${github.liveMonitoring?.length ? `<p>${badge('critical', 'Canlı izleme bozuk')} ${github.liveMonitoring.map((i) => `<a href="${e(i.url)}" target="_blank" rel="noopener">#${e(i.number)} ${e(i.title)}</a>`).join(', ')}</p>` : ''}
-  <h4>Son iş akışları</h4>${github.runs?.length ? `<div class="tw"><table><thead><tr><th>İş akışı</th><th>Dal</th><th>Sonuç</th><th>Zaman</th></tr></thead><tbody>${github.runs.map((c) => `<tr><td><a href="${e(c.url)}" target="_blank" rel="noopener">${e(c.workflowName)}</a></td><td><code>${e(c.headBranch)}</code></td><td>${c.conclusion === 'success' ? badge('good', 'başarılı') : c.conclusion === 'failure' ? badge('critical', 'başarısız') : badge('info', c.conclusion || c.status)}</td><td class="num nw">${fmtDate(c.createdAt)}</td></tr>`).join('')}</tbody></table></div>` : empty('Henüz çalışma yok.')}
-  <h4>Açık PR'lar</h4>${github.prs?.length ? `<ul>${github.prs.map((r) => `<li><a href="${e(r.url)}" target="_blank" rel="noopener">#${e(r.number)} ${e(r.title)}</a>${r.isDraft ? ' <span class="tag">taslak</span>' : ''}</li>`).join('')}</ul>` : empty('Açık PR yok.')}
-  <p class="muted small">gh CLI ile okunur, 5 dakikada bir yenilenir.</p>` : empty('GitHub bilgisi yok: gh CLI kurulu ve giriş yapılmış olmalı, depo GitHub\'a bağlı olmalı.')}</section>`;
+  ${github.liveRun ? `<p><b>${L('dashboard.liveMonitoring')}</b> · ${L('dashboard.liveLastRun')} ${fmtDate(github.liveRun.createdAt)} ${github.liveRun.conclusion === 'skipped' ? `${badge('info', L('dashboard.notSetUp'))} <span class="muted small">${L('dashboard.liveUrlHint')}</span>` : github.liveRun.conclusion === 'success' ? badge('good', L('dashboard.succeeded')) : github.liveRun.conclusion === 'failure' ? `${badge('critical', L('dashboard.failedRun'))} <span class="muted small">/fix-bug</span>` : badge('info', github.liveRun.conclusion || github.liveRun.status)} <a href="${e(github.liveRun.url)}" target="_blank" rel="noopener">${L('dashboard.logLink')}</a></p>` : ''}
+  ${github.liveMonitoring?.length ? `<p>${badge('critical', L('dashboard.liveBroken'))} ${github.liveMonitoring.map((i) => `<a href="${e(i.url)}" target="_blank" rel="noopener">#${e(i.number)} ${e(i.title)}</a>`).join(', ')}</p>` : ''}
+  <h4>${L('dashboard.recentWorkflows')}</h4>${github.runs?.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.workflow')}</th><th>${L('dashboard.th.branch')}</th><th>${L('dashboard.th.result')}</th><th>${L('dashboard.th.time')}</th></tr></thead><tbody>${github.runs.map((c) => `<tr><td><a href="${e(c.url)}" target="_blank" rel="noopener">${e(c.workflowName)}</a></td><td><code>${e(c.headBranch)}</code></td><td>${c.conclusion === 'success' ? badge('good', L('dashboard.succeeded')) : c.conclusion === 'failure' ? badge('critical', L('dashboard.failedRun')) : badge('info', c.conclusion || c.status)}</td><td class="num nw">${fmtDate(c.createdAt)}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noRuns'))}
+  <h4>${L('dashboard.openPrs')}</h4>${github.prs?.length ? `<ul>${github.prs.map((r) => `<li><a href="${e(r.url)}" target="_blank" rel="noopener">#${e(r.number)} ${e(r.title)}</a>${r.isDraft ? ` <span class="tag">${L('dashboard.draft')}</span>` : ''}</li>`).join('')}</ul>` : empty(L('dashboard.noPrs'))}
+  <p class="muted small">${L('dashboard.ghNote')}</p>` : empty(L('dashboard.noGithub'))}</section>`;
 
 const healthSeverity = (p) => (p >= 85 ? 'good' : p >= 70 ? 'info' : p >= 50 ? 'warn' : 'critical');
-const healthLabel = (p) => (p >= 85 ? 'Sağlıklı' : p >= 70 ? 'İyi' : p >= 50 ? 'Dikkat' : 'Riskli');
+const healthLabel = (p) => L(p >= 85 ? 'dashboard.healthHealthy' : p >= 70 ? 'dashboard.healthGood' : p >= 50 ? 'dashboard.sevWarn' : 'dashboard.healthRisky');
 const findingsSection = `
-<section class="card"><h3>Alan sağlık puanları</h3>${Object.keys(findings.latest).length ? `<div class="kpis mini">${Object.keys(FINDING_KINDS).filter((t) => findings.latest[t]).map((t) => {
+<section class="card"><h3>${L('dashboard.areaScores')}</h3>${Object.keys(findings.latest).length ? `<div class="kpis mini">${Object.keys(FINDING_KINDS).filter((t) => findings.latest[t]).map((t) => {
   const r = findings.latest[t];
   const diff = r.previous != null ? r.health - r.previous : null;
-  return kpi(FINDING_KINDS[t], `${r.health}/100`, `${badge(healthSeverity(r.health), healthLabel(r.health))} ${diff != null ? `<span class="num">${diff >= 0 ? '+' : ''}${diff}</span>` : ''}<br><a href="docs/findings/${e(t)}/latest.md" target="_blank" rel="noopener">${e(r.date)} · ${r.findings ?? '-'} bulgu${r.critical ? ` · ${r.critical} kritik` : ''}</a>`, progressBar(r.health, 100, healthSeverity(r.health)));
-}).join('')}</div>${Object.keys(FINDING_KINDS).filter((t) => !findings.latest[t]).length ? `<p class="muted small">Henüz raporu olmayanlar: ${Object.keys(FINDING_KINDS).filter((t) => !findings.latest[t]).map((t) => `<code>/findings-${t}</code>`).join(' ')}</p>` : ''}` : empty('Henüz bulgu raporu yok. Başlamak için:', '/findings-tech')}</section>
-<section class="card"><h3>Rapor geçmişi</h3>${findings.rows.length ? `<div class="tw"><table><thead><tr><th>Tarih</th><th>Tür</th><th>Sağlık</th><th>Değişim</th><th>Bulgu</th><th>Kritik</th><th>Rapor</th></tr></thead><tbody>${[...findings.rows].reverse().slice(0, 30).map((r) => `<tr><td class="num nw">${e(r.date)}</td><td>${e(FINDING_KINDS[r.kind] ?? r.kind)}</td><td>${badge(healthSeverity(r.health), `${r.health}`)}</td><td class="num">${r.previous != null ? `${r.health - r.previous >= 0 ? '+' : ''}${r.health - r.previous}` : '-'}</td><td class="num">${r.findings ?? '-'}</td><td class="num">${r.critical || '-'}</td><td>${md(r.report)}</td></tr>`).join('')}</tbody></table></div>` : empty('Rapor yok.')}
-<p class="muted small">Puanlama: bulgu önemi = etki (40) + olasılık (25) + yayılım (20) + aciliyet (15); sağlık = 100 − ceza (kritik 15, yüksek 8, orta 4, düşük 1). Yöntem: <code>.claude/findings/protocol.md</code></p></section>`;
+  return kpi(kindName(t), `${r.health}/100`, `${badge(healthSeverity(r.health), healthLabel(r.health))} ${diff != null ? `<span class="num">${diff >= 0 ? '+' : ''}${diff}</span>` : ''}<br><a href="docs/findings/${e(t)}/latest.md" target="_blank" rel="noopener">${L('dashboard.findingsLine', { date: e(r.date), findings: r.findings ?? '-' })}${r.critical ? L('dashboard.findingsCritical', { critical: r.critical }) : ''}</a>`, progressBar(r.health, 100, healthSeverity(r.health)));
+}).join('')}</div>${Object.keys(FINDING_KINDS).filter((t) => !findings.latest[t]).length ? `<p class="muted small">${L('dashboard.noReportYet')} ${Object.keys(FINDING_KINDS).filter((t) => !findings.latest[t]).map((t) => `<code>/findings-${t}</code>`).join(' ')}</p>` : ''}` : empty(L('dashboard.noFindingReports'), '/findings-tech')}</section>
+<section class="card"><h3>${L('dashboard.reportHistory')}</h3>${findings.rows.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.kind')}</th><th>${L('dashboard.th.health')}</th><th>${L('dashboard.th.change')}</th><th>${L('dashboard.th.finding')}</th><th>${L('dashboard.th.critical')}</th><th>${L('dashboard.th.report')}</th></tr></thead><tbody>${[...findings.rows].reverse().slice(0, 30).map((r) => `<tr><td class="num nw">${e(r.date)}</td><td>${e(kindName(r.kind))}</td><td>${badge(healthSeverity(r.health), `${r.health}`)}</td><td class="num">${r.previous != null ? `${r.health - r.previous >= 0 ? '+' : ''}${r.health - r.previous}` : '-'}</td><td class="num">${r.findings ?? '-'}</td><td class="num">${r.critical || '-'}</td><td>${md(r.report)}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noReports'))}
+<p class="muted small">${L('dashboard.scoringNote')}</p></section>`;
 
 const TABS = [
-  ['genel', 'Genel', overview], ['yol', 'Yol haritası', roadmapSection], ['kararlar', `Kararlar`, decisionTable],
-  ['kurul', 'Kurul', boardSection], ['bulgular', 'Bulgular', findingsSection], ['kalite', 'Kalite', quality], ['aktivite', 'Aktivite', activity],
-  ['urun', 'Ürün ve teknik', product], ['operasyon', 'Operasyon', operations], ['limit', 'Limit ve maliyet', limitSection],
+  ['genel', L('dashboard.tabOverview'), overview], ['yol', L('dashboard.tabRoadmap'), roadmapSection], ['kararlar', L('dashboard.tabDecisions'), decisionTable],
+  ['kurul', L('dashboard.board'), boardSection], ['bulgular', L('dashboard.tabFindings'), findingsSection], ['kalite', L('dashboard.tabQuality'), quality], ['aktivite', L('dashboard.tabActivity'), activity],
+  ['urun', L('dashboard.tabProduct'), product], ['operasyon', L('dashboard.tabOperations'), operations], ['limit', L('dashboard.tabLimit'), limitSection],
 ];
 
-const next = d.next[0] ?? (d.kitPending ? '`/start [fikrin]`' : '-');
+const next = d.next[0] ?? (d.kitPending ? L('dashboard.startIdeaCode') : '-');
 const html = `<!doctype html>
 <html lang="${e(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${e(d.project)} · Kontrol paneli</title>
+<title>${e(d.project)} · ${e(L('dashboard.title'))}</title>
 <style>
 :root{--bg:#f4f6f9;--surface:#fff;--sunk:#eef1f5;--fg:#141b27;--muted:#5b6577;--line:#dde3eb;--accent:#2a78d6;--accent-soft:#e3eefb;
 --good:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;--good-bg:#e5f5e5;--warn-bg:#fdf3dc;--crit-bg:#fbe7e7;--info-bg:#e9eef6;
@@ -439,48 +450,48 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
 <header class="top">
   <div><h1>${e(d.project)}</h1></div>
   <div class="meta">
-    ${badge(health, health === 'good' ? 'Yolunda' : health === 'warn' ? 'Dikkat gerekiyor' : 'Engel var').replace('class="badge', 'class="badge health')}
-    ${d.kit?.type ? `<span class="pill">${e(d.kit.type)}${d.kit.addons?.length ? ' + ' + e(d.kit.addons.join(', ')) : ''}</span><span class="pill">kit ${e(d.kit.version)}</span>${d.kit.tool?.some((t) => t !== 'claude') ? `<span class="pill">${e(d.kit.tool.join(' + '))}</span>` : ''}` : '<span class="pill">kit kurulmadı</span>'}
+    ${badge(health, health === 'good' ? L('dashboard.sevGood') : health === 'warn' ? L('dashboard.healthWarn') : L('dashboard.healthCritical')).replace('class="badge', 'class="badge health')}
+    ${d.kit?.type ? `<span class="pill">${e(d.kit.type)}${d.kit.addons?.length ? ' + ' + e(d.kit.addons.join(', ')) : ''}</span><span class="pill">${e(L('dashboard.kitVersion', { version: d.kit.version }))}</span>${d.kit.tool?.some((t) => t !== 'claude') ? `<span class="pill">${e(d.kit.tool.join(' + '))}</span>` : ''}` : `<span class="pill">${e(L('dashboard.kitNotInstalled'))}</span>`}
     ${git?.branch ? `<span class="pill">⎇ ${e(git.branch)}</span>` : ''}
-    <label class="refresh"><input type="checkbox" id="oto" checked> 30 sn'de yenile</label>
+    <label class="refresh"><input type="checkbox" id="oto" checked> ${e(L('dashboard.autoRefresh'))}</label>
   </div>
 </header>
 
 <div class="hero">
   <section class="card" aria-labelledby="simdi">
-    <div class="now-l" id="simdi">Şimdi</div>
+    <div class="now-l" id="simdi">${L('dashboard.now')}</div>
     <div class="now-v">${e(a['Aktif faz'] ?? '-')} · ${md(a['Aktif görev'] ?? '-')}</div>
     <div class="now-grid">
-      <div><div class="now-l">Soru modu</div><div>${e(a['Soru modu'] ?? '-')}</div></div>
-      <div><div class="now-l">Profil</div><div>${e(a['Profil'] ?? '-')}</div></div>
-      <div><div class="now-l">Son güncelleme</div><div class="num">${e(a['Son güncelleme'] ?? '-')}</div></div>
-      ${/başlangıç/i.test(a['Aktif faz'] ?? '') ? `<div><div class="now-l">Başlangıç adımı</div><div class="num">${e(a['Başlangıç adımı'] ?? '-')}</div></div>` : ''}
+      <div><div class="now-l">${L('dashboard.questionMode')}</div><div>${e(a['Soru modu'] ?? '-')}</div></div>
+      <div><div class="now-l">${L('dashboard.profile')}</div><div>${e(a['Profil'] ?? '-')}</div></div>
+      <div><div class="now-l">${L('dashboard.lastUpdate')}</div><div class="num">${e(a['Son güncelleme'] ?? '-')}</div></div>
+      ${/başlangıç/i.test(a['Aktif faz'] ?? '') ? `<div><div class="now-l">${L('dashboard.startStep')}</div><div class="num">${e(a['Başlangıç adımı'] ?? '-')}</div></div>` : ''}
     </div>
-    <div class="next"><div class="now-l">Sıradaki adım</div><div>${md(next)}${copyBtn(next)}</div>${cmdOf(next) ? '<div class="muted small">Kopyala, Claude sohbetine yapıştır.</div>' : ''}</div>
-    ${d.state ? `<div class="now-l" style="margin-top:14px">Durum</div><p style="margin-top:4px">${md(d.state)}</p>` : ''}
-    ${d.lastSession.length ? `<div class="now-l" style="margin-top:10px">Son oturumda</div><ul style="margin-top:4px">${d.lastSession.slice(0, 4).map((x) => `<li>${md(x)}</li>`).join('')}</ul>` : ''}
+    <div class="next"><div class="now-l">${L('dashboard.nextStep')}</div><div>${md(next)}${copyBtn(next)}</div>${cmdOf(next) ? `<div class="muted small">${e(L('dashboard.pasteHint'))}</div>` : ''}</div>
+    ${d.state ? `<div class="now-l" style="margin-top:14px">${L('dashboard.status')}</div><p style="margin-top:4px">${md(d.state)}</p>` : ''}
+    ${d.lastSession.length ? `<div class="now-l" style="margin-top:10px">${L('dashboard.lastSession')}</div><ul style="margin-top:4px">${d.lastSession.slice(0, 4).map((x) => `<li>${md(x)}</li>`).join('')}</ul>` : ''}
   </section>
   <section class="card" aria-labelledby="dikkat">
-    <h3 id="dikkat">Dikkat gerektirenler <span class="muted small">(${alerts.length})</span></h3>
-    ${alerts.length ? `<ul class="att">${alerts.slice(0, 6).map(alertRow).join('')}</ul>${alerts.length > 6 ? `<details class="daha"><summary>${alerts.length - 6} madde daha</summary><ul class="att">${alerts.slice(6).map(alertRow).join('')}</ul></details>` : ''}` : `<p>${badge('good', 'Her şey yolunda')} Bekleyen karar, kritik bulgu veya açık sorun yok.</p>`}
+    <h3 id="dikkat">${L('dashboard.attention')} <span class="muted small">(${alerts.length})</span></h3>
+    ${alerts.length ? `<ul class="att">${alerts.slice(0, 6).map(alertRow).join('')}</ul>${alerts.length > 6 ? `<details class="daha"><summary>${L('dashboard.moreItems', { count: alerts.length - 6 })}</summary><ul class="att">${alerts.slice(6).map(alertRow).join('')}</ul></details>` : ''}` : `<p>${badge('good', L('dashboard.allGood'))} ${L('dashboard.allGoodText')}</p>`}
   </section>
 </div>
 
 <div class="kpis">
-  ${kpi('Görevler', `${d.taskCount.done}/${d.taskCount.total}`, `%${percent(d.taskCount.done, d.taskCount.total)} tamam`, progressBar(d.taskCount.done, d.taskCount.total))}
-  ${acceptance.total ? kpi('Kabul testleri', `${acceptance.passing}/${acceptance.total}`, `${acceptance.tested} kriterin testi var`, progressBar(acceptance.passing, acceptance.total, 'good')) : kpi('MVP kriterleri', `${mvpCriteria.done}/${mvpCriteria.total}`, `${mvp.length} özellik`, progressBar(mvpCriteria.done, mvpCriteria.total))}
-  ${kpi('Kararlar', d.decisions.length, `${d.decisions.length - autoDecisions} kullanıcı · ${autoDecisions} otomatik`)}
-  ${kpi('Kurul', d.board.meetings.length, rejectCount ? `${rejectCount} RET` : `${d.board.members.length} üye`)}
-  ${kpi('Commit · 7 gün', git ? last7 : '-', git ? `${git.changed.length} dosya bekliyor` : 'git yok')}
-  ${kpi('Limit', limit?.five_hour ? `%${Math.round(limit.five_hour.percent)}` : '-', limit?.seven_day ? `haftalık %${Math.round(limit.seven_day.percent)} · ${limitLevel}` : 'bilinmiyor', limit?.five_hour ? progressBar(Math.round(limit.five_hour.percent), 100, limitSeverity(limit.five_hour.percent, 'five_hour')) : '')}
+  ${kpi(L('dashboard.kpiTasks'), `${d.taskCount.done}/${d.taskCount.total}`, L('dashboard.donePct', { percent: percent(d.taskCount.done, d.taskCount.total) }), progressBar(d.taskCount.done, d.taskCount.total))}
+  ${acceptance.total ? kpi(L('dashboard.acceptanceTests'), `${acceptance.passing}/${acceptance.total}`, L('dashboard.criteriaTested', { count: acceptance.tested }), progressBar(acceptance.passing, acceptance.total, 'good')) : kpi(L('dashboard.kpiMvp'), `${mvpCriteria.done}/${mvpCriteria.total}`, L('dashboard.featuresCount', { count: mvp.length }), progressBar(mvpCriteria.done, mvpCriteria.total))}
+  ${kpi(L('dashboard.kpiDecisions'), d.decisions.length, L('dashboard.usersAuto', { user: d.decisions.length - autoDecisions, auto: autoDecisions }))}
+  ${kpi(L('dashboard.board'), d.board.meetings.length, rejectCount ? L('dashboard.rejects', { count: rejectCount }) : L('dashboard.membersCount', { count: d.board.members.length }))}
+  ${kpi(L('dashboard.kpiCommits7'), git ? last7 : '-', git ? L('dashboard.filesWaiting', { count: git.changed.length }) : L('dashboard.noGit'))}
+  ${kpi(L('dashboard.kpiLimit'), limit?.five_hour ? `%${Math.round(limit.five_hour.percent)}` : '-', limit?.seven_day ? L('dashboard.weeklyLevel', { percent: Math.round(limit.seven_day.percent), level: limitLevel }) : L('dashboard.unknown'), limit?.five_hour ? progressBar(Math.round(limit.five_hour.percent), 100, limitSeverity(limit.five_hour.percent, 'five_hour')) : '')}
 </div>
 
-<nav class="tabs" role="tablist" aria-label="Bölümler">
+<nav class="tabs" role="tablist" aria-label="${e(L('dashboard.tabsLabel'))}">
 ${TABS.map(([id, name], i) => `<button class="tab" role="tab" id="t-${id}" aria-controls="p-${id}" aria-selected="${i === 0}" data-id="${id}">${name}</button>`).join('')}
 </nav>
 ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${id}" aria-labelledby="t-${id}" ${i ? 'hidden' : ''}>${content}</div>`).join('\n')}
 
-<footer>Üretildi: ${new Date().toLocaleString('tr-TR')} · Kaynak: docs/*.md, git, .claude/state/usage.json · Her Claude cevabından sonra otomatik güncellenir (<code>node .claude/hooks/dashboard.mjs</code>)</footer>
+<footer>${L('dashboard.footer', { when: new Date().toLocaleString(loc) })}</footer>
 </div>
 <div id="tip" role="tooltip"></div>
 <style>.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style>
@@ -520,7 +531,7 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
   document.querySelectorAll('.kopyala').forEach(function (b) {
     b.addEventListener('click', function () {
       var c = b.dataset.cmd;
-      function done(ok) { b.textContent = ok ? 'Kopyalandı' : 'Kopyalanamadı'; setTimeout(function () { b.textContent = 'Kopyala'; }, 1500); }
+      function done(ok) { b.textContent = ok ? ${jsStr('dashboard.copied')} : ${jsStr('dashboard.copyFailed')}; setTimeout(function () { b.textContent = ${jsStr('dashboard.copy')}; }, 1500); }
       function fallback() { var t = document.createElement('textarea'); t.value = c; document.body.appendChild(t); t.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (er) {} t.remove(); done(ok); }
       if (navigator.clipboard) navigator.clipboard.writeText(c).then(function () { done(true); }, fallback); else fallback();
     });
@@ -545,4 +556,4 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
 // A committed dashboard.html link (to ~/.bashrc, say) must not be written through
 try { if (fs.lstatSync(file('dashboard.html')).isSymbolicLink()) fs.unlinkSync(file('dashboard.html')); } catch { /* not there yet */ }
 fs.writeFileSync(file('dashboard.html'), html);
-if (!quiet) console.log(`dashboard.html güncellendi · ${d.taskCount.done}/${d.taskCount.total} görev · ${d.decisions.length} karar · ${alerts.length} dikkat`);
+if (!quiet) console.log(`dashboard.html updated · ${d.taskCount.done}/${d.taskCount.total} tasks · ${d.decisions.length} decisions · ${alerts.length} alerts`);

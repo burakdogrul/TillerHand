@@ -4,6 +4,7 @@
 // Must stay fast: the status line calls it on every refresh (git and heavy reads are in dashboard.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
+import { t } from './lang.mjs';
 
 // Only a regular file: a folder or a link to a folder named like a test or report file must not throw (EISDIR)
 export const readText = (p) => { try { return fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : ''; } catch { return ''; } };
@@ -70,9 +71,9 @@ export function readStatus(root) {
     .map(([no, date, stage, topic, question, chosen, door, decidedBy]) => ({ no, date, stage, topic, question, chosen, door, decidedBy }));
 
   const checklists = [
-    ['Güvenlik', 'docs/security/checklist.md'], ['Canlıya alma', 'docs/operations/release-checklist.md'], ['Yasal / KVKK', 'docs/legal/privacy-kvkk.md'],
-    ['AI', 'docs/ai/guide.md'], ['Lansman', 'docs/product/launch.md'],
-  ].filter(([, f]) => fs.existsSync(d(f))).map(([name, f]) => ({ name, file: f, ...tally(readText(d(f))) }));
+    ['statusRead.checklist.security', 'docs/security/checklist.md'], ['statusRead.checklist.release', 'docs/operations/release-checklist.md'],
+    ['statusRead.checklist.legal', 'docs/legal/privacy-kvkk.md'], ['statusRead.checklist.ai', 'docs/ai/guide.md'], ['statusRead.checklist.launch', 'docs/product/launch.md'],
+  ].filter(([, f]) => fs.existsSync(d(f))).map(([name, f]) => ({ name: t(root, name), file: f, ...tally(readText(d(f))) }));
 
   let kit = null;
   try { kit = JSON.parse(readText(d('.kit.json'))); } catch { /* not set up */ }
@@ -91,7 +92,7 @@ export function readStatus(root) {
   const title = (f) => readText(d(f)).match(/^# (.+)$/m)?.[1].trim();
   return {
     // The project name is in AGENTS.md; in projects before 3.9.0 in CLAUDE.md (the update adds AGENTS.md with a placeholder)
-    project: [title('AGENTS.md'), title('CLAUDE.md')].find((a) => a && a !== '[PROJE ADI]') ?? title('AGENTS.md') ?? 'Proje',
+    project: [title('AGENTS.md'), title('CLAUDE.md')].find((a) => a && a !== '[PROJE ADI]') ?? title('AGENTS.md') ?? t(root, 'statusRead.defaultProject'),
     // type: null = set up by init, no type chosen yet (waiting for /start or /adopt)
     installed: !!kit && kit.type !== null,
     kitPending: kit ? kit.type === null : fs.existsSync(d('kit/kit.mjs')),

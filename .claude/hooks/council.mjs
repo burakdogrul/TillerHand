@@ -81,7 +81,7 @@ export function renderSection(s) {
   const lines = [];
   lines.push(`**Uzlaşma:** ${s.consensus == null ? '-' : `%${s.consensus}`}`);
   lines.push(`**Tartışmalı:** ${s.findings.filter((f) => f.disputed).length}`, '');
-  if (s.invalid?.length) lines.push(`> Uyarı: ${s.invalid.join(', ')} incelemesinde biçimli ve eksiksiz SIRALAMA yok (her görüş bir kez); sıralamaya katılmadı (oyları sayıldı). İnceleyenden SIRALAMA'yı yeniden iste.`, '');
+  if (s.invalid?.length) lines.push(`> Warning: the review by ${s.invalid.join(', ')} has no well-formed, complete SIRALAMA (each Görüş once); it was left out of the ranking (its votes were counted). Ask the reviewer for the SIRALAMA again.`, '');
   if (s.ranking.length) {
     lines.push('| Görüş | Ortalama sıra | Sıralayan |', '|---|---|---|');
     for (const r of s.ranking) lines.push(`| ${r.opinion} | ${r.average} | ${r.votes} |`);
@@ -111,10 +111,10 @@ export function writeMinutes(minutes, s) {
 
 if (isMain(import.meta.url)) {
   const file = process.argv[2];
-  if (!file || !fs.existsSync(file)) { console.error('Kullanım: node .claude/hooks/council.mjs <tutanak.md>'); process.exit(1); }
+  if (!file || !fs.existsSync(file)) { console.error('Usage: node .claude/hooks/council.mjs <minutes.md>'); process.exit(1); }
   const text = fs.readFileSync(file, 'utf8');
   const s = countVotes(text);
-  if (!s.reviewerCount) { console.error('Tutanakta "## 2. Çapraz inceleme" altında "### İnceleyen: X" bölümü yok.'); process.exit(1); }
+  if (!s.reviewerCount) { console.error('The minutes have no "### İnceleyen: X" section under "## 2. Çapraz inceleme".'); process.exit(1); }
   fs.writeFileSync(file, writeMinutes(text, s));
   console.log(renderSection(s));
 }

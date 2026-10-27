@@ -7,7 +7,7 @@
 //   The result goes to .claude/state/gate.json with the same change signature as the commit gate; the commit gate stops
 //   the commit on a red or stale result. A green check's output is not written, the last 30 lines of a red one are.
 //   If no check passed (commands empty, no Semgrep) the result is EMPTY: the commit gate stays closed.
-//   "Mutlak yol": an added line with this machine's project or home path is red; a generic C:\Users\<name>, /home/<name> is a note.
+//   "Absolute path": an added line with this machine's project or home path is red; a generic C:\Users\<name>, /home/<name> is a note.
 //   node .claude/hooks/gate.mjs --approve   saves the commands with user approval. A new or changed command does not run unapproved:
 //   an untrusted repo's AGENTS.md must not run code through the gate. The approval lives in the user folder (~/.vibe-kit/).
 import fs from 'node:fs';
@@ -34,7 +34,7 @@ function failed(root, name, r) {
   const rel = `.claude/state/gate-log/${name.toLowerCase().replace(/\s+/g, '-')}.log`;
   fs.mkdirSync(path.join(root, path.dirname(rel)), { recursive: true });
   fs.writeFileSync(path.join(root, rel), all);
-  return { output: lines.slice(-30).join('\n'), note: `son 30 satır; tamamı ${rel}` };
+  return { output: lines.slice(-30).join('\n'), note: `last 30 lines; full output in ${rel}` };
 }
 
 // Only the "## Komutlar" section is read: a "test:" line elsewhere must not count as a command
@@ -64,7 +64,7 @@ export function approve(root) {
   const file = approvalPath(root);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify({ digest: digest(list), commands: list, date: new Date().toISOString() }, null, 2));
-  return `Kapı komutları onaylandı:\n${commandList(list) || '(tanımlı komut yok)'}`;
+  return `Gate commands approved:\n${commandList(list) || '(no commands defined)'}`;
 }
 
 export function isApproved(root, list = approvedCommands(root)) {
@@ -85,7 +85,7 @@ function check(root, { name, command }) {
 function semgrep(root, files) {
   const name = 'Semgrep';
   const code = files.filter((f) => isCodeFile(f) && fs.existsSync(path.join(root, f)));
-  if (!code.length) return { name, status: 'skipped', note: 'değişen kod dosyası yok' };
+  if (!code.length) return { name, status: 'skipped', note: 'no changed code files' };
   const start = Date.now();
   const cmd = process.env.SEMGREP || 'semgrep';
   // --metrics=off: the code scan must not send usage data (docs.semgrep.dev/cli-reference, 2026-10-24)
@@ -97,8 +97,8 @@ function semgrep(root, files) {
     const outside = (y) => y && path.relative(root, y).startsWith('..');
     const found = r.error.code === 'EINVAL' ? cmd
       : process.platform === 'win32' ? (spawnSync('where', [cmd], { encoding: 'utf8' }).stdout ?? '').split(/\r?\n/).map((y) => y.trim()).find(outside) ?? '' : '';
-    return { name, status: 'skipped', note: found ? `${found} bulundu ama çalıştırılamadı (.cmd/.bat); SEMGREP=<semgrep.exe yolu> ile ver`
-      : 'kurulu değil; CI\'daki semgrep işi çalıştırır' };
+    return { name, status: 'skipped', note: found ? `${found} found but cannot run (.cmd/.bat); pass SEMGREP=<path to semgrep.exe>`
+      : 'not installed; the semgrep job in CI runs it' };
   }
   const sec = Math.round((Date.now() - start) / 1000);
   if (r.status === 0) return { name, status: 'passed', sec };
@@ -115,7 +115,7 @@ function semgrep(root, files) {
 // read whole. Paths are read from the git top level, so a project in a monorepo subfolder is checked too.
 const ESCAPE = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export function absPathCheck(root, files) {
-  const name = 'Mutlak yol';
+  const name = 'Absolute path';
   const git = (...a) => spawnSync('git', a, { cwd: root, encoding: 'utf8', maxBuffer: BUFFER });
   const top = git('rev-parse', '--show-toplevel').stdout?.trim() || root;
   const variants = (p) => { const f = p.replace(/\\/g, '/').replace(/\/+$/, ''); return [f, f.replace(/\//g, '\\'), f.replace(/\//g, '\\\\')]; };
@@ -148,14 +148,14 @@ export function absPathCheck(root, files) {
       if (mine?.test(l)) red.push(at); else if (generic.test(l)) notes.push(at);
     });
   }
-  const list = (a) => [...a.slice(0, 15), a.length > 15 ? `… ve ${a.length - 15} satır daha` : ''].filter(Boolean).join('\n');
-  if (red.length) return { name, status: 'failed', note: 'bu makineye özel yol; import.meta.url, __dirname, path.join(kök, …), os.tmpdir() kullan. Bilinçliyse satıra ya da üstüne kit:yol-izinli yaz',
+  const list = (a) => [...a.slice(0, 15), a.length > 15 ? `… and ${a.length - 15} more lines` : ''].filter(Boolean).join('\n');
+  if (red.length) return { name, status: 'failed', note: 'path specific to this machine; use import.meta.url, __dirname, path.join(root, …), os.tmpdir(). If deliberate, write kit:yol-izinli on the line or the line above',
     output: list(red) };
-  return { name, status: 'passed', ...(notes.length && { note: `${notes.length} satırda kullanıcı klasörüne benzeyen yol var; makineye özelse düzelt (engellemez)`, output: list(notes) }) };
+  return { name, status: 'passed', ...(notes.length && { note: `${notes.length} lines have a path that looks like a user folder; fix it if it is machine-specific (does not block)`, output: list(notes) }) };
 }
 
-export const approvalNeeded = (list) => `komut onayı gerekli\nAGENTS.md → Komutlar yeni veya değişmiş; bu komutlar onaysız çalışmaz:\n${commandList(list)}\n` +
-  'Komutları kullanıcıya göster ve sor. Onaylarsa: node .claude/hooks/gate.mjs --approve, sonra komutu tekrar çalıştır.';
+export const approvalNeeded = (list) => `komut onayı gerekli (command approval needed)\nAGENTS.md → Komutlar is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
+  'Show the commands to the user and ask. If they approve: node .claude/hooks/gate.mjs --approve, then run the command again.';
 
 // Spec drift (F-23): a "must not change" behavior whose test is missing or red stops the gate; no result is only a note
 // Only reports written during this gate run count (since = gate start): an older report says nothing about the code now.
@@ -164,17 +164,17 @@ function specCheck(root, since) {
   if (!list.length && !unreadable.length) return null;
   const bad = list.filter((k) => !k.test || k.result === 'failed');
   const unknown = list.filter((k) => k.test && !k.result).length;
-  const notes = [`${list.length} değişmemesi gereken davranış`,
-    unknown && `${unknown} testin bu koşuda sonucu yok (test komutu JUnit raporu yazmıyor)`,
-    unreadable.length && `${unreadable.length} satır okunamadı, "- Ö-01.1: ..." biçiminde yaz: ${unreadable.map((u) => `${u.spec}: ${u.line}`).join(' · ')}`];
+  const notes = [`${list.length} behaviors that must not change`,
+    unknown && `${unknown} tests have no result in this run (the test command writes no JUnit report)`,
+    unreadable.length && `${unreadable.length} lines could not be read, write them as "- Ö-01.1: ...": ${unreadable.map((u) => `${u.spec}: ${u.line}`).join(' · ')}`];
   return { name: 'Spec', status: bad.length ? 'failed' : 'passed', note: notes.filter(Boolean).join('; '),
-    output: bad.length ? bad.map((k) => `${k.id} (${k.spec}): ${k.test ? 'test kırmızı' : 'test yok'}`).join('\n') : undefined };
+    output: bad.length ? bad.map((k) => `${k.id} (${k.spec}): ${k.test ? 'test red' : 'no test'}`).join('\n') : undefined };
 }
 
-// Status label and mark shown to the user
-export const STATUS_LABEL = { passed: 'geçti', failed: 'kaldı', unset: 'tanımsız', skipped: 'atlandı' };
+// Status label and mark in the gate output
+export const STATUS_LABEL = { passed: 'passed', failed: 'failed', unset: 'unset', skipped: 'skipped' };
 const MARK = { passed: '✅', failed: '❌', unset: '⚪', skipped: '⚪' };
-const line = (k) => `${MARK[k.status]} ${k.name}${k.sec != null ? ` (${k.sec} sn)` : ''}${k.status === 'passed' ? '' : `: ${STATUS_LABEL[k.status]}`}${k.note ? ` (${k.note})` : ''}` +
+const line = (k) => `${MARK[k.status]} ${k.name}${k.sec != null ? ` (${k.sec} s)` : ''}${k.status === 'passed' ? '' : `: ${STATUS_LABEL[k.status]}`}${k.note ? ` (${k.note})` : ''}` +
   (k.output ? `\n\`\`\`\n${k.output}\n\`\`\`` : '');
 
 export function runGate(root) {
@@ -182,7 +182,7 @@ export function runGate(root) {
   let signature = null, files = [];
   try { ({ signature, files } = changes()); } catch { /* not a git repo: the commands still run */ }
   const list = approvedCommands(root);
-  if (!isApproved(root, list)) return { passed: false, text: `## Kapı · ${approvalNeeded(list)}` };
+  if (!isApproved(root, list)) return { passed: false, text: `## Gate · ${approvalNeeded(list)}` };
   const checks = [...list.filter((k) => CHECKS.includes(k.name)).map((k) => check(root, k)), semgrep(root, files)];
   const empty = !checks.some((k) => k.status === 'passed');
   const spec = specCheck(root, start); // after the test command, which may have refreshed the JUnit report; it does not fill an empty gate
@@ -192,16 +192,16 @@ export function runGate(root) {
   const file = path.join(root, '.claude', 'state', 'gate.json');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify({ signature, date: new Date().toISOString(), passed, empty, checks }, null, 2));
-  const result = checks.some((k) => k.status === 'failed') ? 'Sonuç: KIRMIZI. Commit kapısı açılmaz: düzelt ve kapıyı tekrar çalıştır.'
-    : empty ? 'Sonuç: BOŞ, hiçbir kontrol çalışmadı. AGENTS.md → Komutlar\'ı doldur; commit kapısı açılmaz (kullanıcı isterse commit-gate.mjs --skip).'
-    : 'Sonuç: YEŞİL.';
-  return { passed, text: [`## Kapı · ${files.length} dosya değişti`, ...checks.map(line), result].join('\n') };
+  const result = checks.some((k) => k.status === 'failed') ? 'Result: RED. The commit gate stays closed: fix it and run the gate again.'
+    : empty ? 'Result: EMPTY, no check ran. Fill in AGENTS.md → Komutlar; the commit gate stays closed (if the user wants, commit-gate.mjs --skip).'
+    : 'Result: GREEN.';
+  return { passed, text: [`## Gate · ${files.length} files changed`, ...checks.map(line), result].join('\n') };
 }
 
 if (isMain(import.meta.url)) {
   const arg = process.argv[2];
   if (arg === '--approve') { console.log(approve(findRoot())); process.exit(0); }
-  if (arg !== '--run') { console.error('Kullanım: node .claude/hooks/gate.mjs --run | --approve'); process.exit(1); }
+  if (arg !== '--run') { console.error('Usage: node .claude/hooks/gate.mjs --run | --approve'); process.exit(1); }
   const { passed, text } = runGate(findRoot());
   console.log(text);
   process.exit(passed ? 0 : 1);

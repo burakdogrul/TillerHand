@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { prdCriteria, junitCases } from './dashboard-data.mjs';
 import { findRoot, isMain } from './shared.mjs';
+import { t } from './lang.mjs';
 
 // A pipe would split the table cell (the dashboard's table reader does not know \|)
 const cell = (s) => String(s ?? '').split(/\r?\n/)[0].trim().slice(0, 160).replace(/\|/g, '/');
@@ -18,15 +19,15 @@ const reasonLine = (s) => (s ?? '').split(/\r?\n/).find((l) => /^\s*Error\b/.tes
 const STALE_MIN = 30;
 
 export function qaReport(root, junit = 'test-results-qa/junit.xml', now = new Date()) {
-  const none = (why) => ({ code: 2, text: `QA raporu yazılmadı: ${why}` });
+  const none = (why) => ({ code: 2, text: `QA report not written: ${why}` });
   let xml, age;
   try { xml = fs.readFileSync(path.resolve(root, junit), 'utf8'); age = (now - fs.statSync(path.resolve(root, junit)).mtimeMs) / 60000; } catch {
-    return none(`${junit} yok. Testleri JUnit raporuyla çalıştır (qa.md adım 4).`);
+    return none(`${junit} not found. Run the tests with a JUnit report (qa.md step 4).`);
   }
   let prd;
-  try { prd = fs.readFileSync(path.join(root, 'docs/product/prd.md'), 'utf8'); } catch { return none('docs/product/prd.md yok.'); }
+  try { prd = fs.readFileSync(path.join(root, 'docs/product/prd.md'), 'utf8'); } catch { return none('docs/product/prd.md not found.'); }
   const criteria = prdCriteria(prd);
-  if (!criteria.length) return none('PRD\'de kimlikli kabul kriteri yok (`- [ ] Ö-01.1: ...`).');
+  if (!criteria.length) return none('the PRD has no acceptance criterion with an id (`- [ ] Ö-01.1: ...`).');
   const results = new Map();
   for (const c of junitCases(xml)) {
     for (const k of c.keys) {
@@ -53,15 +54,15 @@ export function qaReport(root, junit = 'test-results-qa/junit.xml', now = new Da
     return { criterion: `${k.id} ${k.text}`, result: !r ? 'koşulmadı' : r.failed ? 'kaldı' : 'geçti', evidence, note: r?.failed ? reasonLine(r.reason) : '' };
   });
   const count = (x) => rows.filter((r) => r.result === x).length;
-  if (!count('geçti') && !count('kaldı')) return none(`${junit} içinde PRD kriterine bağlı test sonucu yok (test adı kimlikle başlamalı: \`Ö-01.1 ...\`; sunucu açıldı mı?).`);
-  const summary = `${count('geçti')} geçti · ${count('kaldı')} kaldı · ${count('koşulmadı')} koşulmadı`;
+  if (!count('geçti') && !count('kaldı')) return none(`no test result tied to a PRD criterion in ${junit} (the test name must start with the id: \`Ö-01.1 ...\`; did the server start?).`);
+  const counts = { passed: count('geçti'), failed: count('kaldı'), notRun: count('koşulmadı') };
   const file = `docs/quality/qa/${stamp}.md`;
-  const md = `# QA raporu · ${stamp}\n\n**Sonuç:** ${summary} (PRD'de ${rows.length} kriter, kaynak: \`${junit}\`)\n\n` +
-    `| Kriter | Sonuç | Kanıt | Not |\n|---|---|---|---|\n${rows.map((r) => `| ${cell(r.criterion)} | ${r.result} | ${r.evidence} | ${cell(r.note)} |`).join('\n')}\n`;
+  const md = `${t(root, 'qaReport.title', { stamp })}\n\n${t(root, 'qaReport.result', { summary: t(root, 'qaReport.summary', counts), count: rows.length, junit })}\n\n` +
+    `${t(root, 'qaReport.tableHeader')}\n|---|---|---|---|\n${rows.map((r) => `| ${cell(r.criterion)} | ${r.result} | ${r.evidence} | ${cell(r.note)} |`).join('\n')}\n`;
   fs.mkdirSync(path.join(root, 'docs/quality/qa'), { recursive: true });
   fs.writeFileSync(path.join(root, file), md);
-  const stale = age > STALE_MIN ? `\nUyarı: ${junit} ${Math.round(age)} dk önce yazılmış; bu koşunun sonucu olmayabilir, testleri yeniden çalıştır.` : '';
-  return { code: count('kaldı') ? 1 : 0, text: `QA: ${summary} → ${file}${stale}` };
+  const stale = age > STALE_MIN ? `\nWarning: ${junit} was written ${Math.round(age)} min ago; it may not be the result of this run, rerun the tests.` : '';
+  return { code: count('kaldı') ? 1 : 0, text: `QA: ${counts.passed} passed · ${counts.failed} failed · ${counts.notRun} not run → ${file}${stale}` };
 }
 
 if (isMain(import.meta.url)) {

@@ -179,7 +179,7 @@ test('init: the kit stays in its own folder, the project is set up in its folder
   assert.match(read(path.join(game, 'README.md')), /^# \[PROJE ADI\]/m, 'the project\'s README template');
   assert.deepEqual([record(game).type, record(game).kit], [null, 'git_repo']);
   const durum = spawnSync(process.execPath, [path.join(game, '.claude/hooks/statusline.mjs')], { input: JSON.stringify({ workspace: { project_dir: game } }), encoding: 'utf8' }).stdout;
-  assert.match(durum, /Kit kurulmadı.*\/adopt/);
+  assert.match(durum, /Kit not set up.*\/adopt/, 'no language chosen before setup: English');
   assert.notEqual(node(kitMjs, 'init', '--project', game).status, 0, 'ikinci init reddedilir');
 
   const k = node(kitMjs, 'install', '--type', 'web-saas', '--project', game);
@@ -273,7 +273,7 @@ test('status line and dashboard: before and after setup', () => {
     input: JSON.stringify({ workspace: { project_dir: p } }), encoding: 'utf8',
   }).stdout;
   const p = cloneKit('durum');
-  assert.match(statusBar(p), /Kit kurulmadı/);
+  assert.match(statusBar(p), /Kit not set up/, 'no language chosen before setup: English');
   assert.equal(installType(p, '--type', 'web-saas').status, 0);
   const progress = path.join(p, 'docs/workflow/progress.md');
   write(progress, read(progress).replace(/^\*\*Aktif faz:\*\* .*$/m, '**Aktif faz:** Faz 1').replace(/^\*\*Soru modu:\*\* .*$/m, '**Soru modu:** açık · kapalı konular: tasarim'));

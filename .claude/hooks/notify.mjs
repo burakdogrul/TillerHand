@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { findRoot, isMain } from './shared.mjs';
+import { t } from './lang.mjs';
 
 export const THRESHOLD_SEC = 90;
 
@@ -39,9 +40,9 @@ function main() {
     try { const r = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'reminder.json'), 'utf8')); startedAt = r.turnAt ?? r.tur ?? 0; } catch { /* */ } // tur: key before 3.15.0
     const duration = (Date.now() - startedAt) / 1000;
     if (!startedAt || duration < THRESHOLD_SEC) process.exit(0);
-    message = `İş bitti (${Math.round(duration / 60)} dk). Sonuca bakabilirsin.`;
+    message = t(root, 'notify.done', { minutes: Math.round(duration / 60) });
   } else {
-    message = input.message || 'Claude cevabını bekliyor.';
+    message = input.message || t(root, 'notify.waiting');
   }
 
   const title = `Claude Code · ${project}`.slice(0, 60);

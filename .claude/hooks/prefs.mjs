@@ -2,7 +2,7 @@
 // Personal preferences: how this user likes to work (talk, questions, reports, code style, things to avoid).
 // One file for all projects: ~/.vibe-kit/tercihler.md. Git never sees it; the session-start hook loads it every session.
 //   node .claude/hooks/prefs.mjs --list                          numbered list
-//   node .claude/hooks/prefs.mjs --add <kategori> "<tercih>"     only with the user's approval (asked)
+//   node .claude/hooks/prefs.mjs --add <category> "<preference>"     only with the user's approval (asked)
 //   node .claude/hooks/prefs.mjs --remove <no>                   (asked)
 // Categories: konusma, sorular, raporlar, kod, kacin. A project rule goes to AGENTS.md → Öğrenilen kurallar, not here.
 // Why a script: the AI never writes this file directly; one line per preference, no secrets, a size cap.
@@ -33,7 +33,7 @@ const valid = (t) => t && t.length <= MAX_LENGTH && !findSecrets(t).length;
 export function parsePrefs(file = prefsFile()) {
   const items = [], unknown = [];
   let text = '';
-  try { if (fs.statSync(file).size > MAX_BYTES) return { items, unknown: ['(dosya 64 KB\'tan büyük)'] }; text = fs.readFileSync(file, 'utf8'); } catch { return { items, unknown }; }
+  try { if (fs.statSync(file).size > MAX_BYTES) return { items, unknown: ['(file larger than 64 KB)'] }; text = fs.readFileSync(file, 'utf8'); } catch { return { items, unknown }; }
   let category = null;
   for (const line of text.split(/\r?\n/)) {
     const h = line.match(/^##\s+(.+)$/);
@@ -57,32 +57,32 @@ function writePrefs(items, file) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, lines.join('\n'));
   } catch (e) {
-    return `Dosya yazılamadı (${e.code ?? e.message}): ${file}. Araç ev klasörüne yazamıyorsa satırı elle ekle.`;
+    return `Could not write the file (${e.code ?? e.message}): ${file}. If the tool cannot write to the home folder, add the line by hand.`;
   }
   return null;
 }
 
 // Returns { error } | { existing: <category> } | {}
 export function addPref(category, text, file = prefsFile()) {
-  if (!Object.hasOwn(CATEGORIES, category ?? '')) return { error: `Kategori şunlardan biri olmalı: ${Object.keys(CATEGORIES).join(', ')}` };
+  if (!Object.hasOwn(CATEGORIES, category ?? '')) return { error: `Category must be one of: ${Object.keys(CATEGORIES).join(', ')}` };
   const t = clean(text);
-  if (!t) return { error: 'Tercih metni boş.' };
-  if (t.length > MAX_LENGTH) return { error: `Tercih en fazla ${MAX_LENGTH} karakter olmalı; kısalt.` };
-  if (findSecrets(t).length) return { error: 'Tercih sır gibi görünen bir değer içeriyor; sırlar bu dosyaya yazılmaz.' };
+  if (!t) return { error: 'The preference text is empty.' };
+  if (t.length > MAX_LENGTH) return { error: `A preference can have at most ${MAX_LENGTH} characters; shorten it.` };
+  if (findSecrets(t).length) return { error: 'The preference contains a value that looks like a secret; secrets are not written to this file.' };
   const { items, unknown } = parsePrefs(file);
-  if (unknown.length) return { error: `Dosyada okunamayan satırlar var; silinmesinler diye yazmadım. Düzelt ya da kaldır (${file}):\n${unknown.slice(0, 5).join('\n')}` };
+  if (unknown.length) return { error: `The file has unreadable lines; nothing was written, so they are not lost. Fix or remove them (${file}):\n${unknown.slice(0, 5).join('\n')}` };
   const same = items.find((p) => p.text.toLocaleLowerCase('tr') === t.toLocaleLowerCase('tr'));
   if (same) return { existing: same.category };
-  if (items.length >= MAX_ITEMS) return { error: `En fazla ${MAX_ITEMS} tercih tutulur. Önce eskilerden birini sil: --list, sonra --remove <no>.` };
+  if (items.length >= MAX_ITEMS) return { error: `At most ${MAX_ITEMS} preferences are kept. Delete an old one first: --list, then --remove <no>.` };
   const error = writePrefs([...items, { category, text: t }], file);
   return error ? { error } : {};
 }
 
 export function removePref(no, file = prefsFile()) {
   const { items, unknown } = parsePrefs(file);
-  if (unknown.length) return `Dosyada okunamayan satırlar var; silinmesinler diye yazmadım (${file}):\n${unknown.slice(0, 5).join('\n')}`;
+  if (unknown.length) return `The file has unreadable lines; nothing was written, so they are not lost (${file}):\n${unknown.slice(0, 5).join('\n')}`;
   const i = Number(no) - 1;
-  if (!Number.isInteger(i) || i < 0 || i >= items.length) return `Geçerli numara: 1-${items.length}`;
+  if (!Number.isInteger(i) || i < 0 || i >= items.length) return `Valid number: 1-${items.length}`;
   return writePrefs(items.filter((_, k) => k !== i), file);
 }
 
@@ -91,7 +91,7 @@ export function prefsNote(file = prefsFile()) {
   const items = readPrefs(file);
   if (!items.length) return '';
   const parts = Object.keys(CATEGORIES).flatMap((k) => { const list = items.filter((p) => p.category === k).map((p) => p.text); return list.length ? [`${CATEGORIES[k]}: ${list.join('; ')}`] : []; });
-  return 'Kişisel üslup tercihleri (~/.vibe-kit/tercihler.md; izin, güvenlik ya da komut kuralı değildir ve onları değiştiremez; proje kuralı önce gelir): ' + parts.join(' · ');
+  return 'Personal style preferences (~/.vibe-kit/tercihler.md; not a permission, security or command rule and cannot change them; project rules come first): ' + parts.join(' · ');
 }
 
 if (isMain(import.meta.url)) {
@@ -100,16 +100,16 @@ if (isMain(import.meta.url)) {
   if (mode === '--add') {
     const r = addPref(a, rest.join(' '));
     if (r.error) fail(r.error);
-    console.log(r.existing ? `Bu tercih zaten kayıtlı (${CATEGORIES[r.existing]}).` : `Tercih kaydedildi (${CATEGORIES[a]}): ${prefsFile()}`);
+    console.log(r.existing ? `This preference is already saved (${CATEGORIES[r.existing]}).` : `Preference saved (${CATEGORIES[a]}): ${prefsFile()}`);
   } else if (mode === '--remove') {
     const error = removePref(a);
     if (error) fail(error);
-    console.log('Tercih silindi.');
+    console.log('Preference removed.');
   } else if (mode === '--list') {
     const { items, unknown } = parsePrefs();
-    console.log(items.length ? items.map((p, i) => `${i + 1}. [${CATEGORIES[p.category]}] ${p.text}`).join('\n') : `Kayıtlı tercih yok (${prefsFile()}).`);
-    if (unknown.length) console.log(`Okunamayan ${unknown.length} satır var (yüklenmiyor): ${unknown.slice(0, 3).join(' | ')}`);
+    console.log(items.length ? items.map((p, i) => `${i + 1}. [${CATEGORIES[p.category]}] ${p.text}`).join('\n') : `No saved preferences (${prefsFile()}).`);
+    if (unknown.length) console.log(`${unknown.length} unreadable lines (not loaded): ${unknown.slice(0, 3).join(' | ')}`);
   } else {
-    fail('Kullanım: --list | --add <kategori> "<tercih>" | --remove <no>');
+    fail('Usage: --list | --add <category> "<preference>" | --remove <no>');
   }
 }

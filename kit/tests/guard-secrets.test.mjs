@@ -44,7 +44,7 @@ test('hook: denies a secret inside Write', () => {
   const r = run({ tool_name: 'Write', tool_input: { file_path: 'a.ts', content: `x = "${FAKE.stripe}"` } });
   assert.equal(r.status, 0);
   assert.ok(denied(r));
-  assert.match(r.stdout, /ENGELLENDİ/);
+  assert.match(r.stdout, /BLOCKED/);
 });
 
 test('hook: Edit and MultiEdit are checked', () => {

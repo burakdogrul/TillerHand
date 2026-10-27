@@ -7,11 +7,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot, isMain } from './shared.mjs';
+import { t, readLang } from './lang.mjs';
 
 export const THRESHOLDS = { five_hour: { yellow: 60, red: 85 }, seven_day: { yellow: 70, red: 90 } };
-const WINDOWS = { five_hour: '5 saatlik', seven_day: 'haftalık' };
-// Level shown to the user
-export const LEVEL_LABEL = { green: 'yeşil', yellow: 'sarı', red: 'kırmızı', unknown: 'bilinmiyor' };
+// Window → message key of its name
+const WINDOWS = { five_hour: 'usage.window5h', seven_day: 'usage.windowWeek' };
+// Plain level names (flow.mjs, read by the AI); summary() shows them in the project language through usage.level.* keys
+export const LEVEL_LABEL = { green: 'green', yellow: 'yellow', red: 'red', unknown: 'unknown' };
 const file = (root) => path.join(root, '.claude', 'state', 'usage.json');
 
 export function writeLimits(root, rateLimits, now = Date.now()) {
@@ -50,7 +52,7 @@ export function readLimits(root, now = Date.now()) {
   return data;
 }
 
-// green | yellow | red | unknown (LEVEL_LABEL has the Turkish label)
+// green | yellow | red | unknown (LEVEL_LABEL has the plain label)
 export function level(data) {
   if (!data) return 'unknown';
   let s = 'green';
@@ -63,23 +65,24 @@ export function level(data) {
   return s;
 }
 
-function timeLeft(resetsAt, now) {
+function timeLeft(resetsAt, now, root) {
   if (!resetsAt) return '';
   const min = Math.max(0, Math.round((resetsAt * 1000 - now) / 60000));
-  const clock = new Date(resetsAt * 1000).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  const left = min >= 1440 ? `${Math.floor(min / 1440)} gün ${Math.floor((min % 1440) / 60)} sa` : `${Math.floor(min / 60)} sa ${min % 60} dk`;
-  return `sıfırlanma ${clock}, ${left} sonra`;
+  const clock = new Date(resetsAt * 1000).toLocaleString(readLang(root) === 'tr' ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const left = min >= 1440
+    ? t(root, 'usage.leftDays', { days: Math.floor(min / 1440), hours: Math.floor((min % 1440) / 60) })
+    : t(root, 'usage.leftHours', { hours: Math.floor(min / 60), minutes: min % 60 });
+  return t(root, 'usage.resets', { clock, left });
 }
 
-export function summary(data, now = Date.now()) {
-  if (!data) {
-    return 'Limit bilgisi yok. Masaüstü uygulamasındaysan get_usage aracını kullan. Terminal/IDE\'de durum çubuğu ilk API yanıtından sonra yazar. İkisi de yoksa kullanıcıdan /usage sonucunu iste.';
-  }
+// The dashboard shows this text to the user, so it follows the project language (root)
+export function summary(data, now = Date.now(), root = findRoot()) {
+  if (!data) return t(root, 'usage.none');
   const parts = Object.entries(WINDOWS)
     .filter(([k]) => data[k])
-    .map(([k, name]) => `${name}: %${Math.round(data[k].percent)}${data[k].renewed ? ' (yenilendi)' : ` (${timeLeft(data[k].resetsAt, now)})`}`);
-  const stale = data.ageMin > 30 ? ' — eski olabilir, get_usage veya /usage ile doğrula' : '';
-  return `${parts.join(' · ')} · seviye: ${LEVEL_LABEL[level(data)]} · ${data.ageMin} dk önce okundu${stale}`;
+    .map(([k, name]) => t(root, 'usage.windowPart', { name: t(root, name), percent: Math.round(data[k].percent), tail: data[k].renewed ? ` ${t(root, 'usage.renewed')}` : ` (${timeLeft(data[k].resetsAt, now, root)})` }));
+  const stale = data.ageMin > 30 ? t(root, 'usage.stale') : '';
+  return t(root, 'usage.summary', { parts: parts.join(' · '), level: t(root, `usage.level.${level(data)}`), age: data.ageMin, stale });
 }
 
 if (isMain(import.meta.url)) {

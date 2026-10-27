@@ -30,10 +30,10 @@ test('F-05 Ö: a note on the 5th edit, silent in between, again on the 10th', ()
   for (let i = 1; i <= 4; i++) assert.equal(edit('src/a.ts'), null, `edit ${i}`);
   const n = edit('src/a.ts').hookSpecificOutput;
   assert.equal(n.hookEventName, 'PostToolUse');
-  assert.match(n.additionalContext, /src\/a\.ts.*5\. kez/);
+  assert.match(n.additionalContext, /src\/a\.ts.*edited 5 times/);
   assert.match(n.additionalContext, /semgrep/i);
   for (let i = 6; i <= 9; i++) assert.equal(edit('src/a.ts'), null);
-  assert.match(edit('src/a.ts').hookSpecificOutput.additionalContext, /10\. kez/);
+  assert.match(edit('src/a.ts').hookSpecificOutput.additionalContext, /edited 10 times/);
 });
 
 test('F-05 the counter resets on a new session; files count separately; docs do not count', () => {
@@ -47,7 +47,7 @@ test('F-05 Antigravity: the note is given once at PreInvocation', () => {
   const ag = { toolCall: { name: 'replace_file_content', args: { TargetFile: path.join(p, 'src/d.ts'), TargetContent: 'a', ReplacementContent: 'b' } }, workspacePaths: [p], conversationId: 'c1' };
   for (let i = 1; i <= 5; i++) assert.deepEqual(run(ag), {}, 'PostToolUse output is an empty object');
   const note = run({ invocationNum: 3, conversationId: 'c1', workspacePaths: [p] }, ['--inject']);
-  assert.match(note.injectSteps[0].systemMessage.systemMessage, /src\/d\.ts.*5\. kez/);
+  assert.match(note.injectSteps[0].systemMessage.systemMessage, /src\/d\.ts.*edited 5 times/);
   assert.equal(run({ invocationNum: 4, conversationId: 'c1', workspacePaths: [p] }, ['--inject']), null, 'note given once');
 });
 
@@ -55,7 +55,7 @@ test('F-05 the path in the note is safe: a name with special characters is not w
   const five = (file) => { let n; for (let i = 1; i <= 5; i++) n = edit(file, 'g1'); return n.hookSpecificOutput.additionalContext; };
   const bad = five('src/$(touch x)`id`.ts');
   assert.doesNotMatch(bad, /\$\(|`id`/, 'no command substitution in the note');
-  assert.match(bad, /-- "<dosya yolu>"/);
+  assert.match(bad, /-- "<file path>"/);
   assert.match(five('src/ödeme.ts'), /-- "src\/ödeme\.ts"/, 'a Turkish name is written');
 });
 

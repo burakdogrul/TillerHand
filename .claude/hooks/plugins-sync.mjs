@@ -41,31 +41,31 @@ if (isMain(import.meta.url)) {
   const install = process.argv.includes('--install');
   let wanted;
   try { wanted = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf8')).enabledPlugins; } catch (h) {
-    console.error(`.claude/settings.json okunamadı: ${h.message}`);
+    console.error(`Could not read .claude/settings.json: ${h.message}`);
     process.exit(1);
   }
   let installed;
   try { installed = JSON.parse(run('plugin', 'list', '--json')); } catch (h) {
-    console.error(`claude CLI çalışmadı (${reason(h)}). Eklentileri /plugin ile elle kur.`);
+    console.error(`The claude CLI failed (${reason(h)}). Install the plugins by hand with /plugin.`);
     process.exit(1);
   }
   const off = disabledHere(wanted, installed, root);
-  if (off.length) console.log(`Bilgi: kurulu ama bu makinede kapalı (kişisel tercih, değiştirilmedi): ${off.join(', ')}. Açmak için /plugin → Installed.`);
+  if (off.length) console.log(`Info: installed but disabled on this machine (personal choice, left unchanged): ${off.join(', ')}. To enable: /plugin → Installed.`);
   const list = missingPlugins(wanted, installed, root);
-  if (!list.length) { console.log('Eklentiler eşit: proje ayarındaki her eklenti kurulu.'); process.exit(0); }
+  if (!list.length) { console.log('Plugins in sync: every plugin in the project settings is installed.'); process.exit(0); }
   if (!install) {
-    console.log(`Kurulu olmayan ${list.length} eklenti:\n${list.map((e) => `  ${e.id}${e.enabled ? '' : ' (kurulup kapatılacak)'}`).join('\n')}\nKurmak için kullanıcıya sor, onaylarsa: node .claude/hooks/plugins-sync.mjs --install`);
+    console.log(`${list.length} plugins not installed:\n${list.map((e) => `  ${e.id}${e.enabled ? '' : ' (will be installed, then disabled)'}`).join('\n')}\nAsk the user first; if they approve: node .claude/hooks/plugins-sync.mjs --install`);
     process.exit(0);
   }
   let failures = 0;
   for (const { id, enabled } of list) {
-    if (!/^[\w.-]+@[\w.-]+$/.test(id)) { console.error(`atlandı (geçersiz ad): ${id}`); failures++; continue; }
+    if (!/^[\w.-]+@[\w.-]+$/.test(id)) { console.error(`skipped (invalid name): ${id}`); failures++; continue; }
     try {
       run('plugin', 'install', id, '--scope', 'project');
       if (!enabled) run('plugin', 'disable', id, '--scope', 'project');
-      console.log(`kuruldu${enabled ? '' : ' (kapalı)'}: ${id}`);
-    } catch (h) { console.error(`kurulamadı: ${id} · ${reason(h)}`); failures++; }
+      console.log(`installed${enabled ? '' : ' (disabled)'}: ${id}`);
+    } catch (h) { console.error(`install failed: ${id} · ${reason(h)}`); failures++; }
   }
-  console.log(`${list.length - failures}/${list.length} eklenti kuruldu. Bu oturumda etkinleştirmek için /reload-plugins.`);
+  console.log(`${list.length - failures}/${list.length} plugins installed. To enable them in this session: /reload-plugins.`);
   process.exit(failures ? 1 : 0);
 }

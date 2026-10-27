@@ -13,12 +13,22 @@ import { parseInput } from '../../.claude/hooks/shared.mjs';
 
 const HOOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks', 'test-guard.mjs');
 let p;
-before(() => { p = fs.mkdtempSync(path.join(os.tmpdir(), 'test-guard-')); });
+before(() => {
+  p = fs.mkdtempSync(path.join(os.tmpdir(), 'test-guard-'));
+  // The reasons go through t(): pin the project language so the text does not depend on where the suite runs
+  fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify({ lang: 'en' }));
+});
 after(() => fs.rmSync(p, { recursive: true, force: true }));
 
 const run = (input, env = { CLAUDE_PROJECT_DIR: p }) => {
   const r = spawnSync(process.execPath, [HOOK], { input: JSON.stringify(input), encoding: 'utf8', env: { ...process.env, ...env } });
   return r.stdout.trim() ? JSON.parse(r.stdout) : null;
+};
+// weakening() reads the language from findRoot() (CLAUDE_PROJECT_DIR): run it in the pinned project
+const weak = (before, after) => {
+  const old = process.env.CLAUDE_PROJECT_DIR;
+  process.env.CLAUDE_PROJECT_DIR = p;
+  try { return weakening(before, after); } finally { if (old === undefined) delete process.env.CLAUDE_PROJECT_DIR; else process.env.CLAUDE_PROJECT_DIR = old; }
 };
 
 test('F-02 test file detection', () => {
@@ -30,16 +40,16 @@ test('F-02 test file detection', () => {
 
 test('F-02 deleting an assert, adding .skip/.only, loosening an expectation are caught', () => {
   const old = "test('Ö-01.1 toplam', () => {\n  expect(topla(1, 2)).toBe(3);\n  expect(topla(0, 0)).toBe(0);\n});\n";
-  assert.match(weakening(old, old.replace('  expect(topla(0, 0)).toBe(0);\n', '')), /beklenti/);
-  assert.match(weakening(old, old.replace("test('", "test.skip('")), /atlan/);
-  assert.match(weakening(old, old.replace("test('", "test .only ('")), /atlan/, 'spaced spelling');
-  assert.match(weakening(old, old.replace("test('", "it.skip.each([1])('")), /atlan/);
-  assert.match(weakening(old, old.replace('.toBe(3)', '.toBeTruthy()')), /gevşe/);
-  assert.match(weakening(old, old.replace('  expect(topla(0', '  // expect(topla(0')), /beklenti/, 'commenting out counts as deleting');
-  assert.match(weakening(old, old.replace('  expect(topla(0, 0)).toBe(0);', '  /* expect(topla(0, 0)).toBe(0); */')), /beklenti/);
-  assert.match(weakening('def test_a():\n    assert a == 1\n    assert b == 2\n', 'def test_a():\n    assert a == 1\n    # assert b == 2\n'), /beklenti/);
-  assert.match(weakening('def test_a():\n    assert a\n', '@pytest.mark.skip\ndef test_a():\n    assert a\n'), /atlan/);
-  assert.match(weakening('', "test.only('x', () => {});"), /atlan/, '.only in a new file');
+  assert.match(weak(old, old.replace('  expect(topla(0, 0)).toBe(0);\n', '')), /expectation \(expect\/assert\) is deleted/);
+  assert.match(weak(old, old.replace("test('", "test.skip('")), /test is skipped or focused/);
+  assert.match(weak(old, old.replace("test('", "test .only ('")), /test is skipped or focused/, 'spaced spelling');
+  assert.match(weak(old, old.replace("test('", "it.skip.each([1])('")), /test is skipped or focused/);
+  assert.match(weak(old, old.replace('.toBe(3)', '.toBeTruthy()')), /expectation is loosened/);
+  assert.match(weak(old, old.replace('  expect(topla(0', '  // expect(topla(0')), /expectation \(expect\/assert\) is deleted/, 'commenting out counts as deleting');
+  assert.match(weak(old, old.replace('  expect(topla(0, 0)).toBe(0);', '  /* expect(topla(0, 0)).toBe(0); */')), /expectation \(expect\/assert\) is deleted/);
+  assert.match(weak('def test_a():\n    assert a == 1\n    assert b == 2\n', 'def test_a():\n    assert a == 1\n    # assert b == 2\n'), /expectation \(expect\/assert\) is deleted/);
+  assert.match(weak('def test_a():\n    assert a\n', '@pytest.mark.skip\ndef test_a():\n    assert a\n'), /test is skipped or focused/);
+  assert.match(weak('', "test.only('x', () => {});"), /test is skipped or focused/, '.only in a new file');
 });
 
 test('F-02 an edit that strengthens a test or is neutral stays silent', () => {
@@ -77,7 +87,7 @@ test('F-02 hook: Claude asks, Codex denies and has the AI ask, non-test files ar
   const codex = { tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Update File: a.test.ts\n@@\n-  expect(2).toBe(2);\n*** End Patch' } };
   assert.equal(run(codex, { CLAUDE_PROJECT_DIR: '' }).hookSpecificOutput.permissionDecision, 'deny');
   const del = { tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Delete File: a.test.ts\n*** End Patch' } };
-  assert.match(run(del, { CLAUDE_PROJECT_DIR: '' }).hookSpecificOutput.permissionDecisionReason, /siliniyor/);
+  assert.match(run(del, { CLAUDE_PROJECT_DIR: '' }).hookSpecificOutput.permissionDecisionReason, /a test file is deleted/);
   const ag = { toolCall: { name: 'replace_file_content', args: { TargetFile: file, TargetContent: "test('a'", ReplacementContent: "test.only('a'" } }, workspacePaths: [p] };
   assert.equal(run(ag, { CLAUDE_PROJECT_DIR: '' }).decision, 'ask');
 });
@@ -87,19 +97,19 @@ test('F-02 hook: asks when a Codex Add File overwrites an existing test or a tes
   fs.writeFileSync(file, "test('b', () => {\n  expect(1).toBe(1);\n});\n");
   const patch = (body) => ({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: `*** Begin Patch\n${body}\n*** End Patch` } });
   const codex = { CLAUDE_PROJECT_DIR: '' };
-  assert.match(run(patch("*** Add File: b.test.ts\n+test('b', () => {});"), codex).hookSpecificOutput.permissionDecisionReason, /beklenti/, 'Add File is compared with the file on disk');
+  assert.match(run(patch("*** Add File: b.test.ts\n+test('b', () => {});"), codex).hookSpecificOutput.permissionDecisionReason, /expectation \(expect\/assert\) is deleted/, 'Add File is compared with the file on disk');
   assert.equal(run(patch("*** Add File: c.test.ts\n+test('c', () => { expect(1).toBe(1); });"), codex), null, 'a new test file is free');
-  assert.match(run(patch('*** Update File: b.test.ts\n*** Move to: src/b.ts'), codex).hookSpecificOutput.permissionDecisionReason, /taşınıyor/);
+  assert.match(run(patch('*** Update File: b.test.ts\n*** Move to: src/b.ts'), codex).hookSpecificOutput.permissionDecisionReason, /moved to a path where it will not run/);
   assert.equal(run(patch('*** Update File: b.test.ts\n*** Move to: tests/b.test.ts'), codex), null, 'test to test move is free');
 });
 
 test('F-02 3.13.1 heuristics: ;// comment, #assert, skipIf/runIf, expect without a matcher are caught; model.fit and chains are free', () => {
   const old = "test('a', () => {\n  expect(a).toBe(1); expect(b).toBe(2);\n});\n";
-  assert.match(weakening(old, old.replace(' expect(b)', '// expect(b)')), /beklenti/, ';// comment');
-  assert.match(weakening('def test_a():\n    assert a\n    assert b\n', 'def test_a():\n    assert a\n    #assert b\n'), /beklenti/, '# without a space');
-  assert.match(weakening(old, old.replace("test('", "test.skipIf(ci)('")), /atlan/);
-  assert.match(weakening(old, old.replace("test('", "it.runIf(false)('")), /atlan/);
-  assert.match(weakening(old, old.replace('expect(b).toBe(2)', 'expect(b)')), /gevşe/, 'no matcher');
+  assert.match(weak(old, old.replace(' expect(b)', '// expect(b)')), /expectation \(expect\/assert\) is deleted/, ';// comment');
+  assert.match(weak('def test_a():\n    assert a\n    assert b\n', 'def test_a():\n    assert a\n    #assert b\n'), /expectation \(expect\/assert\) is deleted/, '# without a space');
+  assert.match(weak(old, old.replace("test('", "test.skipIf(ci)('")), /test is skipped or focused/);
+  assert.match(weak(old, old.replace("test('", "it.runIf(false)('")), /test is skipped or focused/);
+  assert.match(weak(old, old.replace('expect(b).toBe(2)', 'expect(b)')), /expectation is loosened/, 'no matcher');
   const fit = "test('m', () => {\n  model.fit(x);\n  expect(model.w).toBe(1);\n});\n";
   assert.equal(weakening(fit, fit + "test('n', () => {\n  model.fit(z);\n  expect(f(g(1))).toBe(1);\n});\n"), null, 'model.fit is not a focus');
   assert.equal(weakening(old, old + "test('c', () => {\n  expect(c)\n    .toBe(3);\n});\n"), null, 'chain broken across lines');
@@ -124,8 +134,8 @@ test('F-02 3.13.1 Codex Move: a move in the test folder to a name that does not 
   fs.writeFileSync(path.join(p, 'e.test.ts'), "test('e', () => { expect(2).toBe(2); });\n");
   const patch = (body) => ({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: `*** Begin Patch\n${body}\n*** End Patch` } });
   const codex = { CLAUDE_PROJECT_DIR: '' };
-  assert.match(run(patch('*** Update File: d.test.ts\n*** Move to: tests/d.ts'), codex).hookSpecificOutput.permissionDecisionReason, /taşınıyor/);
-  assert.match(run(patch('*** Update File: d.test.ts\n*** Move to: e.test.ts'), codex).hookSpecificOutput.permissionDecisionReason, /üstüne/);
+  assert.match(run(patch('*** Update File: d.test.ts\n*** Move to: tests/d.ts'), codex).hookSpecificOutput.permissionDecisionReason, /moved to a path where it will not run/);
+  assert.match(run(patch('*** Update File: d.test.ts\n*** Move to: e.test.ts'), codex).hookSpecificOutput.permissionDecisionReason, /overwrites an existing file/);
 });
 
 test('F-02 3.13.1 audit: supertest .expect is free, thresholds and the ci script are asked, moving a non-test file onto an existing test is asked', () => {
@@ -138,7 +148,7 @@ test('F-02 3.13.1 audit: supertest .expect is free, thresholds and the ci script
   assert.equal(edit('jest.config.json', '"bail": 0', '"bail": 1').hookSpecificOutput.permissionDecision, 'ask', 'json config');
   fs.writeFileSync(path.join(p, 'f.test.ts'), "test('f', () => { expect(1).toBe(1); });\n");
   const patch = { tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Update File: src/f.ts\n*** Move to: f.test.ts\n*** End Patch' } };
-  assert.match(run(patch, { CLAUDE_PROJECT_DIR: '' }).hookSpecificOutput.permissionDecisionReason, /üstüne/);
+  assert.match(run(patch, { CLAUDE_PROJECT_DIR: '' }).hookSpecificOutput.permissionDecisionReason, /overwrites an existing file/);
 });
 
 // Test writer ≠ code writer: in Claude Code only the test-writer subagent may write a test file.

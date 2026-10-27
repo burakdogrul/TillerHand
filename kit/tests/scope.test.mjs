@@ -46,13 +46,13 @@ test('F-06 silent without a plan; once a plan is saved an existing file off the 
   assert.equal(edit('src/yeni.ts'), null, 'new file: the structure guard looks at it');
   assert.equal(edit('docs/not.md'), null, 'docs is free');
   assert.equal(edit('CHANGELOG.md'), null);
-  assert.match(cli('--status').stdout, /G-1.*3 yol/);
+  assert.match(cli('--status').stdout, /G-1.*3 paths/);
 });
 
 test('F-06 an active plan does not widen without a question; add and end work; the shield asks on add', () => {
   const again = cli('--plan-save', 'G-2', 'src/b.ts');
   assert.equal(again.status, 1);
-  assert.match(again.stderr, /aktif/);
+  assert.match(again.stderr, /plan is active/);
   assert.equal(edit('src/b.ts').decision, 'ask', 'list unchanged');
   assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-add src/b.ts')?.decision, 'ask', 'Codex/Antigravity equivalent');
   assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-end')?.decision, 'ask', '3.28.0: closing the shield is asked too');
@@ -99,7 +99,7 @@ test('3.17.0 the pre-3.15 plan flags are unknown flags (an error, not a silent n
   for (const flag of ['--plan-kaydet', '--plan-ekle', '--plan-bitir']) {
     const r = cli(flag, 'G-10', 'src/a.ts');
     assert.equal(r.status, 1, flag);
-    assert.match(r.stderr, /Bilinmeyen bayrak/, flag);
+    assert.match(r.stderr, /Unknown flag/, flag);
   }
   assert.ok(!fs.existsSync(path.join(p, '.claude/state/plan.json')), 'no plan was saved');
   assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-ekle src/b.ts'), null, 'Codex/Antigravity: no rule for a flag that does nothing');

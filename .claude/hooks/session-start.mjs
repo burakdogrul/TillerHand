@@ -30,10 +30,10 @@ try {
     next = t(root, 'session.begin');
   } else {
     const a = d.fields;
-    notes.push(`Aşama: ${a['Aktif faz'] ?? '-'} · Görev: ${a['Aktif görev'] ?? '-'} · Soru modu: ${a['Soru modu'] ?? 'açık'} · Kurul: ${d.board.state}`);
+    notes.push(`Phase: ${a['Aktif faz'] ?? '-'} · Task: ${a['Aktif görev'] ?? '-'} · Question mode: ${a['Soru modu'] ?? 'açık'} · Board: ${d.board.state}`);
     if (/başlangıç/i.test(a['Aktif faz'] ?? '') && d.installed) {
       const command = /uyum/i.test(a['Aktif faz']) ? '/adopt' : '/start';
-      notes.push(`${command} yarım kaldı (adım ${a['Başlangıç adımı']}). Kullanıcıya ${command} ile kaldığı yerden devam etmeyi öner.`);
+      notes.push(`${command} was left unfinished (step ${a['Başlangıç adımı']}). Suggest the user continue with ${command} where they left off.`);
       next = t(root, 'session.resume', { command, step: a['Başlangıç adımı'] });
     } else {
       const task = d.phases.flatMap((f) => f.tasks).find((x) => !x.done);
@@ -41,17 +41,17 @@ try {
       if (code) next = t(root, 'session.next', { code, title: task.text.replace(/^G-\d+:\s*/, '').split(' — ')[0].replace(/\*\*/g, '').slice(0, 70) });
     }
     if (d.handoffPending) {
-      notes.push('Devir notu bekliyor (docs/workflow/handoff.md): proje başka kişiden veya hesaptan devralınıyor. İşe başlamadan /handoff devral öner.');
+      notes.push('Handoff note waiting (docs/workflow/handoff.md): the project is being taken over from another person or account. Suggest /handoff devral before starting work.');
       next = next ? t(root, 'session.handoffThen', { next }) : t(root, 'session.handoff');
     }
     if (next) notes.push(next);
-    if (d.leftOff.length) notes.push(`Kaldığı yer: ${d.leftOff.join(' | ')}. Kullanıcıya buradan devam etmeyi öner.`);
-    if (d.pending.length) notes.push(`Bekleyen kararlar: ${d.pending.join(' | ')}. Önce bunları sor.`);
+    if (d.leftOff.length) notes.push(`Where we left off: ${d.leftOff.join(' | ')}. Suggest the user continue from here.`);
+    if (d.pending.length) notes.push(`Pending decisions: ${d.pending.join(' | ')}. Ask these first.`);
   }
   if (tool === 'claude') { // limit data and the caveman plugin are Claude Code only
     const l = readLimits(root);
-    notes.push(l ? `Limit (son bilinen): ${summary(l)}` : 'Limit: bilinmiyor. İş planlamadan önce oku (get_usage veya node .claude/hooks/usage.mjs).');
-    notes.push('Rapor dili için caveman:caveman skill\'ini yükle (yüklü değilse atla).');
+    notes.push(l ? `Limit (last known): ${summary(l)}` : 'Limit: unknown. Read it before planning work (get_usage or node .claude/hooks/usage.mjs).');
+    notes.push('Load the caveman:caveman skill for the report style (skip if it is not installed).');
   }
 } catch {
   // docs could not be read: give git info only
@@ -60,13 +60,13 @@ try {
 const git = (c) => execSync(`git ${c}`, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 try {
   git('rev-parse --is-inside-work-tree');
-  const branch = git('branch --show-current') || '(ayrık HEAD)';
+  const branch = git('branch --show-current') || '(detached HEAD)';
   const changed = git('status --porcelain').split('\n').filter(Boolean).length;
-  notes.push(`Dal: ${branch} · commit edilmemiş dosya: ${changed}`);
+  notes.push(`Branch: ${branch} · uncommitted files: ${changed}`);
   const lastProgress = git('log -1 --format=%H -- docs/workflow/progress.md');
   if (lastProgress) {
     const since = Number(git(`rev-list --count ${lastProgress}..HEAD`));
-    if (since >= 3) notes.push(`UYARI: docs/workflow/progress.md son ${since} commit'tir güncellenmedi. Oturum sonunda /wrap-up hatırlat.`);
+    if (since >= 3) notes.push(`WARNING: docs/workflow/progress.md has not been updated for the last ${since} commits. Remind the user to run /wrap-up at the end of the session.`);
   }
 } catch {
   // not a git repo, or before the first commit

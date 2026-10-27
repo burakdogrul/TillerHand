@@ -24,13 +24,13 @@ const notes = [];
 const lang = readLang(root);
 if (lang) notes.push(`[Kit] Reply in ${lang}.`); // every message: the language rule must not fade in long sessions
 if (data.count % INTERVAL === 0) {
-  notes.push('[Kit hatırlatma] Kararları AskUserQuestion ile sor (önerilen ilk sırada). Kapsamı genişletme. Kurul ve limit kurallarına uy. Her cevabın sonuna durum bloğu ekle.');
+  notes.push('[Kit reminder] Ask decisions with AskUserQuestion (recommended option first). Do not widen the scope. Follow the board and limit rules. End every answer with the status block.');
 }
 try {
   const b = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'context.json'), 'utf8'));
   const percent = b.percent;
-  if (percent >= 70) notes.push(`[Kit] Bağlam %${percent} dolu: yanıt kalitesi düşebilir. Mevcut adımı bitir, kullanıcıya /wrap-up ve ardından /clear öner.`);
-  else if (percent >= 50 && data.count % 4 === 0) notes.push(`[Kit] Bağlam %${percent}: uygun bir noktada /wrap-up + /clear önermeyi düşün.`);
+  if (percent >= 70) notes.push(`[Kit] Context is ${percent}% full: answer quality may drop. Finish the current step, then suggest /wrap-up and /clear to the user.`);
+  else if (percent >= 50 && data.count % 4 === 0) notes.push(`[Kit] Context is ${percent}%: consider suggesting /wrap-up + /clear at a suitable point.`);
 } catch { /* no context info */ }
 
 if (notes.length) console.log(notes.join('\n'));

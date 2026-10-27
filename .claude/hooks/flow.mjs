@@ -28,11 +28,11 @@ const SENSITIVE = /auth|login|session|passw|payment|ödeme|checkout|billing|webh
 // Same bands as the cost table in docs/workflow/usage-limits.md §3 (1-2, 3-6, more files)
 export function flow({ files = 0, paths, installed = [], context, level: lvl }) {
   if (paths) files = paths.length;
-  const size = files <= 2 ? 'küçük' : files <= 6 ? 'orta' : 'büyük';
+  const size = files <= 2 ? 'small' : files <= 6 ? 'medium' : 'large';
   const clear = context != null && context >= 50;
   // A full main context is paid again on every turn: the code goes out of it
-  const code = size === 'küçük' && !clear ? 'ana' : 'alt ajan';
-  const base = { küçük: 1, orta: 2, büyük: 3 }[size];
+  const code = size === 'small' && !clear ? 'main' : 'subagent';
+  const base = { small: 1, medium: 2, large: 3 }[size];
   // Yellow halves the members (rules.md §4); red runs one, so a RET stops before the rest is paid for
   const members = lvl === 'red' ? 1 : lvl === 'yellow' ? Math.ceil(base / 2) : base;
   // Most matching files first; only members this project's board has
@@ -44,13 +44,13 @@ export function flow({ files = 0, paths, installed = [], context, level: lvl }) 
 }
 
 export function flowText(f) {
-  const where = (w) => (w === 'ana' ? 'ana oturum' : 'alt ajan');
+  const where = (w) => (w === 'main' ? 'main session' : 'subagent');
   return [
-    `Akış: ${f.files} dosya · ${f.size} · bağlam ${f.context == null ? 'bilinmiyor' : `%${f.context}`} · limit ${LEVEL_LABEL[f.level]}`,
-    `Kod: ${where(f.code)}${f.code === 'ana' ? '' : ' (kod rolü)'}`,
-    `Doküman işi (roadmap, progress, maliyet günlüğü progress.mjs ile; bu satır diğerleri için): ${where(f.docs)}${f.docs === 'ana' ? '' : ' (doküman rolü)'}`,
-    `Kurul: ${f.board?.length ? f.board.join(', ') : f.board ? 'ilgili üye yok' : `ilgili ${f.members} üye`} + code-reviewer${f.security ? ' + security-auditor (hassas yol)' : ''}, ${f.parallel ? 'paralel' : 'sırayla'}${f.board ? '' : ' (hassas yolda + security-auditor)'}`,
-    ...(f.clear ? [`Önce /clear öner: bağlam %${f.context}, her tur bunu yeniden okur.`] : []),
+    `Flow: ${f.files} files · ${f.size} · context ${f.context == null ? 'unknown' : `${f.context}%`} · limit ${LEVEL_LABEL[f.level]}`,
+    `Code: ${where(f.code)}${f.code === 'main' ? '' : ' (code role)'}`,
+    `Docs work (roadmap, progress and the cost log go through progress.mjs; this line is for the rest): ${where(f.docs)}${f.docs === 'main' ? '' : ' (docs role)'}`,
+    `Board: ${f.board?.length ? f.board.join(', ') : f.board ? 'no matching member' : `${f.members} matching members`} + code-reviewer${f.security ? ' + security-auditor (sensitive path)' : ''}, ${f.parallel ? 'in parallel' : 'in sequence'}${f.board ? '' : ' (plus security-auditor on a sensitive path)'}`,
+    ...(f.clear ? [`Suggest /clear first: context ${f.context}%, every turn rereads it.`] : []),
   ].join('\n');
 }
 
@@ -64,7 +64,7 @@ if (isMain(import.meta.url)) {
     const i = process.argv.indexOf(name);
     if (i < 0) return undefined;
     const n = Number(process.argv[i + 1]);
-    if (!Number.isFinite(n) || n < 0) { console.error('Kullanım: node .claude/hooks/flow.mjs [--files N] [--context N] [--limit N] [--json]'); process.exit(1); }
+    if (!Number.isFinite(n) || n < 0) { console.error('Usage: node .claude/hooks/flow.mjs [--files N] [--context N] [--limit N] [--json]'); process.exit(1); }
     return n;
   };
   const files = arg('--files');

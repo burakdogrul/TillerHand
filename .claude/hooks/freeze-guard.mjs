@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readInput, decide, findRoot, isMain } from './shared.mjs';
+import { t } from './lang.mjs';
 
 // Project root even when called from a subfolder: lock and plan are written where the hook reads them; paths are root-relative
 const root = findRoot();
@@ -27,10 +28,14 @@ const FREE = ['docs/workflow/progress.md', '.claude/state/'];
 
 // Counterpart of .claude/settings.json → permissions (deny: .env and secrets/, ask: rule and guard files)
 const PROTECTED = [
-  ['deny', /^(\.env(\.local|\.production|\.[^/]+\.local)?|secrets(\/.*)?)$/i, 'Ortam ve sır dosyaları AI tarafından okunmaz ve yazılmaz.'],
-  ['ask', /^(CLAUDE\.md|AGENTS\.md|\.mcp\.json|\.claude\/.*|\.codex\/.*|\.agents\/hooks\.json|\.github\/workflows\/.*|\.git(\/.*)?)$/i, 'Kural, koruma ve iş akışı dosyaları kullanıcı onayıyla değişir.'],
+  ['deny', /^(\.env(\.local|\.production|\.[^/]+\.local)?|secrets(\/.*)?)$/i, 'Environment and secret files are not read or written by the AI.'],
+  ['ask', /^(CLAUDE\.md|AGENTS\.md|\.mcp\.json|\.claude\/.*|\.codex\/.*|\.agents\/hooks\.json|\.github\/workflows\/.*|\.git(\/.*)?)$/i, 'guard.freeze.protectedAsk'],
 ];
-export const protectedRule = (rel) => PROTECTED.find(([, re]) => re.test(rel)) ?? null;
+// Returns [decision, pattern, text]; the text of an ask rule is in the user's language (message key), a deny rule's is for the AI
+export const protectedRule = (rel, r = root) => {
+  const e = PROTECTED.find(([, re]) => re.test(rel));
+  return e ? [e[0], e[1], e[0] === 'ask' ? t(r, e[2]) : e[2]] : null;
+};
 
 export const relPath = (file, rootDir) => path.relative(rootDir, path.resolve(rootDir, file)).split(path.sep).join('/');
 
@@ -79,18 +84,18 @@ function setPlan(mode, args) {
   const current = readPlan();
   if (mode === '--plan-end') {
     fs.rmSync(planPath(), { force: true });
-    return console.log(current ? `Kapsam kalkanı kapandı (${current.task}).` : 'Aktif plan yok.');
+    return console.log(current ? `Scope shield closed (${current.task}).` : 'No active plan.');
   }
   const [task, ...paths] = mode === '--plan-save' ? args : [null, ...args];
   const fail = (m) => { console.error(m); process.exit(1); };
-  if (mode === '--plan-save' && current) fail(`Plan aktif (${current.task}). Kapsamı genişletmek kullanıcı onayıyla --plan-add; görev bittiyse önce --plan-end.`);
-  if (mode === '--plan-add' && !current) fail('Aktif plan yok; önce --plan-save <görev> <yol...>.');
-  if ((mode === '--plan-save' && !task) || !paths.length) fail(`Kullanım: ${mode === '--plan-save' ? '--plan-save <görev> <yol...>' : '--plan-add <yol...>'}`);
+  if (mode === '--plan-save' && current) fail(`A plan is active (${current.task}). To widen the scope, use --plan-add with user approval; if the task is done, run --plan-end first.`);
+  if (mode === '--plan-add' && !current) fail('No active plan; run --plan-save <task> <path...> first.');
+  if ((mode === '--plan-save' && !task) || !paths.length) fail(`Usage: ${mode === '--plan-save' ? '--plan-save <task> <path...>' : '--plan-add <path...>'}`);
   const normal = paths.map(normalPlanPath);
-  if (normal.includes(null)) fail(`Proje dışındaki yol plana eklenmez: ${paths[normal.indexOf(null)]}`);
+  if (normal.includes(null)) fail(`A path outside the project is not added to the plan: ${paths[normal.indexOf(null)]}`);
   const plan = current ? { task: current.task, paths: [...new Set([...current.paths, ...normal])] } : { task, paths: [...new Set(normal)] };
   writePlan(plan);
-  console.log(`Kapsam kalkanı: ${plan.task} · ${plan.paths.length} yol. Liste dışı mevcut dosyaya yazım sorulur.`);
+  console.log(`Scope shield: ${plan.task} · ${plan.paths.length} paths. Writing to an existing file outside the list is asked.`);
 }
 
 const MODES = ['--set', '--off', '--status', '--plan-save', '--plan-add', '--plan-end'];
@@ -100,25 +105,25 @@ const MODES = ['--set', '--off', '--status', '--plan-save', '--plan-add', '--pla
 function configure(mode, value) {
   if (mode === '--off') {
     fs.rmSync(LOCK, { force: true });
-    console.log('Düzenleme kilidi kaldırıldı.');
+    console.log('Edit lock removed.');
   } else if (mode === '--set' && value) {
     const dir = relPath(value, root).replace(/\/+$/, '');
-    if (!dir || dir.startsWith('..')) { console.error('Klasör proje içinde olmalı.'); process.exit(1); }
+    if (!dir || dir.startsWith('..')) { console.error('The folder must be inside the project.'); process.exit(1); }
     const current = readLock();
     if (current && !allowedInLock(`${dir}/x`, current)) {
-      console.error(`Kilit açık (${current}/). Sadece daraltılabilir; genişletmek için önce kullanıcı onayıyla /freeze off.`);
+      console.error(`A lock is on (${current}/). It can only be narrowed; to widen it, first run /freeze off with user approval.`);
       process.exit(1);
     }
     fs.mkdirSync(path.dirname(LOCK), { recursive: true });
     fs.writeFileSync(LOCK, JSON.stringify({ dir, date: new Date().toISOString() }, null, 2));
-    console.log(`Düzenleme kilidi: sadece ${dir}/ (kaldırmak için /freeze off)`);
+    console.log(`Edit lock: only ${dir}/ (to remove it: /freeze off)`);
   } else if (mode.startsWith('--plan-')) {
     setPlan(mode, process.argv.slice(3));
   } else {
     const k = readLock();
     const p = readPlan();
-    console.log(k ? `Düzenleme kilidi açık: ${k}/` : 'Düzenleme kilidi yok.');
-    console.log(p ? `Kapsam kalkanı: ${p.task} · ${p.paths.length} yol (${p.paths.join(', ')})` : 'Aktif plan yok.');
+    console.log(k ? `Edit lock is on: ${k}/` : 'No edit lock.');
+    console.log(p ? `Scope shield: ${p.task} · ${p.paths.length} paths (${p.paths.join(', ')})` : 'No active plan.');
   }
 }
 
@@ -130,30 +135,29 @@ function hook() {
   // Gate command approval record (gate.mjs, in the user folder ~/.vibe-kit/): the AI must not write it by hand
   const approval = paths.find((p) => /[\\/]\.vibe-kit([\\/]|$)/i.test(p));
   if (approval) decide(g.tool, 'ask', /tercihler\.md$/i.test(approval)
-    ? `${approval}: kişisel tercih dosyası; elle yazılmaz, node .claude/hooks/prefs.mjs --add / --remove kullanılır.`
-    : `${approval}: kapı komut onayı kaydı; elle yazılmaz, node .claude/hooks/gate.mjs --approve kullanılır.`);
+    ? t(g.root, 'guard.freeze.prefsFile', { path: approval })
+    : t(g.root, 'guard.freeze.gateApproval', { path: approval }));
   if (g.tool !== 'claude') {
     for (const p of paths) {
-      const k = protectedRule(relPath(p, groot));
+      const k = protectedRule(relPath(p, groot), g.root);
       if (k) decide(g.tool, k[0], `${relPath(p, groot)}: ${k[2]}`);
     }
     // Reads (view_file etc.): only .env and secrets/ are denied (the counterpart of Read(./.env) in Claude)
     for (const p of g.reads) {
       const rel = relPath(realPath(path.resolve(g.dir, p)), groot);
-      const k = protectedRule(rel);
+      const k = protectedRule(rel, g.root);
       if (k?.[0] === 'deny') decide(g.tool, 'deny', `${rel}: ${k[2]}`);
     }
   }
   const lock = readLock(g.root);
   const outside = lock && paths.find((p) => !allowedInLock(p, lock, groot));
-  if (outside) decide(g.tool, 'deny', `Düzenleme kilidi: sadece ${lock}/ değiştirilebilir. Bu dosya gerekiyorsa kullanıcıya sor; kilidi kaldırmak için /freeze off.`);
+  if (outside) decide(g.tool, 'deny', `Edit lock: only ${lock}/ may be changed. If you need this file, ask the user; to remove the lock use /freeze off.`);
   const plan = readPlan(g.root);
   for (const [i, p] of (plan ? paths : []).entries()) {
     const rel = relPath(p, groot);
     // A new file is not asked (the structure guard looks at it); deleting and overwriting an existing one is
     if (inScope(rel, plan.paths) || !(g.files[i].deleted || fs.existsSync(p))) continue;
-    decide(g.tool, 'ask', `Kapsam kalkanı: ${rel || '(yol bilinmiyor)'} onaylı planda yok (görev ${plan.task}). Gerekliyse kullanıcıya sor; ` +
-      `onaylarsa node .claude/hooks/freeze-guard.mjs --plan-add <yol>. Görev bittiyse --plan-end.`);
+    decide(g.tool, 'ask', t(g.root, 'guard.freeze.scopeAsk', { rel: rel || t(g.root, 'guard.freeze.unknownPath'), task: plan.task }));
   }
   process.exit(0);
 }
@@ -162,7 +166,7 @@ if (isMain(import.meta.url)) {
   const [mode, value] = process.argv.slice(2);
   // A mistyped or removed flag must fail loudly: run as the hook it would pass silently and the AI would think the plan is saved
   if (mode?.startsWith('--') && !MODES.includes(mode)) {
-    console.error(`Bilinmeyen bayrak: ${mode}. Kullanım: freeze-guard.mjs ${MODES.join(' | ')}`);
+    console.error(`Unknown flag: ${mode}. Usage: freeze-guard.mjs ${MODES.join(' | ')}`);
     process.exit(1);
   }
   MODES.includes(mode) ? configure(mode, value) : hook();

@@ -61,13 +61,13 @@ test('F-07 --check: passes with no changed code file, a long file turns CI red',
   sh('git add docs/not.md && git commit -qm doc');
   const r = spawnSync(process.execPath, [SCRIPT, '--check', '--base', base], { cwd: p, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p } });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /değişen kod dosyası yok/i);
+  assert.match(r.stdout, /no changed code files/i);
   const base2 = sh('git rev-parse HEAD');
   write('src/dev.ts', 'x;\n'.repeat(450));
   sh('git add src/dev.ts && git commit -qm uzun');
   const r2 = spawnSync(process.execPath, [SCRIPT, '--check', '--base', base2], { cwd: p, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p, LIZARD: 'olmayan-lizard-komutu' } });
   assert.equal(r2.status, 1);
-  assert.match(r2.stderr, /src\/dev\.ts.*450 satır/);
+  assert.match(r2.stderr, /src\/dev\.ts.*450 lines/);
 });
 
 test('F-07 build/out/vendor in a subfolder are measured; Turkish paths are kept; base and file names are not taken for flags', () => {

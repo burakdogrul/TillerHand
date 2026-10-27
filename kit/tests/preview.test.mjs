@@ -120,7 +120,7 @@ test('F-17 audit: only a plain local address is accepted (shell characters, user
     approve();
     const r = preview();
     assert.equal(r.status, 1, url);
-    assert.match(r.stdout, /yerel olmalı/, url);
+    assert.match(r.stdout, /address must be local/, url);
   }
   assert.equal(calls(), '', 'no browser call');
   assert.ok(!fs.existsSync(path.join(p, 'dev.pid')), 'no server');
@@ -132,13 +132,13 @@ test('Ö-17.3 a server that exits or never opens: clear message, the process is 
   approve();
   const exited = preview();
   assert.equal(exited.status, 1);
-  assert.match(exited.stdout, /kapandı/);
+  assert.match(exited.stdout, /exited before it came up/);
   assert.match(exited.stdout, /PORT dolu/, 'the last lines of the server output are shown');
   agents('node hang.mjs');
   approve();
   const hung = preview({ PREVIEW_TIMEOUT_MS: '1500' });
   assert.equal(hung.status, 1);
-  assert.match(hung.stdout, /açılmadı/);
+  assert.match(hung.stdout, /did not come up within/);
   assert.ok(await gone(pid()), 'the server that never opened is stopped');
 });
 
@@ -149,7 +149,7 @@ test('Ö-17.3 a failed browser step still closes the browser and stops the serve
     reset();
     const r = preview({ PREVIEW_FAIL: step });
     assert.equal(r.status, 1, step);
-    assert.match(r.stdout, /ekran görüntüsü alınamadı/, step);
+    assert.match(r.stdout, /could not take the screenshot/, step);
     assert.match(calls(), /-s=kit-preview-\d+ close/, `${step}: close is called`);
     assert.ok(await gone(pid()), step);
   }
@@ -174,7 +174,7 @@ test('F-17 audit: a linked .previews folder is refused', () => {
   try {
     const r = preview();
     assert.equal(r.status, 1);
-    assert.match(r.stdout, /bağlantı/);
+    assert.match(r.stdout, /\.previews is a link/);
     assert.deepEqual(fs.readdirSync(outside), []);
   } finally {
     fs.unlinkSync(path.join(p, '.previews'));

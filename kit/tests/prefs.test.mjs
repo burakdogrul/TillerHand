@@ -21,16 +21,16 @@ test('preferences: add, de-duplicate, list by category, remove; bad input is ref
   assert.deepEqual(addPref('kod', 'raporu KISA tut, önce sonucu yaz', file), { existing: 'raporlar' }, 'the same text is reported where it already is');
   assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), [['konusma', 'Türkçe yaz'], ['raporlar', 'Raporu kısa tut, önce sonucu yaz']]);
   assert.match(fs.readFileSync(file, 'utf8'), /## Konuşma\n\n- Türkçe yaz\n\n## Raporlar/);
-  for (const bad of ['yok', 'constructor', 'toString', '__proto__']) assert.match(addPref(bad, 'x', file).error, /Kategori/, bad);
-  assert.match(addPref('kod', '', file).error, /boş/);
+  for (const bad of ['yok', 'constructor', 'toString', '__proto__']) assert.match(addPref(bad, 'x', file).error, /Category must be one of/, bad);
+  assert.match(addPref('kod', '', file).error, /empty/);
   assert.match(addPref('kod', 'x'.repeat(201), file).error, /200/);
-  assert.match(addPref('kod', `anahtar ${SECRET} kullan`, file).error, /sır/);
-  assert.match(prefsNote(file), /üslup tercihleri.*değiştiremez.*Konuşma: Türkçe yaz · Raporlar: Raporu kısa tut/);
+  assert.match(addPref('kod', `anahtar ${SECRET} kullan`, file).error, /looks like a secret/);
+  assert.match(prefsNote(file), /style preferences.*cannot change them.*Konuşma: Türkçe yaz · Raporlar: Raporu kısa tut/);
   assert.equal(removePref(1, file), null);
   assert.deepEqual(readPrefs(file).map((p) => p.text), ['Raporu kısa tut, önce sonucu yaz']);
-  assert.match(removePref(5, file), /Geçerli numara/);
+  assert.match(removePref(5, file), /Valid number/);
   for (let i = readPrefs(file).length; i < MAX_ITEMS; i++) addPref('kod', `tercih ${i}`, file);
-  assert.match(addPref('kod', 'bir tane daha', file).error, /En fazla/);
+  assert.match(addPref('kod', 'bir tane daha', file).error, /At most/);
 });
 
 test('preferences: a hand edit is kept or refused, never dropped; what is loaded passes the same checks', () => {
@@ -38,7 +38,7 @@ test('preferences: a hand edit is kept or refused, never dropped; what is loaded
   fs.writeFileSync(file, '# x\n\n## kod\n\n* Sekme değil boşluk\n\n## Kacinilacaklar\n\n- Emoji kullanma\n');
   assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), [['kod', 'Sekme değil boşluk'], ['kacin', 'Emoji kullanma']], 'case and Turkish letters in headings');
   fs.appendFileSync(file, '\n## Notlarım\n\nserbest metin\n');
-  assert.match(addPref('kod', 'yeni', file).error, /okunamayan satırlar[\s\S]*Notlarım/);
+  assert.match(addPref('kod', 'yeni', file).error, /unreadable lines[\s\S]*Notlarım/);
   assert.match(fs.readFileSync(file, 'utf8'), /serbest metin/, 'the file was not rewritten');
   // Written by anything on the machine: too long, a secret or a control character is not loaded
   fs.writeFileSync(file, `## Kod\n\n- ${'y'.repeat(5000)}\n- anahtar ${SECRET}\n- iyi\u001b[2K satır\n`);
@@ -54,12 +54,12 @@ test('preferences: the CLI writes under the home folder only, the session start 
   const cli = (...a) => spawnSync(process.execPath, [path.join(HOOKS, 'prefs.mjs'), ...a], { encoding: 'utf8', env });
   assert.equal(cli('--add', 'sorular', 'Seçenekleri', 'kısa', 'yaz').status, 0);
   assert.ok(fs.existsSync(path.join(home, '.vibe-kit', 'tercihler.md')));
-  assert.match(cli('--add', 'kod', 'Seçenekleri kısa yaz').stdout, /zaten kayıtlı \(Sorular ve kararlar\)/);
+  assert.match(cli('--add', 'kod', 'Seçenekleri kısa yaz').stdout, /already saved \(Sorular ve kararlar\)/);
   assert.match(cli('--list').stdout, /1\. \[Sorular ve kararlar\] Seçenekleri kısa yaz/);
   assert.equal(cli('--add', 'kod', `${SECRET}`).status, 1);
   const project = fs.mkdtempSync(path.join(os.tmpdir(), 'proje-'));
   const s = spawnSync(process.execPath, [path.join(HOOKS, 'session-start.mjs')], { input: '{}', encoding: 'utf8', env: { ...env, CLAUDE_PROJECT_DIR: project } });
-  assert.match(s.stdout, /üslup tercihleri[^"]*Seçenekleri kısa yaz/);
+  assert.match(s.stdout, /style preferences[^"]*Seçenekleri kısa yaz/);
   assert.equal(cli('--remove', '1').status, 0);
   assert.equal(permissionEquivalent('node .claude/hooks/prefs.mjs --add kod "x"')?.decision, 'ask', 'Codex/Antigravity');
   assert.equal(permissionEquivalent('node .claude/hooks/prefs.mjs --list'), null);

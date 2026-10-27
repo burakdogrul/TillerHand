@@ -42,9 +42,9 @@ test('rollback: returns to a working point, history and .env are kept, unsaved w
   assert.equal(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), 'calisiyor');
   assert.equal(fs.existsSync(path.join(root, 'yeni.js')), false, 'a tracked file not in the target was removed');
   assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), 'GIZLI=1', 'a .gitignore file is not touched');
-  assert.match(git(root, 'log', '-1', '--format=%s'), /^revert: calisan\/.+ haline dönüldü$/);
+  assert.match(git(root, 'log', '-1', '--format=%s'), /^revert: back to calisan\/.+ \([0-9a-f]+\)$/);
   assert.match(git(root, 'log', '--format=%s'), /feat: bozan değişiklik/, 'history was not deleted');
-  assert.match(git(root, 'stash', 'list'), /geri-alma öncesi/);
+  assert.match(git(root, 'stash', 'list'), /before rollback/);
 
   // A rollback can be undone too
   restore(root, 'HEAD~1');
@@ -56,7 +56,7 @@ test('rollback: no working point with unsaved changes; no commit if already in t
   write(root, 'a.js', '1');
   commit(root, 'ilk');
   write(root, 'a.js', '2');
-  assert.throws(() => saveCheckpoint(root), /Kaydedilmemiş/);
+  assert.throws(() => saveCheckpoint(root), /uncommitted changes/);
   git(root, 'checkout', '--', 'a.js');
   const previous = git(root, 'rev-parse', 'HEAD');
   assert.equal(restore(root, 'HEAD').changed, false);

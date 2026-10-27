@@ -11,7 +11,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { readInput, decide, isMain } from './shared.mjs';
+import { readInput, decide, isMain, findRoot } from './shared.mjs';
+import { t } from './lang.mjs';
 
 const TEST = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec|e2e-spec)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$|_test\.(py|go)$/i;
 // Windows resolves "a.test.ts.", "a.test.ts " and "a.test.ts::$DATA" (alternate stream) to the same file
@@ -37,9 +38,9 @@ const count = (s, re) => (stripComments(s).match(re) ?? []).length;
 
 // Returns: null (no problem) | a description of the weakening
 export function weakening(before, after) {
-  if (count(after, SKIP) > count(before, SKIP)) return 'test atlanıyor veya tek teste odaklanıyor (.skip / .only / skipIf / xit / pytest skip)';
-  if (count(after, EXPECT) < count(before, EXPECT)) return 'beklenti (expect/assert) siliniyor veya yoruma alınıyor';
-  if (count(after, WEAK) > count(before, WEAK)) return 'beklenti gevşetiliyor (toBeTruthy, toBeDefined, expect.anything, matcher\'sız expect, assert True)';
+  if (count(after, SKIP) > count(before, SKIP)) return t(findRoot(), 'guard.test.skip');
+  if (count(after, EXPECT) < count(before, EXPECT)) return t(findRoot(), 'guard.test.expectRemoved');
+  if (count(after, WEAK) > count(before, WEAK)) return t(findRoot(), 'guard.test.expectWeak');
   return null;
 }
 
@@ -47,7 +48,7 @@ export function weakening(before, after) {
 export function configRisk(before, after) {
   const a = new Set(before.split('\n')), b = new Set(after.split('\n'));
   const changed = [...a].filter((s) => !b.has(s)).concat([...b].filter((s) => !a.has(s)));
-  return changed.some((s) => RISKY.test(s)) ? 'testlerin kapsamını belirleyen ayar değişiyor (include/exclude, testMatch, passWithNoTests, eşik, test script\'i)' : null;
+  return changed.some((s) => RISKY.test(s)) ? t(findRoot(), 'guard.test.configRisk') : null;
 }
 
 // The real path too: a link or junction into the test folder, a Windows short name (TESTS~1)
@@ -76,21 +77,20 @@ function hook() {
     // Tests are written by the test-writer agent only (AGENTS.md rule 7): whoever writes the code must not shape the test
     // to it. Only Claude Code reports the subagent; Codex and Antigravity keep the rule in text. Config files stay a question.
     if (g.tool === 'claude' && g.agent !== 'test-writer' && !config) {
-      decide(g.tool, 'deny', `Test ayrımı: ${name.split(path.sep).join('/')} bir test dosyası; test dosyalarına yalnız test-writer ajanı yazar, kodu yazan testi değiştiremez (AGENTS.md kural 7). ` +
-        'Test eklemek veya değiştirmek gerekiyorsa test-writer ajanını çağır (varsa SendMessage ile sürdür); kriter değişiyorsa kullanıcıya sor.');
+      decide(g.tool, 'deny', `Test separation: ${name.split(path.sep).join('/')} is a test file; only the test-writer agent writes test files, and whoever writes the code cannot change tests (AGENTS.md rule 7). ` +
+        'If a test must be added or changed, call the test-writer agent (continue it with SendMessage if it exists); if the criterion changes, ask the user.');
     }
     let before = f.before;
     if (before === undefined) { try { before = fs.readFileSync(full, 'utf8'); } catch { before = ''; } }
     const after = f.after ?? f.text;
     let reason;
-    if (f.deleted) reason = config ? 'test ayar dosyası siliniyor' : 'test dosyası siliniyor';
+    if (f.deleted) reason = t(g.root, config ? 'guard.test.configDeleted' : 'guard.test.fileDeleted');
     // Codex Move: a test moved to a path that does not run is as good as deleted; moving onto an existing file overwrites it
-    else if (source && (!isTestFile(name) || (TEST_NAME.test(path.basename(source)) && !TEST_NAME.test(path.basename(name))))) reason = `test dosyası çalışmayan bir yola taşınıyor (${f.source})`;
-    else if (f.source && fs.existsSync(full)) reason = `taşıma var olan dosyanın üstüne yazıyor (${f.source} → ${f.path})`;
+    else if (source && (!isTestFile(name) || (TEST_NAME.test(path.basename(source)) && !TEST_NAME.test(path.basename(name))))) reason = t(g.root, 'guard.test.movedAway', { source: f.source });
+    else if (f.source && fs.existsSync(full)) reason = t(g.root, 'guard.test.moveOverwrite', { source: f.source, path: f.path });
     else reason = config ? configRisk(before, after) : weakening(before, after);
     if (reason) {
-      decide(g.tool, 'ask', `Test koruması: ${name.split(path.sep).join('/')} içinde ${reason}. Testi geçirmek için testi zayıflatmak yasak (AGENTS.md kural 7). ` +
-        'Gerekçe gerçekse (yanlış test, değişen kabul kriteri) kullanıcıya söyle ve onayını al; değilse kodu düzelt.');
+      decide(g.tool, 'ask', t(g.root, 'guard.test.ask', { name: name.split(path.sep).join('/'), reason }));
     }
   }
   process.exit(0);

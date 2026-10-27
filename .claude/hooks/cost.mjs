@@ -25,9 +25,9 @@ try {
   fs.mkdirSync(path.join(root, '.claude', 'state'), { recursive: true });
   fs.writeFileSync(path.join(root, '.claude', 'state', 'cost.json'), JSON.stringify({ readAt: new Date().toISOString(), data }));
   const t = data.totals ?? {};
-  console.log(`Son 30 gün: ${Math.round((t.totalTokens ?? 0) / 1e6)}M token · API karşılığı $${(t.totalCost ?? 0).toFixed(2)}`);
+  console.log(`Last 30 days: ${Math.round((t.totalTokens ?? 0) / 1e6)}M tokens · API-equivalent cost $${(t.totalCost ?? 0).toFixed(2)}`);
 } catch (h) {
-  console.error(`ccusage okunamadı (${h.code ?? h.message}). Node ve ağ erişimi gerekir; pano bu kartı boş gösterir.`);
+  console.error(`Could not read ccusage (${h.code ?? h.message}). Node and network access are needed; the dashboard shows this card empty.`);
 } finally {
   fs.rmSync(work, { recursive: true, force: true });
 }

@@ -59,8 +59,8 @@ test('F-03 gate: a red check shows its last lines, a green one writes no output,
   assert.match(r.stdout, /HATA satiri/);
   assert.match(r.stdout, /✅ lint/);
   assert.doesNotMatch(r.stdout, /lint temiz/, 'a green check\'s output costs no tokens');
-  assert.match(r.stdout, /tip kontrol.*tanımsız/);
-  assert.match(r.stdout, /Semgrep.*atlandı/);
+  assert.match(r.stdout, /tip kontrol.*unset/);
+  assert.match(r.stdout, /Semgrep.*skipped/);
   const state = JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8'));
   assert.equal(state.passed, false);
   assert.match(state.signature, /^[0-9a-f]{64}$/);
@@ -69,17 +69,17 @@ test('F-03 gate: a red check shows its last lines, a green one writes no output,
   const long = runGate().stdout;
   assert.match(long, /satir 50/);
   assert.doesNotMatch(long, /satir 20\b/);
-  assert.match(long, /tamamı \.claude\/state\/gate-log\/test\.log/);
+  assert.match(long, /full output in \.claude\/state\/gate-log\/test\.log/);
   assert.match(fs.readFileSync(path.join(p, '.claude/state/gate-log/test.log'), 'utf8'), /satir 1\n[\s\S]*satir 50/);
   agents('node -e "process.exit(0)"');
   const green = runGate();
   assert.equal(green.status, 0);
-  assert.doesNotMatch(green.stdout, /hiçbir kontrol çalışmadı/);
+  assert.doesNotMatch(green.stdout, /no check ran/);
   fs.renameSync(path.join(p, 'AGENTS.md'), path.join(p, 'AGENTS.yok'));
   const empty = runGate();
   assert.equal(empty.status, 1, '3.14.1: if no check ran the gate is empty, not green');
-  assert.match(empty.stdout, /BOŞ.*hiçbir kontrol çalışmadı/);
-  assert.doesNotMatch(empty.stdout, /onay/i, 'no command approval is needed when nothing runs');
+  assert.match(empty.stdout, /EMPTY.*no check ran/);
+  assert.doesNotMatch(empty.stdout, /approv|onay/i, 'no command approval is needed when nothing runs');
   assert.equal(JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8')).empty, true);
   fs.renameSync(path.join(p, 'AGENTS.yok'), path.join(p, 'AGENTS.md'));
 });
@@ -101,7 +101,7 @@ test('F-03 commit gate: stops if the gate is missing, red or stale; passes with 
   approve('board-qa');
   const red = commit();
   assert.equal(red.status, 2);
-  assert.match(red.stderr, /kırmızı/);
+  assert.match(red.stderr, /gate is red/);
   const refused = approve('atlandı: kullanıcı isteği');
   assert.equal(refused.status, 1, '--approve never writes an "atlandı" note (a $\'\\x..\' spelling arrives here decoded)');
   assert.match(refused.stderr, /--skip/);
@@ -131,7 +131,7 @@ test('F-03 audit: an untracked new file is in the signature; global git options 
   approve('board-qa');
   const chain = commit("sed -i s/a/b/ a.js && git commit -am x");
   assert.equal(chain.status, 2, 'a chain that changes files before the commit');
-  assert.match(chain.stderr, /tek başına/);
+  assert.match(chain.stderr, /run the commit on its own/);
   assert.equal(commit('git commit -m "$(rm -rf x)"').status, 2, 'command substitution');
   assert.equal(commit('git commit -m x && git push').status, 2, 'push is a separate command');
   assert.equal(commit('cd . && git add -A && git commit -m x').status, 0, 'commit with cd and git add is free');
@@ -160,7 +160,7 @@ test('3.14.1 an empty gate stops the commit; the user passes with "atlandı"', (
   approve('board-qa');
   const r = commit();
   assert.equal(r.status, 2);
-  assert.match(r.stderr, /boş/);
+  assert.match(r.stderr, /gate is empty/);
   skip('kullanıcı isteği');
   assert.equal(commit().status, 0);
   fs.renameSync(path.join(p, 'AGENTS.yok'), path.join(p, 'AGENTS.md'));
@@ -220,7 +220,7 @@ test('3.17.0 the pre-3.15 flag and state are gone: --onayla does not approve; th
   fs.rmSync(approvalPath(p), { force: true }); // an earlier test approved this same list
   const old = gate('--onayla');
   assert.equal(old.status, 1);
-  assert.match(old.stderr, /Kullanım/);
+  assert.match(old.stderr, /Usage/);
   assert.equal(gate('--run').status, 1, 'the old flag wrote no approval');
   assert.equal(permissionEquivalent('node .claude/hooks/gate.mjs --onayla'), null, 'Codex/Antigravity: no rule for a flag that does nothing');
   assert.equal(permissionEquivalent('node .claude/hooks/commit-gate.mjs --approve "board-qa"'), null, 'commit-gate --approve is not the gate approval');
@@ -276,7 +276,7 @@ test('3.14.1 audit: a semgrep placed inside the project is not suggested', { ski
   fs.rmSync(path.join(p, 'c.js'));
 });
 
-test('3.14.1 Semgrep: installed as .cmd on Windows does not say "kurulu değil"', { skip: process.platform !== 'win32' }, () => {
+test('3.14.1 Semgrep: installed as .cmd on Windows does not say "not installed"', { skip: process.platform !== 'win32' }, () => {
   const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'sg-'));
   fs.writeFileSync(path.join(bin, 'semgrep.cmd'), '@echo off\r\nexit /b 0\r\n');
   write('b.js', 'yeni kod');
@@ -284,8 +284,8 @@ test('3.14.1 Semgrep: installed as .cmd on Windows does not say "kurulu değil"'
   const e = { ...process.env, CLAUDE_PROJECT_DIR: p, PATH: `${bin};${process.env.PATH}` };
   delete e.SEMGREP;
   const r = spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, encoding: 'utf8', env: e });
-  assert.match(r.stdout, /Semgrep.*atlandı.*SEMGREP=/);
-  assert.doesNotMatch(r.stdout, /kurulu değil/);
+  assert.match(r.stdout, /Semgrep.*skipped.*SEMGREP=/);
+  assert.doesNotMatch(r.stdout, /not installed/);
   fs.rmSync(bin, { recursive: true, force: true });
   fs.rmSync(path.join(p, 'b.js'));
 });
@@ -367,7 +367,7 @@ test('3.28.3 git.exe and commit aliases are commits too', () => {
     assert.equal(commit(c).status, 2, c);
   assert.equal(commit('git status').status, 0);
   const inline = commit('git -c alias.zz=commit zz -m x && git checkout -- a.js');
-  assert.match(inline.stderr, /zincirli/, 'an inline alias never lets another git command through the chain check');
+  assert.match(inline.stderr, /chained/, 'an inline alias never lets another git command through the chain check');
   sh('git config --unset alias.ci');
   sh('git config --unset alias.yaz');
   sh('git config --unset alias.zincir');
@@ -383,7 +383,7 @@ test('3.29.0 a path of this machine in a changed file turns the gate red; kit:yo
   write('src/yol.test.js', `const f = '${fwd}/fixtures/a.json';\n`);
   const red = runGate();
   assert.equal(red.status, 1, red.stdout);
-  assert.match(red.stdout, /❌ Mutlak yol[\s\S]*src\/yol\.test\.js:1/);
+  assert.match(red.stdout, /❌ Absolute path[\s\S]*src\/yol\.test\.js:1/);
   write('src/yol.test.js', "const f = path.join(import.meta.dirname, 'fixtures', 'a.json');\n");
   assert.equal(runGate().status, 0, 'a derived path is fine');
   // red = this machine's path (blocks), note = looks like a user folder (listed, does not block), ok = nothing
@@ -453,34 +453,34 @@ test('3.32.0 one review per change: the task-end approval covers the commit; aft
   fs.rmSync(path.join(p, '.claude/state/commit-approval.json'), { force: true });
   write('b.js', '1');
   write('c.js', '1');
-  assert.match(status().stdout, /Onay yok/);
+  assert.match(status().stdout, /No approval/);
   runGate();
   assert.equal(approve('görev sonu: board-qa, code-reviewer').status, 0);
   const ok = status();
   assert.equal(ok.status, 0);
-  assert.match(ok.stdout, /Onay geçerli.*görev sonu: board-qa, code-reviewer/s);
-  assert.match(ok.stdout, /yeniden inceleme gerekmez/);
+  assert.match(ok.stdout, /Approval valid.*görev sonu: board-qa, code-reviewer/s);
+  assert.match(ok.stdout, /no new review needed/);
   assert.equal(commit().status, 0, 'the commit passes on the task-end approval: no second board');
   write('c.js', '2');
   write('d.js', 'yeni');
   const stale = status();
-  assert.match(stale.stdout, /Son onaydan sonra değişen: c\.js, d\.js/);
-  assert.doesNotMatch(stale.stdout.split('değişen:')[1], /b\.js/, 'an unchanged reviewed file is not reviewed again');
+  assert.match(stale.stdout, /Changed since the last approval: c\.js, d\.js/);
+  assert.doesNotMatch(stale.stdout.split('Changed since the last approval:')[1], /b\.js/, 'an unchanged reviewed file is not reviewed again');
   const r = commit();
   assert.equal(r.status, 2);
   assert.match(r.stderr, /c\.js, d\.js/);
-  assert.match(r.stderr, /yalnız/);
+  assert.match(r.stderr, /looks only at the diff of these files/);
   sh('git add -A && git commit -qm t');
-  assert.match(status().stdout, /Değişiklik yok/);
+  assert.match(status().stdout, /No changes/);
   // a skipped review covers no file: it is not "reviewed" and a later change does not narrow the review to the delta
   write('e.js', '1');
   write('f.js', '1');
   assert.equal(skip('kullanıcı isteği').status, 0);
-  assert.match(status().stdout, /atlandı.*denetlenmedi/s);
-  assert.doesNotMatch(status().stdout, /Onay geçerli/);
+  assert.match(status().stdout, /Review skipped \(atlandı: .*these changes were not reviewed/s);
+  assert.doesNotMatch(status().stdout, /Approval valid/);
   write('f.js', '2');
-  assert.match(status().stdout, /Onay yok.*2 dosya/s, 'the skipped e.js is still to be reviewed');
-  assert.doesNotMatch(commit().stderr, /yalnız/);
+  assert.match(status().stdout, /No approval.*2 files/s, 'the skipped e.js is still to be reviewed');
+  assert.doesNotMatch(commit().stderr, /looks only at the diff of these files/);
   sh('git add -A && git commit -qm t2');
   // the commands use it: task-end approval opens the commit; /review-changes and the commit board check first
   const read = (f) => fs.readFileSync(path.join(HOOKS, '..', f), 'utf8');

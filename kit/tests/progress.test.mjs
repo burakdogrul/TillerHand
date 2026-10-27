@@ -23,12 +23,12 @@ test('3.35.0 progress.mjs: marks the roadmap, adds a cost row, updates progress 
   assert.equal(run('--done', 'G-002').status, 0);
   assert.match(read('docs/product/roadmap.md', p), /^- \[x\] G-002:/m);
   assert.match(read('docs/product/roadmap.md', p), /^- \[ \] G-001:/m, 'only the given task');
-  assert.match(run('--done', 'G-002').stdout, /zaten/);
+  assert.match(run('--done', 'G-002').stdout, /G-002 is already marked/);
   assert.equal(run('--done', 'G-999').status, 1);
 
   assert.equal(run('--cost', 'G-002 iskelet | ilk', 'O', '40', '52', '35', 'not').status, 0);
   assert.ok(read('docs/workflow/cost-log.md', p).trimEnd().endsWith(`| ${today} | G-002 iskelet \\| ilk | O | 40 | 52 | 12 | 35 | not |`));
-  assert.match(run('--cost', 'x', 'Q', '1', '2', '3').stderr, /Kullanım/);
+  assert.match(run('--cost', 'x', 'Q', '1', '2', '3').stderr, /Usage/);
   assert.match(run('--cost', 'x', 'K', '90', '5', '3').stdout, /\| \? \|/, 'the window renewed: the difference is unknown');
 
   // 3.38.0: --start keeps the start; --cost with only job and size fills start, end and minutes itself

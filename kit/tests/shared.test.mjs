@@ -73,7 +73,7 @@ test('decision format: "ask" turns into deny on Codex, Antigravity uses the deci
   assert.equal(JSON.parse(decisionText('claude', 'ask', 'n')).hookSpecificOutput.permissionDecision, 'ask');
   const c = JSON.parse(decisionText('codex', 'ask', 'n')).hookSpecificOutput;
   assert.equal(c.permissionDecision, 'deny');
-  assert.match(c.permissionDecisionReason, /kullanıcıya sor/);
+  assert.match(c.permissionDecisionReason, /ask the user/);
   assert.deepEqual(JSON.parse(decisionText('antigravity', 'ask', 'n')), { decision: 'ask', reason: 'n' });
 });
 

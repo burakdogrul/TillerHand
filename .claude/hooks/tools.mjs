@@ -17,22 +17,22 @@ import { findRoot, isMain } from './shared.mjs';
 // Keys are the package names users type (/tools ac tasarim): they stay Turkish
 export const PACKAGES = {
   tasarim: {
-    description: 'Stil yönleri, palet ve yazı tipi, GSAP',
+    description: 'Style directions, palette and typefaces, GSAP',
     command: '/design',
     plugins: ['taste-skill@taste-skill', 'ui-ux-pro-max@ui-ux-pro-max-skill', 'gsap-skills@gsap-skills'],
   },
   guvenlik: {
-    description: 'Derin güvenlik taraması',
+    description: 'Deep security scan',
     command: '/findings-security, /release',
     plugins: ['differential-review', 'insecure-defaults', 'sharp-edges', 'static-analysis', 'supply-chain-risk-auditor', 'agentic-actions-auditor', 'fp-check']
       .map((e) => `${e}@trailofbits`).concat('claude-security@claude-plugins-official'),
   },
   yayin: {
-    description: 'İnsan için kod haritası, oturum raporu',
+    description: 'Code map for humans, session report',
     command: '/release, /handoff, /adopt',
     plugins: ['understand-anything@understand-anything', 'session-report@claude-plugins-official'],
   },
-  video: { description: 'Remotion ile video', command: 'motion-video', plugins: ['remotion@remotion'] },
+  video: { description: 'Video with Remotion', command: 'motion-video', plugins: ['remotion@remotion'] },
 };
 
 // Command descriptions are also in the skill list. Light: non-core commands are listed by name only (skillOverrides "name-only"),
@@ -46,12 +46,12 @@ const settingsPaths = (root) => ({ project: path.join(root, '.claude', 'settings
 function readJson(p) {
   if (!fs.existsSync(p)) return {};
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch {
-    throw new Error(`${p} geçerli JSON değil; düzeltmeden paket değiştirilemez.`);
+    throw new Error(`${p} is not valid JSON; fix it before changing a package.`);
   }
 }
 
 function pkg(name) {
-  if (!Object.hasOwn(PACKAGES, name ?? '')) throw new Error(`Bilinmeyen paket: ${name}. Seçenekler: ${Object.keys(PACKAGES).join(', ')}`);
+  if (!Object.hasOwn(PACKAGES, name ?? '')) throw new Error(`Unknown package: ${name}. Options: ${Object.keys(PACKAGES).join(', ')}`);
   return PACKAGES[name];
 }
 
@@ -84,12 +84,12 @@ export function setPackage(root, name, enabled) {
 // Writes the shared project settings (the profile is team-wide). Only kit light commands without a value change; the user's
 // own values (another skill, or "on"/"off" on a kit command) stay. full keeps an empty key so the update does not add the list back.
 export function setCommandMode(root, mode) {
-  if (mode !== 'light' && mode !== 'full') throw new Error(`Bilinmeyen mod: ${mode}. Seçenekler: light, full`);
+  if (mode !== 'light' && mode !== 'full') throw new Error(`Unknown mode: ${mode}. Options: light, full`);
   const file = settingsPaths(root).project;
-  if (!fs.existsSync(file)) throw new Error(`${file} yok; komut listesi yazılmadı.`);
+  if (!fs.existsSync(file)) throw new Error(`${file} does not exist; the command list was not written.`);
   const s = readJson(file);
   const isObject = (x) => x && typeof x === 'object' && !Array.isArray(x);
-  if (!isObject(s) || (s.skillOverrides !== undefined && !isObject(s.skillOverrides))) throw new Error(`${file} → skillOverrides bir nesne değil; düzeltmeden yazılmaz.`);
+  if (!isObject(s) || (s.skillOverrides !== undefined && !isObject(s.skillOverrides))) throw new Error(`${file} → skillOverrides is not an object; fix it before writing.`);
   const o = { ...(s.skillOverrides ?? {}) };
   for (const c of LIGHT_COMMANDS) {
     if (mode === 'light' && o[c] === undefined) o[c] = 'name-only';
@@ -139,57 +139,56 @@ export function measure() {
 const installedList = () => Object.entries(installRecords()).flatMap(([id, k]) => [k].flat().map((e) => ({ id, scope: e?.scope, projectPath: e?.projectPath })));
 const tokenOf = (measurement, ids) => {
   const found = measurement.filter((o) => ids.includes(o.id));
-  return found.length ? `~${found.reduce((s, o) => s + o.skillTokens + o.agentTokens, 0)} token` : '? token (kurulu değil)';
+  return found.length ? `~${found.reduce((s, o) => s + o.skillTokens + o.agentTokens, 0)} token` : '? token (not installed)';
 };
-const NOTE = 'Açtıktan sonra /reload-plugins. Oturum ortasında açmak prompt önbelleğini bozar; en iyisi faz sınırında, /clear ile.';
+const NOTE = 'After enabling, run /reload-plugins. Enabling mid-session breaks the prompt cache; best at a phase boundary, together with /clear.';
 if (isMain(import.meta.url)) {
   const root = findRoot();
   const [flag, name] = process.argv.slice(2);
   try {
     if (flag === '--enable' || flag === '--disable') {
       const ids = setPackage(root, name, flag === '--enable');
-      if (!ids.length) { console.log(`${name} paketinin eklentisi bu projede tanımlı değil; değişiklik yok.`); process.exit(0); }
-      console.log(`${name} paketi ${flag === '--enable' ? 'açıldı' : 'proje varsayılanına döndü'} (.claude/settings.local.json): ${ids.join(', ')}`);
+      if (!ids.length) { console.log(`The plugins of package ${name} are not defined in this project; no change.`); process.exit(0); }
+      console.log(`Package ${name} ${flag === '--enable' ? 'enabled' : 'back to the project default'} (.claude/settings.local.json): ${ids.join(', ')}`);
       const missing = missingPlugins(Object.fromEntries(ids.map((id) => [id, true])), installedList(), root).map((e) => e.id);
-      if (flag === '--enable' && missing.length) console.log(`Kurulu değil: ${missing.join(', ')}. Kullanıcıya sor, onaylarsa: node .claude/hooks/plugins-sync.mjs --install`);
+      if (flag === '--enable' && missing.length) console.log(`Not installed: ${missing.join(', ')}. Ask the user; if they approve: node .claude/hooks/plugins-sync.mjs --install`);
       console.log(NOTE);
     } else if (flag === '--required') {
       pkg(name);
       const d = packageStatus(root).find((x) => x.name === name);
-      if (!d.plugins.length) { console.log(`${name} paketi bu projede yok; adımı atla.`); process.exit(0); }
-      if (d.enabled) { console.log(`${name} paketi açık.`); process.exit(0); }
-      console.log(`${name} paketi kapalı (${tokenOf(measure(), d.plugins)}/oturum: ${d.plugins.join(', ')}). ` +
-        `Kullanıcıya sor; onaylarsa: node .claude/hooks/tools.mjs --enable ${name}, sonra /reload-plugins. Reddederse adımı paketsiz yap.`);
+      if (!d.plugins.length) { console.log(`Package ${name} is not in this project; skip the step.`); process.exit(0); }
+      if (d.enabled) { console.log(`Package ${name} is enabled.`); process.exit(0); }
+      console.log(`Package ${name} is disabled (${tokenOf(measure(), d.plugins)}/session: ${d.plugins.join(', ')}). ` +
+        `Ask the user; if they approve: node .claude/hooks/tools.mjs --enable ${name}, then /reload-plugins. If they decline, do the step without the package.`);
       process.exit(2);
     } else if (flag === '--measure') {
       const project = readJson(settingsPaths(root).project).enabledPlugins ?? {};
       const effective = { ...project, ...(readJson(settingsPaths(root).local).enabledPlugins ?? {}) };
-      const packageOf = (id) => Object.keys(PACKAGES).find((a) => PACKAGES[a].plugins.includes(id)) ?? (id in project ? 'çekirdek' : '-');
+      const packageOf = (id) => Object.keys(PACKAGES).find((a) => PACKAGES[a].plugins.includes(id)) ?? (id in project ? 'core' : '-');
       const rows = measure().map((o) => ({ plugin: o.id, pkg: packageOf(o.id), enabled: effective[o.id] === true, skill: o.skill, descTokens: o.skillTokens, agentTokens: o.agentTokens }))
         .sort((a, b) => b.descTokens + b.agentTokens - a.descTokens - a.agentTokens);
-      // Table headers are shown to the user: Turkish
-      console.table(rows.map((r) => ({ eklenti: r.plugin, paket: r.pkg, açık: r.enabled, skill: r.skill, açıklamaTok: r.descTokens, ajanTok: r.agentTokens })));
+      console.table(rows.map((r) => ({ plugin: r.plugin, package: r.pkg, enabled: r.enabled, skill: r.skill, descTokens: r.descTokens, agentTokens: r.agentTokens })));
       const top = (l) => l.reduce((s, r) => s + r.descTokens + r.agentTokens, 0);
-      console.log(`Açık eklentiler: ~${top(rows.filter((r) => r.enabled))} token · hepsi açık olsaydı: ~${top(rows)} token. Kesin değer: /context, /doctor.`);
+      console.log(`Enabled plugins: ~${top(rows.filter((r) => r.enabled))} tokens · if all were enabled: ~${top(rows)} tokens. Exact value: /context, /doctor.`);
     } else if (flag === '--commands') {
       setCommandMode(root, name);
       console.log(name === 'light'
-        ? `Komut listesi hafif: ${LIGHT_COMMANDS.length} komut sadece adıyla listelenir (/ menüsünde durur). Yeni oturumda geçerli.`
-        : 'Komut listesi tam: bütün komutlar açıklamasıyla listelenir. Yeni oturumda geçerli.');
+        ? `Command list is light: ${LIGHT_COMMANDS.length} commands are listed by name only (they stay in the / menu). Takes effect in a new session.`
+        : 'Command list is full: all commands are listed with their descriptions. Takes effect in a new session.');
     } else if (!flag) {
       const state = packageStatus(root);
       const project = readJson(settingsPaths(root).project).enabledPlugins ?? {};
       const packaged = new Set(Object.values(PACKAGES).flatMap((p) => p.plugins));
-      console.log(`Çekirdek (hep açık): ${Object.keys(project).filter((id) => project[id] !== false && !packaged.has(id)).join(', ') || '-'}`);
+      console.log(`Core (always on): ${Object.keys(project).filter((id) => project[id] !== false && !packaged.has(id)).join(', ') || '-'}`);
       const measurement = measure();
       for (const d of state.filter((x) => x.plugins.length)) {
-        console.log(`  ${d.name.padEnd(9)} ${d.enabled ? 'açık  ' : 'kapalı'}  ${tokenOf(measurement, d.plugins).padEnd(24)} ${d.command} · ${d.description}`);
+        console.log(`  ${d.name.padEnd(9)} ${d.enabled ? 'on ' : 'off'}  ${tokenOf(measurement, d.plugins).padEnd(24)} ${d.command} · ${d.description}`);
       }
       const cm = commandMode(root);
-      console.log(`Komut listesi: ${{ light: 'hafif', full: 'tam', mixed: 'karışık' }[cm.mode]} (${cm.named}/${LIGHT_COMMANDS.length} komut sadece adıyla; değiştirmek: --commands light|full)`);
+      console.log(`Command list: ${cm.mode} (${cm.named}/${LIGHT_COMMANDS.length} commands by name only; to change: --commands light|full)`);
       console.log(NOTE);
     } else {
-      console.error('Kullanım: tools.mjs [--enable <paket> | --disable <paket> | --required <paket> | --measure | --commands light|full]');
+      console.error('Usage: tools.mjs [--enable <package> | --disable <package> | --required <package> | --measure | --commands light|full]');
       process.exit(1);
     }
   } catch (h) {

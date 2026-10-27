@@ -7,21 +7,26 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readInput, decide, isMain } from './shared.mjs';
+import { readInput, decide, isMain, findRoot } from './shared.mjs';
+import { t } from './lang.mjs';
 import { isTestFile, isTestConfig } from './test-guard.mjs';
 import { readLock, readPlan, allowedInLock, inScope, realPath, relPath, protectedRule } from './freeze-guard.mjs';
 
+// Texts of ask decisions go to the user (message keys); texts of deny decisions are plain English for the AI.
+// Helpers here have no root argument: the project root comes from findRoot().
+const tr = (k, vars) => t(findRoot(), k, vars);
+
 const DESTRUCTIVE = [
-  [/\bdrop\s+(table|database|schema|index|view|collection)\b/i, 'DROP ile veri yapısı siliniyor'],
-  [/\btruncate\s+(table\s+)?\w/i, 'TRUNCATE ile tablo boşaltılıyor'],
-  [/\bdelete\s+from\s+[\w."]+\s*(;|"|'|$)/im, 'WHERE koşulu olmayan DELETE: tablodaki tüm satırlar silinir'],
-  [/\balter\s+table\b[^;]*\bdrop\s+column\b/i, 'ALTER TABLE ... DROP COLUMN ile sütun ve verisi siliniyor'],
-  [/\b(supabase\s+db\s+reset|prisma\s+migrate\s+reset|prisma\s+db\s+push\b[^;]*--force-reset|drizzle-kit\s+drop)\b/i, 'Veritabanı sıfırlanıyor'],
-  [/\b(alembic\s+downgrade\s+base|dropdb\b|rails\s+db:(drop|reset)|django-admin\s+flush|manage\.py\s+flush)\b/i, 'Veritabanı veya şema siliniyor'],
-  [/\bdocker\s+(compose\s+down\b[^;]*\s-v\b|volume\s+(rm|prune)\b|system\s+prune\b[^;]*--volumes)/i, 'Docker volume (kalıcı veri) siliniyor'],
-  [/\bgit\s+clean\b(?=[^;]*\s--?[a-z]*f)(?=[^;]*\s-[a-z]*d)/i, 'git clean ile takip edilmeyen dosyalar kalıcı siliniyor'],
-  [/\bredis-cli\b[^;]*\b(flushall|flushdb)\b/i, 'Redis verisi siliniyor'],
-  [/\bfirebase\s+firestore:delete\b/i, 'Firestore verisi siliniyor'],
+  [/\bdrop\s+(table|database|schema|index|view|collection)\b/i, 'DROP deletes a data structure'],
+  [/\btruncate\s+(table\s+)?\w/i, 'TRUNCATE empties a table'],
+  [/\bdelete\s+from\s+[\w."]+\s*(;|"|'|$)/im, 'DELETE without WHERE: every row in the table is deleted'],
+  [/\balter\s+table\b[^;]*\bdrop\s+column\b/i, 'ALTER TABLE ... DROP COLUMN deletes the column and its data'],
+  [/\b(supabase\s+db\s+reset|prisma\s+migrate\s+reset|prisma\s+db\s+push\b[^;]*--force-reset|drizzle-kit\s+drop)\b/i, 'Database is being reset'],
+  [/\b(alembic\s+downgrade\s+base|dropdb\b|rails\s+db:(drop|reset)|django-admin\s+flush|manage\.py\s+flush)\b/i, 'Database or schema is being deleted'],
+  [/\bdocker\s+(compose\s+down\b[^;]*\s-v\b|volume\s+(rm|prune)\b|system\s+prune\b[^;]*--volumes)/i, 'Docker volume (persistent data) is being deleted'],
+  [/\bgit\s+clean\b(?=[^;]*\s--?[a-z]*f)(?=[^;]*\s-[a-z]*d)/i, 'git clean permanently deletes untracked files'],
+  [/\bredis-cli\b[^;]*\b(flushall|flushdb)\b/i, 'Redis data is being deleted'],
+  [/\bfirebase\s+firestore:delete\b/i, 'Firestore data is being deleted'],
 ];
 
 // Database addresses other than localhost count as prod (or a shared environment)
@@ -36,15 +41,15 @@ const UNCLEAR_ENV = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(
 
 const NEEDS_APPROVAL = [
   // unquote() opens quoted spellings; here only what the shell sees
-  [/\b(vercel|vc)\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'Prod ortamına deploy'],
+  [/\b(vercel|vc)\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'guard.destructive.prodDeploy'],
   // The subcommand can also come after flags: vercel --scope team promote <url>
-  [/\b(vercel|vc)(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'Prod ortamı değişiyor (promote/rollback)'],
-  [UNCLEAR_ENV, 'Ortam değişkenleri çekiliyor ama ortam düz development/preview değil (değişken veya özel ortam: prod olabilir)'],
-  [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify\s+deploy\b[^;]*--prod/i, 'Sunucuya deploy'],
-  [/\beas(-cli(@[\w.-]+)?)?\s+(submit\b|update:(rollback|republish)\b|update\b(?=[^;\n]*--(branch|channel|environment)(=|\s+)['"]?prod(uction)?\b)|deploy\b(?=[^;\n]*--prod\b))/i, 'Mağazaya gönderim, prod OTA güncellemesi veya geri alma'],
-  [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'Ana dala doğrudan push'],
-  [/\bgit\s+(rebase|filter-branch|filter-repo)\b/i, 'Git geçmişi yeniden yazılıyor'],
-  [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'Migration uygulanıyor (hedef ortamı kontrol et)'],
+  [/\b(vercel|vc)(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'guard.destructive.promoteRollback'],
+  [UNCLEAR_ENV, 'guard.destructive.unclearEnv'],
+  [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify\s+deploy\b[^;]*--prod/i, 'guard.destructive.serverDeploy'],
+  [/\beas(-cli(@[\w.-]+)?)?\s+(submit\b|update:(rollback|republish)\b|update\b(?=[^;\n]*--(branch|channel|environment)(=|\s+)['"]?prod(uction)?\b)|deploy\b(?=[^;\n]*--prod\b))/i, 'guard.destructive.storeSubmit'],
+  [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'guard.destructive.pushMain'],
+  [/\bgit\s+(rebase|filter-branch|filter-repo)\b/i, 'guard.destructive.rewriteHistory'],
+  [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'guard.destructive.migration'],
 ];
 
 // The test guard runs on file tools; changing a test or test config file from the shell (sed -i, rm, >, mv, git checkout) is asked.
@@ -106,10 +111,10 @@ export function shellTargets(command, dir) {
     // \\?\ and \\.\ drop only before a drive letter; \\?\UNC\ turns back into plain UNC; GLOBALROOT, pipe etc. stay unclear
     let h = t.replace(/^(\\\\|\/\/)[?.][\\/](?=[a-zA-Z]:)/, '').replace(/^(\\\\|\/\/)[?.][\\/]UNC[\\/]/i, '\\\\')
       .replace(/^(\\\\|\/\/)(localhost|127\.0\.0\.1)[\\/]([a-zA-Z])\$(?=[\\/]|$)/i, '$3:');
-    if (/^(\\\\|\/\/)/.test(h)) return markUnclear(`hedef ağ yolu (${t})`), null;
+    if (/^(\\\\|\/\/)/.test(h)) return markUnclear(tr('guard.destructive.unclearNetPath', { path: t })), null;
     h = h.replace(/\$\{?PWD\}?/g, d).replace(/^~(?=\/|\\|$)/, os.homedir());
-    if (/[$`]/.test(h)) return markUnclear(`hedef değişken veya komut içeriyor (${t})`), null;
-    if (/\{[^}]*(,|\.\.)[^}]*\}/.test(h)) return markUnclear(`hedef süslü parantez açılımı içeriyor (${t})`), null;
+    if (/[$`]/.test(h)) return markUnclear(tr('guard.destructive.unclearVar', { path: t })), null;
+    if (/\{[^}]*(,|\.\.)[^}]*\}/.test(h)) return markUnclear(tr('guard.destructive.unclearBrace', { path: t })), null;
     if (process.platform === 'win32') h = h.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:');
     let p = path.resolve(d, h);
     // Glob: if missing on disk, the folder before the first wildcard is the target (src/*.ts → src, * → current folder)
@@ -139,7 +144,7 @@ export function shellTargets(command, dir) {
       const target = name === 'popd' ? stack.pop() : resolve(a.filter((x) => !/^-/.test(x) && !/^\/d$/i.test(x)).pop() ?? '$HOME');
       if (name === 'pushd') stack.push(dir);
       if (target && fs.existsSync(target)) dir = target;
-      else markUnclear(`${name} hedefi doğrulanamadı (${a.join(' ') || 'ev dizini'}); sonraki komutların klasörü bilinmiyor`);
+      else markUnclear(tr('guard.destructive.unclearCd', { name, target: a.join(' ') || tr('guard.destructive.homeDir') }));
       close();
       continue;
     }
@@ -156,19 +161,19 @@ export function shellTargets(command, dir) {
     }
     if (name === 'xargs') {
       const inner = a.filter((x) => !x.startsWith('-'));
-      if (writerKind(path.basename(inner[0] ?? '').toLowerCase(), inner.slice(1))) markUnclear(`xargs ${inner[0]} hedef dosyayı göstermiyor`);
+      if (writerKind(path.basename(inner[0] ?? '').toLowerCase(), inner.slice(1))) markUnclear(tr('guard.destructive.unclearXargs', { command: inner[0] }));
       close();
       continue;
     }
     const kind = writerKind(name, a);
-    if (kind === 'unclear') markUnclear(`${name} ${a.find((x) => !x.startsWith('-')) ?? ''}`.trim() + ' hedef dosyayı göstermiyor');
+    if (kind === 'unclear') markUnclear(tr('guard.destructive.unclearNoTarget', { command: `${name} ${a.find((x) => !x.startsWith('-')) ?? ''}`.trim() }));
     if (kind === 'target') {
       for (const x of fileArgs(name, a)) {
         const p = resolve(x);
         if (!p) continue;
         targets.push(p);
         // git checkout <branch>: if it is not a path it is a branch switch, the whole working tree may change
-        if (name === 'git' && !fs.existsSync(p) && !a.slice(0, a.indexOf(x)).includes('--')) markUnclear(`git ${a[0]} ${x}: yol değil (dal olabilir)`);
+        if (name === 'git' && !fs.existsSync(p) && !a.slice(0, a.indexOf(x)).includes('--')) markUnclear(tr('guard.destructive.unclearBranch', { sub: a[0], arg: x }));
       }
     }
     close();
@@ -214,34 +219,32 @@ export function scopeIssue(command, dir, root) {
   const touchesApproval = (y) => VIBE_KIT.test(y) || !/^\.\.|^$/.test(path.relative(y, vk)) && !path.isAbsolute(path.relative(y, vk));
   for (const h of targets) {
     if (touchesApproval(h) || touchesApproval(realPath(h))) return { decision: 'ask', reason: /tercihler\.md$/i.test(h)
-      ? `${h}: kişisel tercih dosyası (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/prefs.mjs --add / --remove kullanılır. Kullanıcı onayı gerekli.`
-      : `${h}: kapı komut onayı kaydı (kullanıcı klasörü); kabukla değiştirilmez, node .claude/hooks/gate.mjs --approve kullanılır. Kullanıcı onayı gerekli.` };
+      ? t(root, 'guard.destructive.prefsFile', { path: h })
+      : t(root, 'guard.destructive.gateApproval', { path: h }) };
     const rel = relPath(realPath(h), groot);
-    const k = protectedRule(rel) ?? protectedRule(`${rel}/`);
-    if (k) return { decision: k[0], reason: k[0] === 'deny' ? `${rel}: ${k[2]}`
-      : `${rel}: ${k[2]} Kabuk komutuyla değiştiriliyor; kilit, plan ve onay durumları için ilgili kit komutunu kullan. Kullanıcı onayı gerekli.` };
+    const k = protectedRule(rel, root) ?? protectedRule(`${rel}/`, root);
+    if (k) return { decision: k[0], reason: k[0] === 'deny' ? `${rel}: ${k[2]}` : t(root, 'guard.destructive.protectedShell', { rel, text: k[2] }) };
   }
   // The target could not be resolved but the command names a rule/guard file ($D/AGENTS.md, {AGENTS,X}.md): asked even without a lock/plan
   if (unclear && /AGENTS|CLAUDE|\.(claude|git|github|codex|agents|env|mcp)\b|secrets|vibe-kit/i.test(command)) {
-    return { decision: 'ask', reason: `${unclear}; komut kural veya koruma dosyası adını içeriyor (.claude, .git, AGENTS.md…), hedef doğrulanamadı. Kullanıcı onayı gerekli.` };
+    return { decision: 'ask', reason: t(root, 'guard.destructive.unclearRule', { unclear }) };
   }
   const lock = readLock(root), plan = readPlan(root);
   if (!lock && !plan) return null;
-  const label = lock ? `Düzenleme kilidi (${lock}/)` : `Kapsam kalkanı (görev ${plan.task})`;
-  if (unclear) return { decision: 'ask', reason: `${label}: ${unclear}; hangi dosyaların değişeceği bilinemiyor. Gerekliyse kullanıcıya sor.` };
+  const label = lock ? t(root, 'guard.destructive.labelLock', { lock }) : t(root, 'guard.destructive.labelPlan', { task: plan.task });
+  if (unclear) return { decision: 'ask', reason: t(root, 'guard.destructive.scopeUnclear', { label, unclear }) };
   for (const h of targets) {
     if (!fs.existsSync(h)) continue;
     const p = realPath(h), up = path.relative(p, groot), rel = relPath(p, groot);
     if (!up.startsWith('..') && !path.isAbsolute(up)) {
-      return { decision: 'ask', reason: `${label}: komut proje kökünü veya üst klasörünü hedefliyor (${rel || '.'}); kilit/plan dışındaki dosyalar da değişebilir. Gerekliyse kullanıcıya sor.` };
+      return { decision: 'ask', reason: t(root, 'guard.destructive.scopeRoot', { label, rel: rel || '.' }) };
     }
     if (rel.startsWith('..') || path.isAbsolute(rel)) continue;
     if (lock && !allowedInLock(p, lock, groot)) {
-      return { decision: 'ask', reason: `Düzenleme kilidi: ${rel} kilit (${lock}/) dışında ve komut onu değiştirebilir. Gerekliyse kullanıcıya sor.` };
+      return { decision: 'ask', reason: t(root, 'guard.destructive.lockOutside', { rel, lock }) };
     }
     if (plan && !inScope(fs.statSync(p).isDirectory() ? `${rel}/` : rel, plan.paths)) {
-      return { decision: 'ask', reason: `Kapsam kalkanı: ${rel} onaylı planda yok (görev ${plan.task}) ve komut onu değiştirebilir. Gerekliyse kullanıcıya sor; ` +
-        'onaylarsa node .claude/hooks/freeze-guard.mjs --plan-add <yol>.' };
+      return { decision: 'ask', reason: t(root, 'guard.destructive.planOutside', { rel, task: plan.task }) };
     }
   }
   return null;
@@ -252,22 +255,22 @@ export function scopeIssue(command, dir, root) {
 // Only the real .claude/hooks/commit-gate.mjs --approve is kept out of the gate rule (separators optional: unquote drops backslashes;
 // anchored at the start of the path, so sandbox/.claude/hooks/commit-gate.mjs, a renamed gate.mjs, is not exempt).
 const PERMISSION_EQUIVALENT = [
-  ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'rm -rf ile toplu silme'],
-  ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'Klasör toplu siliniyor'],
-  ['deny', /\bgit\s+reset\s+[^;&|]*--hard\b/i, 'git reset --hard ile commit edilmemiş iş siliniyor'],
-  ['deny', /\bgit\s+push\b[^;&|]*\s(--force\S*|-\w*f\w*|\+\S+)(?=\s|$)/i, 'git push --force ile uzak geçmiş eziliyor'],
-  ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, '.env veya secrets/ dosyasına erişiliyor (AI okumaz, yazmaz)'],
-  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'Düzenleme kilidi kaldırılıyor'],
-  ['ask', /tools\.mjs['"]?\s+['"]?--commands\b/i, 'Paylaşılan .claude/settings.json → skillOverrides değişiyor (komut listesi)'],
-  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-add\b/i, 'Onaylı planın dosya listesi genişliyor (kapsam kalkanı)'],
-  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-save\b/i, 'Kapsam kalkanının dosya listesi yazılıyor'],
-  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-end\b/i, 'Kapsam kalkanı kapatılıyor'],
-  ['ask', /commit-gate\.mjs\b[^;&|\n]*--skip\b/i, 'Commit kapısı ve kurul denetimi atlanıyor'],
-  ['ask', /prefs\.mjs['"]?\s+['"]?--(add|remove)\b/i, 'Kişisel tercih dosyası (~/.vibe-kit/tercihler.md) değişiyor'],
-  ['ask', /(?<!(?:^|[\s'"=])(?:\.[\\/]|\$\{?CLAUDE_PROJECT_DIR\}?[\\/]?)?\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'Deterministik kapının çalıştıracağı komutlar onaylanıyor'],
+  ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'Bulk deletion with rm -rf'],
+  ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'A folder is being bulk deleted'],
+  ['deny', /\bgit\s+reset\s+[^;&|]*--hard\b/i, 'git reset --hard deletes uncommitted work'],
+  ['deny', /\bgit\s+push\b[^;&|]*\s(--force\S*|-\w*f\w*|\+\S+)(?=\s|$)/i, 'git push --force overwrites the remote history'],
+  ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, 'Access to .env or secrets/ (the AI does not read or write them)'],
+  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'guard.destructive.perm.freezeOff'],
+  ['ask', /tools\.mjs['"]?\s+['"]?--commands\b/i, 'guard.destructive.perm.toolsCommands'],
+  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-add\b/i, 'guard.destructive.perm.planAdd'],
+  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-save\b/i, 'guard.destructive.perm.planSave'],
+  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-end\b/i, 'guard.destructive.perm.planEnd'],
+  ['ask', /commit-gate\.mjs\b[^;&|\n]*--skip\b/i, 'guard.destructive.perm.commitSkip'],
+  ['ask', /prefs\.mjs['"]?\s+['"]?--(add|remove)\b/i, 'guard.destructive.perm.prefsEdit'],
+  ['ask', /(?<!(?:^|[\s'"=])(?:\.[\\/]|\$\{?CLAUDE_PROJECT_DIR\}?[\\/]?)?\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'guard.destructive.perm.gateApprove'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked
   // (.git: the gate command approval and git hooks live there)
-  ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents|git)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor'],
+  ['ask', /(?=.*((^|[\s'"/\\])\.(claude|codex|agents|git)(?=$|[\s/\\'"])|\bAGENTS\.md|\bCLAUDE\.md))(?=.*(\b(rm|del|erase|rmdir|rd|mv|move|cp|copy|tee|truncate|checkout|restore|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item)\b|\bsed\s+-i|>|\bnode\s+-e|\bpython\d?\s+-c))/i, 'guard.destructive.perm.protectedShell'],
 ];
 
 // What the shell will see: $'..' is opened, quotes, \ escapes and PowerShell ` escapes drop. For matching only.
@@ -292,7 +295,10 @@ export function permissionEquivalent(command) {
 function permissionOne(command) {
   const k = command.replace(/\s+/g, ' ').replace(/\b2>&1|\b2>\s*(\/dev\/null|nul)\b/gi, ''); // an error redirect is not a write
   const e = PERMISSION_EQUIVALENT.find(([, re]) => re.test(k));
-  return e ? { decision: e[0], reason: `${e[2]}. ${e[0] === 'deny' ? 'AI bu komutu çalıştıramaz; gerekliyse kullanıcı kendisi çalıştırır.' : 'Kullanıcı onayı gerekli.'}` } : null;
+  if (!e) return null;
+  return e[0] === 'deny'
+    ? { decision: 'deny', reason: `${e[2]}. The AI cannot run this command; if needed, the user runs it themselves.` }
+    : { decision: 'ask', reason: tr('guard.destructive.approvalSuffix', { reason: tr(e[2]) }) };
 }
 
 // When in doubt, ask: instead of emulating the shell, if a protected word shows up while an obfuscation mark is present, the decision is "ask".
@@ -310,7 +316,7 @@ function obfuscationOne(command) {
   if (!OBFUSCATION.test(command)) return null;
   const g = loosen(command);
   return GUARDED.some((re) => re.test(g))
-    ? { decision: 'ask', reason: 'Komut gizlenmiş görünüyor (satır sonu \\, $\'..\', $(...), `...` veya ${...}) ve korunan bir işlem içeriyor. Kullanıcı onayı gerekli.' } : null;
+    ? { decision: 'ask', reason: tr('guard.destructive.obfuscated') } : null;
 }
 
 // A kit guard script (.claude/hooks) run with an indirect spelling: $VAR, $(..), `..`, ${..}, $'..', a glob * ?, xargs, a pipe or < (commit-gate.mjs $S,
@@ -322,7 +328,7 @@ export function hookScriptIssue(command) {
   if (!/\bnode\b/i.test(k) || !/\.claude|hooks|commit-|gate|freeze/i.test(command)) return null;
   // Arguments from elsewhere count too: xargs, a pipe into node, an input redirect or <(...)
   return /\$\(|`|\$\{|\$'|\$[A-Za-z_]|[*?]|\bxargs\b|\|[^|;&]*\bnode\b|<(?!<)/.test(k)
-    ? { decision: 'ask', reason: 'Kitin koruma betiği dolaylı yazımla çalıştırılıyor ($DEĞİŞKEN, $(...), `...`, ${...} veya * ?); kural metni bunun içini göremez. Kullanıcı onayı gerekli.' } : null;
+    ? { decision: 'ask', reason: tr('guard.destructive.indirectHook') } : null;
 }
 
 // Separators inside quotes turned into spaces: a quoted & or | ("a & b") must not split a command so its later flags escape the rules
@@ -331,7 +337,7 @@ const blankQuoted = (s) => s.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => q.repl
 // path ("src/a.test.ts") is kept. Such commands are still asked through evaluateOne.
 const quotedTextOff = (s) => s.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => (/\s/.test(q) ? ' ' : q.slice(1, -1)));
 const INLINE = /\b(node|deno|bun)\s+(-e|--eval|-p|--print)\b|\bpython[\d.]*\s+-c\b|\b(ruby|perl)\s+-e\b|\b(ba|z|da)?sh\s+-c\b|\b(pwsh|powershell)(\.exe)?\s+(-c|-Command)\b|\bcmd(\.exe)?\s+\/c\b/i;
-const TEST_WRITER_ONLY = 'Test dosyasına yalnız test-writer ajanı yazar: kodu yazan testi değiştiremez (AGENTS.md kural 7). Test eklemek veya değiştirmek gerekiyorsa test-writer ajanını çağır (varsa SendMessage ile sürdür).';
+const TEST_WRITER_ONLY = 'Only the test-writer agent writes to test files: whoever writes the code cannot change tests (AGENTS.md rule 7). If a test must be added or changed, call the test-writer agent (continue it with SendMessage if it exists).';
 // ctx: { tool, agent } of the call; only Claude Code tells which subagent runs it. Test files are written by the
 // test-writer agent only; test config files stay a question (evaluateOne).
 export function evaluate(command, ctx = {}) {
@@ -339,28 +345,32 @@ export function evaluate(command, ctx = {}) {
     ? { decision: 'deny', reason: TEST_WRITER_ONLY } : null;
   // An inline script (node -e, python -c, bash -c) that names a test path may write it; the shell rules cannot see inside
   const inline = INLINE.test(command) && command.split(/[\s'"`(),;=<>]+/).some(isTestCode)
-    ? { decision: 'ask', reason: 'Satır içi betik bir test yolunu anıyor; test dosyasına yazıyor olabilir. Test dosyasına yalnız test-writer ajanı yazar (AGENTS.md kural 7). Kullanıcı onayı gerekli.' } : null;
+    ? { decision: 'ask', reason: tr('guard.destructive.inlineTest') } : null;
   return strictest(testWrite, inline, evaluateOne(command), evaluateOne(unquote(command)), evaluateOne(blankQuoted(command)), obfuscationOne(command), hookScriptIssue(command));
 }
 function evaluateOne(command) {
   const k = command.replace(/\s+/g, ' ');
   const prodDb = PROD_DB.test(k) || PROD_MARK.test(k);
   if (PROD_SECRET.test(k)) {
-    return { decision: 'deny', reason: 'Prod ortam değişkenleri (sırlar) bu makineye çekiliyor. Yerel ortam ve AI sadece dev projesine bağlanır; prod değerleri barındırma panelinde kalır. Gerekliyse kullanıcı kendisi çalıştırır.' };
+    return { decision: 'deny', reason: 'Prod environment variables (secrets) are being pulled onto this machine. The local environment and the AI connect to the dev project only; prod values stay in the hosting dashboard. If needed, the user runs it themselves.' };
   }
   for (const [re, reason] of DESTRUCTIVE) {
     if (re.test(k)) {
-      return { decision: 'deny', reason: `${reason}${prodDb ? ' — PROD/uzak veritabanı hedefleniyor' : ''}. AI bu komutu çalıştıramaz. Gerekliyse kullanıcı, önce yedek alıp kendisi çalıştırır (Claude Code'da "! komut" veya kendi terminali).` };
+      return { decision: 'deny', reason: `${reason}${prodDb ? ' — a PROD/remote database is targeted' : ''}. The AI cannot run this command. If needed, the user takes a backup first and runs it themselves (in Claude Code with "! command" or in their own terminal).` };
     }
   }
-  for (const [re, reason] of NEEDS_APPROVAL) {
-    if (re.test(k)) return { decision: prodDb ? 'deny' : 'ask', reason: `${reason}. Kullanıcı onayı gerekli.${prodDb ? ' Komut prod veritabanı adresi içeriyor; AI çalıştıramaz.' : ''}` };
+  for (const [re, key] of NEEDS_APPROVAL) {
+    if (re.test(k)) {
+      return prodDb
+        ? { decision: 'deny', reason: `${tr(key)}. User approval required. The command contains a prod database address; the AI cannot run it.` }
+        : { decision: 'ask', reason: tr('guard.destructive.approvalSuffix', { reason: tr(key) }) };
+    }
   }
   if (prodDb && /\b(psql|mysql|mongosh|redis-cli|prisma|drizzle-kit|alembic|supabase)\b/i.test(k)) {
-    return { decision: 'ask', reason: 'Komut localhost dışındaki bir veritabanına bağlanıyor (prod olabilir). Kullanıcı onayı gerekli; AI prod erişim bilgisi kullanmamalı.' };
+    return { decision: 'ask', reason: tr('guard.destructive.remoteDb') };
   }
   if (writesTest(k)) {
-    return { decision: 'ask', reason: 'Test dosyası kabuk komutuyla değiştiriliyor, taşınıyor veya siliniyor. Testi geçirmek için testi zayıflatmak yasak (AGENTS.md kural 7); test düzenlemesini dosya aracıyla yap. Kullanıcı onayı gerekli.' };
+    return { decision: 'ask', reason: tr('guard.destructive.testShell') };
   }
   return null;
 }
@@ -370,6 +380,6 @@ if (isMain(import.meta.url)) {
   // Of the lists, the stricter wins (deny > ask)
   const results = g ? [evaluate(g.command, g), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root)].filter(Boolean) : [];
   const s = results.find((x) => x.decision === 'deny') ?? results[0];
-  if (s) decide(g.tool, s.decision, `Kalkan: ${s.reason}`);
+  if (s) decide(g.tool, s.decision, s.decision === 'ask' ? tr('guard.destructive.prefix', { reason: s.reason }) : `Shield: ${s.reason}`);
   process.exit(0);
 }

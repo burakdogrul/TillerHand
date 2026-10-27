@@ -14,22 +14,28 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const tmpFile = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'model-')), 'state', 'models.json');
 
-test('models: recommended by default, --set changes only the given roles, bad input is refused', () => {
+test('models: recommended by default, --set changes only the given roles, bad input is refused', (t) => {
+  // The saved-choice note goes through t(): pin the project language (findRoot reads CLAUDE_PROJECT_DIR)
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'model-lang-'));
+  fs.writeFileSync(path.join(project, '.kit.json'), JSON.stringify({ type: 'web-saas', lang: 'en' }));
+  const previous = process.env.CLAUDE_PROJECT_DIR;
+  process.env.CLAUDE_PROJECT_DIR = project;
+  t.after(() => { if (previous === undefined) delete process.env.CLAUDE_PROJECT_DIR; else process.env.CLAUDE_PROJECT_DIR = previous; });
   const file = tmpFile();
   assert.deepEqual(readModels(file), RECOMMENDED);
-  assert.match(showModels(file), /kayıt yok/);
+  assert.match(showModels(file), /no saved choice/);
   assert.equal(setModels(['code=haiku:medium', 'PLAN=Opus:XHIGH'], file), null);
   assert.deepEqual(readModels(file), { ...RECOMMENDED, code: 'haiku:medium', plan: 'opus:xhigh' });
-  assert.match(showModels(file), /^plan: opus \/ xhigh \(Planlama ve mimari\) · önerilen opus \/ high$/m);
+  assert.match(showModels(file), /^plan: opus \/ xhigh \(Planning and architecture\) · recommended opus \/ high$/m);
   for (const bad of ['code=gpt:low', 'code=sonnet:max', 'code=sonnet', 'code=sonnet:low:x', 'code=sonnet:medium=x', 'yok=sonnet:low', '__proto__=sonnet:low', 'code'])
-    assert.match(setModels([bad], file), /Geçersiz/, bad);
-  assert.match(setModels([], file), /Kullanım/);
+    assert.match(setModels([bad], file), /Invalid/, bad);
+  assert.match(setModels([], file), /Usage/);
   assert.equal(readModels(file).code, 'haiku:medium', 'a refused --set writes nothing');
   fs.writeFileSync(file, '{"code":"gpt-9:ultra","docs":"sonnet:low"}');
   assert.deepEqual(readModels(file), { ...RECOMMENDED, docs: 'sonnet:low' }, 'a bad hand edit falls back to the recommended value');
   fs.writeFileSync(file, 'bozuk');
   assert.deepEqual(readModels(file), RECOMMENDED);
-  assert.match(showModels(file), /kayıt okunamadı/, 'a broken file is not shown as a saved choice');
+  assert.match(showModels(file), /saved choice unreadable/, 'a broken file is not shown as a saved choice');
 });
 
 test('models: the CLI exits 1 on a bad --set and writes nothing', () => {
@@ -37,7 +43,7 @@ test('models: the CLI exits 1 on a bad --set and writes nothing', () => {
   const run = (...args) => spawnSync(process.execPath, [path.join(ROOT, '.claude/hooks/models.mjs'), ...args], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root } });
   const bad = run('--set', 'code=gpt:low');
   assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /Geçersiz/);
+  assert.match(bad.stderr, /Invalid/);
   assert.equal(fs.existsSync(path.join(root, '.claude/state/models.json')), false);
   const ok = run('--set', 'docs=sonnet:low');
   assert.equal(ok.status, 0);
@@ -75,16 +81,16 @@ test('test-writer K4 models: the CLI warns when the code and test roles share a 
   const run = (...args) => spawnSync(process.execPath, [path.join(ROOT, '.claude/hooks/models.mjs'), ...args], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root } });
   const same = run('--set', 'code=sonnet:high', 'test=sonnet:medium');
   assert.equal(same.status, 0, same.stderr);
-  assert.match(same.stdout, /aynı model/, '--set warns');
+  assert.match(same.stdout, /code and test roles use the same model/, '--set warns');
   assert.equal(readModels(path.join(root, '.claude/state/models.json')).test, 'sonnet:medium', 'the choice is still saved');
-  assert.match(run('--show').stdout, /aynı model/, '--show warns');
+  assert.match(run('--show').stdout, /code and test roles use the same model/, '--show warns');
   const diff = run('--set', 'code=sonnet:high', 'test=opus:high');
   assert.equal(diff.status, 0, diff.stderr);
-  assert.doesNotMatch(diff.stdout, /aynı model/);
-  assert.doesNotMatch(run('--show').stdout, /aynı model/);
+  assert.doesNotMatch(diff.stdout, /same model/);
+  assert.doesNotMatch(run('--show').stdout, /same model/);
   const fresh = fs.mkdtempSync(path.join(os.tmpdir(), 'model-tw0-'));
   const show = spawnSync(process.execPath, [path.join(ROOT, '.claude/hooks/models.mjs'), '--show'], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: fresh } });
-  assert.doesNotMatch(show.stdout, /aynı model/, 'recommended values differ (sonnet / opus)');
+  assert.doesNotMatch(show.stdout, /same model/, 'recommended values differ (sonnet / opus)');
 });
 
 test('test-writer K4 models: build.md saves the test role', () => {

@@ -120,7 +120,7 @@ export function decisionText(tool, decision, reason) {
   if (tool === 'antigravity') return JSON.stringify({ decision, reason });
   if (tool === 'codex' && decision === 'ask') {
     decision = 'deny';
-    reason = `Kullanıcı onayı gerekli. ${reason} Codex'te onay penceresi olmadığı için engellendi: kullanıcıya sor; onaylarsa işlemi kendisi yapsın.`;
+    reason = `User approval required. ${reason} Blocked because Codex has no approval prompt: ask the user; if they approve, they should do the action themselves.`;
   }
   return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: decision, permissionDecisionReason: reason } });
 }

@@ -36,7 +36,7 @@ export function changedFiles(root, base) {
   let list;
   // base unknown (new branch, a commit missing from the clone after force-push): the whole repo is measured
   try { list = !base || /^0+$/.test(base) ? git('ls-files', '-z') : git('diff', '--name-only', '-z', '--diff-filter=AMR', '--end-of-options', base, 'HEAD'); }
-  catch { console.warn(`base (${base}) bulunamadı; tüm depo ölçülüyor.`); list = git('ls-files', '-z'); }
+  catch { console.warn(`base (${base}) not found; measuring the whole repo.`); list = git('ls-files', '-z'); }
   return list.filter((f) => fs.existsSync(path.join(root, f)));
 }
 
@@ -44,21 +44,21 @@ function check() {
   const root = findRoot();
   const i = process.argv.indexOf('--base');
   const files = selectFiles(changedFiles(root, i > 0 ? process.argv[i + 1] : ''));
-  if (!files.length) { console.log('Karmaşıklık bütçesi: değişen kod dosyası yok.'); return; }
+  if (!files.length) { console.log('Complexity budget: no changed code files.'); return; }
   let failed = false;
   for (const { file, lines } of longFiles(root, files)) {
-    console.error(`${file}: ${lines} satır (bütçe ${BUDGET.file}). Dosyayı sorumluluklarına göre böl.`);
+    console.error(`${file}: ${lines} lines (budget ${BUDGET.file}). Split the file by responsibility.`);
     failed = true;
   }
   const [command, ...prefix] = process.env.LIZARD ? [process.env.LIZARD] : LIZARD;
   const r = spawnSync(command, [...prefix, ...lizardArgs(files)], { cwd: root, stdio: 'inherit' });
-  if (r.error) { console.error(`lizard çalıştırılamadı (${command}): ${r.error.code}. CI'da pipx hazır gelir; yerelde: pip install lizard==1.24.1, sonra LIZARD=lizard.`); failed = true; }
-  else if (r.status !== 0) { console.error(`Fonksiyon bütçesi aşıldı (karmaşıklık ${BUDGET.complexity}, uzunluk ${BUDGET.function} satır). Fonksiyonu küçük parçalara böl.`); failed = true; }
+  if (r.error) { console.error(`Could not run lizard (${command}): ${r.error.code}. pipx is ready in CI; locally: pip install lizard==1.24.1, then LIZARD=lizard.`); failed = true; }
+  else if (r.status !== 0) { console.error(`Function budget exceeded (complexity ${BUDGET.complexity}, length ${BUDGET.function} lines). Split the function into smaller parts.`); failed = true; }
   if (failed) process.exit(1);
-  console.log(`Karmaşıklık bütçesi uygun: ${files.length} dosya.`);
+  console.log(`Complexity budget OK: ${files.length} files.`);
 }
 
 if (isMain(import.meta.url)) {
   if (process.argv.includes('--check')) check();
-  else { console.error('Kullanım: node .claude/hooks/budget.mjs --check [--base <commit>]'); process.exit(1); }
+  else { console.error('Usage: node .claude/hooks/budget.mjs --check [--base <commit>]'); process.exit(1); }
 }

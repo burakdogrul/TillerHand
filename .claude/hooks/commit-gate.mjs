@@ -10,6 +10,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { findRoot, isMain } from './shared.mjs';
+import { t } from './lang.mjs';
 import { unquote } from './destructive-guard.mjs';
 import { isTestFile, isTestConfig, digest, readRecord } from './test-guard.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
@@ -88,9 +89,9 @@ export function chainIssue(command, commit = COMMIT) {
     .replace(/'[^']*'/g, "''")
     .replace(/"((?:[^"\\]|\\.)*)"/g, (m, inner) => (/\$\(|`/.test(inner) ? m : '""'))
     .replace(/\d*>&\d+/g, '');
-  if (/\$\(|`/.test(k)) return 'komutta ikame var ($(...) veya `...`)';
+  if (/\$\(|`/.test(k)) return 'the command has a substitution ($(...) or `...`)';
   const parts = k.split(/&&|\|\||[;|&\n]/).map((s) => s.trim()).filter(Boolean);
-  return parts.every((s) => commit.test(s) || /^git\s+add\b/.test(s) || /^cd\b/.test(s)) ? null : 'commit başka komutlarla zincirli';
+  return parts.every((s) => commit.test(s) || /^git\s+add\b/.test(s) || /^cd\b/.test(s)) ? null : 'the commit is chained with other commands';
 }
 
 export const docsOnly = (files) => files.every((f) => /\.(md|txt)$/i.test(f) || f.startsWith('docs/'));
@@ -115,7 +116,7 @@ const SKIPPED = /^atlandı/i;
 
 function approve(note) {
   if (SKIPPED.test(note)) {
-    console.error('"atlandı" notu --approve ile yazılmaz. Kullanıcı açıkça isterse: node .claude/hooks/commit-gate.mjs --skip "<neden>"');
+    console.error('A note starting with "atlandı" is not written with --approve. If the user explicitly asks: node .claude/hooks/commit-gate.mjs --skip "<reason>"');
     process.exit(1);
   }
   save(note);
@@ -125,7 +126,7 @@ function save(note) {
   const { signature, files, hashes } = changes();
   fs.mkdirSync(path.dirname(approvalFile), { recursive: true });
   fs.writeFileSync(approvalFile, JSON.stringify({ signature, note, files, hashes, date: new Date().toISOString() }));
-  console.log(`Commit kapısı açıldı (${files.length} dosya). Not: ${note}`);
+  console.log(`Commit gate opened (${files.length} files). Note: ${note}`);
 }
 
 const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
@@ -145,16 +146,16 @@ function readApproval() {
 // --status: has this change already been reviewed? /review-changes and the commit board read this before convening
 function status() {
   let d;
-  try { d = changes(); } catch { console.log('Git deposu değil.'); return; }
-  if (!d.files.length) { console.log('Değişiklik yok.'); return; }
+  try { d = changes(); } catch { console.log('Not a git repository.'); return; }
+  if (!d.files.length) { console.log('No changes.'); return; }
   const approval = readApproval(), gate = readGate();
   // A skipped review covers no file: it is not "reviewed", and after a change the whole diff is still to be reviewed
   const skipped = SKIPPED.test(String(approval?.note ?? ''));
-  const gateText = gate?.signature !== d.signature ? 'kapı bu değişiklikler için çalışmadı' : gate.passed ? 'kapı yeşil' : 'kapı kırmızı';
-  if (skipped && approval.signature === d.signature) console.log(`Denetim atlandı (${approval.note}, ${approval.date ?? '-'}): bu değişiklikler denetlenmedi · ${gateText}.`);
-  else if (!approval || skipped) console.log(`Onay yok: bu değişiklikler için kurul denetimi yapılmadı (${d.files.length} dosya) · ${gateText}.`);
-  else if (approval.signature === d.signature) console.log(`Onay geçerli (${approval.note}, ${approval.date ?? '-'}): bu değişiklikler denetlendi, yeniden inceleme gerekmez · ${gateText}.`);
-  else console.log(`Onay eski (${approval.note}). Son onaydan sonra değişen: ${sinceApproval(approval, d).join(', ')}. Yalnız bunları incele · ${gateText}.`);
+  const gateText = gate?.signature !== d.signature ? 'the gate has not run for these changes' : gate.passed ? 'gate green' : 'gate red';
+  if (skipped && approval.signature === d.signature) console.log(`Review skipped (${approval.note}, ${approval.date ?? '-'}): these changes were not reviewed · ${gateText}.`);
+  else if (!approval || skipped) console.log(`No approval: the board has not reviewed these changes (${d.files.length} files) · ${gateText}.`);
+  else if (approval.signature === d.signature) console.log(`Approval valid (${approval.note}, ${approval.date ?? '-'}): these changes were reviewed, no new review needed · ${gateText}.`);
+  else console.log(`Approval is stale (${approval.note}). Changed since the last approval: ${sinceApproval(approval, d).join(', ')}. Review only these · ${gateText}.`);
 }
 
 // This project's own commit-gate.mjs, resolved from the shell's folder ($CLAUDE_PROJECT_DIR, absolute, relative or ./ spelling),
@@ -188,7 +189,7 @@ async function hook() {
   const commit = commitPattern(command);
   if (!commit.test(command) && [command, open].some((c) => /commit-gate\.mjs\b[^;&|\n]*--skip\b/i.test(c))) {
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
-      permissionDecisionReason: 'Commit kapısı: --skip kurul denetimini ve deterministik kapıyı aşar. Sadece kullanıcı açıkça isterse onayla.' } }));
+      permissionDecisionReason: t(root, 'guard.commit.skipAsk') } }));
     process.exit(0);
   }
   // The gate command approval gives the commands in AGENTS.md permission to run: the user is asked (also covers spellings the permission list misses).
@@ -199,22 +200,22 @@ async function hook() {
     // prompt and get another list approved. Only the exact spelling is accepted.
     if (!/^\s*node\s+(\.\/)?\.claude[\\/]hooks[\\/]gate\.mjs\s+(['"]?)--approve\2\s*$/.test(command)) {
       console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny',
-        permissionDecisionReason: 'Kapı komut onayı sadece tam bu yazımla, tek başına çalıştırılır (zincir, ortam değişkeni, bayrak, yönlendirme yok): node .claude/hooks/gate.mjs --approve' } }));
+        permissionDecisionReason: 'The gate command approval runs only with exactly this spelling, on its own (no chain, environment variable, flag or redirect): node .claude/hooks/gate.mjs --approve' } }));
       process.exit(0);
     }
     // Loaded only here: every Bash call runs this hook, and gate.mjs pulls in the dashboard and edit-round modules
     const { approvedCommands, commandList } = await import('./gate.mjs');
-    const list = commandList(approvedCommands(root)) || '(tanımlı komut yok)';
+    const list = commandList(approvedCommands(root)) || t(root, 'guard.commit.noCommands');
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
-      permissionDecisionReason: `Kapı komut onayı: AGENTS.md → Komutlar'daki şu komutlar bundan sonra her kapıda çalışır:\n${list}\nGüvendiğin komutlarsa onayla.` } }));
+      permissionDecisionReason: t(root, 'guard.commit.gateApprovalAsk', { list }) } }));
     process.exit(0);
   }
   if (!commit.test(command) && !commit.test(open)) process.exit(0);
   if (!hasBoard() || reviewOff()) process.exit(0);
   const chain = chainIssue(command, commit.inline ? COMMIT : commit);
   if (chain) {
-    process.stderr.write(`Commit durduruldu: ${chain}. Kapı komut çalışmadan önceki değişiklikleri denetler; commit'i tek başına ` +
-      '(veya yalnızca "git add … && git commit" ile) çalıştır. Push ve diğer komutları ayrı çalıştır.\n');
+    process.stderr.write(`Commit stopped: ${chain}. The gate reviews the changes as they were before the command runs; run the commit on its own ` +
+      '(or only as "git add … && git commit"). Run push and other commands separately.\n');
     process.exit(2);
   }
 
@@ -237,45 +238,45 @@ async function hook() {
   const written = readRecord(root);
   const foreign = d.files.filter((f) => isTestFile(f) && isCodeFile(f) && !isTestConfig(f) && d.hashes[f] !== 'silindi' && written[f] !== d.hashes[f]);
   if (foreign.length && !(skipped && approval.signature === d.signature)) {
-    process.stderr.write(`Commit durduruldu: şu test dosyalarını test-writer yazmadı, yazdıktan sonra değişti ya da kısmen hazırlandı: ${foreign.join(', ')}.\n` +
-      'Test dosyalarına yalnız test-writer ajanı Write/Edit ile yazar (AGENTS.md kural 7); patch, betik, kabuk, git mv veya Codex/Antigravity ile yazılan test sayılmaz.\n' +
-      'Değişiklik gerekiyorsa test-writer\'a dosyayı gözden geçirtip Write/Edit ile yeniden yazdır. Değişikliği kullanıcı kendisi yaptıysa ' +
-      've bu commit için denetimi atlamayı açıkça isterse --skip "kullanıcı isteği" kullan.\n');
+    process.stderr.write(`Commit stopped: test-writer did not write these test files, or they changed after it wrote them, or they were partially staged: ${foreign.join(', ')}.\n` +
+      'Only the test-writer agent writes test files with Write/Edit (AGENTS.md rule 7); a test written by patch, script, shell, git mv or Codex/Antigravity does not count.\n' +
+      'If a change is needed, have test-writer review the file and rewrite it with Write/Edit. If the user made the change themselves ' +
+      'and explicitly asks to skip the review for this commit, use --skip "user request".\n');
     process.exit(2);
   }
   if (approval?.signature === d.signature && (skipped || (gate?.signature === d.signature && gate.passed === true))) process.exit(0);
   if (approval?.signature === d.signature) {
     const failed = gate?.signature === d.signature ? gate.checks.filter((k) => k.status === 'failed').map((k) => k.name) : null;
     process.stderr.write(failed && !failed.length && gate.empty
-      ? 'Commit durduruldu: deterministik kapı boş (hiçbir kontrol çalışmadı). AGENTS.md → Komutlar\'ı doldur ve kapıyı tekrar çalıştır.\n' +
-        'Kullanıcı bu commit için açıkça isterse --skip "kullanıcı isteği" kullan.\n'
+      ? 'Commit stopped: the deterministic gate is empty (no check ran). Fill in AGENTS.md → Komutlar and run the gate again.\n' +
+        'If the user explicitly asks for this commit, use --skip "user request".\n'
       : failed
-      ? `Commit durduruldu: deterministik kapı kırmızı (${failed.join(', ') || 'kaldı'}). Düzelt, node .claude/hooks/gate.mjs --run ile tekrar çalıştır, sonra onayla.\n` +
-        'Kullanıcı ara commit (WIP) için açıkça isterse --skip "kullanıcı isteği" kullan.\n'
-      : 'Commit durduruldu: bu değişiklikler için deterministik kapı çalışmadı (ya da sonrasında değişiklik oldu). ' +
-        'node .claude/hooks/gate.mjs --run çalıştır; kırmızı yoksa kurul onayını yenile ve commit\'i tekrar dene.\n');
+      ? `Commit stopped: the deterministic gate is red (${failed.join(', ') || 'failed'}). Fix it, run node .claude/hooks/gate.mjs --run again, then approve.\n` +
+        'If the user explicitly asks for an intermediate (WIP) commit, use --skip "user request".\n'
+      : 'Commit stopped: the deterministic gate has not run for these changes (or the changes were modified after it ran). ' +
+        'Run node .claude/hooks/gate.mjs --run; if nothing is red, renew the board approval and try the commit again.\n');
     process.exit(2);
   }
 
   const delta = approval && !skipped ? sinceApproval(approval, d) : [];
   process.stderr.write(
     (delta.length && delta.length < d.files.length
-      ? `Commit durduruldu: son onaydan (${approval.note}) sonra değişen dosyalar denetlenmedi: ${delta.join(', ')}.\n` +
-        'Kurul yalnız bu dosyaların farkına bakar; önceki onaylı dosyalar yeniden incelenmez.\n'
-      : `Commit durduruldu: Bu değişiklikler için kurul denetimi yapılmadı (${d.files.length} dosya).\n`) +
-      '0. node .claude/hooks/gate.mjs --run ile deterministik kapıyı (lint, tip, test, Semgrep) çalıştır; çıktısını üyelere ver.\n' +
-      '1. .claude/board/rules.md §3\'e göre değişen dosyalara ilgili en fazla 2 kurul üyesini model "haiku" ile, sadece diff üzerinde çalıştır.\n' +
-      '2. RET yoksa: node .claude/hooks/commit-gate.mjs --approve "<katılan üyeler>" ve commit\'i tekrar dene.\n' +
-      '3. RET varsa commit atma; bulguyu ve seçenekleri kullanıcıya sor.\n' +
-      'Kullanıcı bu commit için denetimi açıkça atlamak isterse --skip "kullanıcı isteği" kullan.\n'
+      ? `Commit stopped: files changed since the last approval (${approval.note}) were not reviewed: ${delta.join(', ')}.\n` +
+        'The board looks only at the diff of these files; files approved earlier are not reviewed again.\n'
+      : `Commit stopped: the board has not reviewed these changes (${d.files.length} files).\n`) +
+      '0. Run the deterministic gate (lint, types, tests, Semgrep) with node .claude/hooks/gate.mjs --run; give its output to the members.\n' +
+      '1. Following .claude/board/rules.md §3, run at most 2 relevant board members for the changed files with model "haiku", on the diff only.\n' +
+      '2. If there is no RET: node .claude/hooks/commit-gate.mjs --approve "<members who took part>" and try the commit again.\n' +
+      '3. If there is a RET, do not commit; ask the user about the finding and the options.\n' +
+      'If the user explicitly wants to skip the review for this commit, use --skip "user request".\n'
   );
   process.exit(2);
 }
 
 if (isMain(import.meta.url)) {
   const i = process.argv.indexOf('--approve'), j = process.argv.indexOf('--skip');
-  if (i > -1) approve(process.argv[i + 1] || 'belirtilmedi');
-  else if (j > -1) save(`atlandı: ${process.argv[j + 1] || 'kullanıcı isteği'}`);
+  if (i > -1) approve(process.argv[i + 1] || 'unspecified');
+  else if (j > -1) save(`atlandı: ${process.argv[j + 1] || 'user request'}`);
   else if (process.argv.includes('--status')) status();
   else hook();
 }

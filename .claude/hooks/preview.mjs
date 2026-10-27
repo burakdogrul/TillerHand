@@ -19,7 +19,7 @@ const LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?(\/[\w\-./
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const tail = (s) => s.trimEnd().split(/\r?\n/).slice(-15).join('\n');
 const block = (s) => (s.trim() ? `\n\`\`\`\n${tail(s)}\n\`\`\`` : '');
-const fail = (text) => ({ code: 1, text: `Önizleme yapılamadı: ${text}` });
+const fail = (text) => ({ code: 1, text: `Preview failed: ${text}` });
 
 async function answers(url) {
   try { await fetch(url, { signal: AbortSignal.timeout(2000) }); return true; } catch { return false; }
@@ -50,17 +50,17 @@ function browser(tmp, args) {
 export async function preview(root, task) {
   let kit = {};
   try { kit = JSON.parse(fs.readFileSync(path.join(root, '.kit.json'), 'utf8')); } catch { /* not set up */ }
-  if (kit.type === 'mobile') return { code: 0, text: 'Önizleme atlandı: mobil projede web görüntüsü telefondakini göstermez. Ekranı telefonda veya Expo Go\'da açıp kontrol etmesini kullanıcıdan iste.' };
+  if (kit.type === 'mobile') return { code: 0, text: 'Preview skipped: in a mobile project a web screenshot does not show what the phone shows. Ask the user to open the screen on the phone or in Expo Go and check it.' };
   const list = approvedCommands(root);
   const command = (name) => list.find((k) => k.name === name).command;
   const url = command('önizleme'), dev = command('geliştirme');
-  if (!url) return fail('AGENTS.md → Komutlar\'da `önizleme:` satırı yok veya boş. Ekle (örnek: `önizleme:    http://localhost:3000`) ya da kanıtı bu görevde elle üret.');
-  if (!LOCAL.test(url)) return fail(`önizleme adresi yerel olmalı (http://localhost:<port>, 127.0.0.1 veya [::1]). Şu an: ${url}`);
-  if (!isApproved(root, list)) return { code: 1, text: `Önizleme · ${approvalNeeded(list)}` };
+  if (!url) return fail('AGENTS.md → Komutlar has no `önizleme:` line, or it is empty. Add it (example: `önizleme:    http://localhost:3000`) or produce the evidence by hand in this task.');
+  if (!LOCAL.test(url)) return fail(`the önizleme address must be local (http://localhost:<port>, 127.0.0.1 or [::1]). Now: ${url}`);
+  if (!isApproved(root, list)) return { code: 1, text: `Preview · ${approvalNeeded(list)}` };
   const dir = `.previews/${String(task || 'son').replace(/[^\w-]/g, '-')}`;
   // A linked folder from the repo would send the files elsewhere
   for (const d of ['.previews', dir]) {
-    try { if (fs.lstatSync(path.join(root, d)).isSymbolicLink()) return fail(`${d} bir bağlantı (symlink/junction); gerçek klasör olmalı.`); } catch { /* missing: created below */ }
+    try { if (fs.lstatSync(path.join(root, d)).isSymbolicLink()) return fail(`${d} is a link (symlink/junction); it must be a real folder.`); } catch { /* missing: created below */ }
   }
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-preview-'));
   const logFile = path.join(tmp, 'dev.log');
@@ -77,7 +77,7 @@ export async function preview(root, task) {
   process.once('SIGTERM', onSignal);
   try {
     if (!(await answers(url))) {
-      if (!dev) return fail(`${url} açık değil ve AGENTS.md → Komutlar'da \`geliştirme:\` komutu yok.`);
+      if (!dev) return fail(`${url} is not up and AGENTS.md → Komutlar has no \`geliştirme:\` command.`);
       // Output goes to a file, not a pipe: the screenshot steps block the event loop and a full pipe would freeze the server
       const fd = fs.openSync(logFile, 'w');
       // A process group on POSIX so the whole tree can be stopped; on Windows detached would open a console window
@@ -90,8 +90,8 @@ export async function preview(root, task) {
       while (!up && running() && Date.now() < deadline) { await sleep(500); up = await answers(url); }
       if (!up) {
         return fail(running()
-          ? `${url} ${Math.round(wait / 1000)} sn içinde açılmadı. Adres ve port AGENTS.md → Komutlar'daki \`önizleme:\` ile aynı mı?${block(devLog())}`
-          : `dev sunucu açılmadan kapandı (${child.exitCode ?? child.signalCode}): ${dev}${block(devLog())}`);
+          ? `${url} did not come up within ${Math.round(wait / 1000)} s. Are the address and port the same as \`önizleme:\` in AGENTS.md → Komutlar?${block(devLog())}`
+          : `the dev server exited before it came up (${child.exitCode ?? child.signalCode}): ${dev}${block(devLog())}`);
       }
     }
     opened = true;
@@ -100,7 +100,7 @@ export async function preview(root, task) {
       const r = browser(tmp, step.map(String));
       const shot = step[0] === 'screenshot' ? path.join(tmp, step[1].slice(11)) : null;
       if (r.status !== 0 || (shot && !fs.existsSync(shot))) {
-        return fail(`ekran görüntüsü alınamadı (${step.join(' ')}).${block(`${r.error?.message ?? ''}\n${r.stdout ?? ''}${r.stderr ?? ''}`)}`);
+        return fail(`could not take the screenshot (${step.join(' ')}).${block(`${r.error?.message ?? ''}\n${r.stdout ?? ''}${r.stderr ?? ''}`)}`);
       }
     }
     fs.mkdirSync(path.join(root, dir), { recursive: true });
@@ -109,7 +109,7 @@ export async function preview(root, task) {
       fs.rmSync(dest, { force: true }); // a link left in its place is removed, not written through
       fs.copyFileSync(path.join(tmp, `${name}.png`), dest);
     }
-    return { code: 0, text: `Önizleme hazır (${url}):\n${SIZES.map(([name, w]) => `- ${dir}/${name}.png (${w} px)`).join('\n')}\nGörüntüleri aç ve kullanıcıya göster.` };
+    return { code: 0, text: `Preview ready (${url}):\n${SIZES.map(([name, w]) => `- ${dir}/${name}.png (${w} px)`).join('\n')}\nOpen the images and show them to the user.` };
   } finally {
     if (opened) browser(tmp, ['close']);
     if (child) await stop(child);

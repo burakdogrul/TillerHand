@@ -7,7 +7,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { readInput, decide, isMain } from './shared.mjs';
+import { readInput, decide, isMain, findRoot } from './shared.mjs';
+import { t } from './lang.mjs';
 
 export const THRESHOLD = { newDays: 30, npmWeeklyDownloads: 500 };
 
@@ -148,12 +149,13 @@ const daysAgo = (date, now) => Math.floor((now - new Date(date).getTime()) / 864
 // get: a fetch-like function (mocked in tests)
 // status: missing | unknown | similar | new | low | ok
 export async function check({ eco, name }, get = fetch, now = Date.now()) {
+  const tr = (k, vars) => t(findRoot(), k, vars);
   const similar = similarPopular(eco, name);
   try {
     if (eco === 'npm') {
       const r = await get(`https://registry.npmjs.org/${name.replace('/', '%2f')}`, { signal: AbortSignal.timeout(6000) });
-      if (r.status === 404) return { status: 'missing', detail: 'npm kayıt defterinde böyle bir paket yok' };
-      if (!r.ok) return { status: 'unknown', detail: `npm yanıtı ${r.status}` };
+      if (r.status === 404) return { status: 'missing', detail: tr('guard.package.npmMissing') };
+      if (!r.ok) return { status: 'unknown', detail: tr('guard.package.npmStatus', { status: r.status }) };
       const j = await r.json();
       const age = j.time?.created ? daysAgo(j.time.created, now) : null;
       let downloads = null;
@@ -161,22 +163,22 @@ export async function check({ eco, name }, get = fetch, now = Date.now()) {
         const dr = await get(`https://api.npmjs.org/downloads/point/last-week/${name}`, { signal: AbortSignal.timeout(6000) });
         if (dr.ok) downloads = (await dr.json()).downloads ?? null;
       } catch { /* download count is optional */ }
-      if (similar) return { status: 'similar', detail: `popüler "${similar}" paketine çok benziyor (yazım hatası tuzağı olabilir)` };
-      if (age != null && age < THRESHOLD.newDays) return { status: 'new', detail: `${age} gün önce yayımlanmış` };
-      if (downloads != null && downloads < THRESHOLD.npmWeeklyDownloads) return { status: 'low', detail: `haftalık indirme ${downloads}` };
-      return { status: 'ok', detail: `${age ?? '?'} gün, haftalık ${downloads ?? '?'} indirme` };
+      if (similar) return { status: 'similar', detail: tr('guard.package.similar', { similar }) };
+      if (age != null && age < THRESHOLD.newDays) return { status: 'new', detail: tr('guard.package.newNpm', { age }) };
+      if (downloads != null && downloads < THRESHOLD.npmWeeklyDownloads) return { status: 'low', detail: tr('guard.package.lowDownloads', { downloads }) };
+      return { status: 'ok', detail: `${age ?? '?'} days, ${downloads ?? '?'} weekly downloads` };
     }
     const r = await get(`https://pypi.org/pypi/${encodeURIComponent(name)}/json`, { signal: AbortSignal.timeout(6000) });
-    if (r.status === 404) return { status: 'missing', detail: 'PyPI\'da böyle bir paket yok' };
-    if (!r.ok) return { status: 'unknown', detail: `PyPI yanıtı ${r.status}` };
+    if (r.status === 404) return { status: 'missing', detail: tr('guard.package.pypiMissing') };
+    if (!r.ok) return { status: 'unknown', detail: tr('guard.package.pypiStatus', { status: r.status }) };
     const j = await r.json();
     const dates = Object.values(j.releases ?? {}).flat().map((f) => f.upload_time_iso_8601).filter(Boolean).sort();
     const age = dates.length ? daysAgo(dates[0], now) : null;
-    if (similar) return { status: 'similar', detail: `popüler "${similar}" paketine çok benziyor (yazım hatası tuzağı olabilir)` };
-    if (age != null && age < THRESHOLD.newDays) return { status: 'new', detail: `ilk sürümü ${age} gün önce yayımlanmış` };
-    return { status: 'ok', detail: `${age ?? '?'} gün` };
+    if (similar) return { status: 'similar', detail: tr('guard.package.similar', { similar }) };
+    if (age != null && age < THRESHOLD.newDays) return { status: 'new', detail: tr('guard.package.newPypi', { age }) };
+    return { status: 'ok', detail: `${age ?? '?'} days` };
   } catch (e) {
-    return { status: 'unknown', detail: `doğrulanamadı (${e.name === 'TimeoutError' ? 'zaman aşımı' : 'ağ hatası'})` };
+    return { status: 'unknown', detail: tr(e.name === 'TimeoutError' ? 'guard.package.timeout' : 'guard.package.network') };
   }
 }
 
@@ -192,11 +194,11 @@ async function hook() {
   const results = await Promise.all(packages.map(async (p) => ({ ...p, ...(await check(p)) })));
   const missing = results.filter((s) => s.status === 'missing' && !s.unsure);
   if (missing.length) {
-    decide(g.tool, 'deny', `Paket kapısı: ${missing.map((s) => `${s.name} (${s.detail})`).join(', ')}. Bu ad uydurulmuş olabilir. Doğru paket adını resmi dokümandan bul; kullanıcıya bildir.`);
+    decide(g.tool, 'deny', `Package gate: ${missing.map((s) => `${s.name} (${s.detail})`).join(', ')}. This name may be made up. Find the correct package name in the official docs; tell the user.`);
   }
   const suspect = results.filter((s) => s.status !== 'ok');
   if (suspect.length) {
-    decide(g.tool, 'ask', `Paket kapısı uyarısı: ${suspect.map((s) => `${s.eco}:${s.name} — ${s.detail}`).join('; ')}. Kurmadan önce paketin gerçekten istenen paket olduğundan emin ol.`);
+    decide(g.tool, 'ask', t(g.root, 'guard.package.ask', { list: suspect.map((s) => `${s.eco}:${s.name} — ${s.detail}`).join('; ') }));
   }
   process.exit(0);
 }

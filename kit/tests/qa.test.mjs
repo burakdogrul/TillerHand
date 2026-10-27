@@ -33,7 +33,7 @@ test('Ö-18.1 the QA report comes from JUnit: passed, failed with its reason and
   write('test-results-qa/shots/Ö-01.2.png', 'png');
   const r = report(p);
   assert.equal(r.status, 1, 'a failed criterion makes the exit code red');
-  assert.match(r.stdout, /1 geçti · 1 kaldı · 1 koşulmadı/);
+  assert.match(r.stdout, /1 passed · 1 failed · 1 not run/);
   const [file] = reports(p);
   assert.match(file, /^\d{4}-\d{2}-\d{2}-\d{6}\.md$/, 'seconds: two runs in a minute do not overwrite each other');
   const stamp = file.slice(0, -3);
@@ -57,7 +57,7 @@ test('Ö-18.1 a failure wins over a later pass; skipped does not count; the id m
     <testcase name="listede görünür" classname="tests/e2e/Ö-01.2.spec.ts"/>`));
   const r = report(p);
   assert.equal(r.status, 1);
-  assert.match(r.stdout, /1 geçti · 1 kaldı · 1 koşulmadı/);
+  assert.match(r.stdout, /1 passed · 1 failed · 1 not run/);
   fs.rmSync(p, { recursive: true, force: true });
 });
 
@@ -69,20 +69,20 @@ test('Ö-18.1 nothing to report is exit 2 with no report: no JUnit, no test ran,
   write('test-results-qa/junit.xml', suite(''));
   const empty = report(p);
   assert.equal(empty.status, 2, 'zero tests is not a green report');
-  assert.match(empty.stdout, /test sonucu yok/);
+  assert.match(empty.stdout, /no test result tied to a PRD criterion/);
   write('test-results-qa/junit.xml', suite('<testcase name="kimliksiz test"/>'));
   assert.equal(report(p).status, 2, 'tests without criterion ids');
   assert.deepEqual(reports(p), [], 'no report written');
   write('test-results/other.xml', suite('<testcase name="Ö-01.1 a"/><testcase name="Ö-01.2 b"/><testcase name="Ö-02.1 c"/>'));
   const green = report(p, 'test-results/other.xml');
   assert.equal(green.status, 0, green.stdout);
-  assert.match(green.stdout, /3 geçti · 0 kaldı · 0 koşulmadı/);
+  assert.match(green.stdout, /3 passed · 0 failed · 0 not run/);
   write('docs/product/prd.md', '# PRD\n\n- [ ] Ö-01.1: [Gözlemlenebilir davranış]\n');
   assert.equal(report(p, 'test-results/other.xml').status, 2, 'only template criteria');
   fs.rmSync(path.join(p, 'docs/product/prd.md'));
   const noPrd = report(p, 'test-results/other.xml');
   assert.equal(noPrd.status, 2);
-  assert.match(noPrd.stdout, /prd\.md yok/);
+  assert.match(noPrd.stdout, /prd\.md not found/);
   assert.equal(noPrd.stderr, '', 'a message, not a stack trace');
   fs.rmSync(p, { recursive: true, force: true });
 });

@@ -58,7 +58,7 @@ test('attacker: unknown package, path and JSON arguments are rejected; a broken 
   const broken = '{"enabledPlugins": {';
   const p = project(broken);
   for (const name of ['yok', '../x', '{"a":1}', '__proto__', 'constructor']) {
-    assert.throws(() => setPackage(p, name, true), /paket/i, name);
+    assert.throws(() => setPackage(p, name, true), /Unknown package/, name);
     const r = run(p, ['--enable', name]);
     assert.equal(r.status, 1, `${name}: exit code 1`);
   }
@@ -71,12 +71,12 @@ test('--required: a disabled package exits 2 and says how to enable it, 0 when e
   const p = project();
   const off = run(p, ['--required', 'tasarim']);
   assert.equal(off.status, 2);
-  assert.match(off.stdout, /kapalı/);
+  assert.match(off.stdout, /Package tasarim is disabled/);
   assert.match(off.stdout, /--enable tasarim/);
   assert.equal(run(p, ['--enable', 'tasarim']).status, 0);
   const enabled = run(p, ['--required', 'tasarim']);
   assert.equal(enabled.status, 0);
-  assert.match(enabled.stdout, /açık/);
+  assert.match(enabled.stdout, /Package tasarim is enabled/);
   assert.equal(run(p, []).status, 0, 'durum tablosu');
   fs.rmSync(p, { recursive: true, force: true });
 });
@@ -164,9 +164,9 @@ test('F-10 --commands CLI: status shows the mode, a bad mode and a broken settin
   const p = project();
   const file = path.join(p, '.claude/settings.json');
   assert.equal(run(p, ['--commands', 'light']).status, 0);
-  assert.match(run(p, []).stdout, /Komut listesi: hafif/);
+  assert.match(run(p, []).stdout, /Command list: light/);
   assert.equal(run(p, ['--commands', 'full']).status, 0);
-  assert.match(run(p, []).stdout, /Komut listesi: tam/);
+  assert.match(run(p, []).stdout, /Command list: full/);
   assert.equal(run(p, ['--commands', 'x']).status, 1);
   for (const bad of ['{"skillOverrides": {', '{"skillOverrides": "abc"}', '{"skillOverrides": ["a"]}', 'null']) {
     fs.writeFileSync(file, bad);

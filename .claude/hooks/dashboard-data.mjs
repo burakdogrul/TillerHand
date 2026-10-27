@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readText, sections, tableRows, labels } from './status-read.mjs';
+import { t } from './lang.mjs';
 
 const DAY = 864e5;
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s).trim());
@@ -173,10 +174,10 @@ export function envWarnings(root) {
     // A real ref (Supabase: 20 characters); "-", "yok", "n/a" would match anywhere in .mcp.json
     .find(([environment, , ref]) => environment === 'prod' && /^[a-z0-9][a-z0-9._:/-]{7,}$/i.test(ref ?? ''))?.[2];
   if (prodRef && readText(path.join(root, '.mcp.json')).includes(prodRef)) {
-    u.push({ sev: 'critical', text: `Prod projesinin ref'i (${prodRef}) .mcp.json'da: AI prod'a bağlanabiliyor.`, action: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)' });
+    u.push({ sev: 'critical', text: t(root, 'dashboardData.prodRefInMcp', { ref: prodRef }), action: t(root, 'dashboardData.prodRefAction') });
   }
   if (fs.existsSync(path.join(root, 'supabase/config.toml')) && !fs.existsSync(path.join(root, 'tests/security/rls.mjs'))) {
-    u.push({ sev: 'warn', text: 'Supabase kullanılıyor ama RLS saldırgan testi yok (tests/security/rls.mjs).', action: '/kit-update ile şablonu al, tabloları TABLES\'a ekle' });
+    u.push({ sev: 'warn', text: t(root, 'dashboardData.rlsMissing'), action: t(root, 'dashboardData.rlsAction') });
   }
   return u;
 }
