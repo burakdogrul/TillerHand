@@ -20,6 +20,7 @@
 <p align="center">
   <a href="#step-by-step-for-beginners">Step by step</a> ·
   <a href="#quick-start">Quick start</a> ·
+  <a href="#existing-project-adopt">/adopt</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#expert-board">Board</a> ·
   <a href="#guardrails">Guardrails</a> ·
@@ -130,6 +131,15 @@ node vibe-kit/kit/kit.mjs init
 - Kit in another folder: `node <kit>/kit/kit.mjs init --project <project>`.
 - For Codex or Antigravity: `npx tillerhand init --tool codex` (several: `--tool claude,codex`).
 - Recommended: a code map ([codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp)). The AI queries the code instead of reading it file by file, which saves tokens. `/start` offers to install it.
+
+## Existing project: /adopt
+
+If you already have code, the install is the same and only the first command changes. Run `npx tillerhand init` in the project root (your files are not overwritten; a conflicting kit file is placed next to yours as `.kit-new`), start a new session and type `/adopt`.
+
+1. **Scans:** stack, folder layout, test status and git history. The code is not touched in this session.
+2. **Derives docs from the code:** PRD, stack and architecture are drafted; you're asked what you don't like, and rules from your old `CLAUDE.md` are moved to `AGENTS.md` one by one with your approval.
+3. **Tests for critical flows:** you're asked how flows like sign-in or payment should behave; the tests follow your answer, not what the code does today.
+4. **Alignment roadmap:** a safe foundation, then the structure is moved feature by feature on a separate branch, then the findings. After that, `/build` every day.
 
 ## How it works
 

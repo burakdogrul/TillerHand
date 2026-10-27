@@ -20,6 +20,7 @@
 <p align="center">
   <a href="#hiç-bilmiyorsan-adım-adım">Adım adım</a> ·
   <a href="#hızlı-başlangıç">Hızlı başlangıç</a> ·
+  <a href="#var-olan-proje-adopt">/adopt</a> ·
   <a href="#nasıl-çalışır">Nasıl çalışır</a> ·
   <a href="#uzman-kurulu">Kurul</a> ·
   <a href="#koruma-katmanları">Korumalar</a> ·
@@ -128,6 +129,15 @@ node vibe-kit/kit/kit.mjs init
 - Kit başka bir klasördeyse: `node <kit>/kit/kit.mjs init --project <proje>`.
 - Codex veya Antigravity için: `npx tillerhand init --tool codex` (birden fazlası: `--tool claude,codex`).
 - Önerilen: kod haritası ([codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp)). AI kodu dosya dosya okumak yerine sorgular, token tasarrufu sağlar. `/start` kurmayı sorar.
+
+## Var olan proje: /adopt
+
+Kodun zaten varsa kurulum aynı, başlangıç komutu farklı. Projenin kökünde `npx tillerhand init` çalıştır (dosyaların ezilmez; çakışan kit dosyası `.kit-new` olarak yanına konur), yeni oturum aç ve `/adopt` yaz.
+
+1. **Tarar:** stack, klasör yapısı, testlerin durumu ve git geçmişi çıkarılır. Bu oturumda koda dokunulmaz.
+2. **Belgeleri koddan çıkarır:** PRD, stack ve mimari taslak olarak yazılır; neyi beğenmediğin sorulur, eski `CLAUDE.md` kuralları tek tek sorulup `AGENTS.md`'ye taşınır.
+3. **Kritik akışlara test:** giriş, ödeme gibi akışların doğru davranışı sana sorulur; test kodun bugünkü haline değil, senin cevabına göre yazılır.
+4. **Uyum yol haritası:** güvenli zemin, yapıyı ayrı dalda özellik özellik taşıma, bulgular. Sonra her gün `/build`.
 
 ## Nasıl çalışır
 

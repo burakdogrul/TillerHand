@@ -227,6 +227,66 @@ td.f { font: 13px var(--mono); color: var(--fg); white-space: nowrap; }
 .rules b { display: block; margin-bottom: 2px; }
 .rules span { font-size: 14px; color: var(--muted); }
 
+::selection { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+
+/* Okuma ilerlemesi (menünün alt çizgisi) */
+.progress { position: absolute; left: 0; bottom: -1px; width: 100%; height: 2px; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); }
+
+/* Kurulum seçici */
+.setup { max-width: 540px; }
+.seg { display: inline-flex; gap: 4px; padding: 4px; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 12px; }
+.seg button { font: 600 14px var(--font); color: var(--muted); background: none; border: 0; border-radius: 9px; padding: 7px 14px; cursor: pointer; transition: background .2s, color .2s, box-shadow .2s; }
+.seg button:hover { color: var(--fg); }
+.seg button[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 3px 10px rgba(15, 23, 42, .06); }
+.setup .install { max-width: none; }
+.install.chat span::before { content: "› "; }
+.via { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 12px; font-size: 13.5px; color: var(--muted); }
+.via button { font: 500 13.5px var(--font); color: var(--muted); background: none; border: 0; padding: 2px 0; cursor: pointer; border-bottom: 1.5px solid transparent; }
+.via button:hover { color: var(--fg); }
+.via button[aria-pressed="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.setup .next { margin: 14px 0 0; font-size: 14.5px; color: var(--fg-2); }
+.setup .next b { color: var(--fg); }
+
+/* Hero demosu: JS yoksa son hali görünür */
+.demo .prompt { font: 13px var(--mono); color: var(--fg-2); margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--line-strong); min-height: 1.7em; }
+.demo .prompt b { color: var(--accent-ink); font-weight: 500; }
+.demo .caret { display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: -2px; background: var(--accent); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.demo [data-s] { transition: opacity .5s cubic-bezier(.16, 1, .3, 1), transform .5s cubic-bezier(.16, 1, .3, 1); }
+.demo.run [data-s]:not(.in) { opacity: 0; transform: translateY(6px); }
+.opt { transition: border-color .35s ease, background .35s ease, box-shadow .35s ease; }
+.demo.run .opt.rec:not(.picked) { border-color: var(--line); background: transparent; box-shadow: none; }
+.demo.run .opt.rec:not(.picked) b { color: var(--fg); }
+
+/* Yol seçici */
+.routes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 4px 0 32px; }
+.route { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 22px 20px; background: var(--surface); box-shadow: var(--shadow); transition: transform .25s cubic-bezier(.16, 1, .3, 1), border-color .25s ease; }
+.route:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+.route.primary { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: linear-gradient(180deg, var(--accent-soft), var(--surface) 60%); }
+.doc .route h3 { font-size: 19px; margin: 0 0 4px; }
+.route .for { font-size: 14px; color: var(--muted); margin-bottom: 18px; }
+.steps { list-style: none; padding: 0 !important; margin: 0 0 18px; flex: 1; }
+.doc .steps li { position: relative; margin: 0; padding: 0 0 12px 26px; font-size: 14.5px; color: var(--fg-2); }
+.steps li::before { content: ""; position: absolute; left: 3px; top: 7px; width: 11px; height: 11px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.steps li::after { content: ""; position: absolute; left: 8px; top: 20px; bottom: 0; width: 2px; background: var(--line-strong); }
+.doc .steps li:last-child { padding-bottom: 0; }
+.steps li:last-child::after { display: none; }
+.route .go { font-weight: 600; font-size: 14.5px; align-self: flex-start; }
+
+/* Koruma akışı */
+.gflow { margin: 0 0 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-soft); padding: 20px 22px; }
+.gflow .lane + .lane { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line-strong); }
+.gflow .lane-h { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 0 10px; }
+.gflow ol { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 0; padding: 0 !important; margin: 0; }
+.doc .gflow li { display: flex; align-items: center; margin: 0; font-size: 13.5px; }
+.gflow li + li::before { content: ""; width: 16px; height: 2px; margin: 0 6px; background: var(--line-strong); }
+.gflow .node { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 5px 12px; }
+.gflow .node svg { width: 14px; height: 14px; flex: none; }
+.gflow .start .node { background: var(--term-bg); color: var(--term-fg); border-color: var(--term-bg); font-family: var(--mono); font-size: 12.5px; }
+.gflow .stop .node { border-color: color-mix(in srgb, var(--bad) 55%, transparent); background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+.gflow .pass .node { border-color: color-mix(in srgb, var(--ok) 55%, transparent); background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.gflow figcaption { font-size: 13.5px; color: var(--muted); margin-top: 14px; }
+
 footer { border-top: 1px solid var(--line); padding: 40px 0; font-size: 14px; color: var(--muted); }
 footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; }
 
@@ -247,13 +307,15 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
   .nav-links a:not(.btn) { display: none; }
   .hero { padding: 56px 0 48px; }
   .band { padding: 64px 0; }
-  .grid2, .rules, .big { grid-template-columns: minmax(0, 1fr); }
+  .grid2, .rules, .big, .routes { grid-template-columns: minmax(0, 1fr); }
   .bars .row { grid-template-columns: 92px 1fr 48px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .cycle .dot { animation: none; }
-  .btn { transition: none; }
+  .btn, .route, .seg button, .opt, .demo [data-s] { transition: none; }
+  .demo .caret { animation: none; }
+  .route:hover { transform: none; }
 }
 </style>
 </head>
@@ -279,6 +341,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
       <a class="btn ghost small" href="https://github.com/burakdogrul/TillerHand">GitHub</a>
     </nav>
   </div>
+  <div class="progress" aria-hidden="true"></div>
 </header>
 
 <main id="top">
@@ -290,19 +353,31 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
       <span class="pill"><b>v3.43.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
-      <div class="install"><span id="cmd">npx tillerhand init</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
-      <div class="install"><span id="cmd-git">git clone https://github.com/burakdogrul/TillerHand.git vibe-kit</span><button class="copy" type="button" data-copy="cmd-git">Kopyala</button></div>
-      <p class="hero-note">Claude Code için yazıldı · Codex ve Antigravity'de de çalışır · Kod bilmen gerekmez</p>
+      <div class="setup">
+        <div class="seg" role="tablist" aria-label="Projenin durumu">
+          <button type="button" role="tab" aria-selected="true" data-path="new">Yeni proje</button>
+          <button type="button" role="tab" aria-selected="false" data-path="old">Var olan proje</button>
+        </div>
+        <div class="install"><span id="cmd">npx tillerhand init</span><button class="copy" type="button" data-copy="cmd">Kopyala</button></div>
+        <div class="via" role="group" aria-label="Nerede çalıştıracaksın">
+          <span>Nerede:</span>
+          <button type="button" aria-pressed="true" data-via="term">Terminal</button>
+          <button type="button" aria-pressed="false" data-via="chat">Claude uygulaması</button>
+        </div>
+        <p class="next" aria-live="polite">Proje klasöründe çalıştır. Sonra aynı klasörde yeni oturum aç ve <code>/start fikrin</code> yaz.</p>
+      </div>
+      <p class="hero-note">Tek komut yeter; plugin ve git yolları <a href="#baslangic">Kurulum</a>'da · Codex ve Antigravity'de de çalışır · Kod bilmen gerekmez</p>
     </div>
-    <div class="window" aria-label="Örnek: AI'nın sana sorduğu bir karar sorusu">
-      <div class="bar"><i></i><i></i><i></i><span>Claude Code · /start · Adım 4/9</span></div>
+    <div class="window demo" aria-label="Örnek: AI'nın sana sorduğu bir karar sorusu">
+      <div class="bar"><i></i><i></i><i></i><span>Claude Code · /start</span></div>
       <div class="body">
-        <p class="ctx">Teknoloji · Bu karar tüm veri katmanını belirler; sonradan değiştirmek pahalı.</p>
-        <p class="q">Veritabanı ve kimlik doğrulama hangisi olsun?</p>
-        <div class="opt rec"><b>Supabase (Önerilen)</b><span>Postgres, kimlik ve dosya depolama tek yerde. Satır bazlı güvenlik hazır; ücretsiz katman MVP için yeterli.</span></div>
-        <div class="opt"><b>Neon + Better Auth</b><span>Daha fazla kontrol, sağlayıcıya bağımlılık az. Kimlik kodu sende kalır.</span></div>
-        <div class="opt"><b>Firebase</b><span>Gerçek zamanlı ve mobil ile ortak backend. NoSQL; ilişkisel sorgu zayıf.</span></div>
-        <div class="board-row">Kurul görüşü: <span class="tag">Mimar ✓</span><span class="tag">Güvenlik ✓</span><span class="tag warn">Maliyet: izle</span></div>
+        <p class="prompt"><b>›</b> <span class="typed">/start Serbest çalışanlar için fatura takibi</span><span class="caret" aria-hidden="true"></span></p>
+        <p class="ctx" data-s="1">Adım 4/9 · Teknoloji · Bu karar tüm veri katmanını belirler; sonradan değiştirmek pahalı.</p>
+        <p class="q" data-s="1">Veritabanı ve kimlik doğrulama hangisi olsun?</p>
+        <div class="opt rec" data-s="2"><b>Supabase (Önerilen)</b><span>Postgres, kimlik ve dosya depolama tek yerde. Satır bazlı güvenlik hazır; ücretsiz katman MVP için yeterli.</span></div>
+        <div class="opt" data-s="3"><b>Neon + Better Auth</b><span>Daha fazla kontrol, sağlayıcıya bağımlılık az. Kimlik kodu sende kalır.</span></div>
+        <div class="opt" data-s="4"><b>Firebase</b><span>Gerçek zamanlı ve mobil ile ortak backend. NoSQL; ilişkisel sorgu zayıf.</span></div>
+        <div class="board-row" data-s="6">Kurul görüşü: <span class="tag" data-s="6">Mimar ✓</span><span class="tag" data-s="7">Güvenlik ✓</span><span class="tag warn" data-s="8">Maliyet: izle</span></div>
       </div>
     </div>
   </div>
@@ -344,7 +419,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
     <ol class="cycle">
       <li><div class="dot">1</div><div><h3>AI planlar</h3><p>Görevi okur, karar noktalarını bulur, seçenekleri hazırlar.</p></div></li>
       <li class="you"><div class="dot">2</div><div><h3>Sen karar verirsin</h3><p>Önerilen ilk sırada; ne zaman hangisi daha iyi, bedeli ne.</p></div></li>
-      <li><div class="dot">3</div><div><h3>Önce test, sonra kod</h3><p>Kabul testleri kırmızı başlar; kod onları yeşile çevirir.</p></div></li>
+      <li><div class="dot">3</div><div><h3>Önce test, sonra kod</h3><p>Testleri ayrı bir ajan yazar, kırmızı başlar; kod onları yeşile çevirir.</p></div></li>
       <li><div class="dot">4</div><div><h3>Kurul denetler</h3><p>İlgili uzmanlar inceler; kritik bulguda iş bitmez.</p></div></li>
       <li><div class="dot">5</div><div><h3>Kanıtla kaydedilir</h3><p>Kapı yeşilse commit, pano güncellenir, sıradaki görev.</p></div></li>
     </ol>
@@ -493,6 +568,7 @@ Bekleyen karar: e-posta servisi</pre>
     <p>Başla</p>
     <a href="#baslangic">Kurulum</a>
     <a href="#hic-bilmiyorsan">Hiç bilmiyorsan</a>
+    <a href="#adopt">Var olan proje</a>
     <a href="#gunluk">Her gün</a>
     <p>Çalışma şekli</p>
     <a href="#protokol">Karar protokolü</a>
@@ -522,34 +598,53 @@ Bekleyen karar: e-posta servisi</pre>
 <section id="baslangic">
   <p class="path">Başlamadan</p>
   <h2>Kurulum</h2>
-  <p class="lead">TillerHand ve projen ayrı klasörlerde durur. <code>init</code> gereken dosyaları (<code>.claude/</code>, <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>docs/</code>) proje klasörüne kopyalar, git deposu açar ve kit klasörüne dokunmaz. Proje tipi kurulumda değil, <code>/start</code> sırasında soruyla seçilir.</p>
+  <p class="lead">Önce yolunu seç: boş bir klasörde yeni bir fikirle mi başlıyorsun, yoksa kodun zaten var mı? Kurulum ikisinde de aynı; değişen, kurulumdan sonra yazacağın komut.</p>
+  <div class="routes">
+    <article class="route primary">
+      <h3>Yeni fikrim var</h3>
+      <p class="for">Boş klasör, kod yok</p>
+      <ol class="steps">
+        <li>Klasörde <code>npx tillerhand init</code></li>
+        <li>Aynı klasörde yeni oturum, <code>/start fikrin</code>: dokuz adımda plan</li>
+        <li>Faz 0: CI ve ilk deploy</li>
+        <li>Her gün <code>/build</code>: sıradaki görev</li>
+      </ol>
+      <a class="go" href="#sihirbaz">/start sihirbazı →</a>
+    </article>
+    <article class="route">
+      <h3>Kodum zaten var</h3>
+      <p class="for">İlerlemiş, beğenmediğin ya da düzene sokmak istediğin proje</p>
+      <ol class="steps">
+        <li>Projenin kökünde <code>npx tillerhand init</code>; dosyaların ezilmez</li>
+        <li>Yeni oturum, <code>/adopt</code>: kod taranır, belgeler koddan çıkar</li>
+        <li>Kritik akışlara önce testler</li>
+        <li>Uyum görevleri <code>/build</code> ile, özellik özellik</li>
+      </ol>
+      <a class="go" href="#adopt">/adopt nasıl çalışır →</a>
+    </article>
+  </div>
   <p><b>Gereksinimler:</b> <a href="https://claude.com/claude-code">Claude Code</a>, Git, Node.js 18+.</p>
-  <p>Üç kurulum yolu var. Üçü de kiti projeye aynı şekilde kurar; birini seç.</p>
+  <p>Kurulum için <b>tek bir yol seç</b>; üçü de projeye aynı dosyaları kopyalar (<code>.claude/</code>, <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>docs/</code>) ve git deposu yoksa açar. Emin değilsen npm. Proje tipi kurulumda değil, <code>/start</code> sırasında sorulur.</p>
   <div class="table-wrap"><table>
     <thead><tr><th>Yol</th><th>Ne zaman</th></tr></thead>
     <tbody>
-      <tr><td><b>1. npm</b> (önerilen)</td><td>Terminalde en kısa yol</td></tr>
-      <tr><td><b>2. Claude Code plugin</b></td><td>Terminal açmadan, Claude Code içinden. Plugin yalnız kurulumu yapar; sonra kapatılabilir</td></tr>
-      <tr><td><b>3. git</b></td><td>Kitin kaynağını görmek, değiştirmek ya da katkı vermek için</td></tr>
+      <tr><td><b>1. npm</b> (önerilen)</td><td>En kısa yol. Terminalde ya da Claude'a "bu klasörde <code>npx tillerhand init</code> çalıştır" diyerek</td></tr>
+      <tr><td><b>2. Claude Code plugin</b></td><td>Bilgisayara bir kez kurulur, sonra her yeni projede <code>/tillerhand:init</code>. Plugin yalnız kurulumu yapar ve her seferinde son sürümü çeker</td></tr>
+      <tr><td><b>3. git</b></td><td>Kitin kaynağını görmek, değiştirmek ya da katkı vermek için. Kit proje içinde <code>vibe-kit/</code> klasöründe durur, <code>.gitignore</code>'a girer</td></tr>
     </tbody>
   </table></div>
-<pre class="term"><span class="c"># 1. npm (terminalde, proje klasöründe)</span>
-mkdir yeni-proje &amp;&amp; cd yeni-proje
+<pre class="term"><span class="c"># 1. npm: proje klasöründe</span>
 npx tillerhand init
-claude
-<span class="c"># 2. plugin (Claude Code içinde, proje klasöründe)</span>
+<span class="c"># 2. plugin: bir kez (masaüstünde /plugin açılmazsa terminalde: claude plugin marketplace add … ve claude plugin install …)</span>
 /plugin marketplace add burakdogrul/TillerHand
 /plugin install tillerhand@tillerhand
+<span class="c">#    sonra her yeni projede:</span>
 /tillerhand:init
-<span class="c"># 3. git (terminalde): kit proje içinde vibe-kit/ klasöründe durur (.gitignore'a girer)</span>
+<span class="c"># 3. git: proje klasöründe</span>
 git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
 node vibe-kit/kit/kit.mjs init</pre>
-  <p>Kurulumdan sonra aynı klasörde <b>yeni bir Claude Code oturumu</b> aç ve başla:</p>
-<pre class="term">/start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
-<span class="c"># var olan projede /start yerine:</span>
-/adopt</pre>
+  <p>Kurulumdan sonra aynı klasörde <b>yeni bir Claude Code oturumu</b> aç; kitin komutları ve korumaları yeni oturumda yüklenir. Sonra yeni projede <code>/start fikrin</code>, var olan projede <code>/adopt</code>.</p>
   <div class="note"><b>Hangi araç:</b> <code>init</code>, Claude Code, Codex ve Antigravity'den hangisiyle (birden fazlası olabilir) çalışacağını sorar. Doğrudan da verebilirsin: <code>init --tool codex</code>. Kit başka bir klasördeyse: <code>node &lt;kit&gt;/kit/kit.mjs init --project &lt;proje&gt;</code>. Türkiye eki için <code>--addons tr</code>.</div>
-  <div class="note"><b>Var olan proje:</b> <code>/adopt</code> kodu tarar, belgeleri koddan çıkarır, neyi beğenmediğini sorar, eski CLAUDE.md'deki kuralları tek tek sorup AGENTS.md'ye taşır. Önce kritik akışlara doğru davranışa göre test yazılır, sonra yapı özellik özellik ayrı dalda kitin düzenine taşınır. Projenin dosyalarının üzerine yazılmaz; kitin hali <code>.kit-new</code> olarak yanına konur.</div>
   <div class="note"><b>Eklentiler:</b> Proje ilk açıldığında Claude Code, <code>.claude/settings.json</code>'da tanımlı skill eklentilerini kurmayı önerir: Caveman, Impeccable, Taste Skill, UI UX Pro Max, Humanizer, Ponytail ve Matt Pocock. <code>/start</code> onayınla eksikleri proje kapsamında kurar (<code>plugins-sync.mjs --install</code>). Tasarım, güvenlik, yayın ve video paketleri kurulur ama kapalı kalır; ilgili komut gerektiğinde açmayı sorar.</div>
   <div class="note"><b>Önerilen: kod haritası.</b> <a href="https://github.com/DeusData/codebase-memory-mcp">codebase-memory-mcp</a> bağlıysa AI kodu dosya dosya okumak yerine sorgular; proje büyüdükçe ciddi token tasarrufu sağlar. <code>/start</code> kurmak isteyip istemediğini sorar; kurulumu kendi terminalinde yaparsın.</div>
 </section>
@@ -561,11 +656,54 @@ node vibe-kit/kit/kit.mjs init</pre>
   <ol>
     <li><b>Hesaplar (bir kez):</b> <a href="https://github.com">GitHub</a> hesabı (ücretsiz) ve Claude <b>Pro</b> veya <b>Max</b> aboneliği.</li>
     <li><b>Programlar (bir kez):</b> <a href="https://claude.com/download">Claude masaüstü uygulaması</a>, <a href="https://nodejs.org">Node.js</a> (LTS sürümü), <a href="https://git-scm.com/downloads">Git</a>. İstersen <a href="https://desktop.github.com">GitHub Desktop</a> da kurabilirsin.</li>
-    <li><b>Proje:</b> Projen için bir klasör aç ve Claude masaüstü uygulamasında <b>Code</b> sekmesinde seç. Kiti kur. İki yoldan birini seç: Claude'a "bu klasörde <code>npx tillerhand init</code> komutunu çalıştır" yaz ya da plugin ile sırayla <code>/plugin marketplace add burakdogrul/TillerHand</code>, <code>/plugin install tillerhand@tillerhand</code>, <code>/tillerhand:init</code>.</li>
+    <li><b>Proje:</b> Projen için bir klasör aç ve Claude masaüstü uygulamasında <b>Code</b> sekmesinde seç. Claude'a "bu klasörde <code>npx tillerhand init</code> komutunu çalıştır" yaz. TillerHand plugin'ini <a href="#baslangic">bir kez kurduysan</a> bunun yerine <code>/tillerhand:init</code> da olur.</li>
     <li><b>Aç:</b> Aynı klasörde <b>yeni oturum</b> aç; kitin komutları ve korumaları yeni oturumda yüklenir. Eklentileri kurmayı önerirse kabul et.</li>
-    <li><b>Başlat:</b> <code>/start fikrin</code> yaz. <b>Her sorunun ilk seçeneği önerilendir</b>; emin değilsen onu seç. Pro'daysan ilk sorular için öneri: profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (5 saatlik limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
+    <li><b>Başlat:</b> <code>/start fikrin</code> yaz (kodun zaten varsa <a href="#adopt"><code>/adopt</code></a>). <b>Her sorunun ilk seçeneği önerilendir</b>; emin değilsen onu seç. Pro'daysan ilk sorular için öneri: profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (5 saatlik limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
   </ol>
   <div class="note accent"><b>Bilmen gerekenler.</b> Pro'da 5 saatlik ve haftalık kullanım limiti var; Claude %90, %95 ve %99'da uyarır ama işi durdurmaz. Limit dolup iş kesilirse yenilenince <code>/build</code> ile kaldığın yerden devam edersin. Veritabanı, tasarım ve maliyet gibi kararlar sorulmadan verilmez; ödeme, veri silme ve canlıya alma gibi geri dönüşü zor işler her zaman onay ister. Projeyi başkasına bırakacaksan <code>/handoff</code>; devralan <code>/handoff devral</code> ile aynı yerden devam eder.</div>
+</section>
+
+<section id="adopt">
+  <p class="path">Kodun zaten varsa</p>
+  <h2>/adopt: var olan projeyi kite al</h2>
+  <p class="lead"><code>/start</code>'ın var olan kod için karşılığı. Fikirden değil koddan başlar ama kararları yine sen verirsin. Bu oturumda uygulama koduna dokunulmaz ve dosya taşınmaz; taşıma ve düzeltmeler sonradan <code>/build</code> görevleriyle yapılır.</p>
+<pre class="term"><span class="c"># projenin kökünde</span>
+npx tillerhand init
+<span class="c"># aynı klasörde yeni oturum</span>
+/adopt</pre>
+  <div class="phase">
+    <div class="n">1</div>
+    <div>
+      <p class="when">Salt okunur</p>
+      <h3>Tarar</h3>
+      <p>Stack, klasör yapısı, özellikler, testlerin durumu ve son 30 commit çıkarılır. Hızlı tarama 5 saatlik limitin yaklaşık %10-20'si; derin taramada seçtiğin bulgu raporları da çalışır.</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="n">2</div>
+    <div>
+      <p class="when">Senin cevaplarınla</p>
+      <h3>Belgeleri koddan çıkarır</h3>
+      <p>PRD, stack ve mimari koddan taslak olarak yazılır, anlaşılmayan yer sorulur: neyi beğenmiyorsun, neyi iyileştirmek istiyorsun? Eski <code>CLAUDE.md</code>'deki kurallar tek tek sorulup <code>AGENTS.md</code>'ye taşınır. Kitin dosyası projeninkiyle çakışırsa <code>.kit-new</code> olarak yanına konur, birleştirme sorulur.</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="n">3</div>
+    <div>
+      <p class="when">Taşımadan önce</p>
+      <h3>Kritik akışlara test</h3>
+      <p>Giriş, ödeme, veri kaydı gibi 3-7 akış seçilir ve her birinin doğru davranışı sana sorulur. Test kodun bugünkü haline göre değil, senin cevabına göre yazılır; ikisi çelişirse bulgu olur.</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="n">4</div>
+    <div>
+      <p class="when">Yol haritası</p>
+      <h3>Uyum görevleri</h3>
+      <div class="chips"><span>Faz 0 güvenli zemin</span><span>Faz 1 yapıyı taşı</span><span>Faz 2 bulgular</span><span>Faz 3 yeni özellikler</span></div>
+      <p>Yapı ayrı bir dalda, özellik özellik taşınır. Her görevden sonra testler ve uygulama çalışıyor olmalı; bozulursa <code>/rollback</code>. Sonra her gün olduğu gibi <code>/build</code>.</p>
+    </div>
+  </div>
 </section>
 
 <section id="gunluk">
@@ -691,7 +829,7 @@ node vibe-kit/kit/kit.mjs init</pre>
       <h3>Geliştirme döngüsü</h3>
       <div class="flow" role="list" aria-label="Görev döngüsü">
         <span role="listitem">/plan-task · karar noktaları sorulur</span><i aria-hidden="true">→</i>
-        <span role="listitem">/build · önce kabul testleri</span><i aria-hidden="true">→</i>
+        <span role="listitem">/build · testleri test-writer yazar</span><i aria-hidden="true">→</i>
         <span role="listitem">kanıt</span><i aria-hidden="true">→</i>
         <span role="listitem">/review-changes</span><i aria-hidden="true">→</i>
         <span role="listitem">kapı + kurul → commit</span><i aria-hidden="true">→</i>
@@ -768,6 +906,29 @@ node vibe-kit/kit/kit.mjs init</pre>
   <p class="path">Kurallar yazılı, kontroller otomatik</p>
   <h2>Koruma katmanları</h2>
   <p class="lead">Kararlar Claude Code'un izin katmanında verilir (izin ver · sor · engelle); AI bunları atlatamaz. Codex ve Antigravity'de aynı betikler o aracın hook'larıyla çalışır.</p>
+  <figure class="gflow" aria-label="Örnek: korumaların sırası ve bir durdurma">
+    <div class="lane">
+      <p class="lane-h">Her dosya yazımında ve komutta</p>
+      <ol>
+        <li class="start"><span class="node">AI yazar / çalıştırır</span></li>
+        <li><span class="node">Sır engeli</span></li>
+        <li><span class="node">Yıkıcı komut kalkanı</span></li>
+        <li><span class="node">Paket kapısı</span></li>
+        <li><span class="node">Yapı ve kapsam</span></li>
+        <li class="stop"><span class="node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>Test ayrımı: durdu</span></li>
+      </ol>
+    </div>
+    <div class="lane">
+      <p class="lane-h">Her commit'te</p>
+      <ol>
+        <li><span class="node">Deterministik kapı</span></li>
+        <li><span class="node">Test kaynağı</span></li>
+        <li><span class="node">Kurul</span></li>
+        <li class="pass"><span class="node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Commit</span></li>
+      </ol>
+    </div>
+    <figcaption>Örnek: kod ajanı bir test dosyasını değiştirmek istedi, test ayrımı durdurdu. Her katman ayrı bir betik; biri durdurursa işlem olmaz, "sor" kararında onay sana gelir.</figcaption>
+  </figure>
   <div class="table-wrap"><table>
     <thead><tr><th>Katman</th><th>Ne yapar</th></tr></thead>
     <tbody>
@@ -968,7 +1129,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 <section id="araclar">
   <p class="path">Başka araçla</p>
   <h2>Codex ve Antigravity</h2>
-  <p class="lead">TillerHand Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü ve durum çubuğu bu araçlarda yok.</p>
+  <p class="lead">TillerHand Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü, durum çubuğu ve commit kapısı bu araçlarda yok.</p>
 <pre class="term">npx tillerhand init --tool codex          <span class="c"># ya da antigravity, ya da claude,codex</span>
 <span class="c"># var olan projeye araç eklemek</span>
 /kit-update --tool claude,codex</pre>
@@ -981,6 +1142,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
       <tr><td>"Sor" kararı</td><td>Onay penceresi</td><td>Engellenir; AI sana sorar, onaylarsan işlemi sen yaparsın</td><td>Onay penceresi</td></tr>
       <tr><td>Seçenekli sorular</td><td>AskUserQuestion</td><td>Numaralı düz metin</td><td>ask_question</td></tr>
       <tr><td>Kurul ve konsey</td><td>Ayrı ajanlar ve modeller</td><td>Tek model rolleri sırayla üstlenir</td><td>Tek model</td></tr>
+      <tr><td>Test ayrımı</td><td>Hook zorlar: test dosyasına yalnız test-writer yazar</td><td>Kural metinde (ajan kimliği yok)</td><td>Kural metinde (ajan kimliği yok)</td></tr>
       <tr><td>Durum çubuğu, limit, pano yenileme, commit kapısı</td><td>Var</td><td>Yok</td><td>Yok</td></tr>
     </tbody>
   </table></div>
@@ -996,10 +1158,10 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
       <tr><td class="f">/start [fikir]</td><td>Dokuz adımlı sihirbaz: fikir, tip, kurulum, teknoloji, mimari, kurul, tasarım, yol haritası</td></tr>
       <tr><td class="f">/adopt</td><td>Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, AGENTS.md ve CLAUDE.md'yi yeniden yazar, kritik akış testleri ve özellik özellik taşıma ile uyum yol haritası</td></tr>
       <tr><td class="f">/plan-task [görev]</td><td>Karar noktalarını sorar, kurul görüşüyle plan çıkarır, onay alır; 3+ dosyalık işte spec yazar</td></tr>
-      <tr><td class="f">/build [görev]</td><td>Önce kabul testleri, sonra kod; yeni karar çıkarsa durur; kanıt (arayüzde masaüstü ve mobil ekran görüntüsü) ve kurul denetimi</td></tr>
+      <tr><td class="f">/build [görev]</td><td>Önce kabul ve saldırgan testlerini ayrı bir ajan (<code>test-writer</code>) yazar, sonra kod; yeni karar çıkarsa durur; kanıt (arayüzde masaüstü ve mobil ekran görüntüsü) ve kurul denetimi</td></tr>
       <tr><td class="f">/design [kapsam]</td><td>Görsel önizlemeli tasarım kararları ve uygulama</td></tr>
       <tr><td class="f">/review-changes [aralık]</td><td>code-reviewer + security-auditor + ponytail-review; düzeltilecekleri çoklu seçimle sorar</td></tr>
-      <tr><td class="f">/fix-bug [belirti]</td><td>Yeniden üret, kanıtla, hata spec'i ve kırmızı test, düzelt, kapı; aynı hata sınıfı tekrar ederse kural önerir</td></tr>
+      <tr><td class="f">/fix-bug [belirti]</td><td>Yeniden üret, kanıtla, hata spec'i; kırmızı testi <code>test-writer</code> yazar, sonra düzelt, kapı; aynı hata sınıfı tekrar ederse kural önerir</td></tr>
       <tr><td class="f">/qa [kriterler]</td><td>Arayüz kriterlerini tarayıcıda Playwright testi olarak koşar; rapor test sonucundan, panoda kart</td></tr>
       <tr><td class="f">/freeze &lt;klasör&gt; | off</td><td>Düzenlemeyi tek klasöre kilitler; iş başka dosyalara yayılmaz</td></tr>
       <tr><td class="f">/rollback [nokta]</td><td>Son çalışan hale güvenle döner: yarım iş saklanır, geçmiş silinmez</td></tr>
@@ -1083,6 +1245,71 @@ const spy = new IntersectionObserver((entries) => {
   for (const e of entries) if (e.isIntersecting) links.forEach((a) => a.classList.toggle('on', a.hash === '#' + e.target.id));
 }, { rootMargin: '-20% 0px -70% 0px' });
 document.querySelectorAll('.doc section').forEach((s) => spy.observe(s));
+
+// Kurulum seçici: yol (yeni / var olan) sonraki adımı, yer (terminal / Claude) komutu değiştirir
+const setup = { path: 'new', via: 'term' };
+const cmd = document.getElementById('cmd');
+const next = document.querySelector('.setup .next');
+function renderSetup() {
+  cmd.textContent = setup.via === 'term' ? 'npx tillerhand init' : 'bu klasörde npx tillerhand init komutunu çalıştır';
+  cmd.parentElement.classList.toggle('chat', setup.via === 'chat');
+  const where = setup.via === 'term' ? 'Proje klasöründe çalıştır.' : 'Claude uygulamasında proje klasörünü seç ve bunu yaz.';
+  next.innerHTML = setup.path === 'new'
+    ? `${where} Sonra aynı klasörde yeni oturum aç ve <code>/start fikrin</code> yaz.`
+    : `${where} Dosyaların ezilmez. Sonra yeni oturumda <code>/adopt</code> yaz; kod taranır, belgeler koddan çıkar.`;
+}
+document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+  setup.path = b.dataset.path;
+  document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+  renderSetup();
+}));
+document.querySelectorAll('.via button').forEach((b) => b.addEventListener('click', () => {
+  setup.via = b.dataset.via;
+  document.querySelectorAll('.via button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  renderSetup();
+}));
+
+// Okuma ilerlemesi
+const bar = document.querySelector('.progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
+    ticking = false;
+  });
+}, { passive: true });
+
+// Hero demosu: yazılır, soru gelir, önerilen seçilir, kurul görüşü düşer; hareket azaltılmışsa son hali durur
+const demo = document.querySelector('.demo');
+if (demo && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const typed = demo.querySelector('.typed'), text = typed.textContent;
+  const parts = [...demo.querySelectorAll('[data-s]')], rec = demo.querySelector('.opt.rec');
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const visible = () => new Promise((r) => {
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting && !document.hidden) { io.disconnect(); r(); } });
+    io.observe(demo);
+  });
+  (async function loop() {
+    for (;;) {
+      await visible();
+      demo.classList.add('run');
+      parts.forEach((p) => p.classList.remove('in'));
+      rec.classList.remove('picked');
+      typed.textContent = '';
+      for (const ch of text) { typed.textContent += ch; await wait(38); }
+      await wait(500);
+      for (let s = 1; s <= 8; s++) {
+        parts.filter((p) => +p.dataset.s === s).forEach((p) => p.classList.add('in'));
+        if (s === 4) { await wait(700); rec.classList.add('picked'); }
+        await wait(s < 5 ? 380 : 260);
+      }
+      await wait(5200);
+    }
+  })();
+}
 </script>
 </body>
 </html>
