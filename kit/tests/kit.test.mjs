@@ -256,7 +256,7 @@ test('session start: the next command is shown to the user (after /clear)', () =
   const filePath = path.join(p, 'docs/product/roadmap.md');
   write(filePath, read(filePath).replace('- [ ] G-001', '- [x] G-001'));
   const o = oturum(p);
-  assert.match(o.systemMessage, /Sıradaki: \/build G-002 · Proje iskeleti kuruldu/);
+  assert.match(o.systemMessage, /Sıradaki: \/build G-002 · Project skeleton set up/);
   assert.match(o.hookSpecificOutput.additionalContext, /\/build G-002/);
 
   const handoff = path.join(p, 'docs/workflow/handoff.md');

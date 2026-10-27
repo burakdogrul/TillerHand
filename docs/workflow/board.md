@@ -1,19 +1,19 @@
-# Uzman Kurulu
+# Expert Board
 
-> Projeyi sürekli denetleyen uzman ajanlar. Kurallar: `.claude/board/rules.md`.
-> Yetki: **danışman + kritikte durdurur.** Karar kullanıcıda. RET (kritik bulgu) varsa iş bitmez, kullanıcıya sorulur.
-> Ağır toplantılar ve tek yönlü kararlar üç aşamalı **konseyle** yapılır (ilk görüş → anonim çapraz oy → başkan). Tutanaklar: `docs/workflow/council/`.
-> `/dashboard` panosu ve oturum başı notu aşağıdaki kalın etiketli satırları okur; biçimlerini bozma.
+> Expert agents that audit the project continuously. Rules: `.claude/board/rules.md`.
+> Authority: **advisor + stops on critical.** The decision is the user's. If there is a RET (critical finding), the work is not done and the user is asked.
+> Heavy meetings and one-way decisions are held by a three-stage **council** (first opinion → anonymous cross vote → chair). Minutes: `docs/workflow/council/`.
+> The `/dashboard` and the session-start note read the **bold-labeled** lines below; do not break their format.
 
 **Durum:** kurulmadı
 **Commit denetimi:** açık
 
 ## Üyeler
 
-| Üye | Ajan | Model | Odak | Toplantılar |
+| Member | Agent | Model | Focus | Meetings |
 |---|---|---|---|---|
 
 ## Toplantı günlüğü
 
-| # | Tarih | Tür | Kapsam | Katılan | Sonuç | Kritik | Kullanıcı kararı |
+| # | Date | Type | Scope | Attendees | Result | Critical | User decision |
 |---|---|---|---|---|---|---|---|

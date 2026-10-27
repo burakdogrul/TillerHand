@@ -1,7 +1,7 @@
-# Maliyet Günlüğü
+# Cost Log
 
-> İşlerin 5 saatlik limitten ne kadar harcadığı. `docs/workflow/usage-limits.md` §3'teki tahminler,
-> burada en az 3 kayıt olunca bu ortalamalarla değiştirilir. Boyut: K (küçük) / O (orta) / B (büyük) / BOARD / DESIGN / FINDINGS.
+> How much of the 5-hour limit each job used. The estimates in `docs/workflow/usage-limits.md` §3
+> are replaced with these averages once there are at least 3 rows. Size: K (small) / O (medium) / B (large) / BOARD / DESIGN / FINDINGS.
 
-| Tarih | İş | Boyut | Başlangıç 5s % | Bitiş 5s % | Fark | Süre (dk) | Not |
+| Date | Job | Size | Start 5h % | End 5h % | Diff | Time (min) | Note |
 |---|---|---|---|---|---|---|---|

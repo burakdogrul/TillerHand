@@ -1,43 +1,43 @@
-# Lansman
+# Launch
 
-> Teknik canlıya alma `docs/operations/release-checklist.md`'de. Bu dosya ürünün **kullanıcıya ulaşması** için.
-> Kişisel bir araç veya iç proje ise bu dosyayı sil.
+> Technical go-live is in `docs/operations/release-checklist.md`. This file is for the product **reaching users**.
+> If this is a personal tool or an internal project, delete this file.
 
-## 1. Lansman öncesi
+## 1. Before launch
 
-- [ ] **Tek cümlelik değer önerisi** (`docs/product/prd.md` §3) açılış sayfasının başlığında.
-- [ ] Açılış sayfası: ne yapar, kimin için, nasıl görünür (ekran görüntüsü/video), tek bir çağrı (kayıt / bekleme listesi).
-- [ ] Bekleme listesi veya erken erişim formu (lansmandan haftalar önce açılırsa ilk kullanıcılar hazır olur).
-- [ ] Analitik olayları tanımlandı ve çalışıyor:
+- [ ] **One-sentence value proposition** (`docs/product/prd.md` §3) in the landing page headline.
+- [ ] Landing page: what it does, who it is for, how it looks (screenshot/video), a single call to action (sign up / waitlist).
+- [ ] Waitlist or early-access form (if it opens weeks before launch, the first users are ready).
+- [ ] Analytics events defined and working:
 
-| Olay | Ne zaman tetiklenir | Neden önemli |
+| Event | When it fires | Why it matters |
 |---|---|---|
-| `signup` | Kayıt tamamlandı | Edinim |
-| `activated` | [İlk değer anı: örn. ilk faturayı gönderdi] | Aktivasyon |
-| `[ana_eylem]` | [Ürünün ana eylemi] | Kullanım |
-| `upgrade` | Ücretli plana geçti | Gelir |
+| `signup` | Signup completed | Acquisition |
+| `activated` | [First moment of value: e.g. sent their first invoice] | Activation |
+| `[ana_eylem]` | [The product's main action] | Usage |
+| `upgrade` | Moved to a paid plan | Revenue |
 
-- [ ] Geri bildirim kanalı: uygulama içi form veya e-posta, kolay görünür yerde.
-- [ ] Sosyal paylaşım görselleri (Open Graph), favicon, uygulama ikonu.
+- [ ] Feedback channel: an in-app form or email, in an easy-to-see place.
+- [ ] Social sharing images (Open Graph), favicon, app icon.
 
-## 2. Kanallar
+## 2. Channels
 
-| Kanal | Hedef kitle uyuyor mu? | Hazırlık | Tarih |
+| Channel | Does it fit the target audience? | Preparation | Date |
 |---|---|---|---|
-| [Kişisel ağ / LinkedIn / X] | | Kısa demo videosu | |
-| [Hedef kitlenin olduğu topluluklar, forumlar, gruplar] | | Topluluk kurallarını oku, spam yapma | |
-| [Product Hunt vb.] | | | |
-| [İçerik / SEO] | | Problemi anlatan 1-2 yazı | |
+| [Personal network / LinkedIn / X] | | Short demo video | |
+| [Communities, forums, groups where the target audience is] | | Read the community rules, do not spam | |
+| [Product Hunt etc.] | | | |
+| [Content / SEO] | | 1-2 posts that explain the problem | |
 
-## 3. İlk 30 gün
+## 3. First 30 days
 
-- [ ] İlk 10 kullanıcıyla birebir konuş: Neden kaydoldu, nerede takıldı, neyi bekliyordu?
-- [ ] Haftalık metrik bakışı (aşağıdaki tablo).
-- [ ] Geri bildirimleri `docs/product/roadmap.md` → Faz 4'e görev olarak ekle; en çok tekrar edenden başla.
-- [ ] `docs/product/prd.md` §4 başarı kriterleriyle karşılaştır: Hedefe yakın mı, yön değiştirmek gerekiyor mu?
+- [ ] Talk one-on-one with the first 10 users: Why did they sign up, where did they get stuck, what did they expect?
+- [ ] Weekly metrics review (table below).
+- [ ] Add the feedback as tasks to `docs/product/roadmap.md` → Faz 4; start with the most repeated one.
+- [ ] Compare with the `docs/product/prd.md` §4 success criteria: Is it close to the target, or is a change of direction needed?
 
-## 4. Metrik takibi
+## 4. Metrics tracking
 
-| Hafta | Yeni kayıt | Aktivasyon oranı | Haftalık aktif | 1. hafta tutunma | Gelir | Not |
+| Week | New signups | Activation rate | Weekly active | Week 1 retention | Revenue | Note |
 |---|---|---|---|---|---|---|
 | | | | | | | |

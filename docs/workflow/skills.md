@@ -1,11 +1,11 @@
-# Skill Yönlendirme
+# Skill Routing
 
-> Hangi işte hangi skill kullanılır? Skill'i Skill aracıyla yükle, talimatlarını uygula.
-> Bu proje `.claude/settings.json` içinde aşağıdaki plugin'leri tanımlar; Claude Code projeyi açınca kurmayı önerir. Çekirdek dışındakiler paket olarak kapalı gelir (aşağıda "Bağlam paketleri").
-> Bir skill yüklü değilse işi skill'siz yap, durum bloğunda "skill eksik: X" yaz ve kullanıcıya kurulum komutunu ver:
-> `/plugin install <plugin>@<marketplace>` (örn. `/plugin install impeccable@impeccable`).
+> Which skill to use for which job? Load the skill with the Skill tool and apply its instructions.
+> This project defines the plugins below in `.claude/settings.json`; Claude Code suggests installing them when it opens the project. Those outside the core come switched off as packages (see "Bağlam paketleri" below).
+> If a skill is not installed, do the job without it, write "skill missing: X" in the status block and give the user the install command:
+> `/plugin install <plugin>@<marketplace>` (e.g. `/plugin install impeccable@impeccable`).
 
-| Plugin | Marketplace | Skill önekleri |
+| Plugin | Marketplace | Skill prefixes |
 |---|---|---|
 | caveman | caveman | `caveman:` |
 | impeccable | impeccable | `impeccable:` |
@@ -14,143 +14,143 @@
 | humanizer | humanizer | `humanizer:` |
 | ponytail | ponytail | `ponytail:` |
 | mattpocock-skills | mattpocock | `mattpocock-skills:` |
-| gsap-skills (GreenSock, resmi) | gsap-skills | `gsap-skills:` (`tasarim` paketi) |
-| understand-anything | understand-anything | `/understand --language en`, `/understand-dashboard`, `/understand-onboard` (`yayin` paketi; `--auto-update` kullanılmaz). Açıkken oturum başı hook'u graf eskiyse sormadan günceller ve token harcar: iş bitince `/tools` ile paketi kapat |
-| security-guidance, claude-security, hookify, claude-md-management, session-report | claude-plugins-official (Anthropic) | otomatik hook / `/claude-security`, `/hookify`, `/revise-claude-md`, `/session-report` |
-| typescript-lsp (web, mobil) · pyright-lsp (backend) | claude-plugins-official | Dil sunucusu: tip hatası ve tanıma gitme. `npm i -g typescript-language-server typescript` veya `npm i -g pyright` gerekir |
-| supabase, postgres-best-practices | supabase-agent-skills | `supabase:`, `postgres-best-practices:` (web, mobil; backend'de sadece postgres) |
-| web-quality-skills | addy-web-quality-skills | Core Web Vitals, erişilebilirlik, SEO (web) |
-| expo | expo-plugins | Expo build, yükseltme, dağıtım + Expo MCP (mobil) |
+| gsap-skills (GreenSock, official) | gsap-skills | `gsap-skills:` (`tasarim` package) |
+| understand-anything | understand-anything | `/understand --language en`, `/understand-dashboard`, `/understand-onboard` (`yayin` package; `--auto-update` is not used). While on, the session-start hook updates the graph without asking when it is stale and spends tokens: switch the package off with `/tools` when the job is done |
+| security-guidance, claude-security, hookify, claude-md-management, session-report | claude-plugins-official (Anthropic) | automatic hook / `/claude-security`, `/hookify`, `/revise-claude-md`, `/session-report` |
+| typescript-lsp (web, mobile) · pyright-lsp (backend) | claude-plugins-official | Language server: type errors and go to definition. Needs `npm i -g typescript-language-server typescript` or `npm i -g pyright` |
+| supabase, postgres-best-practices | supabase-agent-skills | `supabase:`, `postgres-best-practices:` (web, mobile; only postgres in backend) |
+| web-quality-skills | addy-web-quality-skills | Core Web Vitals, accessibility, SEO (web) |
+| expo | expo-plugins | Expo build, upgrade, distribution + Expo MCP (mobile) |
 
-**Vercel skill'leri** (`react-best-practices`, `composition-patterns` web'de; `react-native-guidelines` mobilde) plugin değildir. `/start` stack kararından sonra projeye kopyalar:
+**Vercel skills** (`react-best-practices`, `composition-patterns` for web; `react-native-guidelines` for mobile) are not plugins. After the stack decision `/start` copies them into the project:
 `npx -y skills@1.7.2 add vercel-labs/agent-skills --skill react-best-practices --skill composition-patterns -a claude-code -y --copy`
 
-**three.js skill'leri** (`threejs-fundamentals`, `threejs-performance`, React'te `threejs-react-three-fiber`; `CloudAI-X/threejs-skills`, MIT) plugin değildir. Sadece 3D seçilirse `/start` 3c sabit commit'ten kopyalar. Her biri ~6k token, çağrılınca yüklenir.
+**three.js skills** (`threejs-fundamentals`, `threejs-performance`, and `threejs-react-three-fiber` for React; `CloudAI-X/threejs-skills`, MIT) are not plugins. Only if 3D is chosen, `/start` 3c copies them from a pinned commit. Each is ~6k tokens, loaded when called.
 
-## Kitin kendi skill'leri (`.claude/skills/`)
+## The kit's own skills (`.claude/skills/`)
 
-| Skill | Ne zaman |
+| Skill | When |
 |---|---|
-| `source-research` | Değişebilen her bilgi (sürüm, fiyat, kota, mevzuat, rakip); teknoloji seçimi; business ve legal raporları |
-| `logo-design` | Logo, ikon, favicon, marka paketi (SVG, API gerektirmez) |
-| `ui-motion` | Uygulama içi animasyon ve geçişler |
-| `motion-video` | Tanıtım videosu, açılış sayfası döngüsü (renderAt(t) + Playwright + ffmpeg) |
+| `source-research` | Any information that can change (version, price, quota, regulation, competitor); technology choice; business and legal reports |
+| `logo-design` | Logo, icon, favicon, brand pack (SVG, needs no API) |
+| `ui-motion` | In-app animation and transitions |
+| `motion-video` | Promo video, landing page loop (renderAt(t) + Playwright + ffmpeg) |
 
-## Araçlar (MCP)
+## Tools (MCP)
 
-| Araç | Ne için | Not |
+| Tool | What for | Note |
 |---|---|---|
-| **Context7** | Kütüphanelerin güncel ve sürüme özel dokümanı | Her tipte açık, ücretsiz |
-| **Playwright CLI** | Arayüz kanıtı, konsol, ağ, ekran görüntüsü (`npx -y @playwright/cli@0.1.22`) | Web'de; MCP'den az token. Kabul testleri yine `npx playwright test` |
-| **Chrome DevTools**, **Playwright** MCP | Performans izi; keşif amaçlı uzun tarayıcı akışı | Varsayılan kapalı; komut sorup ekler (katalog) |
-| **Vercel CLI** | Önizleme ve prod deploy (`npx -y vercel@63.1.1`) | `/release`; `--prod`, `promote`, `rollback` sorulur |
-| **Sentry**, **Supabase** | Hata kayıtları, veritabanı uyarıları (salt-okunur) | `/maintain` |
-| **Firecrawl** | Site tarama | İsteğe bağlı, API anahtarı gerekir; `source-research` §5 |
-| **Maestro**, **Expo** | Mobil E2E testi, EAS build, çökme kayıtları | Mobilde |
-| GitHub, Stripe, Vercel, PostHog, Figma… | Servis seçilince | Katalog: `docs/workflow/mcp-catalog.md` |
+| **Context7** | Current, version-specific docs of libraries | On for every project type, free |
+| **Playwright CLI** | Interface evidence, console, network, screenshots (`npx -y @playwright/cli@0.1.22`) | In web; fewer tokens than the MCP. Acceptance tests still run with `npx playwright test` |
+| **Chrome DevTools**, **Playwright** MCP | Performance trace; long exploratory browser flows | Off by default; the command asks and adds it (catalog) |
+| **Vercel CLI** | Preview and prod deploy (`npx -y vercel@63.1.1`) | `/release`; `--prod`, `promote`, `rollback` are asked |
+| **Sentry**, **Supabase** | Error logs, database warnings (read-only) | `/maintain` |
+| **Firecrawl** | Site crawling | Optional, needs an API key; `source-research` §5 |
+| **Maestro**, **Expo** | Mobile E2E tests, EAS build, crash logs | In mobile |
+| GitHub, Stripe, Vercel, PostHog, Figma… | When the service is chosen | Catalog: `docs/workflow/mcp-catalog.md` |
 
 ## Bağlam paketleri
 
-Açık her plugin'in skill açıklamaları her oturumda bağlama yüklenir. Skill listesi bağlamın %1'iyle sınırlıdır; taşınca az kullanılan skill'lerin açıklaması düşer ve Claude onları tanımaz. Plugin içindeki skill'ler tek tek kapatılamaz. Bu yüzden eklentiler **çekirdek** ve **paket** olarak ayrılır. Paketler `.claude/settings.json`'da kapalı gelir; ilgili komut ilk adımda `node .claude/hooks/tools.mjs --required <paket>` ile bakar, kapalıysa maliyetiyle birlikte açmayı sorar. Açma sadece bu makineyi etkiler (`.claude/settings.local.json`). Yönetim: `/tools`. Tanımlar: `.claude/hooks/tools.mjs` → `PACKAGES`.
+The skill descriptions of every plugin that is on are loaded into the context in each session. The skill list is limited to 1% of the context; when it overflows, the descriptions of rarely used skills drop and Claude does not recognize them. Skills inside a plugin cannot be switched off one by one. So plugins are split into **core** and **packages**. Packages come switched off in `.claude/settings.json`; in its first step the related command checks with `node .claude/hooks/tools.mjs --required <paket>` and, if the package is off, asks to switch it on together with its cost. Switching on affects only this machine (`.claude/settings.local.json`). Management: `/tools`. Definitions: `.claude/hooks/tools.mjs` → `PACKAGES`.
 
-| Paket | Eklentiler | Açan komut |
+| Package | Plugins | Command that switches it on |
 |---|---|---|
-| Çekirdek (hep açık) | caveman, ponytail, mattpocock-skills, impeccable, humanizer, security-guidance, hookify, claude-md-management + stack eklentileri | - |
+| Core (always on) | caveman, ponytail, mattpocock-skills, impeccable, humanizer, security-guidance, hookify, claude-md-management + stack plugins | - |
 | `tasarim` | taste-skill, ui-ux-pro-max, gsap-skills | `/design` |
 | `guvenlik` | Trail of Bits (7), claude-security | `/findings-security`, `/findings-all`, `/release first` |
 | `yayin` | understand-anything, session-report | `/release`, `/handoff`, `/adopt` |
 | `video` | remotion | `motion-video` |
 
-- Paketi oturum ortasında açmak prompt önbelleğini bozar ve bütün bağlam yeniden okunur. En ucuzu faz sınırında, `/clear` ile birlikte açmaktır.
-- Kesin ölçüm: `/context` (Skills satırı), `/doctor`; kullanılmayan skill'ler: `/skill-doctor`. Kaba ölçüm: `/tools olc`. `/maintain monthly` bunu kontrol eder.
-- Bir eklentiyi çekirdeğe almak veya paketten çıkarmak `teknik` karardır.
+- Switching a package on in the middle of a session breaks the prompt cache and the whole context is read again. The cheapest time is at a phase boundary, together with `/clear`.
+- Exact measurement: `/context` (Skills line), `/doctor`; unused skills: `/skill-doctor`. Rough measurement: `/tools olc`. `/maintain monthly` checks this.
+- Moving a plugin into the core or out of a package is a `teknik` decision.
 
-**Komut listesi (Hafif/Tam):** Kitin komut açıklamaları da aynı listeye girer (~1.600 token). Hafif ve Standart profilde çekirdek dışı 20 komut `skillOverrides` → `name-only` ile sadece adıyla listelenir: `/` menüsünde durur, Claude adıyla çağırabilir, açıklaması bağlama girmez. Açıklamasıyla kalan çekirdek: start, adopt, build, fix-bug, plan-task, design, tools, review-changes, wrap-up, release. Tam profil: `node .claude/hooks/tools.mjs --commands full`; geri dönmek: `--commands light`. Ayar `.claude/settings.json`'dadır (ekip geneli); kendi `skillOverrides` değerlerin korunur. Codex ve Antigravity'de etkisi yoktur. Liste: `.claude/hooks/tools.mjs` → `CORE_COMMANDS`, `LIGHT_COMMANDS`.
+**Command list (Light/Full):** The kit's command descriptions go into the same list (~1,600 tokens). In the Light and Standard profile, the 20 commands outside the core are listed by name only with `skillOverrides` → `name-only`: they stay in the `/` menu, Claude can call them by name, their description does not enter the context. The core that keeps its description: start, adopt, build, fix-bug, plan-task, design, tools, review-changes, wrap-up, release. Full profile: `node .claude/hooks/tools.mjs --commands full`; to go back: `--commands light`. The setting is in `.claude/settings.json` (team-wide); your own `skillOverrides` values are kept. It has no effect in Codex and Antigravity. List: `.claude/hooks/tools.mjs` → `CORE_COMMANDS`, `LIGHT_COMMANDS`.
 
-## Skill bütçesi
+## Skill budget
 
-- Backend projelerinde arayüz tasarım plugin'leri (impeccable dahil) kapalı gelir (`kit/templates/backend/.claude/settings.merge.json`).
-- Stack'e özel skill'ler (Supabase, Expo, web kalitesi, LSP) sadece ilgili proje tipinde açılır.
-- security-guidance'ın tur sonu incelemesi kapalı gelir (`ENABLE_STOP_REVIEW=0`, kota). Düzenleme anındaki kalıp taraması (ücretsiz) ve commit incelemesi açıktır. Kota rahatsa `.claude/settings.json` → `env`'den açılabilir.
-- Yeni bir plugin eklemek `teknik` karardır: aynı işi yapan bir skill zaten var mı, kaynak güvenilir mi, bağlam maliyeti nedir? Üçüncü taraf skill'ler bir saldırı yüzeyidir: kurmadan önce SKILL.md içeriğini oku.
+- In backend projects the interface design plugins (including impeccable) come switched off (`kit/templates/backend/.claude/settings.merge.json`).
+- Stack-specific skills (Supabase, Expo, web quality, LSP) are switched on only in the related project type.
+- The end-of-turn review of security-guidance comes switched off (`ENABLE_STOP_REVIEW=0`, quota). The pattern scan at edit time (free) and the commit review are on. If the quota is comfortable, it can be switched on from `.claude/settings.json` → `env`.
+- Adding a new plugin is a `teknik` decision: is there already a skill that does the same job, is the source trustworthy, what is the context cost? Third-party skills are an attack surface: read the SKILL.md content before installing.
 
-## İletişim
+## Communication
 
-| Durum | Skill |
+| Situation | Skill |
 |---|---|
-| Durum bloğu, ilerleme notları, kod açıklamaları | `caveman:caveman` (oturum başında yükle). Sorular, seçenek açıklamaları ve dokümanlar bundan muaftır, tam cümle yazılır |
+| Status block, progress notes, code explanations | `caveman:caveman` (load at session start). Questions, option descriptions and documents are exempt; write full sentences |
 
-## Fikir, ürün ve mimari
+## Idea, product and architecture
 
-| Durum | Skill |
+| Situation | Skill |
 |---|---|
-| Fikri ve planı sorgulamak (`/start` 1. adım, büyük özellik planı) | `mattpocock-skills:grilling` (soruları AskUserQuestion ile sor) |
-| Kavramlar, sözlük, karar kaydı (`docs/product/glossary.md`, `docs/decisions/`) | `mattpocock-skills:domain-modeling` |
-| Modül sınırları, arayüz tasarımı, test edilebilir yapı (`docs/architecture/`) | `mattpocock-skills:codebase-design` |
-| Teknoloji karşılaştırma, güncel sürüm/fiyat/doküman araştırması | `mattpocock-skills:research` |
-| Bir durum modelini veya akışı denemek (atılacak prototip) | `mattpocock-skills:prototype` |
-| Kullanıcının elle yapması gereken kurulum (panel, DNS, anahtar, mağaza hesabı) | `mattpocock-skills:wizard` |
+| Questioning the idea and the plan (`/start` Step 1, big feature plan) | `mattpocock-skills:grilling` (ask the questions with AskUserQuestion) |
+| Concepts, glossary, decision record (`docs/product/glossary.md`, `docs/decisions/`) | `mattpocock-skills:domain-modeling` |
+| Module boundaries, interface design, testable structure (`docs/architecture/`) | `mattpocock-skills:codebase-design` |
+| Technology comparison, research on current version/price/docs | `mattpocock-skills:research` |
+| Trying out a state model or flow (throwaway prototype) | `mattpocock-skills:prototype` |
+| Setup the user must do by hand (panel, DNS, key, store account) | `mattpocock-skills:wizard` |
 
-## Tasarım (web ve mobil arayüz)
+## Tasarım (web and mobile UI)
 
-Önce stil yönü seçilir (`/design`). Her yön bir skill'e eşlenir; önizlemeler ve uygulama o skill'le yapılır. Ürün bağlamı ve tasarım sistemi her zaman Impeccable'da (`PRODUCT.md`, `DESIGN.md`) tutulur.
+First the style direction is chosen (`/design`). Each direction maps to a skill; previews and implementation are done with that skill. Product context and the design system are always kept in Impeccable (`PRODUCT.md`, `DESIGN.md`).
 
-| Stil yönü (kullanıcıya sunulan seçenek) | Ne zaman iyi | Ana skill |
+| Style direction (option shown to the user) | When it is good | Main skill |
 |---|---|---|
-| **Premium / Apple tarzı:** bol boşluk, büyük ve ince tipografi, yumuşak geçişler, pahalı his | Tüketici ürünü, marka algısı önemli, fiyatı yüksek ürün | `taste-skill:high-end-visual-design` |
-| **Minimal editoryal:** sıcak monokrom, tipografi odaklı, düz yüzeyler | İçerik, portfolyo, sakin SaaS, güven veren hizmet | `taste-skill:minimalist-ui` |
-| **Cesur ve hareketli:** dev tipografi, kaydırmaya bağlı animasyonlar (GSAP), bento ızgaralar | Lansman sayfası, genç kitle, dikkat çekmesi gereken ürün | `taste-skill:gpt-taste` |
-| **Endüstriyel / brutalist:** ham ızgara, terminal estetiği, keskin kontrast | Geliştirici aracı, veri yoğun pano, sıra dışı marka | `taste-skill:industrial-brutalist-ui` |
-| **İşlevsel ürün arayüzü:** sade, yoğun bilgi, hızlı kullanım | Panel, admin, B2B araç, formlar | `impeccable:impeccable` + `ui-ux-pro-max:ui-styling` (shadcn/ui) |
-| **Kendi yönünü bul (anti-generic):** brief'ten yön çıkarır | Hiçbiri tam uymuyorsa | `taste-skill:design-taste-frontend` |
+| **Premium / Apple style:** lots of white space, large and thin typography, soft transitions, expensive feel | Consumer product, brand perception matters, high-priced product | `taste-skill:high-end-visual-design` |
+| **Minimal editorial:** warm monochrome, typography-led, flat surfaces | Content, portfolio, calm SaaS, trust-building service | `taste-skill:minimalist-ui` |
+| **Bold and animated:** giant typography, scroll-linked animations (GSAP), bento grids | Launch page, young audience, product that must grab attention | `taste-skill:gpt-taste` |
+| **Industrial / brutalist:** raw grid, terminal aesthetic, sharp contrast | Developer tool, data-heavy dashboard, unconventional brand | `taste-skill:industrial-brutalist-ui` |
+| **Functional product UI:** plain, dense information, fast to use | Panel, admin, B2B tool, forms | `impeccable:impeccable` + `ui-ux-pro-max:ui-styling` (shadcn/ui) |
+| **Find your own direction (anti-generic):** derives a direction from the brief | If none fits exactly | `taste-skill:design-taste-frontend` |
 
-| Tasarım işi | Skill |
+| Design job | Skill |
 |---|---|
-| Ürün bağlamını yazmak (`PRODUCT.md`), PRD'den beslenerek | `impeccable:impeccable` → `init` |
-| Görsel dünyayı kaydetmek (`DESIGN.md`), seçilen önizlemeden | `impeccable:impeccable` → yeni iş akışı |
-| Renk paleti ve yazı tipi çifti adayları, ürün tipine göre | `ui-ux-pro-max:ui-ux-pro-max` |
-| Tasarım belirteçleri ve bileşen kuralları | `ui-ux-pro-max:design-system` |
-| Ekran/bölüm üretmek | Seçilen yön skill'i + `impeccable:impeccable` |
-| Bitmiş ekranı değerlendirmek ve düzeltmek | `impeccable:impeccable` → `critique`, `audit`, `polish` (gerekirse `bolder`/`quieter`/`distill`/`harden`/`adapt`/`animate`) |
-| Var olan bir arayüzü yenilemek | `taste-skill:redesign-existing-projects` + `impeccable:impeccable` |
-| Logo, marka kimliği | `ui-ux-pro-max:design`, `ui-ux-pro-max:brand` |
-| Sosyal medya/reklam görselleri | `ui-ux-pro-max:banner-design` |
-| Mobil ekranlar | Seçilen yön skill'i + `impeccable:impeccable` (iOS/Android platform kılavuzu) + `ui-ux-pro-max:ui-ux-pro-max` (React Native) |
+| Write the product context (`PRODUCT.md`), fed from the PRD | `impeccable:impeccable` → `init` |
+| Record the visual world (`DESIGN.md`), from the chosen preview | `impeccable:impeccable` → new workflow |
+| Color palette and typeface pair candidates, by product type | `ui-ux-pro-max:ui-ux-pro-max` |
+| Design tokens and component rules | `ui-ux-pro-max:design-system` |
+| Produce a screen/section | Chosen direction skill + `impeccable:impeccable` |
+| Evaluate and fix a finished screen | `impeccable:impeccable` → `critique`, `audit`, `polish` (if needed `bolder`/`quieter`/`distill`/`harden`/`adapt`/`animate`) |
+| Redo an existing interface | `taste-skill:redesign-existing-projects` + `impeccable:impeccable` |
+| Logo, brand identity | `ui-ux-pro-max:design`, `ui-ux-pro-max:brand` |
+| Social media/ad visuals | `ui-ux-pro-max:banner-design` |
+| Mobile screens | Chosen direction skill + `impeccable:impeccable` (iOS/Android platform guidelines) + `ui-ux-pro-max:ui-ux-pro-max` (React Native) |
 
-## İçerik
+## Content
 
-| Durum | Skill |
+| Situation | Skill |
 |---|---|
-| Kullanıcıya görünen her metin: açılış sayfası, ekran metinleri, e-postalar, mağaza açıklaması, duyurular | Önce yaz, sonra `humanizer:humanizer` ile geçir (AI kokan kalıpları temizler) |
+| Every text the user sees: landing page, screen texts, emails, store description, announcements | Write first, then pass it through `humanizer:humanizer` (removes AI-sounding patterns) |
 
-## Bulgu raporları
+## Findings reports
 
-| Durum | Skill / dosya |
+| Situation | Skill / file |
 |---|---|
-| `/findings-<tür>` (tech, business, security, ux, perf, legal, all) | Yöntem `.claude/findings/protocol.md`, bakış açısı `.claude/findings/lenses/<tür>.md` |
-| Derin güvenlik taraması (`/findings-security`) | `/claude-security` (Anthropic, çok ajanlı, bulgular doğrulanmış) |
-| Güvenlik derinliği | Trail of Bits: `differential-review`, `insecure-defaults`, `sharp-edges`, `static-analysis`, `supply-chain-risk-auditor`, `agentic-actions-auditor`, `fp-check` |
-| Business ve legal araştırması | `source-research` + web araması |
-| Teknik ve performans taraması | `ponytail:ponytail-audit` |
-| UX taraması | `impeccable:impeccable` → `audit`, `critique` |
+| `/findings-<tür>` (tech, business, security, ux, perf, legal, all) | Method `.claude/findings/protocol.md`, lens `.claude/findings/lenses/<tür>.md` |
+| Deep security scan (`/findings-security`) | `/claude-security` (Anthropic, multi-agent, findings verified) |
+| Security depth | Trail of Bits: `differential-review`, `insecure-defaults`, `sharp-edges`, `static-analysis`, `supply-chain-risk-auditor`, `agentic-actions-auditor`, `fp-check` |
+| Business and legal research | `source-research` + web search |
+| Technical and performance scan | `ponytail:ponytail-audit` |
+| UX scan | `impeccable:impeccable` → `audit`, `critique` |
 
-## Kod
+## Code
 
-| Durum | Skill |
+| Situation | Skill |
 |---|---|
-| Her kod değişikliği (en küçük tam çözüm, gereksiz soyutlama yok) | `ponytail:ponytail` |
-| Kritik akış (auth, ödeme, veri yazma; `docs/quality/test-plan.md` K1-K5) | `mattpocock-skills:tdd` (kırmızı testi `test-writer` ajanı yazar, yeşile kod tarafı çevirir) |
-| Bozulan projeyi son çalışan hale döndürmek | `/rollback` (`checkpoint.mjs`) |
-| Yeni başlayan kullanıcıya her adımı anlatmak | Anlatıcı mod: `.claude/output-styles/anlatici.md` (`outputStyle: anlatici`) |
-| Hata ayıklama (`/fix-bug`) | `mattpocock-skills:diagnosing-bugs` + `/freeze <klasör>` |
-| Değişiklik incelemesi (`/review-changes`) | `ponytail:ponytail-review` + `code-reviewer` ajanı (+ `security-auditor`) |
-| Görev/spec'e uygunluk incelemesi (dal veya PR) | `mattpocock-skills:code-review` |
-| Tüm kod tabanı kalite denetimi (`/release ilk`, `/maintain quarterly`) | `ponytail:ponytail-audit` |
-| Ertelenen kısa yolların listesi (`/maintain monthly`) | `ponytail:ponytail-debt` |
-| PR açıklaması | `mattpocock-skills:pr` |
-| CLAUDE.md, komut veya skill düzenlemek (`/retro`) | `mattpocock-skills:writing-for-agents` |
-| CLAUDE.md denetimi, oturum dersleri (`/retro`, `/wrap-up`) | `claude-md-management`: `claude-md-improver`, `/revise-claude-md` |
-| "Bunu bir daha yapma" → kalıcı kural | `/hookify <kural>` (`.claude/hookify.*.local.md`) |
-| React/Next performans (web) · React Native (mobil) | `react-best-practices`, `composition-patterns` · `react-native-guidelines` (Vercel) |
-| Veritabanı şeması, sorgu, indeks | `postgres-best-practices:*`, `supabase:*` |
-| Token ve maliyet ayrıntısı | `/session-report` (HTML), pano için `node .claude/hooks/cost.mjs` |
+| Every code change (smallest complete solution, no needless abstraction) | `ponytail:ponytail` |
+| Critical flow (auth, payment, data writes; `docs/quality/test-plan.md` K1-K5) | `mattpocock-skills:tdd` (the `test-writer` agent writes the red test, the code side turns it green) |
+| Return a broken project to the last working state | `/rollback` (`checkpoint.mjs`) |
+| Explain every step to a new user | Narrator mode: `.claude/output-styles/anlatici.md` (`outputStyle: anlatici`) |
+| Debugging (`/fix-bug`) | `mattpocock-skills:diagnosing-bugs` + `/freeze <klasör>` |
+| Change review (`/review-changes`) | `ponytail:ponytail-review` + `code-reviewer` agent (+ `security-auditor`) |
+| Conformance review against task/spec (branch or PR) | `mattpocock-skills:code-review` |
+| Quality audit of the whole codebase (`/release first`, `/maintain quarterly`) | `ponytail:ponytail-audit` |
+| List of deferred shortcuts (`/maintain monthly`) | `ponytail:ponytail-debt` |
+| PR description | `mattpocock-skills:pr` |
+| Edit CLAUDE.md, a command or a skill (`/retro`) | `mattpocock-skills:writing-for-agents` |
+| CLAUDE.md audit, session lessons (`/retro`, `/wrap-up`) | `claude-md-management`: `claude-md-improver`, `/revise-claude-md` |
+| "Don't do this again" → permanent rule | `/hookify <kural>` (`.claude/hookify.*.local.md`) |
+| React/Next performance (web) · React Native (mobile) | `react-best-practices`, `composition-patterns` · `react-native-guidelines` (Vercel) |
+| Database schema, query, index | `postgres-best-practices:*`, `supabase:*` |
+| Token and cost detail | `/session-report` (HTML), `node .claude/hooks/cost.mjs` for the dashboard |

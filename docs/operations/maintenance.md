@@ -1,52 +1,52 @@
-# Bakım ve Düzenli Kontroller
+# Maintenance and Regular Checks
 
-> Canlıdaki proje kendi kendine bozulur: bağımlılıklar eskir, sertifikalar ve kartlar süresi dolar,
-> faturalar şişer, yedekler sessizce durur. Bu dosya bunları yakalar.
-> `/maintain weekly` · `/maintain monthly` · `/maintain quarterly` komutları ilgili listeyi çalıştırır ve kayda ekler.
-> Tipe özel ek maddeler: `docs/architecture/stack.md` → "Bakım".
+> A live project decays on its own: dependencies age, certificates and cards expire,
+> bills swell, backups stop silently. This file catches those.
+> The commands `/maintain weekly` · `/maintain monthly` · `/maintain quarterly` run the matching list and add to the log.
+> Project-type-specific extra items: `docs/architecture/stack.md` → "Bakım" (maintenance).
 
-## Haftalık (~15 dk)
+## Weekly (~15 min)
 
-- [ ] Hata takibi: yeni veya artan hata var mı? Varsa `docs/product/roadmap.md`'ye görev olarak ekle.
-- [ ] Uptime: kesinti oldu mu?
-- [ ] Maliyet: hosting, DB, AI API harcaması beklenen aralıkta mı? Harcama alarmı tetiklendi mi (`docs/operations/spend-alarms.md`)?
-- [ ] Kullanıcı geri bildirimi / destek kutusu tarandı.
-- [ ] Yedekler son 7 günde başarıyla alındı mı?
+- [ ] Error tracking: any new or rising errors? If yes, add them to `docs/product/roadmap.md` as tasks.
+- [ ] Uptime: was there an outage?
+- [ ] Cost: is hosting, DB and AI API spend within the expected range? Did a spend alarm fire (`docs/operations/spend-alarms.md`)?
+- [ ] User feedback / support inbox scanned.
+- [ ] Were backups taken successfully in the last 7 days?
 
-## Aylık (~1 saat)
+## Monthly (~1 hour)
 
-- [ ] Bağımlılık güncellemesi (yama ve küçük sürümler) + testler.
-- [ ] Bağımlılık güvenlik taraması (`npm audit` / `uv run --with pip-audit pip-audit`).
-- [ ] Performans ölçümü (tipe özel hedefler, `docs/architecture/stack.md`).
-- [ ] Maliyet trendi: geçen aya göre artış neden?
-- [ ] Kullanılmayan servis, ortam değişkeni, özellik bayrağı, ölü kod temizliği.
-- [ ] `docs/workflow/progress.md`, `docs/architecture/overview.md` güncel mi?
-- [ ] Analitik: başarı kriterlerine (`docs/product/prd.md` §4) göre durum.
-- [ ] Kopya kod oranı (`npx jscpd --silent .`) ve `docs/quality/metrics.md`'ye aylık satır.
-- [ ] `docs/product/unit-economics.md` gerçek faturalarla güncel mi?
-- [ ] `docs/operations/feature-flags.md`: kaldırma tarihi geçen bayraklar temizlendi mi?
-- [ ] `docs/product/feedback.md`: yeni geri bildirimler işlendi mi (`/user-feedback`)?
+- [ ] Dependency updates (patch and minor versions) + tests.
+- [ ] Dependency security scan (`npm audit` / `uv run --with pip-audit pip-audit`).
+- [ ] Performance measurement (project-type-specific targets, `docs/architecture/stack.md`).
+- [ ] Cost trend: why did it rise compared with last month?
+- [ ] Clean up unused services, environment variables, feature flags, dead code.
+- [ ] Are `docs/workflow/progress.md` and `docs/architecture/overview.md` current?
+- [ ] Analytics: status against the success criteria (`docs/product/prd.md` §4).
+- [ ] Duplicate code ratio (`npx jscpd --silent .`) and a monthly row in `docs/quality/metrics.md`.
+- [ ] Is `docs/product/unit-economics.md` current with the real invoices?
+- [ ] `docs/operations/feature-flags.md`: were the flags past their removal date cleaned up?
+- [ ] `docs/product/feedback.md`: was new feedback processed (`/user-feedback`)?
 
-## Çeyreklik (3 ayda bir, ~yarım gün)
+## Quarterly (every 3 months, ~half a day)
 
-- [ ] **Yedekten tam geri yükleme tatbikatı** (ayrı bir ortama).
-- [ ] Erişim gözden geçirme: hosting, DB, ödeme, domain, kod deposu. Eski erişimleri kaldır.
-- [ ] Kritik anahtarların yenilenmesi (rotation), özellikle sızma şüphesi olanlar.
-- [ ] Majör sürüm güncellemeleri planla (framework, runtime, SDK).
-- [ ] `docs/legal/privacy-kvkk.md` ve yayındaki metinler güncel mi? Yeni veri/servis eklendi mi?
-- [ ] `docs/security/checklist.md` tam tur.
-- [ ] `docs/operations/accounts.md`: bitiş tarihleri, 2FA, artık kullanılmayan hesaplar.
+- [ ] **Full restore drill from backup** (into a separate environment).
+- [ ] Access review: hosting, DB, payment, domain, code repository. Remove old access.
+- [ ] Rotate critical keys, especially those suspected of a leak.
+- [ ] Plan major version updates (framework, runtime, SDK).
+- [ ] Are `docs/legal/privacy-kvkk.md` and the published texts current? Was new data/a new service added?
+- [ ] Full pass of `docs/security/checklist.md`.
+- [ ] `docs/operations/accounts.md`: expiry dates, 2FA, accounts no longer used.
 
-## Olay müdahale (site çöktü / veri sızdı / fatura patladı)
+## Incident response (site down / data leaked / bill exploded)
 
-1. **Durdur:** Zarar sürüyorsa önce durdur. Önceki sürüme dön (rollback), sızan anahtarı iptal et, servisi bakım moduna al.
-2. **Kaydet:** Ne zaman başladı, kimler etkilendi, ne gördün? Ekran görüntüsü ve log al. Şimdi değil sonra hatırlamazsın.
-3. **Düzelt:** Kök nedeni bul ve düzelt; regresyon testi ekle.
-4. **Bildir:** Kişisel veri ihlali varsa KVKK Kurulu'na **72 saat** içinde bildirim ve etkilenen kullanıcılara bilgilendirme (`docs/legal/privacy-kvkk.md`).
-5. **Öğren:** Aşağıdaki kayda yaz. Tekrarı engelleyen kontrolü ilgili listeye ekle.
+1. **Stop:** If damage continues, stop it first. Return to the previous version (rollback), revoke the leaked key, put the service in maintenance mode.
+2. **Record:** When did it start, who was affected, what did you see? Take screenshots and logs. You will not remember later.
+3. **Fix:** Find and fix the root cause; add a regression test.
+4. **Notify:** For a personal data breach, notify the KVKK Board within **72 hours** and inform the affected users (`docs/legal/privacy-kvkk.md`).
+5. **Learn:** Write it in the log below. Add the check that prevents a repeat to the matching list.
 
 ## Bakım kaydı
 
-| Tarih | Tür | Bulgular | Yapılan / açılan görev |
+| Date | Type | Findings | Done / task opened |
 |---|---|---|---|
-| | haftalık/aylık/çeyreklik/olay | | |
+| | weekly/monthly/quarterly/incident | | |

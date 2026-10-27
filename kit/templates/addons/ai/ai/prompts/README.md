@@ -1,15 +1,15 @@
-# Promptlar
+# Prompts
 
-Her prompt ayrı dosya. Dosyanın başına şu bloğu koy:
+Each prompt is a separate file. Put this block at the top of the file:
 
 ```
 <!--
-amaç: [bu prompt ne yapar]
-girdi: [değişkenler: {{musteri_adi}}, {{fatura_metni}}]
-çıktı: [biçim / şema adı]
-model: [AI_MODEL_* değişkeni]
-son değişiklik: YYYY-AA-GG — [ne değişti, eval sonucu]
+purpose: [what this prompt does]
+input: [variables: {{customer_name}}, {{invoice_text}}]
+output: [format / schema name]
+model: [AI_MODEL_* variable]
+last change: YYYY-MM-DD — [what changed, eval result]
 -->
 ```
 
-Prompt değişikliği = kod değişikliği: eval'den geçer, commit'lenir, CHANGELOG'a yazılır.
+A prompt change is a code change: it passes the eval, is committed, and is written to the CHANGELOG.

@@ -1,27 +1,27 @@
-# Özellik Bayrakları
+# Feature Flags
 
-> Riskli özellikler bir bayrağın arkasında yayınlanır. Sorun çıkarsa **yeniden deploy etmeden** kapatılır (acil kapatma).
-> Unutulan bayrak teknik borçtur: her bayrağın bir kaldırma tarihi olur. `/dashboard` panosu süresi geçenleri gösterir.
-> Uygulama yöntemi `docs/architecture/stack.md` → "Özellik bayrakları" bölümünde.
+> Risky features ship behind a flag. If something goes wrong, the flag is turned off **without a redeploy** (kill switch).
+> A forgotten flag is technical debt: every flag gets a removal date. The `/dashboard` dashboard shows the overdue ones.
+> The implementation method is in `docs/architecture/stack.md` → "Özellik bayrakları" (feature flags).
 
-## Ne zaman bayrak zorunlu?
+## When is a flag mandatory?
 
-- Ödeme, abonelik veya para hareketi
-- AI/LLM çağrısı yapan özellik (maliyet patlaması riski)
-- Toplu e-posta / bildirim gönderen özellik
-- Veri silen, taşıyan veya dışa aktaran özellik
-- Büyük arayüz değişikliği (kademeli açmak için)
+- Payment, subscription or money movement
+- A feature that calls an AI/LLM (risk of a cost explosion)
+- A feature that sends bulk email / notifications
+- A feature that deletes, moves or exports data
+- A large interface change (to roll it out gradually)
 
 ## Bayraklar
 
-`/dashboard` panosu bu tabloyu okur. Tarih biçimi `YYYY-AA-GG`, durum `açık` / `kapalı` / `kademeli %N`.
+The `/dashboard` dashboard reads this table. Date format `YYYY-AA-GG`, status `açık` / `kapalı` / `kademeli %N`.
 
-| Bayrak | Amaç | Durum | Sahibi | Eklendi | Kaldırma tarihi | Acil kapatma test edildi |
+| Flag | Purpose | Status | Owner | Added | Removal date | Kill switch tested |
 |---|---|---|---|---|---|---|
 
-## Kurallar
+## Rules
 
-- Bayrak adı `ozellik_adi` biçiminde ve `docs/product/glossary.md` ile uyumlu.
-- Bayrak kapalıyken kod yolu da test edilir (iki durum için en az bir test).
-- Özellik herkese açıldıktan ve 2 hafta sorunsuz çalıştıktan sonra bayrak ve eski kod yolu kaldırılır.
-- Acil kapatma: Panelden veya ortam değişkeninden kapatma adımı bu dosyada yazılı ve en az bir kez denenmiş olmalı.
+- The flag name uses the `ozellik_adi` form and matches `docs/product/glossary.md`.
+- The code path is also tested while the flag is off (at least one test for each of the two states).
+- After the feature is open to everyone and has run without problems for 2 weeks, the flag and the old code path are removed.
+- Kill switch: the step to turn it off from the panel or an environment variable is written in this file and has been tried at least once.

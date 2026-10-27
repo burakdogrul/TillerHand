@@ -1,9 +1,9 @@
-# Arşiv
+# Archive
 
-Artık geçerli olmayan ama saklanması gereken dokümanlar. Silmek yerine buraya taşı ve dosyanın başına şunu ekle:
+Docs that are no longer valid but must be kept. Instead of deleting, move them here and add this at the top of the file:
 
 ```
-> Arşivlendi: YYYY-AA-GG · Neden: [...] · Yerine geçen: [docs/... veya "yok"]
+> Archived: YYYY-MM-DD · Reason: [...] · Replaced by: [docs/... or "none"]
 ```
 
-Arşivdeki dokümanlar AI için bağlam değildir; güncel kararlar `docs/decisions/` altındadır.
+Docs in the archive are not context for the AI; current decisions are under `docs/decisions/`.

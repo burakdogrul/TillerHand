@@ -1,76 +1,77 @@
-# Ürün Gereksinimleri (PRD)
+# Product Requirements (PRD)
 
-> Aşama: **0 - Fikir**. Kod yazmadan önce doldurulur. `/start` komutu bu dosyayı seninle birlikte doldurur.
-> Son güncelleme: [YYYY-AA-GG]
+> Stage: **0 - Idea**. Fill it in before writing code. The `/start` command fills this file in together with you.
+> Last updated: [YYYY-AA-GG]
 
 ## 1. Problem
 
-[Kim, hangi durumda, neyi yapamıyor veya neyi zor yapıyor? 2-3 cümle.]
+[Who cannot do what, or finds what hard to do, and in which situation? 2-3 sentences.]
 
-## 2. Hedef kullanıcı
+## 2. Target user
 
-| Persona | Kim? | En büyük derdi | Şu an ne kullanıyor? |
+| Persona | Who? | Biggest pain | What do they use now? |
 |---|---|---|---|
-| [Birincil] | | | |
-| [İkincil] | | | |
+| [Primary] | | | |
+| [Secondary] | | | |
 
-## 3. Değer önerisi
+## 3. Değer önerisi (value proposition)
 
-[Tek cümle: "[Kullanıcı], [ürün] sayesinde [sonuç] elde eder, çünkü [fark]."]
+[One sentence: "With [product], [user] gets [result], because [difference]."]
 
-## 4. Başarı kriterleri (ölçülebilir)
+## 4. Success criteria (measurable)
 
-- [ ] [Örn: İlk 30 günde 50 kayıtlı kullanıcı]
-- [ ] [Örn: Kayıttan ilk değere ulaşma süresi < 3 dakika]
-- [ ] [Örn: Aylık altyapı maliyeti < X TL]
+- [ ] [E.g. 50 registered users in the first 30 days]
+- [ ] [E.g. time from signup to first value < 3 minutes]
+- [ ] [E.g. monthly infrastructure cost < X TL]
 
-## 5. MVP kapsamı
+## 5. MVP scope
 
-Her özellik bir kullanıcı hikayesi + kabul kriterleri. Kabul kriteri yoksa özellik hazır değildir.
-Her kriterin bir kimliği var (`Ö-01.1`). Kabul testleri bu kimliği test adında taşır; `/dashboard` panosu MVP ilerlemesini kutucuklardan değil **test sonuçlarından** okur (`docs/quality/test-plan.md` §1a).
+Each feature is a user story + acceptance criteria. A feature without acceptance criteria is not ready.
+Each criterion has an id (`Ö-01.1`). Acceptance tests carry this id in the test name; the `/dashboard` reads MVP progress from **test results**, not from checkboxes (`docs/quality/test-plan.md` §1a).
+The label "Öncelik" (priority) stays Turkish: the dashboard reads it.
 
-### Ö-01: [Özellik adı]
-**Hikaye:** [Kullanıcı] olarak [eylem] yapmak istiyorum, böylece [fayda].
-**Kabul kriterleri:**
-- [ ] Ö-01.1: [Gözlemlenebilir davranış: "Geçersiz e-posta girilince form gönderilmez ve hata mesajı gösterilir"]
+### Ö-01: [Feature name]
+**Story:** As a [user], I want to [action], so that [benefit].
+**Acceptance criteria:**
+- [ ] Ö-01.1: [Observable behavior: "When an invalid email is entered, the form is not sent and an error message is shown"]
 - [ ] Ö-01.2: [...]
-**Öncelik:** Olmazsa olmaz / Olsa iyi olur
+**Öncelik:** Must have / Nice to have
 
-### Ö-02: [Özellik adı]
+### Ö-02: [Feature name]
 ...
 
-## 6. Kapsam dışı (bu sürümde YAPILMAYACAK)
+## 6. Kapsam dışı (out of scope: NOT built in this release)
 
-Bu liste AI'nın kapsamı genişletmesini engeller. Aklına gelen her "sonra" fikrini buraya yaz.
+This list stops the AI from widening the scope. Write every "later" idea that comes to mind here.
 
-- [Örn: Çoklu dil desteği]
-- [Örn: Takım/organizasyon hesapları]
-- [Örn: Mobil uygulama]
+- [E.g. Multi-language support]
+- [E.g. Team/organization accounts]
+- [E.g. Mobile app]
 
-## 7. Ana kullanıcı akışları
+## 7. Main user flows
 
 ```
-[Akış 1: Kayıt]  Açılış → Kayıt ol → E-posta doğrula → Onboarding → Panel
-[Akış 2: ...]
+[Flow 1: Sign-up]  Landing → Sign up → Verify email → Onboarding → Dashboard
+[Flow 2: ...]
 ```
 
-## 8. Ekranlar / uç noktalar listesi
+## 8. List of screens / endpoints
 
-| Ad | Tür (sayfa/ekran/endpoint) | Kimler erişir | İlgili özellik |
+| Name | Type (page/screen/endpoint) | Who can access | Related feature |
 |---|---|---|---|
 | | | | |
 
-## 9. Kısıtlar
+## 9. Constraints
 
-- **Bütçe:** [aylık altyapı + AI API üst limiti]
-- **Süre:** [MVP hedef tarihi]
-- **Yasal:** [Kişisel veri işleniyor mu? Ödeme alınıyor mu? → `docs/legal/privacy-kvkk.md`]
-- **Teknik:** [Zorunlu platform, entegrasyon vb.]
+- **Budget:** [monthly cap for infrastructure + AI API]
+- **Time:** [MVP target date]
+- **Legal:** [Is personal data processed? Is payment taken? → `docs/legal/privacy-kvkk.md`]
+- **Technical:** [Required platform, integrations, etc.]
 
-## 10. Gelir modeli (varsa)
+## 10. Revenue model (if any)
 
-[Ücretsiz / abonelik / tek seferlik / reklam. Fiyat. Ödeme sağlayıcısı.]
+[Free / subscription / one-time / ads. Price. Payment provider.]
 
-## 11. Açık sorular
+## 11. Open questions
 
-- [ ] [Henüz cevabı olmayan, kararı etkileyen sorular]
+- [ ] [Questions without an answer yet that affect a decision]

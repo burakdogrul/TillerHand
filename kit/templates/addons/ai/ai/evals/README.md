@@ -1,17 +1,17 @@
-# Eval Setleri
+# Eval Sets
 
-Her satır bir vaka (`.jsonl`). Alanlar:
+Each line is one case (`.jsonl`). Fields:
 
-| Alan | Açıklama |
+| Field | Description |
 |---|---|
-| `id` | Benzersiz kimlik |
-| `ozellik` | Hangi AI özelliği (`docs/ai/guide.md` → model envanteri) |
+| `id` | Unique id |
+| `ozellik` | Which AI feature (`docs/ai/guide.md` → model inventory) |
 | `tur` | `tipik` / `zor` / `kotu-niyetli` |
-| `girdi` | Özelliğe verilen girdi |
-| `beklenen` | Kontroller: `icerir`, `icermez`, `esit`, `sema`, `hata`, `puanlama` (LLM-as-judge kriteri) |
+| `girdi` | The input given to the feature |
+| `beklenen` | Checks: `icerir`, `icermez`, `esit`, `sema`, `hata`, `puanlama` (LLM-as-judge criterion) |
 
-Çalıştırma betiği projenin diline göre yazılır (`evals/calistir.ts` veya `evals/calistir.py`):
-vakaları oku → özelliği gerçek prompt ve modelle çağır → kontrolleri uygula → geçme oranını ve kalanları raporla.
-AI'dan ilk AI özelliğiyle birlikte bu betiği yazmasını iste. Eval, `docs/ai/guide.md` §3'teki kabul eşiğini geçmeden prompt/model değişikliği merge edilmez.
+The run script is written in the project's language (`evals/calistir.ts` or `evals/calistir.py`):
+read the cases → call the feature with the real prompt and model → apply the checks → report the pass rate and the failures.
+Ask the AI to write this script together with the first AI feature. A prompt/model change is not merged until the eval passes the acceptance threshold in `docs/ai/guide.md` §3.
 
-Canlıda kötü sonuç veren gerçek örnekleri (kişisel veriyi temizleyerek) buraya ekle.
+Add real examples that gave bad results in production here (with personal data removed).

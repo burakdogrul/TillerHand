@@ -1,156 +1,156 @@
-# Stack: Backend / API / Otomasyon
+# Stack: Backend / API / Automation
 
-> Bu dosya her oturumda AI'ya yüklenir. Projede farklı bir seçim yaptıysan burayı güncelle
-> ve nedenini `docs/decisions/log.md`'ye yaz.
+> This file is loaded into the AI every session. If the project makes a different choice, update this file
+> and write the reason to `docs/decisions/log.md`.
 
-## Karar noktaları
+## Karar noktaları (decision points)
 
-`/start` bu kararları sırayla sorar (`docs/workflow/decision-protocol.md`). Her kararda bu projeye en uygun 2-4 seçeneği sun; **önerilen** etiketi varsayılandır, ama PRD'ye göre başka seçenek daha uygunsa onu öner ve nedenini söyle. Fiyat, ücretsiz katman ve kısıt gibi değişebilen iddiaların yanında `(kaynak: <adres>, YYYY-AA-GG)` notu varsa ve 90 günden yeniyse yeniden araştırılmaz.
+`/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that fit this project best. The **recommended** label is the default, but if another option fits the PRD better, recommend that one and say why. A claim that can change (price, free tier, limit) with a `(kaynak: <adres>, YYYY-AA-GG)` note newer than 90 days is not researched again.
 
-| # | Karar | Seçenekler (ne zaman daha iyi) |
+| # | Decision | Options (when each is better) |
 |---|---|---|
-| 1 | Dil ve framework | **Python + FastAPI** (önerilen: AI/veri işleri, hızlı geliştirme, otomatik OpenAPI dokümanı) · Node.js + TypeScript + Hono/Fastify (frontend ile aynı dil, tip paylaşımı) · Go (yüksek performans, tek binary, düşük bellek) · Django (hazır admin paneli, büyük monolit) |
-| 2 | Veritabanı | **PostgreSQL** (önerilen: her şeye yeter, JSON desteği) · SQLite / Turso (tek sunucu, küçük ölçek, sıfır işletme) · MongoDB (şemasız doküman, değişken yapı) |
-| 3 | ORM / sorgu | **SQLAlchemy 2 + Alembic** (Python) · SQLModel (Pydantic ile tek model, daha basit) · Node seçildiyse: Drizzle (önerilen) / Prisma |
-| 4 | Kimlik doğrulama | **Dış sağlayıcının JWT'si** (Supabase Auth / Clerk; kullanıcı yönetimini sen yazmazsın) · API anahtarı (servisler arası, B2B API) · Kendi oturum/JWT'n (tam kontrol; güvenlik yükü sende) |
-| 5 | Arka plan işleri | **Platform cron'u** (önerilen basit zamanlanmış işler için) · ARQ / Celery + Redis (kuyruk, yeniden deneme, yoğun iş) · Temporal / Inngest (çok adımlı, uzun süren iş akışları) · Yok |
-| 6 | API stili | **REST + OpenAPI** (önerilen) · GraphQL (çok farklı istemci, esnek sorgu) · tRPC (sadece TypeScript istemci) |
-| 7 | Barındırma | **Railway** (önerilen: en kolay, Postgres dahil; ücretsiz kalıcı katman yok, Hobby aylık 5 dolar ve 5 dolarlık kullanım içerir (kaynak: https://docs.railway.com/pricing/plans, 2026-10-26)) · Fly.io (kullanıcıya yakın bölge, ölçekleme) · Render · Google Cloud Run (istek başı ödeme, sıfıra ölçeklenir) · VPS + Coolify (sabit maliyet, bakım sende) |
-| 8 | Paket yönetimi | **uv** (önerilen Python için: çok hızlı, kilit dosyası) · Poetry |
-| 9 | Gözlem | **Sentry + yapılandırılmış log** (Better Stack / Axiom) · OpenTelemetry (dağıtık servisler) |
-| 10 | Test | **pytest + httpx** (önerilen) · Node seçildiyse: Vitest + supertest |
+| 1 | Language and framework | **Python + FastAPI** (recommended: AI/data work, fast development, automatic OpenAPI docs) · Node.js + TypeScript + Hono/Fastify (same language as the frontend, shared types) · Go (high performance, single binary, low memory) · Django (ready-made admin panel, large monolith) |
+| 2 | Database | **PostgreSQL** (recommended: fits everything, JSON support) · SQLite / Turso (single server, small scale, zero operations) · MongoDB (schemaless documents, variable structure) |
+| 3 | ORM / queries | **SQLAlchemy 2 + Alembic** (Python) · SQLModel (one model with Pydantic, simpler) · If Node is chosen: Drizzle (recommended) / Prisma |
+| 4 | Authentication | **An external provider's JWT** (Supabase Auth / Clerk; you do not write user management) · API key (service to service, B2B API) · Your own session/JWT (full control; the security burden is yours) |
+| 5 | Background jobs | **Platform cron** (recommended for simple scheduled jobs) · ARQ / Celery + Redis (queue, retries, heavy work) · Temporal / Inngest (multi-step, long-running workflows) · None |
+| 6 | API style | **REST + OpenAPI** (recommended) · GraphQL (many different clients, flexible queries) · tRPC (TypeScript clients only) |
+| 7 | Hosting | **Railway** (recommended: easiest, Postgres included; no free permanent tier, Hobby is 5 dollars a month and includes 5 dollars of usage (kaynak: https://docs.railway.com/pricing/plans, 2026-10-26)) · Fly.io (region close to users, scaling) · Render · Google Cloud Run (pay per request, scales to zero) · VPS + Coolify (fixed cost, maintenance is yours) |
+| 8 | Package management | **uv** (recommended for Python: very fast, lock file) · Poetry |
+| 9 | Observability | **Sentry + structured logs** (Better Stack / Axiom) · OpenTelemetry (distributed services) |
+| 10 | Testing | **pytest + httpx** (recommended) · If Node is chosen: Vitest + supertest |
 
 ## Seçilen teknolojiler
 
-> `/start` Adım 4'te karar noktalarına göre doldurulur. Aşağıdaki tablo **önerilen** yığındır ve onaylanana kadar öneri sayılır.
-> Seçim farklıysa bu dosyanın komut, klasör, kural, doğrulama ve kontrol bölümleri seçime göre yeniden yazılır.
+> Filled in by `/start` Step 4 from the decision points. The table below is the **recommended** stack and counts as a proposal until approved.
+> If the choice differs, rewrite this file's commands, folder, rules, verification and checks sections to match.
 
-| Katman | Seçim | Not |
+| Layer | Choice | Note |
 |---|---|---|
-| Dil | Python 3.12+ | Alternatif: Node.js + TypeScript (Hono/Fastify + Drizzle) |
-| Paket yönetimi | uv | `pip install` değil, `uv add` |
+| Language | Python 3.12+ | Alternative: Node.js + TypeScript (Hono/Fastify + Drizzle) |
+| Package management | uv | `uv add`, not `pip install` |
 | API | FastAPI + Pydantic v2 | |
-| Ayarlar | pydantic-settings | Tüm config ortam değişkeninden |
-| DB | PostgreSQL + SQLAlchemy 2 (veya SQLModel) | |
+| Settings | pydantic-settings | All config comes from environment variables |
+| DB | PostgreSQL + SQLAlchemy 2 (or SQLModel) | |
 | Migration | Alembic | |
-| Arka plan işleri | Cron (platform) / ARQ / Celery | İhtiyaç kadar; basit iş için cron yeter |
+| Background jobs | Cron (platform) / ARQ / Celery | Only as needed; cron is enough for simple jobs |
 | Lint + format | Ruff | |
 | Test | pytest + httpx | |
-| Paketleme | Docker | |
+| Packaging | Docker | |
 | Hosting | Railway / Fly.io / Render | |
-| Hata takibi | Sentry | |
-| Cron izleme | Healthchecks.io (dead man's switch) | İş çalışmazsa alarm |
+| Error tracking | Sentry | |
+| Cron monitoring | Healthchecks.io (dead man's switch) | Alarm if a job does not run |
 
-## Komutlar
+## Komutlar (commands)
 
 ```bash
-uv sync                                  # bağımlılıkları kur
-uv run fastapi dev app/main.py           # geliştirme
+uv sync                                  # install dependencies
+uv run fastapi dev app/main.py           # development
 uv run pytest                            # test
 uv run ruff check .                      # lint
 uv run ruff format .                     # format
-uv run alembic revision --autogenerate -m "[ad]"   # migration oluştur (çıktıyı mutlaka oku)
-uv run alembic upgrade head              # migration uygula
-uv run --with pip-audit pip-audit                            # bağımlılık açıkları
+uv run alembic revision --autogenerate -m "[ad]"   # create a migration (always read the output)
+uv run alembic upgrade head              # apply migrations
+uv run --with pip-audit pip-audit                            # dependency vulnerabilities
 docker build -t [ad] . && docker run --env-file .env -p 8000:8000 [ad]
 ```
 
-## Klasör yapısı
+## Klasör yapısı (folder structure)
 
-Özellik bazlı yapı ve kurallar: `docs/architecture/structure.md`. Harita: `.claude/structure.json` (dışına yazım sorulur, CI denetler).
+Feature-based structure and rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is asked about, CI checks it).
 ```
 app/
-├── main.py                     # uygulama, router kayıtları, /health
+├── main.py                     # app, router registration, /health
 ├── config.py                   # pydantic-settings
-├── core/                       # veritabanı oturumu, güvenlik, loglama, hata işleyiciler, ortak bağımlılıklar
+├── core/                       # database session, security, logging, error handlers, shared dependencies
 ├── features/
-│   └── <özellik>/              # örn. invoice/
-│       ├── router.py           # HTTP uçları (ince)
-│       ├── service.py          # iş mantığı
-│       ├── repository.py       # veritabanı erişimi
+│   └── <feature>/              # e.g. invoice/
+│       ├── router.py           # HTTP endpoints (thin)
+│       ├── service.py          # business logic
+│       ├── repository.py       # database access
 │       ├── models.py           # SQLAlchemy modelleri
-│       ├── schemas.py          # Pydantic giriş/çıkış şemaları
+│       ├── schemas.py          # Pydantic input/output schemas
 │       ├── dependencies.py
 │       └── exceptions.py
-├── shared/                     # birden fazla özelliğin kullandığı yardımcılar
-└── jobs/                       # zamanlanmış ve arka plan işleri (idempotent)
+├── shared/                     # helpers used by more than one feature
+└── jobs/                       # scheduled and background jobs (idempotent)
 alembic/                        # migration'lar
 tests/
-├── <özellik>/                  # özelliğe göre testler (test_O_01_1_... kabul testleri dahil)
-└── live/                       # canlı izleme testleri
+├── <feature>/                   # tests by feature (test_O_01_1_... kabul testleri dahil)
+└── live/                       # live monitoring tests
 Dockerfile  pyproject.toml  uv.lock
 ```
 
-## Kodlama kuralları
+## Kodlama kuralları (coding rules)
 
-- Router ince, iş mantığı `services/`'te.
-- Her uç noktada Pydantic giriş şeması; dönüşte de şema (iç alanlar sızmasın).
-- Tutarlı hata biçimi: `{"error": {"code": "...", "message": "..."}}`.
-- Liste uçlarında sayfalama zorunlu.
-- **Her dış çağrıda açık timeout** (`requests`'te varsayılan timeout yoktur, istek sonsuza kadar asılı kalabilir) ve gerekiyorsa geri çekilmeli tekrar (retry + backoff).
-- İşler (jobs) **idempotent**: iki kez çalışırsa zarar vermez.
-- Loglar yapılandırılmış (JSON), istek kimliği (request id) içerir; kişisel veri ve sır içermez.
-- `/health` ucu: uygulama + DB bağlantısı.
-- Migration'lar elle gözden geçirilir; `autogenerate` her şeyi doğru yakalamaz.
-- Async uçta senkron, bloklayan kütüphane kullanma.
+- Keep the router thin; business logic goes in `services/`.
+- Every endpoint has a Pydantic input schema; the response has a schema too (internal fields must not leak).
+- Use a consistent error format: `{"error": {"code": "...", "message": "..."}}`.
+- Pagination is required on list endpoints.
+- **An explicit timeout on every external call** (`requests` has no default timeout, so a request can hang forever) and, where needed, retry with backoff.
+- Jobs are **idempotent**: running twice does no harm.
+- Logs are structured (JSON) and include the request id; they contain no personal data or secrets.
+- `/health` endpoint: the app + the DB connection.
+- Review migrations by hand; `autogenerate` does not catch everything correctly.
+- Do not use a synchronous, blocking library in an async endpoint.
 
-## Doğrulama (görev bitmeden kanıt)
+## Doğrulama (verification: evidence before a task is done)
 
-- Uç nokta: sunucuyu çalıştır, `curl -i` (veya httpx) ile ana senaryo + yetkisiz istek + geçersiz girdi. İstek ve yanıtı göster.
-- İş/cron: işi elle bir kez tetikle, logu ve DB'deki etkisini göster; iki kez çalıştırıp idempotent olduğunu göster.
-- Migration: `alembic upgrade head` → `alembic downgrade -1` → `alembic upgrade head` temiz geçiyor.
+- Endpoint: run the server, then use `curl -i` (or httpx) for the main scenario + an unauthorized request + invalid input. Show the request and the response.
+- Job/cron: trigger the job by hand once, show the log and its effect in the DB; run it twice and show it is idempotent.
+- Migration: `alembic upgrade head` → `alembic downgrade -1` → `alembic upgrade head` passes cleanly.
 
-## Otomatik kontroller
+## Automatic checks
 
-| Katman | Ne yapar | Kurulum |
+| Layer | What it does | Setup |
 |---|---|---|
-| Claude hook'ları | Sır yazımını engeller; `.py` dosyasını Ruff ile biçimlendirir ve lint hatasını AI'ya geri bildirir | Hazır (`.claude/settings.json`). Node.js gerekir |
-| Pre-commit | Ruff + sır taraması, commit öncesi | `uvx pre-commit install` (bir kez) |
-| CI (+ Semgrep, kopya kod, karmaşıklık bütçesi) | Lint, format, migration, test, açık taraması, Docker build, gitleaks, değişen dosyalarda karmaşıklık bütçesi (fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır; `node .claude/hooks/budget.mjs --check`) | `.github/workflows/ci.yml` hazır; GitHub'a push et |
-| Dependabot | Haftalık bağımlılık PR'ları | `.github/dependabot.yml` hazır |
-| MCP | Sentry'deki hataları okuma (`/maintain`) | `.mcp.json` hazır; ilk kullanımda Sentry'ye giriş yap |
+| Claude hooks | Block writing secrets; format `.py` files with Ruff and feed lint errors back to the AI | Ready (`.claude/settings.json`). Needs Node.js |
+| Pre-commit | Ruff + secret scan, before commit | `uvx pre-commit install` (once) |
+| CI (+ Semgrep, duplicate code, complexity budget) | Lint, format, migration, test, vulnerability scan, Docker build, gitleaks, complexity budget on changed files (function complexity 15, function 80, file 400 lines; `node .claude/hooks/budget.mjs --check`) | `.github/workflows/ci.yml` is ready; push to GitHub |
+| Dependabot | Weekly dependency PRs | `.github/dependabot.yml` is ready |
+| MCP | Read errors in Sentry (`/maintain`) | `.mcp.json` is ready; sign in to Sentry on first use |
 
-## Kabul testleri ve özellik bayrakları
+## Acceptance tests and feature flags
 
-**Kabul testleri** (`docs/quality/test-plan.md` §1a): Test fonksiyonunun adı kriter kimliğini taşır (`test_O_01_1_...`). Pano JUnit raporunu okur:
+**Acceptance tests** (`docs/quality/test-plan.md` §1a): The test function name carries the criterion id (`test_O_01_1_...`). The dashboard reads the JUnit report:
 
 ```bash
 uv run pytest --junitxml=test-results/junit.xml
 ```
 
-**Özellik bayrakları** (`docs/operations/feature-flags.md`): Acil kapatma yeniden deploy gerektirmemeli. Veritabanında `feature_flags` tablosu (`ad`, `acik`, `yuzde`, `guncellendi`) + süreç içinde 60 sn önbellek. Okuma tek bir yerden yapılır: `app/services/bayrak.py` → `bayrak_acik("ad", kullanici_id)`. Bayrağı değiştirmek bir admin ucu veya SQL ile yapılır ve loglanır.
+**Feature flags** (`docs/operations/feature-flags.md`): An emergency shutoff must not need a redeploy. Use a `feature_flags` table in the database (`ad`, `acik`, `yuzde`, `guncellendi`) + a 60 s in-process cache. Reading happens in one place: `app/services/bayrak.py` → `bayrak_acik("ad", kullanici_id)`. Changing a flag is done through an admin endpoint or SQL and is logged.
 
-## Sık yapılan AI hataları (bunlara dikkat)
+## Sık yapılan AI hataları (common AI mistakes; watch for these)
 
-- Koda, teste veya ayara bu makineye özel mutlak yol yazmak (`C:\Users\<ad>\…`, `/home/<ad>/…`, proje klasörünün tam yolu): başka makinede çalışmaz. Yolu `Path(__file__).parent`, ayardan gelen kök veya testte `tmp_path` ile türet. Deterministik kapı bunu yakalar.
-- Pydantic v1 sözdizimini (`class Config`, `.dict()`) v2 ile karıştırmak.
-- Dış API çağrısında timeout koymamak, hatayı yutmak (`except: pass`).
-- CORS'u `allow_origins=["*"]` ile kimlik bilgisiyle birlikte açmak.
-- Cron işini sunucu içinde `while True: sleep` ile yazmak (yeniden başlayınca kaybolur, izlenemez).
-- DB oturumunu kapatmamak, bağlantı havuzunu tüketmek.
+- Writing a machine-specific absolute path into code, a test or a setting (`C:\Users\<ad>\…`, `/home/<ad>/…`, the full path of the project folder): it does not work on another machine. Derive the path with `Path(__file__).parent`, a root from settings, or `tmp_path` in a test. The deterministic gate catches this.
+- Mixing Pydantic v1 syntax (`class Config`, `.dict()`) with v2.
+- Not setting a timeout on an external API call, swallowing the error (`except: pass`).
+- Opening CORS with `allow_origins=["*"]` together with credentials.
+- Writing a cron job inside the server as `while True: sleep` (lost on restart, cannot be monitored).
+- Not closing the DB session, exhausting the connection pool.
 
-## Güvenlik (ek)
+## Güvenlik (security; extra)
 
-- [ ] Kimlik doğrulama: JWT doğrulaması (imza + süre + issuer) veya API anahtarı (hash'lenmiş saklanır).
-- [ ] Rate limit (slowapi veya reverse proxy).
-- [ ] Prod'da `/docs` ve `/openapi.json` kapalı veya korumalı.
-- [ ] CORS beyaz liste.
-- [ ] Docker imajı root olmayan kullanıcıyla çalışıyor, imajda `.env` yok.
+- [ ] Authentication: JWT verification (signature + expiry + issuer) or an API key (stored hashed).
+- [ ] Rate limit (slowapi or reverse proxy).
+- [ ] `/docs` and `/openapi.json` are off or protected in prod.
+- [ ] CORS allowlist.
+- [ ] The Docker image runs as a non-root user, and the image has no `.env`.
 
-## Canlıya alma (ek)
+## Canlıya alma (go live; extra)
 
-- [ ] Dockerfile: çok aşamalı, root olmayan kullanıcı, `HEALTHCHECK`
-- [ ] Platformda health check `/health`'e bağlı
-- [ ] Migration deploy adımında otomatik veya kontrollü çalışıyor (uygulamadan önce)
-- [ ] Ortam değişkenleri platformda; `DEBUG` kapalı
-- [ ] Kaynak limitleri (bellek/CPU) ve otomatik yeniden başlatma
-- [ ] Her cron işi Healthchecks.io'ya ping atıyor; atmazsa alarm
-- [ ] Log saklama ve arama (platform logları veya Better Stack/Axiom)
-- [ ] Yük altında basit deneme (`hey`, `k6`): beklenen trafiğin 3 katında hata yok
-- [ ] Yanıt süresi hedefi: p95 < 500 ms (ana uçlar)
+- [ ] Dockerfile: multi-stage, non-root user, `HEALTHCHECK`
+- [ ] The platform health check points to `/health`
+- [ ] Migration runs automatically or in a controlled way at the deploy step (before the app)
+- [ ] Environment variables are on the platform; `DEBUG` is off
+- [ ] Resource limits (memory/CPU) and automatic restart
+- [ ] Every cron job pings Healthchecks.io; an alarm fires if it does not
+- [ ] Log retention and search (platform logs or Better Stack/Axiom)
+- [ ] A simple load trial (`hey`, `k6`): no errors at 3 times the expected traffic
+- [ ] Response time target: p95 < 500 ms (main endpoints)
 
-## Bakım (ek)
+## Bakım (maintenance; extra)
 
-- Haftalık: cron işleri başarılı mı, kuyruk birikmesi var mı, 5xx oranı.
-- Aylık: `uv lock --upgrade` + testler, `uv run --with pip-audit pip-audit`, yavaş sorgular (`pg_stat_statements`).
-- Çeyreklik: Python ve temel kütüphanelerin majör sürümleri, Docker taban imajı güncellemesi, DB indeks ve boyut gözden geçirme.
+- Weekly: did the cron jobs succeed, is the queue backing up, the 5xx rate.
+- Monthly: `uv lock --upgrade` + tests, `uv run --with pip-audit pip-audit`, slow queries (`pg_stat_statements`).
+- Quarterly: major versions of Python and core libraries, Docker base image update, DB index and size review.

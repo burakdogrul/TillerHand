@@ -1,66 +1,66 @@
-# Mimari
+# Architecture
 
-> Aşama: **0 - Fikir** sonunda yazılır, **2 - Geliştirme** boyunca güncellenir.
-> Yapı değiştikçe bu dosya da değişir. Güncel değilse AI yanlış varsayım yapar.
+> Stage: written at the end of **0 - Idea**, updated throughout **2 - Development**.
+> When the structure changes, this file changes too. If it is out of date, the AI makes wrong assumptions.
 
-## 1. Genel bakış
+## 1. Overview
 
 ```
-[İstemci] ──HTTPS──> [Uygulama/API] ──> [Veritabanı]
+[Client] ──HTTPS──> [App/API] ──> [Database]
                           │
-                          ├──> [Auth sağlayıcı]
-                          ├──> [Ödeme]
+                          ├──> [Auth provider]
+                          ├──> [Payment]
                           └──> [E-posta / AI API / Depolama]
 ```
 
-## 2. Teknoloji seçimi
+## 2. Technology choice
 
-| Katman | Seçim | Neden | Alternatif |
+| Layer | Choice | Why | Alternative |
 |---|---|---|---|
-| Dil | | | |
+| Language | | | |
 | Framework | | | |
-| Veritabanı | | | |
+| Database | | | |
 | Auth | | | |
 | Hosting | | | |
-| Hata takibi | | | |
+| Error tracking | | | |
 
-Ayrıntılı kurallar: `docs/architecture/stack.md`.
+Detailed rules: `docs/architecture/stack.md`.
 
-## 3. Klasör yapısı
+## 3. Folder structure
 
 ```
-[Proje kök klasör ağacı, sadece ana klasörler + her birinin görevi]
+[Project root folder tree, main folders only + the job of each]
 ```
 
-## 4. Veri modeli
+## 4. Data model
 
-| Tablo | Alanlar (önemli olanlar) | İlişkiler | Kişisel veri? | Erişim kuralı |
+| Table | Fields (the important ones) | Relations | Personal data? | Access rule |
 |---|---|---|---|---|
-| users | id, email, created_at | | Evet | Sadece kendisi |
+| users | id, email, created_at | | Yes | Only the user |
 | | | | | |
 
-## 5. Dış servisler
+## 5. External services
 
-| Servis | Amaç | Ortam değişkeni | Ücret / limit | Hesap sahibi |
+| Service | Purpose | Environment variable | Price / limit | Account owner |
 |---|---|---|---|---|
 | | | | | |
 
-## 6. Kimlik doğrulama ve yetki
+## 6. Authentication and authorization
 
-- **Giriş yöntemleri:** [e-posta+şifre / magic link / Google / Apple]
-- **Roller:** [user, admin]
-- **Yetki nerede kontrol ediliyor:** [sunucu tarafı / DB kuralları (RLS) / ikisi]
+- **Sign-in methods:** [email+password / magic link / Google / Apple]
+- **Roles:** [user, admin]
+- **Where authorization is checked:** [server side / DB rules (RLS) / both]
 
-## 7. Ortamlar
+## 7. Environments
 
-| Ortam | URL | Veritabanı | Deploy nasıl |
+| Environment | URL | Database | How it is deployed |
 |---|---|---|---|
-| Lokal | localhost | lokal/dev projesi | - |
-| Önizleme/Staging | | ayrı | PR açılınca |
-| Prod | | ayrı | `main`'e merge |
+| Local | localhost | local/dev project | - |
+| Preview/Staging | | separate | when a PR is opened |
+| Prod | | separate | merge to `main` |
 
-## 8. Bilinen teknik borç
+## 8. Known technical debt
 
-| Ne | Neden böyle | Ne zaman düzeltilmeli |
+| What | Why it is this way | When it should be fixed |
 |---|---|---|
 | | | |

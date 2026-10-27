@@ -1,4 +1,4 @@
 # Stack
 
-> Proje tipi henüz seçilmedi. `/start` tipi sorar ve bu dosyayı seçilen tipin
-> teknoloji, kural ve karar noktaları dosyasıyla değiştirir.
+> The project type is not chosen yet. `/start` asks for the type and replaces this file with the
+> technology, rules and decision points file of the chosen type.

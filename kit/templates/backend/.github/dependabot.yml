@@ -1,4 +1,4 @@
-# Güvenlik güncellemeleri için: GitHub > Settings > Code security > Dependabot security updates: Açık.
+# For security updates: GitHub > Settings > Code security > Dependabot security updates: On.
 version: 2
 updates:
   - package-ecosystem: uv

@@ -1,165 +1,165 @@
-# Stack: Mobil Uygulama
+# Stack: Mobile App
 
-> Bu dosya her oturumda AI'ya yüklenir. Projede farklı bir seçim yaptıysan burayı güncelle
-> ve nedenini `docs/decisions/log.md`'ye yaz.
+> This file is loaded into the AI every session. If you made a different choice in the project, update this file
+> and write the reason in `docs/decisions/log.md`.
 
-## Karar noktaları
+## Karar noktaları (decision points)
 
-`/start` bu kararları sırayla sorar (`docs/workflow/decision-protocol.md`). Her kararda bu projeye en uygun 2-4 seçeneği sun; **önerilen** etiketi varsayılandır, ama PRD'ye göre başka seçenek daha uygunsa onu öner ve nedenini söyle. Fiyat, ücretsiz katman ve kısıt gibi değişebilen iddiaların yanında `(kaynak: <adres>, YYYY-AA-GG)` notu varsa ve 90 günden yeniyse yeniden araştırılmaz.
+`/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that fit this project best; the **recommended** label is the default, but if another option fits the PRD better, recommend it and say why. If a claim that can change (price, free tier, limit) has a `(kaynak: <adres>, YYYY-AA-GG)` note next to it and the note is newer than 90 days, it is not researched again.
 
-| # | Karar | Seçenekler (ne zaman daha iyi) |
+| # | Decision | Options (when each is better) |
 |---|---|---|
-| 1 | Yaklaşım | **Expo / React Native** (önerilen: tek kod iki platform, TypeScript, OTA güncelleme, AI'nın iyi bildiği ekosistem) · Flutter (piksel hassasiyetinde özel arayüz, yüksek animasyon performansı; Dart) · Native Swift + Kotlin (en iyi platform deneyimi; iki ayrı kod tabanı) · PWA (mağazasız, en ucuz; cihaz özellikleri sınırlı) |
-| 2 | Platformlar | **iOS + Android** · Önce iOS (ödeme yapan kitle, daha az cihaz çeşidi) · Önce Android (TR pazar payı yüksek, yayın süreci hızlı) |
-| 3 | Backend | **Supabase** (önerilen: auth + Postgres + storage + RLS) · Firebase (gerçek zamanlı, çevrimdışı senkron güçlü) · Kendi API'n (karmaşık iş mantığı; ayrı backend projesi) · Yok (tamamen cihazda) |
-| 4 | Yerel veri | **SecureStore + MMKV** (önerilen: ayar ve token) · SQLite / expo-sqlite (çevrimdışı çok veri) · WatermelonDB (çevrimdışı öncelikli, senkron) |
-| 5 | Veri ve durum yönetimi | **TanStack Query + Zustand** (önerilen) · Redux Toolkit (büyük ekip, katı yapı) |
-| 6 | Uygulama içi satın alma | Yok · **RevenueCat** (önerilen: iki mağaza tek API, abonelik analitiği; aylık izlenen gelir 2.500 dolara kadar ücretsiz, üstünde gelirin %1'i (kaynak: https://www.revenuecat.com/pricing, 2026-10-26)) · Doğrudan StoreKit + Play Billing (RevenueCat ücreti yok, mağaza komisyonu yine kesilir; çok iş) |
-| 7 | Bildirim | **expo-notifications** (önerilen) · OneSignal (pazarlama kampanyaları, segmentasyon) · Yok |
-| 8 | UI bileşenleri | **Kendi bileşenlerin + tema dosyası** (önerilen: DESIGN.md'ye tam uyum) · Tamagui (web + mobil ortak) · React Native Paper (Material hazır bileşenler) |
-| 9 | Analitik ve hata | **Sentry + PostHog** (önerilen) · Firebase Analytics + Crashlytics (Firebase seçildiyse) |
-| 10 | Test | **Jest + RNTL + Maestro** (önerilen) · Detox (daha derin e2e, kurulumu zor) |
+| 1 | Approach | **Expo / React Native** (recommended: one codebase for two platforms, TypeScript, OTA updates, an ecosystem the AI knows well) · Flutter (pixel-precise custom interface, high animation performance; Dart) · Native Swift + Kotlin (best platform experience; two separate codebases) · PWA (no store, cheapest; limited device features) |
+| 2 | Platforms | **iOS + Android** · iOS first (paying audience, fewer device variants) · Android first (high market share in Turkey, faster release process) |
+| 3 | Backend | **Supabase** (recommended: auth + Postgres + storage + RLS) · Firebase (real-time, strong offline sync) · Your own API (complex business logic; separate backend project) · None (entirely on the device) |
+| 4 | Local data | **SecureStore + MMKV** (recommended: settings and tokens) · SQLite / expo-sqlite (lots of offline data) · WatermelonDB (offline-first, sync) |
+| 5 | Data and state management | **TanStack Query + Zustand** (recommended) · Redux Toolkit (large team, strict structure) |
+| 6 | In-app purchases | None · **RevenueCat** (recommended: two stores through one API, subscription analytics; free up to 2,500 dollars of monthly tracked revenue, 1% of revenue above that (kaynak: https://www.revenuecat.com/pricing, 2026-10-26)) · Direct StoreKit + Play Billing (no RevenueCat fee, the store commission is still charged; a lot of work) |
+| 7 | Notifications | **expo-notifications** (recommended) · OneSignal (marketing campaigns, segmentation) · None |
+| 8 | UI components | **Your own components + a theme file** (recommended: full match with DESIGN.md) · Tamagui (shared web + mobile) · React Native Paper (ready-made Material components) |
+| 9 | Analytics and errors | **Sentry + PostHog** (recommended) · Firebase Analytics + Crashlytics (if Firebase was chosen) |
+| 10 | Test | **Jest + RNTL + Maestro** (recommended) · Detox (deeper e2e, hard to set up) |
 
 ## Seçilen teknolojiler
 
-> `/start` Adım 4'te karar noktalarına göre doldurulur. Aşağıdaki tablo **önerilen** yığındır ve onaylanana kadar öneri sayılır.
-> Seçim farklıysa bu dosyanın komut, klasör, kural, doğrulama ve kontrol bölümleri seçime göre yeniden yazılır.
+> `/start` fills this in at Step 4 from the decision points. The table below is the **recommended** stack and counts only as a suggestion until approved.
+> If the choice differs, the commands, folders, rules, verification and checks sections of this file are rewritten to match the choice.
 
-| Katman | Seçim | Not |
+| Layer | Choice | Note |
 |---|---|---|
-| Framework | Expo (React Native) + TypeScript (strict) | Alternatif: Flutter |
-| Navigasyon | Expo Router | Dosya tabanlı |
-| Backend | Supabase veya Firebase | Ayrı API gerekiyorsa `backend` şablonu |
-| Güvenli depolama | `expo-secure-store` | Token'lar burada, AsyncStorage'da değil |
-| Uygulama içi satın alma | RevenueCat | Dijital içerik = mağaza ödemesi zorunlu |
-| Build / yayın | EAS Build, EAS Submit, EAS Update | |
-| Hata takibi | Sentry (`@sentry/react-native`) | |
+| Framework | Expo (React Native) + TypeScript (strict) | Alternative: Flutter |
+| Navigation | Expo Router | File-based |
+| Backend | Supabase or Firebase | If a separate API is needed, the `backend` template |
+| Secure storage | `expo-secure-store` | Tokens go here, not in AsyncStorage |
+| In-app purchases | RevenueCat | Digital content = store payment is required |
+| Build / release | EAS Build, EAS Submit, EAS Update | |
+| Error tracking | Sentry (`@sentry/react-native`) | |
 | Test | Jest + React Native Testing Library, Maestro (e2e) | |
 
-## Komutlar
+## Komutlar (commands)
 
 ```bash
-npx expo start                          # geliştirme
+npx expo start                          # development
 npx expo lint
 npx tsc --noEmit
 npm run test                            # jest
-npx expo install [paket]                # paket ekleme (SDK uyumlu sürüm seçer, npm install değil)
-npx expo-doctor                         # bağımlılık uyumu kontrolü
-eas build --profile preview --platform all     # test build'i
-eas build --profile production --platform all  # mağaza build'i
+npx expo install [paket]                # add a package (picks the SDK-compatible version, not npm install)
+npx expo-doctor                         # dependency compatibility check
+eas build --profile preview --platform all     # test build
+eas build --profile production --platform all  # store build
 eas submit --platform ios|android
-eas update --branch production          # OTA güncelleme (sadece JS değişikliği)
+eas update --branch production          # OTA update (JS changes only)
 maestro test .maestro/                  # e2e
 ```
 
-## Klasör yapısı
+## Klasör yapısı (folder structure)
 
-Özellik bazlı yapı ve kurallar: `docs/architecture/structure.md`. Harita: `.claude/structure.json` (dışına yazım sorulur, CI denetler).
+Structure by feature and its rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is asked about, CI checks it).
 ```
 src/
-├── app/                        # SADECE ekranlar ve navigasyon (Expo Router). İş mantığı yok.
+├── app/                        # ONLY screens and navigation (Expo Router). No business logic.
 │   ├── (auth)/
 │   ├── (tabs)/
 │   └── _layout.tsx
 ├── features/
-│   └── <özellik>/              # örn. invoice/
+│   └── <feature>/              # e.g. invoice/
 │       ├── components/
 │       ├── hooks/
-│       ├── api/                # sunucu çağrıları (TanStack Query sorguları ve mutasyonları)
-│       ├── store/              # yerel durum (Zustand dilimi)
+│       ├── api/                # server calls (TanStack Query queries and mutations)
+│       ├── store/              # local state (Zustand slice)
 │       ├── __tests__/
 │       ├── schemas.ts
 │       ├── types.ts
 │       └── index.ts
-├── components/                 # paylaşılan bileşenler: Button, TextField, Screen, EmptyState...
-├── hooks/                      # paylaşılan hook'lar (useBayrak vb.)
-├── lib/                        # supabase, sentry, secure storage, analitik istemcileri
-├── theme/                      # tasarım belirteçleri (DESIGN.md'den)
-├── config/                     # ortam değişkenleri, sabitler
+├── components/                 # shared components: Button, TextField, Screen, EmptyState...
+├── hooks/                      # shared hooks (useBayrak etc.)
+├── lib/                        # supabase, sentry, secure storage, analytics clients
+├── theme/                      # design tokens (from DESIGN.md)
+├── config/                     # environment variables, constants
 └── types/
-assets/                         # ikon, splash, font, görsel
-.maestro/                       # uçtan uca akışlar (kabul testleri)
-tests/                          # paylaşılan test yardımcıları
+assets/                         # icon, splash, font, images
+.maestro/                       # end-to-end flows (acceptance tests)
+tests/                          # shared test helpers
 app.config.ts  eas.json
 ```
 
-## Kodlama kuralları
+## Kodlama kuralları (coding rules)
 
-- **Uygulama paketindeki her şey herkese açıktır.** Sır, servis anahtarı, admin anahtarı uygulamaya konmaz; gizli işlemler sunucuda.
-- `EXPO_PUBLIC_` ön ekli değişkenler pakete gömülür; sadece herkese açık değerler.
-- Paket eklerken `npx expo install` kullan.
-- Supabase seçildiyse DB şema değişikliği sadece migration dosyasıyla: `npx -y supabase@2.120.0 migration new [ad]` (`supabase/migrations/`). Panelden veya MCP'den elle DDL yok.
-- Supabase seçildiyse her yeni tabloda RLS açık, politikası yazılı ve tablo `tests/security/rls.mjs` → `TABLES` listesinde (CI'daki `rls` işi anonim ve ikinci kullanıcıyla saldırır; kayıtsız tabloda kırmızı olur).
-- Her ekranda: yükleniyor, boş, hata, **çevrimdışı** durumu.
-- İzin istemeden önce neden gerektiğini kullanıcıya göster; izin metinleri (`infoPlist`) Türkçe ve açıklayıcı.
-- Klavye ekranı kapatmasın (`KeyboardAvoidingView`), güvenli alan (`SafeAreaView`) kullan.
-- Dokunma alanı en az 44x44 pt; erişilebilirlik etiketleri (`accessibilityLabel`).
-- Her özelliği **hem iOS hem Android'de, gerçek cihazda** dene.
-- UI işinden önce `DESIGN.md` ve `docs/design/design-guide.md`'yi oku; belirteçlerin ve kuralların dışına çıkma. Yeni tasarım kararı gerekiyorsa `/design`.
+- **Everything in the app bundle is public.** Do not put a secret, service key or admin key into the app; secret operations run on the server.
+- Variables with the `EXPO_PUBLIC_` prefix are embedded in the bundle; only public values.
+- Use `npx expo install` when adding a package.
+- If Supabase is chosen, DB schema changes go only through a migration file: `npx -y supabase@2.120.0 migration new [ad]` (`supabase/migrations/`). No manual DDL from the dashboard or MCP.
+- If Supabase is chosen, every new table has RLS on, a written policy, and an entry in the `TABLES` list of `tests/security/rls.mjs` (the `rls` job in CI attacks as anonymous and as a second user; an unregistered table turns it red).
+- Every screen has: loading, empty, error and **offline** states.
+- Before asking for a permission, show the user why it is needed; permission texts (`infoPlist`) are in the app's main language and explanatory.
+- The keyboard must not cover the screen (`KeyboardAvoidingView`); use the safe area (`SafeAreaView`).
+- Touch targets are at least 44x44 pt; accessibility labels (`accessibilityLabel`).
+- Try every feature **on both iOS and Android, on a real device**.
+- Before UI work, read `DESIGN.md` and `docs/design/design-guide.md`; do not go outside the tokens and rules. If a new design decision is needed, use `/design`.
 
-## Doğrulama (görev bitmeden kanıt)
+## Doğrulama (verification: evidence before a task is done)
 
-- Mantık: Jest testleri çalıştır, çıktıyı göster.
-- Akış: `.maestro/` altında ilgili akış varsa `maestro test` çalıştır; yoksa kritik akışlar için yaz.
-- Cihaz testi AI tarafından yapılamaz: Bana iOS ve Android'de denemem gereken adımları, beklenen sonuçla birlikte madde madde yaz.
+- Logic: run the Jest tests and show the output.
+- Flow: if there is a relevant flow under `.maestro/`, run `maestro test`; if not, write one for critical flows.
+- The AI cannot do device testing: Write me, as a list, the steps I need to try on iOS and Android, with the expected result for each.
 
-## Otomatik kontroller
+## Automatic checks
 
-| Katman | Ne yapar | Kurulum |
+| Layer | What it does | Setup |
 |---|---|---|
-| Claude hook'ları | Sır yazımını engeller; düzenlenen dosyayı Prettier ile biçimlendirir | Hazır (`.claude/settings.json`). Prettier projede kurulu olmalı |
-| Pre-commit | lint-staged (ESLint + Prettier) + sır taraması | `npm i -D husky lint-staged prettier` → `npm pkg set scripts.prepare="husky"` → `npx husky` |
-| CI (+ Semgrep, kopya kod, karmaşıklık bütçesi) | Lint, tip, test, expo-doctor, açık taraması, gitleaks, değişen dosyalarda karmaşıklık bütçesi (fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır; `node .claude/hooks/budget.mjs --check`) | `.github/workflows/ci.yml` hazır |
-| Dependabot | Haftalık küçük güncellemeler (Expo SDK paketleri hariç) | `.github/dependabot.yml` hazır |
-| MCP | Supabase (salt-okunur), Sentry · gerektiğinde: Supabase dev (`docs/workflow/mcp-catalog.md`) | `.mcp.json`: `DEV_REF`'i doldur (salt-okunur, **geliştirme** projesi; prod ref'i AI ortamına yazılmaz). Yazma yetkili Supabase MCP sadece **geliştirme** projesine (`supabase-dev`) |
+| Claude hooks | Block writing secrets; format the edited file with Prettier | Ready (`.claude/settings.json`). Prettier must be installed in the project |
+| Pre-commit | lint-staged (ESLint + Prettier) + secret scan | `npm i -D husky lint-staged prettier` → `npm pkg set scripts.prepare="husky"` → `npx husky` |
+| CI (+ Semgrep, duplicate code, complexity budget) | Lint, types, tests, expo-doctor, vulnerability scan, gitleaks, complexity budget on changed files (function complexity 15, function 80, file 400 lines; `node .claude/hooks/budget.mjs --check`) | `.github/workflows/ci.yml` ready |
+| Dependabot | Weekly small updates (except Expo SDK packages) | `.github/dependabot.yml` ready |
+| MCP | Supabase (read-only), Sentry · when needed: Supabase dev (`docs/workflow/mcp-catalog.md`) | `.mcp.json`: fill in `DEV_REF` (read-only, **development** project; the prod ref is not written into the AI environment). The Supabase MCP with write access goes only to the **development** project (`supabase-dev`) |
 
-## Kabul testleri ve özellik bayrakları
+## Acceptance tests and feature flags
 
-**Kabul testleri** (`docs/quality/test-plan.md` §1a): Jest testinin veya Maestro akışının adı kriter kimliğini taşır (`Ö-01.1`). Pano JUnit raporunu okur:
+**Acceptance tests** (`docs/quality/test-plan.md` §1a): The name of the Jest test or Maestro flow carries the criterion id (`Ö-01.1`). The dashboard reads the JUnit report:
 
 ```bash
 npx jest --reporters=default --reporters=jest-junit   # JEST_JUNIT_OUTPUT_DIR=test-results
 maestro test .maestro/ --format junit --output test-results/junit-e2e.xml
 ```
 
-**Özellik bayrakları** (`docs/operations/feature-flags.md`): Mağaza güncellemesi olmadan kapatılabilmeli. Uygulama açılışta uzaktan okur ve son bilinen değeri önbellekte tutar; ağ yoksa güvenli varsayılan (kapalı) kullanılır:
-- PostHog feature flags veya Firebase Remote Config; ya da Supabase `feature_flags` tablosu.
-- Okuma tek bir hook'tan yapılır: `hooks/useBayrak.ts`. Ödeme, AI ve bildirim gönderen özellikler bayraksız yayınlanmaz.
+**Feature flags** (`docs/operations/feature-flags.md`): It must be possible to turn a feature off without a store update. The app reads the flag remotely at launch and caches the last known value; with no network, the safe default (off) is used:
+- PostHog feature flags or Firebase Remote Config; or a Supabase `feature_flags` table.
+- Reading goes through a single hook: `hooks/useBayrak.ts`. Features that take payments, use AI or send notifications are not released without a flag.
 
-## Sık yapılan AI hataları (bunlara dikkat)
+## Sık yapılan AI hataları (common AI mistakes; watch for these)
 
-- Koda, teste veya ayara bu makineye özel mutlak yol yazmak (`C:\Users\<ad>\…`, `/home/<ad>/…`, proje klasörünün tam yolu): başka makinede çalışmaz. Yolu `import.meta.url` / `__dirname`, `path.join(process.cwd(), …)` veya `os.tmpdir()` ile türet. Deterministik kapı bunu yakalar.
-- Web'e özel API veya paket kullanmak (DOM, `window`, sadece web çalışan kütüphaneler).
-- `npm install` ile SDK ile uyumsuz sürüm kurmak.
-- Token'ı AsyncStorage'a yazmak.
-- Native modül gerektiren paketi Expo Go'da çalışır sanmak (development build gerekir).
-- Native değişikliği (yeni izin, native paket) OTA güncellemesiyle göndermeye çalışmak.
+- Writing an absolute path specific to this machine into code, a test or a setting (`C:\Users\<ad>\…`, `/home/<ad>/…`, the full path of the project folder): it does not work on another machine. Derive the path with `import.meta.url` / `__dirname`, `path.join(process.cwd(), …)` or `os.tmpdir()`. The deterministic gate catches this.
+- Using web-only APIs or packages (DOM, `window`, libraries that work only on the web).
+- Installing a version that is incompatible with the SDK through `npm install`.
+- Writing the token to AsyncStorage.
+- Assuming a package that needs a native module works in Expo Go (it needs a development build).
+- Trying to ship a native change (a new permission, a native package) through an OTA update.
 
-## Güvenlik (ek)
+## Güvenlik (security; extra)
 
-- [ ] Pakette sır yok (build sonrası `EXPO_PUBLIC_` değişkenlerini gözden geçir).
-- [ ] Token'lar SecureStore'da.
-- [ ] Deep link parametreleri doğrulanıyor.
-- [ ] API çağrıları sadece HTTPS.
+- [ ] No secrets in the bundle (review the `EXPO_PUBLIC_` variables after the build).
+- [ ] Tokens are in SecureStore.
+- [ ] Deep link parameters are validated.
+- [ ] API calls use HTTPS only.
 
-## Canlıya alma (ek)
+## Canlıya alma (go live; extra)
 
-- [ ] `app.config.ts`: bundle id / package adı kalıcı ve doğru; `version`, iOS `buildNumber`, Android `versionCode` artırıldı
-- [ ] Uygulama ikonu, splash, uygulama adı
-- [ ] Mağaza sayfası: açıklama, anahtar kelimeler, ekran görüntüleri (tüm gerekli boyutlar), destek URL'si, **gizlilik politikası URL'si**
-- [ ] **App Store gizlilik etiketleri** (App Privacy) ve **Google Play Veri Güvenliği** formu, gerçek veri toplamayla uyumlu
-- [ ] **Uygulama içi hesap silme** (hesap oluşturma varsa Apple ve Google zorunlu kılar)
-- [ ] Üçüncü taraf girişi (Google vb.) varsa Apple'ın giriş kuralı (Guideline 4.8) kontrol edildi
-- [ ] Dijital içerik/abonelik satışı mağaza ödemesiyle (Apple 3.1.1); fiyatlar ve abonelik metinleri mağazada
-- [ ] İnceleme ekibi için **test hesabı** ve notlar
-- [ ] TestFlight / Google Play dahili test kanalında en az birkaç gün test
-- [ ] Android: Google Play'in güncel **hedef API seviyesi** şartı karşılanıyor
-- [ ] EAS Update: `runtimeVersion` politikası belirlendi; OTA ile sadece JS değişikliği gidiyor
-- [ ] Sentry sembol/kaynak haritaları yükleniyor
-- [ ] Performans: soğuk açılış < 3 sn (orta seviye Android'de), liste kaydırma takılmıyor
+- [ ] `app.config.ts`: bundle id / package name is permanent and correct; `version`, iOS `buildNumber`, Android `versionCode` incremented
+- [ ] App icon, splash, app name
+- [ ] Store page: description, keywords, screenshots (all required sizes), support URL, **privacy policy URL**
+- [ ] **App Store privacy labels** (App Privacy) and the **Google Play Data Safety** form, matching the real data collection
+- [ ] **In-app account deletion** (Apple and Google require it if the app has account creation)
+- [ ] If there is third-party sign-in (Google etc.), Apple's sign-in rule (Guideline 4.8) was checked
+- [ ] Digital content/subscription sales go through the store payment (Apple 3.1.1); prices and subscription texts are in the store
+- [ ] A **test account** and notes for the review team
+- [ ] At least a few days of testing in the TestFlight / Google Play internal test track
+- [ ] Android: the current Google Play **target API level** requirement is met
+- [ ] EAS Update: `runtimeVersion` policy is set; only JS changes go out through OTA
+- [ ] Sentry symbol/source maps are uploaded
+- [ ] Performance: cold start < 3 s (on a mid-range Android), list scrolling does not stutter
 
-## Bakım (ek)
+## Bakım (maintenance; extra)
 
-- Haftalık: Sentry'de **çökme oranı** (hedef: çökmesiz kullanıcı ≥ %99.5), mağaza yorumları ve puanı.
-- Aylık: `npx expo-doctor`, `npm outdated`, `npm audit`.
-- Çeyreklik: Expo SDK yükseltmesi (yılda ~3 SDK çıkar; 2 sürümden fazla geride kalma), Apple geliştirici üyeliği ve sertifika/provisioning bitiş tarihleri, Google Play hedef API seviyesi duyuruları, Apple'ın yeni Xcode/SDK zorunlulukları.
+- Weekly: **crash rate** in Sentry (target: crash-free users ≥ 99.5%), store reviews and rating.
+- Monthly: `npx expo-doctor`, `npm outdated`, `npm audit`.
+- Quarterly: Expo SDK upgrade (about 3 SDKs come out per year; do not fall more than 2 versions behind), Apple developer membership and certificate/provisioning expiry dates, Google Play target API level announcements, Apple's new Xcode/SDK requirements.

@@ -1,55 +1,55 @@
-# Tasarım
+# Design
 
-> Arayüzün tek kaynağı üç dosyadır:
-> - `PRODUCT.md`: ürün bağlamı (kim, ne için). Impeccable `init` ile, PRD'den beslenerek yazılır.
-> - `DESIGN.md`: görsel dünya ve tasarım belirteçleri (renk, yazı, boşluk, köşe, gölge, hareket). Impeccable yazar; bileşenler sadece bu belirteçleri kullanır.
-> - Bu dosya: seçilen yön, tasarım karar günlüğü ve her ekranda geçerli kalıcı kurallar.
+> The interface has three sources of truth:
+> - `PRODUCT.md`: product context (who, for what). Written with Impeccable `init`, fed from the PRD.
+> - `DESIGN.md`: visual world and design tokens (color, type, spacing, corners, shadow, motion). Impeccable writes it; components use only these tokens.
+> - This file: the chosen direction, the design decision log and the lasting rules that apply on every screen.
 >
-> Kararlar `/design` ile **görsel önizlemelerle** alınır (`docs/workflow/decision-protocol.md` §5). Yeni bir renk, boyut veya bileşen
-> gerekiyorsa önce karar olarak sorulur, sonra DESIGN.md'ye eklenir. Kodda ham renk veya rastgele boyut yazılmaz.
+> Decisions are made with `/design` using **visual previews** (`docs/workflow/decision-protocol.md` §5). If a new color, size or component
+> is needed, it is asked as a decision first, then added to DESIGN.md. No raw colors or arbitrary sizes in code.
 
-## 1. Seçilen yön
+## 1. Seçilen yön (Chosen direction)
 
-| Alan | Seçim | Skill | Önizleme | Tarih |
+| Area | Choice | Skill | Preview | Date |
 |---|---|---|---|---|
-| Stil yönü | [örn. Premium / Apple tarzı] | [örn. taste-skill:high-end-visual-design] | `.previews/01-stil/b.html` | |
-| Renk paleti | | ui-ux-pro-max | | |
-| Yazı tipi çifti | | ui-ux-pro-max | | |
-| Köşe / gölge / hareket | | | | |
-| Koyu tema | | | | |
-| Hitap (sen/siz) | | | | |
+| Style direction | [e.g. Premium / Apple style] | [e.g. taste-skill:high-end-visual-design] | `.previews/01-stil/b.html` | |
+| Color palette | | ui-ux-pro-max | | |
+| Font pair | | ui-ux-pro-max | | |
+| Corners / shadow / motion | | | | |
+| Dark theme | | | | |
+| Form of address (informal/formal) | | | | |
 
-## 2. Tasarım karar günlüğü
+## 2. Design decision log
 
-| # | Tarih | Ekran/kapsam | Soru | Seçilen | Önizleme |
+| # | Date | Screen/scope | Question | Chosen | Preview |
 |---|---|---|---|---|---|
 
-## 3. Bileşenler
+## 3. Components
 
-- Önce `components/ui/` (shadcn) içinde var mı bak; varsa onu kullan, kopyalayıp değiştirme.
-- Buton varyantları: `default` (sayfada en fazla 1 ana eylem), `secondary`, `outline`, `ghost`, `destructive`.
-- Form: etiket her zaman görünür (sadece placeholder değil), hata mesajı alanın altında, gönderirken buton devre dışı + yükleniyor.
-- Tablo/liste: boş durum bileşeni + yükleniyor iskeleti (skeleton) zorunlu.
-- İkonlar: [lucide-react], tek set.
+- First check whether it exists in `components/ui/` (shadcn); if it does, use it, do not copy and change it.
+- Button variants: `default` (at most 1 main action per page), `secondary`, `outline`, `ghost`, `destructive`.
+- Form: the label is always visible (not only a placeholder), the error message sits under the field, the button is disabled + loading while submitting.
+- Table/list: an empty-state component + a loading skeleton are required.
+- Icons: [lucide-react], a single set.
 
-## 4. Durumlar (her ekranda)
+## 4. States (on every screen)
 
-| Durum | Nasıl görünür |
+| State | How it looks |
 |---|---|
-| Yükleniyor | İskelet; 300 ms'den kısa yüklemelerde hiçbir şey |
-| Boş | Ne olacağını anlatan bir cümle + ilk adım butonu |
-| Hata | Ne oldu + ne yapabilir (tekrar dene / destek); teknik detay yok |
-| Başarılı işlem | Kısa bildirim (toast), 3-4 sn |
+| Loading | Skeleton; nothing for loads shorter than 300 ms |
+| Empty | One sentence saying what will be here + a first-step button |
+| Error | What happened + what the user can do (retry / support); no technical detail |
+| Successful action | Short notification (toast), 3-4 s |
 
-## 5. Erişilebilirlik
+## 5. Accessibility
 
-- Metin kontrastı en az 4.5:1 (büyük metin 3:1); iki temada da.
-- Klavye ile her şeye ulaşılır, odak halkası görünür.
-- Görsellerde `alt`, ikon butonlarda `aria-label`.
-- Mobil genişlikte (375 px) yatay kaydırma yok, dokunma alanı en az 44 px.
+- Text contrast at least 4.5:1 (large text 3:1); in both themes.
+- Everything is reachable by keyboard, the focus ring is visible.
+- `alt` on images, `aria-label` on icon buttons.
+- No horizontal scroll at mobile width (375 px), touch target at least 44 px.
 
-## 6. Metin dili
+## 6. Copy language
 
-- Hitap: [sen/siz] (`docs/product/glossary.md` ile aynı).
-- Butonlar fiil: "Kaydet", "Fatura oluştur"; "Tamam", "Gönder" gibi belirsiz değil.
-- Hata mesajı suçlamaz ve çözümü söyler: "E-posta adresi geçerli değil. Örnek: ad@alan.com".
+- Form of address: [informal/formal] (same as `docs/product/glossary.md`).
+- Buttons are verbs: "Save", "Create invoice"; not vague ones like "OK", "Submit".
+- An error message does not blame the user and says the fix: "The email address is not valid. Example: name@domain.com".

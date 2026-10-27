@@ -1,19 +1,20 @@
-# Kullanıcı Geri Bildirimi
+# User Feedback
 
-> Kullanıcıların sesi. `/user-feedback` komutu yeni geri bildirimleri buraya işler, Ürün kurul üyesiyle önceliklendirir,
-> hangilerinin yol haritasına gireceğini sana sorar. `/dashboard` panosu açık geri bildirimleri ve öne çıkan temaları gösterir.
-> Kişisel veri yazma: kullanıcıyı anonim etiketle (K-001) belirt.
+> The voice of the users. The `/user-feedback` command puts new feedback here, prioritizes it with the Product board member,
+> and asks you which items go into the roadmap. `/dashboard` shows open feedback and the leading themes.
+> The headings "Gelen kutusu" (inbox) and "Temalar" (themes) stay Turkish: the dashboard reads them.
+> Do not write personal data: label the user anonymously (K-001).
 
 ## Gelen kutusu
 
-Tür: `hata` / `istek` / `şikayet` / `övgü` / `soru`. Durum: `yeni` / `planlandı` / `yapıldı` / `reddedildi` / `birleşti`.
+Types: `hata` / `istek` / `şikayet` / `övgü` / `soru`. Statuses: `yeni` / `planlandı` / `yapıldı` / `reddedildi` / `birleşti`.
 
-| # | Tarih | Kaynak | Kullanıcı | Özet | Tür | Tema | Öncelik | Durum | Görev |
+| # | Date | Source | User | Summary | Type | Theme | Priority | Status | Görev (task) |
 |---|---|---|---|---|---|---|---|---|---|
 
 ## Temalar
 
-Benzer geri bildirimler bir temada toplanır. Aynı temada 3+ geri bildirim varsa güçlü sinyaldir.
+Similar feedback is collected under one theme. 3+ feedback items in the same theme is a strong signal.
 
-| Tema | Geri bildirim sayısı | Etkilenen özellik | Karar |
+| Theme | Feedback count | Affected feature | Decision |
 |---|---|---|---|

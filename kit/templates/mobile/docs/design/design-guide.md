@@ -1,54 +1,54 @@
-# Tasarım
+# Design
 
-> Arayüzün tek kaynağı üç dosyadır:
-> - `PRODUCT.md`: ürün bağlamı (kim, ne için). Impeccable `init` ile, PRD'den beslenerek yazılır.
-> - `DESIGN.md`: görsel dünya ve tasarım belirteçleri (renk, yazı, boşluk, köşe, gölge, hareket). Impeccable yazar; bileşenler sadece bu belirteçleri kullanır.
-> - Bu dosya: seçilen yön, tasarım karar günlüğü ve her ekranda geçerli kalıcı kurallar.
+> The interface has three sources of truth:
+> - `PRODUCT.md`: product context (who, for what). Written with Impeccable `init`, fed from the PRD.
+> - `DESIGN.md`: visual world and design tokens (color, type, spacing, corners, shadow, motion). Impeccable writes it; components use only these tokens.
+> - This file: the chosen direction, the design decision log and the lasting rules that apply on every screen.
 >
-> Kararlar `/design` ile **görsel önizlemelerle** alınır (`docs/workflow/decision-protocol.md` §5). Yeni bir renk, boyut veya bileşen
-> gerekiyorsa önce karar olarak sorulur, sonra DESIGN.md'ye eklenir. Kodda ham renk veya rastgele boyut yazılmaz.
+> Decisions are made with `/design` using **visual previews** (`docs/workflow/decision-protocol.md` §5). If a new color, size or component
+> is needed, it is asked as a decision first, then added to DESIGN.md. No raw colors or arbitrary sizes in code.
 
-## 1. Seçilen yön
+## 1. Seçilen yön (Chosen direction)
 
-| Alan | Seçim | Skill | Önizleme | Tarih |
+| Area | Choice | Skill | Preview | Date |
 |---|---|---|---|---|
-| Stil yönü | [örn. Premium / Apple tarzı] | [örn. taste-skill:high-end-visual-design] | `.previews/01-stil/b.html` | |
-| Renk paleti | | ui-ux-pro-max | | |
-| Yazı tipi çifti | | ui-ux-pro-max | | |
-| Köşe / gölge / hareket | | | | |
-| Koyu tema | | | | |
-| Hitap (sen/siz) | | | | |
+| Style direction | [e.g. Premium / Apple style] | [e.g. taste-skill:high-end-visual-design] | `.previews/01-stil/b.html` | |
+| Color palette | | ui-ux-pro-max | | |
+| Font pair | | ui-ux-pro-max | | |
+| Corners / shadow / motion | | | | |
+| Dark theme | | | | |
+| Form of address (informal/formal) | | | | |
 
-## 2. Tasarım karar günlüğü
+## 2. Design decision log
 
-| # | Tarih | Ekran/kapsam | Soru | Seçilen | Önizleme |
+| # | Date | Screen/scope | Question | Chosen | Preview |
 |---|---|---|---|---|---|
 
-## 3. Bileşenler
+## 3. Components
 
-- Ortak bileşenler `components/` altında: `Button`, `TextField`, `Screen` (SafeArea + klavye + kaydırma), `EmptyState`, `ErrorState`, `ListSkeleton`. Yeni ekran bunlarla kurulur.
-- Ekranda en fazla 1 ana eylem; birincil buton ekranın altında başparmak erişiminde.
-- Liste: `FlatList`/`FlashList`, boş durum + yükleniyor iskeleti + aşağı çekip yenileme.
-- İkon seti: [@expo/vector-icons → tek set].
-- Geri bildirim: önemli eylemlerde hafif titreşim (haptics), tutarlı kullanım.
+- Shared components live under `components/`: `Button`, `TextField`, `Screen` (SafeArea + keyboard + scrolling), `EmptyState`, `ErrorState`, `ListSkeleton`. A new screen is built from these.
+- At most 1 main action per screen; the primary button sits at the bottom of the screen within thumb reach.
+- List: `FlatList`/`FlashList`, empty state + loading skeleton + pull to refresh.
+- Icon set: [@expo/vector-icons → a single set].
+- Feedback: light vibration (haptics) on important actions, used consistently.
 
-## 4. Durumlar (her ekranda)
+## 4. States (on every screen)
 
-| Durum | Nasıl görünür |
+| State | How it looks |
 |---|---|
-| Yükleniyor | İskelet |
-| Boş | Bir cümle + ilk adım butonu |
-| Hata | Ne oldu + tekrar dene |
-| Çevrimdışı | Üstte şerit; önbellekteki veri gösterilir, yazma işlemleri sıraya alınır veya engellenir |
+| Loading | Skeleton |
+| Empty | One sentence + a first-step button |
+| Error | What happened + retry |
+| Offline | Banner at the top; cached data is shown, write operations are queued or blocked |
 
-## 5. Erişilebilirlik ve platform
+## 5. Accessibility and platform
 
-- Dokunma alanı en az 44x44 pt; metin kontrastı en az 4.5:1.
-- `accessibilityLabel` ikon butonlarda zorunlu; ekran okuyucuyla (VoiceOver/TalkBack) ana akış bir kez denenir.
-- Güvenli alan (çentik, ana ekran çubuğu) ve klavye hiçbir içeriği örtmez.
-- Android geri tuşu ve iOS kaydırarak geri dönme hareketi beklendiği gibi çalışır.
+- Touch target at least 44x44 pt; text contrast at least 4.5:1.
+- `accessibilityLabel` is required on icon buttons; try the main flow once with a screen reader (VoiceOver/TalkBack).
+- The safe area (notch, home indicator) and the keyboard never cover any content.
+- The Android back button and the iOS swipe-back gesture work as expected.
 
-## 6. Metin dili
+## 6. Copy language
 
-- Hitap: [sen/siz] (`docs/product/glossary.md` ile aynı).
-- Butonlar fiil; izin açıklama metinleri neden gerektiğini söyler.
+- Form of address: [informal/formal] (same as `docs/product/glossary.md`).
+- Buttons are verbs; permission explanation texts say why the permission is needed.

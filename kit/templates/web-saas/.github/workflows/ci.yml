@@ -1,5 +1,5 @@
-# Her push ve PR'da çalışır. Kırmızıysa merge etme.
-# GitHub > Settings > Branches > main için "Require status checks" ile zorunlu kıl.
+# Runs on every push and PR. If it is red, do not merge.
+# Make it required for main with "Require status checks" in GitHub > Settings > Branches.
 name: CI
 
 on:
@@ -7,7 +7,7 @@ on:
     branches: [main]
   pull_request:
 
-# İşler depoyu sadece okur; ele geçirilen bir adım token ile depoya yazamasın
+# Jobs only read the repo; a hijacked step must not be able to write to the repo with the token
 permissions:
   contents: read
 
@@ -26,14 +26,14 @@ jobs:
       - run: npm run --if-present test
       - run: npm run build
         env:
-          # Build sırasında okunan herkese açık değişkenler (gerçek sırlar burada olmaz)
+          # Public variables read during the build (real secrets do not belong here)
           NEXT_PUBLIC_SITE_URL: https://example.com
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-      - name: Bağımlılık açıkları (yüksek ve üstü)
+      - name: Dependency vulnerabilities (high and above)
         run: npm audit --audit-level=high --omit=dev
 
-  # Kritik akışlar için e2e. Playwright testleri yazılınca yorumu kaldır.
+  # e2e for critical flows. Uncomment once Playwright tests are written.
   # e2e:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Klasör yapısı (.claude/structure.json)
+      - name: Folder structure (.claude/structure.json)
         run: node .claude/hooks/structure-guard.mjs --check
 
   karmasiklik:
@@ -56,14 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # base commit'iyle karşılaştırmak için
-      - name: Karmaşıklık bütçesi (değişen dosyalar; fonksiyon karmaşıklığı 15, fonksiyon 80, dosya 400 satır)
+          fetch-depth: 0 # to compare with the base commit
+      - name: Complexity budget (changed files; function complexity 15, function 80, file 400 lines)
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node .claude/hooks/budget.mjs --check --base "$BASE"
 
-  # RLS saldırgan testi: CI içinde boş bir yerel Supabase açılır, migration'lar uygulanır. Sır gerekmez; dev ve prod'a dokunmaz.
-  # Supabase kullanılmıyorsa (supabase/config.toml yoksa) adımlar atlanır.
+  # RLS adversarial test: an empty local Supabase starts inside CI and the migrations are applied. No secrets needed; it does not touch dev or prod.
+  # If Supabase is not used (no supabase/config.toml), the steps are skipped.
   rls:
     runs-on: ubuntu-latest
     steps:
@@ -75,13 +75,13 @@ jobs:
           cache: npm
       - if: hashFiles('supabase/config.toml') != ''
         run: npm ci
-      - name: Yerel Supabase
+      - name: Local Supabase
         if: hashFiles('supabase/config.toml') != ''
         run: npx -y supabase@2.120.0 start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,supavisor,postgres-meta
-      - name: RLS saldırgan testi (anonim ve ikinci kullanıcı)
+      - name: RLS adversarial test (anonymous and second user)
         if: hashFiles('supabase/config.toml') != ''
         run: |
-          # Sadece gereken anahtarlar alınır; çıktı kabuk komutu olarak çalıştırılmaz
+          # Only the needed keys are taken; the output is not run as a shell command
           anahtarlar=$(npx -y supabase@2.120.0 status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL|PUBLISHABLE_KEY|SECRET_KEY)=')
           while IFS="=" read -r ad deger; do deger="${deger%\"}"; export "$ad=${deger#\"}"; done <<< "$anahtarlar"
           node --test tests/security/rls.mjs
@@ -92,29 +92,29 @@ jobs:
       image: semgrep/semgrep
     steps:
       - uses: actions/checkout@v7
-      - name: Statik güvenlik analizi (yüksek önemli bulgular CI'ı durdurur)
+      - name: Static security analysis (high severity findings stop CI)
         run: semgrep scan --config p/default --config p/owasp-top-ten --severity ERROR --error
 
   kopya-kod:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Kopya kod oranı (eşik %5)
+      - name: Duplicate code ratio (threshold 5%)
         run: npx --yes jscpd@4 --threshold 5 --silent --ignore "**/node_modules/**,**/.next/**,**/dist/**,**/build/**,**/.venv/**,**/coverage/**,**/.expo/**" .
 
   sir-taramasi:
     runs-on: ubuntu-latest
-    # gitleaks PR'da commit listesini okur (pulls/{n}/commits); özel depoda bu izin olmadan 403
+    # gitleaks reads the commit list on a PR (pulls/{n}/commits); in a private repo this gives 403 without this permission
     permissions:
       contents: read
       pull-requests: read
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # tüm geçmiş taranır
-      # Kişisel hesapta ücretsiz; organizasyon deposunda GITLEAKS_LICENSE sırrı gerekir
+          fetch-depth: 0 # the whole history is scanned
+      # Free on a personal account; an organization repo needs the GITLEAKS_LICENSE secret
       - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Token salt okunur: PR yorumu kapalı, sızıntı işi kırmızı yapar
+          # The token is read-only: PR comments are off, a leak turns the job red
           GITLEAKS_ENABLE_COMMENTS: "false"

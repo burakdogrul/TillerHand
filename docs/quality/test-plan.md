@@ -1,78 +1,78 @@
-# Test Planı
+# Test Plan
 
-> Yaklaşım: **Dengeli.** Kritik akışlarda otomatik test zorunlu, geri kalanında manuel kontrol listesi yeterli.
-> Test araçları ve komutlar: `docs/architecture/stack.md`.
+> Approach: **Balanced.** Automatic tests are required for critical flows; a manual checklist is enough for the rest.
+> Test tools and commands: `docs/architecture/stack.md`.
 
-## 1. Kritik akışlar (otomatik test ZORUNLU)
+## 1. Kritik akışlar (critical flows; automatic test REQUIRED)
 
-Bu akışlardan birine dokunan her değişiklik test ile gelir. Test kırmızıysa merge/deploy yok.
+Every change that touches one of these flows comes with a test. If a test is red, there is no merge/deploy.
 
-| # | Akış | Neden kritik | Test türü | Test dosyası | Durum |
+| # | Flow | Why critical | Test type | Test file | Status |
 |---|---|---|---|---|---|
-| K1 | Kayıt / giriş / çıkış | Herkes kullanır | e2e | | ⬜ |
-| K2 | Yetki: kullanıcı başkasının verisini göremez | Veri sızıntısı | entegrasyon | | ⬜ |
-| K3 | Ödeme / abonelik (varsa) | Para | e2e + webhook | | ⬜ |
-| K4 | Ana veri yazma işlemi (oluştur/güncelle/sil) | Veri kaybı | entegrasyon | | ⬜ |
-| K5 | [Projeye özel] | | | | ⬜ |
+| K1 | Sign-up / sign-in / sign-out | Everyone uses it | e2e | | ⬜ |
+| K2 | Authorization: a user cannot see another user's data | Data leak | integration | | ⬜ |
+| K3 | Payment / subscription (if any) | Money | e2e + webhook | | ⬜ |
+| K4 | Main data write operation (create/update/delete) | Data loss | integration | | ⬜ |
+| K5 | [Project-specific] | | | | ⬜ |
 
-## 1a. Kabul testleri (yaşayan şartname)
+## 1a. Acceptance tests (living specification)
 
-PRD'deki her kabul kriteri (`Ö-01.1` gibi) **kod yazılmadan önce** çalıştırılabilir bir teste dönüşür ve önce kırmızı olur.
-Test adı kriter kimliğini içerir. Örnekler:
+Every acceptance criterion in the PRD (like `Ö-01.1`) becomes a runnable test **before any code is written**, and it is red first.
+The test name contains the criterion id. Examples:
 
 ```ts
-test('Ö-01.1 geçersiz e-posta ile form gönderilmez', async ({ page }) => { /* ... */ });
+test('Ö-01.1 the form is not submitted with an invalid email', async ({ page }) => { /* ... */ });
 ```
 ```python
-def test_O_01_1_gecersiz_eposta_form_gonderilmez(client): ...   # Python: "Ö-01.1" yerine "O_01_1"
+def test_O_01_1_invalid_email_form_not_submitted(client): ...   # Python: use "O_01_1" instead of "Ö-01.1"
 ```
 
-- Testler JUnit XML raporu üretecek şekilde çalıştırılır. Pano bu raporu okur:
+- Tests are run so that they produce a JUnit XML report. The dashboard reads this report:
   - Playwright: `--reporter=junit` → `test-results/junit.xml`
   - Vitest: `--reporter=junit --outputFile=test-results/junit.xml`
   - pytest: `--junitxml=test-results/junit.xml`
-- PRD'deki kutucuğu sadece testi geçen kriter için işaretle. Pano iki kaynağı karşılaştırır: kutucuk işaretli ama test yoksa veya kırmızıysa "Dikkat" alanında uyarır.
-- AI "yaptım" dese bile kriterin testi yeşil değilse kriter bitmemiştir.
+- Check the box in the PRD only for a criterion whose test passes. The dashboard compares the two sources: if the box is checked but the test is missing or red, it warns in the "Needs attention" area.
+- Even if the AI says "done", a criterion whose test is not green is not finished.
 
-## 1b. Saldırgan testleri
+## 1b. Adversarial tests
 
-AI kodunun yaklaşık yarısında güvenlik açığı bulunuyor (Veracode, 2025). Bu yüzden veri döndüren veya veri yazan her uç nokta / server action için şu testler yazılır:
+About half of AI code has a security hole (Veracode, 2025). So for every endpoint / server action that returns or writes data, these tests are written:
 
-| Test | Ne dener | Beklenen |
+| Test | What it tries | Expected |
 |---|---|---|
-| Başkasının kaydı (IDOR) | Kullanıcı B, A'nın kaydının kimliğiyle okur / günceller / siler | 403 veya 404; veri değişmez |
-| Oturumsuz erişim | Giriş yapmadan istek | 401 / yönlendirme |
-| Rol aşımı | Normal kullanıcı admin ucunu çağırır | 403 |
-| XSS | Metin alanına `<script>alert(1)</script>` ve `"><img src=x onerror=alert(1)>` | Metin olarak görünür, çalışmaz |
-| Girdi sınırları | Çok uzun metin, negatif sayı, boş dizi, beklenmeyen alan | Doğrulama hatası; 500 değil |
-| Log enjeksiyonu | Girdide satır sonu (`
-`) ve sahte log satırı | Loglarda kaçışlı/tek satır |
+| Someone else's record (IDOR) | User B reads / updates / deletes with the id of A's record | 403 or 404; data does not change |
+| Access without a session | Request without signing in | 401 / redirect |
+| Role escalation | A normal user calls an admin endpoint | 403 |
+| XSS | `<script>alert(1)</script>` and `"><img src=x onerror=alert(1)>` in a text field | Shown as text, does not run |
+| Input limits | Very long text, negative number, empty array, unexpected field | Validation error; not 500 |
+| Log injection | A line break (`
+`) and a fake log line in the input | Escaped / single line in the logs |
 
-Test adları `SALDIRI:` önekiyle başlar. `security-auditor` ajanı eksik saldırgan testlerini KRİTİK sayar.
+Test names start with the prefix `SALDIRI:`. The `security-auditor` agent counts missing adversarial tests as KRİTİK.
 
-**Supabase kullanılıyorsa** veritabanı katmanının saldırgan testi hazır gelir: `tests/security/rls.mjs`. Anonim ve ikinci kullanıcı, birinci kullanıcının satırını okumayı, güncellemeyi, silmeyi ve onun adına yazmayı dener; RLS'i kapalı veya teste kayıtsız public tablo varsa kırmızı olur. Sadece yerel Supabase'e karşı çalışır (CI `rls` işi, sır gerekmez). Her yeni tablo `TABLES` listesine eklenir. Uygulama katmanındaki (server action, route handler) testler yine yukarıdaki tabloya göre ayrıca yazılır.
+**If Supabase is used,** the adversarial test of the database layer comes ready: `tests/security/rls.mjs`. An anonymous user and a second user try to read, update, delete and write on behalf of the first user's rows; it is red if there is a public table with RLS off or not registered in the test. It runs only against local Supabase (CI `rls` job, no secret needed). Every new table is added to the `TABLES` list. Tests at the application layer (server action, route handler) are still written separately according to the table above.
 
-## 2. Kurallar
+## 2. Rules
 
-- **Her hata düzeltmesi bir regresyon testiyle gelir.** Önce hatayı gösteren test kırmızı olur, sonra düzeltme ile yeşile döner.
-- Testi geçirmek için testi değiştirmek yasak; test yanlışsa önce bunu açıkla.
-- Saf iş mantığı (hesaplama, fiyat, tarih, izin kontrolü) birim testiyle kaplanır.
-- Dış servisler (ödeme, e-posta, AI API) testte taklit (mock) edilir; gerçek anahtar kullanılmaz.
+- **Every bug fix comes with a regression test.** First the test that shows the bug goes red, then it turns green with the fix.
+- Changing a test to make it pass is forbidden; if the test is wrong, explain that first.
+- Pure business logic (calculation, price, date, permission check) is covered by unit tests.
+- External services (payment, email, AI API) are mocked in tests; no real key is used.
 
-## 3. Manuel kontrol listesi (her sürüm öncesi, ~10 dk)
+## 3. Manual checklist (before every release, ~10 min)
 
-- [ ] Yeni kullanıcı olarak baştan sona ana akış
-- [ ] Yanlış girişler: boş form, çok uzun metin, özel karakter, emoji
-- [ ] Yavaş/kesik ağ (tarayıcı/cihaz ağ kısıtlama)
-- [ ] Mobil genişlik / küçük ekran
-- [ ] Çıkış yapıp geri tuşu ile korumalı sayfaya erişim denemesi
-- [ ] Boş durum (hiç verisi olmayan kullanıcı)
-- [ ] [Projeye özel]
+- [ ] The main flow from start to finish as a new user
+- [ ] Wrong inputs: empty form, very long text, special characters, emoji
+- [ ] Slow/interrupted network (browser/device network throttling)
+- [ ] Mobile width / small screen
+- [ ] Sign out, then try to reach a protected page with the back button
+- [ ] Empty state (a user with no data at all)
+- [ ] [Project-specific]
 
-## 4. Komutlar
+## 4. Commands
 
 ```bash
-[test komutu]          # tümü
-[test komutu] [dosya]  # tek dosya
-[e2e komutu]           # uçtan uca
+[test komutu]          # all
+[test komutu] [dosya]  # single file
+[e2e komutu]           # end to end
 ```

@@ -1,8 +1,8 @@
-# İlerleme
+# Progress
 
-> Bu dosya her oturumda AI'ya otomatik yüklenir. **40 satırı geçmesin.**
-> Sadece güncel durumu tutar; geçmiş `CHANGELOG.md`, `docs/decisions/log.md` ve git'te yaşar.
-> Alt durum çubuğu ve `/dashboard` panosu aşağıdaki **kalın etiketli** satırları okur; biçimlerini bozma.
+> This file is loaded into the AI automatically in every session. **Do not exceed 40 lines.**
+> It holds only the current state; history lives in `CHANGELOG.md`, `docs/decisions/log.md` and git.
+> The status line and the `/dashboard` read the **bold-labeled** lines below; do not break their format.
 
 **Son güncelleme:** -
 **Aktif faz:** Başlangıç
@@ -13,7 +13,7 @@
 
 ## Şu anki durum
 
-Proje henüz başlamadı. `/start [fikir]` ile başla.
+The project has not started yet. Start with `/start [fikir]`.
 
 ## Son oturumda yapılanlar
 
@@ -27,7 +27,7 @@ Proje henüz başlamadı. `/start [fikir]` ile başla.
 
 - 
 
-## Kaldığı yer (limit veya yarıda kalma nedeniyle durulduysa)
+## Kaldığı yer (if stopped because of a limit or midway)
 
 - 
 
@@ -35,6 +35,6 @@ Proje henüz başlamadı. `/start [fikir]` ile başla.
 
 - 
 
-## Dikkat (AI için notlar)
+## Dikkat (notes for the AI)
 
 - 

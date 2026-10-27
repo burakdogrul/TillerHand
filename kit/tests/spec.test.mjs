@@ -106,5 +106,5 @@ test('Ö-23.2 the commands: /plan-task writes a feature spec only for 3+ files, 
   assert.match(read('.claude/commands/fix-bug.md'), /docs\/product\/specs\//);
   assert.match(read('.claude/commands/review-changes.md'), /docs\/product\/specs\//);
   const t = read('docs/product/specs/_template.md');
-  for (const h of ['## Mevcut davranış', '## Beklenen davranış', '## Değişmemesi gereken davranış']) assert.ok(t.includes(h), h);
+  for (const h of ['## Current behavior', '## Expected behavior', '## Değişmemesi gereken davranış']) assert.ok(t.includes(h), h);
 });

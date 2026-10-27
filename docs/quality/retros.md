@@ -1,18 +1,18 @@
-# Retrolar
+# Retros
 
-> Her faz sonunda ve proje sonunda `/retro` ile doldurulur. Genel dersler kite geri yazılır,
-> böylece aynı hata bir sonraki projede tekrar etmez.
+> Filled in with `/retro` at the end of every phase and at the end of the project. General lessons are written back to the kit,
+> so the same mistake does not repeat in the next project.
 
-## Şablon
+## Template
 
 ```
-## YYYY-AA-GG — [Faz / Proje sonu]
-**İyi giden:** [...]
-**Zaman kaybettiren:** [...]
-**Tekrar eden AI hataları:** [hata türü — kaç kez — nasıl çözüldü]
-**Eksik/gereksiz kontrol:** [...]
-**Projeye eklenen kurallar:** [dosya: kural]
-**Kite önerilen değişiklikler:** [dosya: değişiklik — onaylandı/reddedildi]
+## YYYY-MM-DD — [Phase / End of project]
+**Went well:** [...]
+**Lost time:** [...]
+**Repeated AI mistakes:** [mistake type — how many times — how it was solved]
+**Missing/unneeded checks:** [...]
+**Rules added to the project:** [file: rule]
+**Changes proposed to the kit:** [file: change — approved/rejected]
 ```
 
 ---

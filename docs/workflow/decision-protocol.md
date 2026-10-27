@@ -1,101 +1,101 @@
-# Karar Protokolü
+# Decision Protocol
 
-> Bu proje **soru odaklı** yürür. Kararları kullanıcı verir, AI seçenekleri hazırlar, önerir, uygular ve raporlar.
-> Kullanıcı bir konuda "sorma" diyene kadar o konuda tek bir karar bile kendiliğinden verilmez.
+> This project is **question-driven**. The user makes the decisions; the AI prepares the options, recommends, implements and reports.
+> Until the user says "don't ask" about a topic, not a single decision on that topic is made on its own.
 
-## 1. Karar noktası nedir?
+## 1. What is a decision point?
 
-Aşağıdakilerden birini etkileyen her seçim bir **karar noktasıdır** ve sorulur:
+Every choice that affects one of the following is a **decision point** and is asked:
 
-| Konu (kod) | Örnekler |
+| Topic (code) | Examples |
 |---|---|
-| `urun` | Özellik kapsamı, öncelik, MVP sınırı, kullanıcı akışı, fiyat, hedef kitle |
-| `teknik` | Dil, framework, veritabanı, auth yöntemi, hosting, kütüphane ekleme, API stili, mimari yapı, klasör yapısı |
-| `tasarim` | Stil yönü, renk, yazı tipi, sayfa/ekran düzeni, bileşen stili, animasyon miktarı, ikon seti, koyu tema |
-| `icerik` | Arayüz metinleri, ses tonu, hitap, açılış sayfası metni, e-posta metinleri |
-| `veri` | Veri modeli, alanlar, ilişkiler, saklama süresi, silme davranışı, migration |
-| `guvenlik` | Yetki modeli, roller, oturum süresi, hız sınırları, kişisel veri işleme |
-| `maliyet` | Ücretli servis seçimi, plan seviyesi, AI model seçimi, harcama limitleri |
+| `urun` | Feature scope, priority, MVP boundary, user flow, price, target audience |
+| `teknik` | Language, framework, database, auth method, hosting, adding a library, API style, architecture, folder structure |
+| `tasarim` | Style direction, color, typeface, page/screen layout, component style, amount of animation, icon set, dark theme |
+| `icerik` | Interface texts, tone of voice, form of address, landing page copy, email texts |
+| `veri` | Data model, fields, relations, retention period, deletion behavior, migration |
+| `guvenlik` | Authorization model, roles, session length, rate limits, personal data handling |
+| `maliyet` | Choice of paid service, plan tier, AI model choice, spending limits |
 
-**Karar noktası değildir** (sorulmaz, uygulanır ve durum bloğunda kısaca raporlanır): dosya/değişken/fonksiyon adı (`docs/product/glossary.md`'ye uygun), kodun iç düzeni, biçimlendirme, projede zaten kararı verilmiş bir kalıbın tekrar uygulanması.
+**Not a decision point** (not asked; apply it and report it briefly in the status block): file/variable/function names (follow `docs/product/glossary.md`), the internal layout of code, formatting, repeating a pattern the project has already decided.
 
-Emin değilsen karar noktasıdır, sor.
+If unsure, it is a decision point. Ask.
 
-## 2. Nasıl sorulur?
+## 2. How to ask
 
-1. **AskUserQuestion aracını kullan.** Araç yoksa aynı yapıyı numaralı liste olarak yaz ve cevap bekle.
-2. **Önce bağlam (1-3 cümle, soru metninin içinde veya hemen öncesinde):** Hangi aşamadayız, bu karar neyi etkiler, geri dönmesi kolay mı zor mu?
-3. **2-4 seçenek.** En uygun gördüğün **ilk sırada** ve etiketinin sonunda **"(Önerilen)"**.
-4. **Her seçeneğin açıklamasında:** Ne olduğu, hangi durumda daha iyi olduğu ve bedeli. Örnek: "Next.js — SEO ve sunucu tarafı gereken ürünlerde en iyisi, AI bu ekosistemi en iyi bilir; öğrenme eğrisi ve barındırma maliyeti Vite SPA'dan yüksek."
-5. **Önerinin gerekçesi bu projeye özel olsun:** PRD'deki kullanıcıya, bütçeye, ölçeğe ve kullanıcının daha önceki kararlarına dayan. Genel geçer "en popüler" gerekçe yetmez.
-6. **Tur başına en fazla 4 soru.** Aynı adımın birbirinden bağımsız sorularını tek AskUserQuestion çağrısında topla: her ayrı çağrı bir tur daha demek ve her tur bütün bağlamı yeniden okur. Birbirine bağlı kararları sırayla sor (önce framework, sonra ona bağlı kütüphane).
-7. Kullanıcı "Other" ile serbest cevap verirse onu da değerlendir. Riskli bulursan bir kez nedenini söyle, ısrar ederse uygula ve kayda geç.
-8. **Güncellik:** Sürüm, fiyat, kullanımdan kaldırma gibi değişebilen bilgiye dayanan seçeneklerde hafızana güvenme. Gerekirse önce araştır (`docs/workflow/skills.md` → araştırma).
-9. **Tasarım kararlarında görsel önizleme zorunlu.** Bkz. bölüm 5.
+1. **Use the AskUserQuestion tool.** If the tool is missing, write the same structure as a numbered list and wait for the answer.
+2. **Context first (1-3 sentences, inside the question text or right before it):** Which stage are we in, what does this decision affect, is it easy or hard to reverse?
+3. **2-4 options.** Put the one you find best **first**, with **"(Recommended)"** at the end of its label.
+4. **In each option's description:** What it is, when it is better, and what it costs. Example: "Next.js: best for products that need SEO and server-side work, the AI knows this ecosystem best; steeper learning curve and higher hosting cost than a Vite SPA."
+5. **Make the reason for the recommendation specific to this project:** Base it on the user in the PRD, the budget, the scale and the user's earlier decisions. A generic "most popular" reason is not enough.
+6. **At most 4 questions per round.** Group independent questions of the same step into one AskUserQuestion call: every separate call is one more round, and every round re-reads the whole context. Ask dependent decisions in order (framework first, then the library that depends on it).
+7. If the user gives a free answer with "Other", evaluate it too. If you find it risky, say why once; if the user insists, apply it and record it.
+8. **Freshness:** For options that depend on information that can change (version, price, deprecation), do not trust your memory. Research first if needed (`docs/workflow/skills.md` → research).
+9. **Visual preview is mandatory for design decisions.** See section 5.
 
-## 2a. Geri dönüş maliyeti: tek yönlü / çift yönlü kapı
+## 2a. Cost of reversal: one-way / two-way door
 
-Her kararı sormadan önce sınıfla ve soru metninde belirt:
+Classify every decision before asking and state it in the question text:
 
-- **Çift yönlü kapı:** Sonradan kolay ve ucuz değiştirilir (buton metni, renk, bir kütüphanenin iç kullanımı). Normal sorulur.
-- **Tek yönlü kapı:** Geri dönüşü pahalı veya imkânsız (veritabanı, auth sağlayıcısı, veri modeli, ödeme sağlayıcısı, alan adı, kişisel veri işleme, mağaza paket adı, herkese açık API sözleşmesi). Ek kurallar:
-  1. Soru metninde "Tek yönlü karar: sonradan değiştirmek [şu kadar] maliyetli" yazılır.
-  2. **Veritabanı ve auth kararlarında** (Tam profilde tüm tek yönlü kararlarda) sormadan önce **karar konseyi** toplanır (`.claude/board/council.md`); diğer tek yönlü kararlarda `board-architect` (ilgiliyse `security-auditor`) görüşü alınır. Konsey: 3 danışman aynı soruyu farklı modellerle cevaplar, birbirini anonim sıralar, `board-chair` önerir. Önerilen seçenek konseyin önerisidir; her seçeneğin açıklamasına konsey oyu ve azınlık görüşü eklenir. Limit kırmızıysa konsey yerine `board-architect` (ve ilgiliyse `security-auditor`) görüşü alınır.
-  3. Cevaptan sonra ADR zorunludur: `docs/decisions/adr-NNNN-*.md` (şablon: `adr-template.md`).
-  4. Kullanıcı acele etmiyorsa, büyük tek yönlü kararlar için "bir gün düşünüp sonra karar vermek" seçeneği de sunulur.
+- **Two-way door:** Easy and cheap to change later (button text, color, internal use of a library). Asked normally.
+- **One-way door:** Expensive or impossible to reverse (database, auth provider, data model, payment provider, domain name, personal data handling, store package name, public API contract). Extra rules:
+  1. The question text says "One-way decision: changing it later costs [this much]".
+  2. **For database and auth decisions** (in the Full profile, all one-way decisions), the **decision council** (`.claude/board/council.md`) meets before you ask; for other one-way decisions, get the opinion of `board-architect` (and `security-auditor` if relevant). Council: 3 advisors answer the same question with different models, rank each other anonymously, and `board-chair` recommends. The recommended option is the council's recommendation; add the council vote and the minority opinion to each option's description. If the limit is red, get the opinion of `board-architect` (and `security-auditor` if relevant) instead of the council.
+  3. After the answer an ADR is mandatory: `docs/decisions/adr-NNNN-*.md` (template: `adr-template.md`).
+  4. If the user is not in a hurry, for big one-way decisions also offer the option "think about it for a day, then decide".
 
-## 3. Cevap gelince
+## 3. When the answer arrives
 
-1. Kararı `docs/decisions/log.md` → **Karar günlüğü** tablosuna ekle (tarih, aşama, konu, soru, seçilen, kapı: `tek`/`çift`, karar veren: `kullanıcı`).
-2. Mimariyi veya uzun vadeyi etkileyen kararlarda ADR yaz (`docs/decisions/adr-NNNN-*.md`) ve `log.md` → ADR listesine ekle.
-3. Kararın etkilediği dokümanı güncelle (stack, mimari, tasarım rehberi, PRD, sözlük…).
-4. Sonra uygula.
+1. Add the decision to the **"Karar günlüğü"** (decision log) table in `docs/decisions/log.md` (date, stage, topic, question, chosen, door: `tek`/`çift`, decided by: `kullanıcı`).
+2. For decisions that affect the architecture or the long term, write an ADR (`docs/decisions/adr-NNNN-*.md`) and add it to the ADR list in `log.md`.
+3. Update the document the decision affects (stack, architecture, design guide, PRD, glossary…).
+4. Then implement.
 
-## 4. Soru modu
+## 4. Question mode
 
-Durum `docs/workflow/progress.md` → `**Soru modu:**` satırında tutulur. Varsayılan: `açık · kapalı konular: yok`.
+The state is kept in the `**Soru modu:**` line of `docs/workflow/progress.md`. Default: `açık · kapalı konular: yok`.
 
-| Kullanıcı ne der | Ne yaparsın |
+| What the user says | What you do |
 |---|---|
-| "sorma", "hiç sorma", `/ask-mode kapat hepsi` | Tüm konular kapalı |
-| "tasarımda sorma", "renkleri sen seç", `/ask-mode kapat tasarim` | Sadece o konu kapalı (konu kodlarıyla eşleştir; emin değilsen hangi konuyu kastettiğini sor) |
-| "tekrar sor", "sormaya devam et", `/ask-mode ac [konu\|hepsi]` | Konu(lar) tekrar açık |
+| "don't ask", "never ask", `/ask-mode off hepsi` | All topics closed |
+| "don't ask about design", "you pick the colors", `/ask-mode off tasarim` | Only that topic closed (match it to the topic codes; if unsure, ask which topic is meant) |
+| "ask again", "keep asking", `/ask-mode on [konu\|hepsi]` | Topic(s) open again |
 
-**Kapalı konuda:** "(Önerilen)" seçeneği seç, uygula. Günlüğe `karar veren: otomatik` yaz. Durum bloğunda "Otomatik kararlar" satırında listele. Tasarım konusu kapalı olsa bile önizlemeleri `.previews/` altına üret ki kullanıcı sonradan bakabilsin.
+**On a closed topic:** Pick the "(Recommended)" option and apply it. Write `karar veren: otomatik` in the log. List it in the "Auto decisions" line of the status block. Even when the design topic is closed, produce the previews under `.previews/` so the user can look later.
 
-**Soru modundan bağımsız, her zaman onay iste:** veri silme, prod'a deploy, ödeme veya para harcatan işlem, geri dönülemez her komut, `AGENTS.md` → "Never" listesi.
+**Regardless of question mode, always ask for approval:** data deletion, prod deploy, an action that spends money, any command that cannot be undone, the "Never" list in `AGENTS.md`.
 
-## 5. Tasarım kararlarında görsel önizleme
+## 5. Visual preview for design decisions
 
-Her `tasarim` kararı görselle sorulur. Kullanıcı yazıyı değil, görüntüyü seçer.
+Every `tasarim` decision is asked with visuals. The user chooses an image, not text.
 
-1. Seçenek başına bir örnek üret: `.previews/NN-konu/a.html`, `b.html`, `c.html` (NN sıra no). Ayrıca hepsini yan yana veya alt alta gösteren `index.html`.
-2. Örnekler **gerçek içerikle** yapılır (PRD'deki ürün adı, gerçek başlık ve metinler); lorem ipsum yok.
-3. Her örnek, `docs/workflow/skills.md`'de o seçeneğe eşlenen skill ile üretilir. Örneğin "Premium" seçeneği premium tasarım skill'iyle, "Minimal" seçeneği minimal skill'le. Böylece seçenekler arasındaki fark gerçek olur.
-4. Büyük kararlarda (stil yönü, sayfa düzeni, ana ekran) her seçenek ayrı tam bölümdür. Küçük kararlarda (renk paleti, yazı tipi çifti, köşe/gölge, buton stili) tek bir karşılaştırma sayfasında yan yana örnekler yeterlidir.
-5. Önizlemeyi aç: Tarayıcı aracı varsa `index.html`'i aç, masaüstü ve mobil genişlikte ekran görüntüsü al ve göster. Yoksa dosya yolunu ver.
-6. Sonra AskUserQuestion ile sor: seçenekler A/B/C, açıklamalarında her birinin farkı ve hangi durumda daha iyi olduğu. Kullanıcı karma isteyebilir ("A'nın düzeni, B'nin renkleri"); bunu yeni bir önizlemeyle doğrula.
-7. Seçim `docs/design/design-guide.md` → karar günlüğüne ve `docs/decisions/log.md`'ye yazılır. `.previews/` git'e girmez.
+1. Produce one sample per option: `.previews/NN-konu/a.html`, `b.html`, `c.html` (NN is the sequence number). Also an `index.html` that shows them all side by side or one below the other.
+2. Build the samples with **real content** (the product name, real titles and texts from the PRD); no lorem ipsum.
+3. Produce each sample with the skill that `docs/workflow/skills.md` maps to that option. For example, the "Premium" option with the premium design skill, the "Minimal" option with the minimal skill. This makes the difference between options real.
+4. For big decisions (style direction, page layout, home screen), each option is a separate full section. For small decisions (color palette, typeface pair, corner/shadow, button style), side-by-side samples on one comparison page are enough.
+5. Open the preview: If a browser tool exists, open `index.html`, take screenshots at desktop and mobile width and show them. If not, give the file path.
+6. Then ask with AskUserQuestion: options A/B/C, with the difference of each and when it is better in the descriptions. The user may want a mix ("A's layout, B's colors"); verify that with a new preview.
+7. The choice is written to the decision log in `docs/design/design-guide.md` and to `docs/decisions/log.md`. `.previews/` stays out of git.
 
-## 6. Durum bloğu (her cevabın sonunda)
+## 6. Status block (at the end of every answer)
 
-Kısa ve sıkıştırılmış dille (caveman), en fazla 4 satır:
+In short, compressed language (caveman), at most 4 lines:
 
 ```
-── Durum ─────────────────────────────
-Aşama: Faz 1 · Görev: G-012 (7/23) · Soru modu: açık · Limit: 5s %34 hf %5
-Yapıldı: kayıt formu + doğrulama, test yeşil · Kurul: ONAY (ux, qa)
-Otomatik kararlar: yok
-Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi
+── Status ─────────────────────────────
+Phase: Phase 1 · Task: G-012 (7/23) · Question mode: open · Limit: 5h %34 weekly %5
+Done: signup form + validation, tests green · Board: ONAY (ux, qa)
+Auto decisions: none
+Next: G-013 password reset · pending decision: email service
 ```
 
-- Aşama ve görev `docs/workflow/progress.md`'den; görev sayısı `docs/product/roadmap.md`'deki işaretli/toplam.
-- Limit: masaüstünde `get_usage`, terminalde `node .claude/hooks/usage.mjs` (okunamıyorsa "bilinmiyor").
-- Kurul: bu turda toplantı yapıldıysa sonucu ve katılanlar.
-- "Sıradaki" her zaman somut olsun; bir karar bekleniyorsa onu söyle.
-- Sadece soru sorduğun turda (cevap beklerken) durum bloğunu soru öncesine tek satır olarak koy.
+- Phase and task come from `docs/workflow/progress.md`; the task count is checked/total in `docs/product/roadmap.md`.
+- Limit: `get_usage` on desktop, `node .claude/hooks/usage.mjs` in the terminal (if it cannot be read, "unknown").
+- Board: if a meeting happened this turn, its result and attendees.
+- "Next" must always be concrete; if a decision is awaited, say so.
+- In a turn where you only ask a question (waiting for the answer), put the status block as a single line before the question.
 
-## 7. Dil
+## 7. Language
 
-- **Sorular, seçenek açıklamaları, dokümanlar ve kullanıcıya görünen metinler:** Tam cümlelerle, düzgün Türkçe.
-- **Durum bloğu, ilerleme notları, kod açıklamaları:** Kısa ve sıkıştırılmış (caveman).
+- **Questions, option descriptions, documents and texts the user sees:** Complete sentences, proper prose in the conversation language.
+- **Status block, progress notes, code explanations:** Short and compressed (caveman).

@@ -1,9 +1,9 @@
-# Öğrenme kaydı
+# Learning Log
 
-> Anlatıcı mod açıkken görev sonunda sorulan anlama sorularının cevapları. AI her cevaptan sonra bir satır ekler; cevaplanmayan soru yazılmaz.
-> Pano "Ürün ve teknik" sekmesinde doğru/yanlış sayısını ve sık yanılan kavramları gösterir. Not değildir, kimseyle paylaşılmaz.
+> Answers to the comprehension questions asked at the end of a task while narrator mode is on. The AI adds one row after each answer; an unanswered question is not written.
+> The dashboard shows the number of correct (doğru) and wrong (yanlış) answers and the concepts often missed on the "Product and tech" tab. It is not a grade and is shared with no one.
 
 ## Kayıtlar
 
-| Tarih | Görev | Kavram | Sonuç |
+| Date | Task | Concept | Result |
 |---|---|---|---|

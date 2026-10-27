@@ -1,11 +1,12 @@
-# Birim Ekonomisi
+# Unit Economics
 
-> Ürün her yeni kullanıcıda para kazandırıyor mu, kaybettiriyor mu? AI özellikli ürünlerde kullanıcı başı maliyet
-> fark edilmeden fiyatı geçebilir. `/dashboard` panosu aşağıdaki girdilerden hesabı **otomatik** yapar.
-> `/start` Adım 5'te doldurulur; `/maintain monthly` gerçek faturalarla günceller.
-> Sayılarda nokta ondalık ayırıcıdır (örn. `3.5`). Para birimi tek olmalı.
+> Does the product earn money or lose money on each new user? In AI products the cost per user
+> can pass the price without anyone noticing. `/dashboard` does the calculation from the inputs below **automatically**.
+> Filled in at `/start` Step 5; `/maintain monthly` updates it with real bills.
+> Use a dot as the decimal separator in numbers (e.g. `3.5`). Use a single currency.
+> The input labels stay Turkish because the dashboard reads them: Para birimi = currency, Fiyat = price per user per month, Ödeme komisyonu = payment fee, Sabit aylık maliyet = fixed monthly cost, Kullanıcı başı değişken maliyet = variable cost per user, Hedef aktif kullanıcı = target active users, Ücretsiz kullanıcı oranı = free user share.
 
-## Girdiler
+## Inputs
 
 **Para birimi:** TL
 **Fiyat (kullanıcı başı aylık):** 0
@@ -15,27 +16,27 @@
 **Hedef aktif kullanıcı:** 0
 **Ücretsiz kullanıcı oranı (%):** 0
 
-## Değişken maliyetin dökümü (kullanıcı başı, aylık)
+## Breakdown of variable cost (per user, monthly)
 
-| Kalem | Varsayım | Tutar |
+| Item | Assumption | Amount |
 |---|---|---|
-| AI / LLM çağrıları | [örn. kullanıcı başı ayda 200 istek × ortalama token × fiyat] | |
-| E-posta | | |
-| Depolama / bant genişliği | | |
-| Diğer | | |
+| AI / LLM calls | [e.g. 200 requests per user per month × average tokens × price] | |
+| Email | | |
+| Storage / bandwidth | | |
+| Other | | |
 
-## Sabit maliyetin dökümü (aylık)
+## Breakdown of fixed cost (monthly)
 
-| Kalem | Tutar |
+| Item | Amount |
 |---|---|
 | Hosting | |
-| Veritabanı | |
-| Alan adı (aylığa bölünmüş) | |
-| Diğer abonelikler | |
+| Database | |
+| Domain name (divided per month) | |
+| Other subscriptions | |
 
-## Notlar
+## Notes
 
-- **Katkı payı** = fiyat × (1 − komisyon) − değişken maliyet. Negatifse her yeni ödeyen kullanıcı zarar ettirir.
-- **Başa baş** = sabit maliyet ÷ katkı payı (ödeyen kullanıcı sayısı).
-- Ücretsiz kullanıcılar da değişken maliyet doğurur; hesap bunu "ücretsiz kullanıcı oranı" ile dahil eder.
-- Değişken maliyet fiyatın %30'unu geçiyorsa fiyat veya kullanım limiti kararı `maliyet` konusu olarak sorulur.
+- **Contribution margin** = price × (1 − commission) − variable cost. If it is negative, every new paying user causes a loss.
+- **Break-even** = fixed cost ÷ contribution margin (number of paying users).
+- Free users also create variable cost; the calculation includes it through the "Ücretsiz kullanıcı oranı (%)" input (free user share).
+- If variable cost passes 30% of the price, a price or usage-limit decision is asked as a `maliyet` topic.

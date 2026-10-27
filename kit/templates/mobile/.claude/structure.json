@@ -1,5 +1,5 @@
 {
-  "description": "Mobil (Expo Router, özellik bazlı). Yeni dosyalar sadece bu kalıplara uyan yerlere yazılır; değiştirmek teknik bir karardır. Ayrıntı: docs/architecture/structure.md",
+  "description": "Mobile (Expo Router, by feature). New files are written only to places that match these patterns; changing them is a technical decision. Details: docs/architecture/structure.md",
   "allow": [
     "README.md",
     "CHANGELOG.md",

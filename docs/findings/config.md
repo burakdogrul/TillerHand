@@ -1,22 +1,22 @@
-# Bulgu ayarları
+# Findings settings
 
-> `/findings-*` komutları bu dosyayı okur. Boş alanları ilk çalıştırmada AI sorup doldurur.
+> The `/findings-*` commands read this file. The AI asks for the empty fields on the first run and fills them in.
 
 ## Business
 
-**Sektör:** -
-**Alt alan:** -
-**Uzman rolü:** -
-**Pazar:** -
-**Hedef müşteri:** -
-**Rakipler:** -
+**Sector:** -
+**Subfield:** -
+**Expert role:** -
+**Market:** -
+**Target customer:** -
+**Competitors:** -
 
 ## Legal
 
-**İlgili regülasyonlar:** -
-**Kişisel veri türleri:** -
-**Veri işlenen ülkeler:** -
+**Relevant regulations:** -
+**Personal data types:** -
+**Countries where data is processed:** -
 
-## Genel
+## General
 
-**Hariç tutulan yollar:** sandbox/, docs/archive/
+**Excluded paths:** sandbox/, docs/archive/

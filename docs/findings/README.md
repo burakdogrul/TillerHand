@@ -1,22 +1,22 @@
-# Bulgular
+# Findings
 
-Projeyi farklı uzman gözleriyle tarayan raporlar. Her rapor en önemli en fazla 20 bulguyu kanıtla, 0-100 önem puanıyla ve düzeltme yöntemiyle sıralar; ayrıca alan için 0-100 sağlık puanı verir. Yöntem: `.claude/findings/protocol.md`.
+Reports that scan the project through different expert eyes. Each report ranks at most the 20 most important findings with evidence, a 0-100 severity score and a fix method; it also gives a 0-100 health score for the area. Method: `.claude/findings/protocol.md`.
 
-| Komut | Bakış açısı | Klasör |
+| Command | Viewpoint | Folder |
 |---|---|---|
-| `/findings-tech` | Kıdemli mimar: hatalar, tekrar ve kullanılmayan kod, yapı, testler | `tech/` |
-| `/findings-business` | Sektör uzmanı: iş akışları, iş kuralları, gelir, rekabet | `business/` |
-| `/findings-security` | Saldırgan: erişim, enjeksiyon, sırlar, bağımlılıklar | `security/` |
-| `/findings-ux` | Kullanıcı ve UX araştırmacısı: akışlar, erişilebilirlik, metin | `ux/` |
-| `/findings-perf` | Performans ve FinOps: yavaş yollar, maliyet | `perf/` |
-| `/findings-legal` | Uyum uzmanı: KVKK, regülasyon, lisans (hukuki görüş değildir) | `legal/` |
-| `/findings-all` | Seçilen türlerin hepsi + birleşik özet | `summary-*.md` |
+| `/findings-tech` | Senior architect: bugs, duplicate and unused code, structure, tests | `tech/` |
+| `/findings-business` | Industry expert: workflows, business rules, revenue, competition | `business/` |
+| `/findings-security` | Attacker: access, injection, secrets, dependencies | `security/` |
+| `/findings-ux` | User and UX researcher: flows, accessibility, copy | `ux/` |
+| `/findings-perf` | Performance and FinOps: slow paths, cost | `perf/` |
+| `/findings-legal` | Compliance expert: KVKK, regulation, license (not legal advice) | `legal/` |
+| `/findings-all` | All of the selected types + a combined summary | `summary-*.md` |
 
-Her türün klasöründe tarihli raporlar ve en son raporun kopyası (`latest.md`) bulunur.
+Each type's folder holds dated reports and a copy of the latest report (`latest.md`).
 
 ## Raporlar
 
-`/dashboard` panosu bu tabloyu okur; sütunları değiştirme. Sağlık ve önceki puan `NN` biçiminde yazılır.
+The `/dashboard` dashboard reads this table; do not change the columns. Write health and the previous score in the `NN` format.
 
-| Tarih | Tür | Sağlık | Önceki | Bulgu | Kritik | Rapor |
+| Date | Type | Health | Previous | Findings | Critical | Report |
 |---|---|---|---|---|---|---|

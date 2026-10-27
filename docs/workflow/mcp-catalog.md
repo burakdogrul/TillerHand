@@ -1,42 +1,42 @@
-# MCP ve eklenti kataloğu
+# MCP and plugin catalog
 
-> Şablonda hazır gelmeyen, projede o servis seçilirse açılan bağlantılar. `/start` Adım 5'te (dış servisler) bu tabloya bakar ve eşleşen servis için kurulumu önerir.
-> Hepsi resmi, satıcının kendi sunucusudur (doğrulama: 2026-10-12). Kimlik doğrulama tarayıcıda (OAuth) veya senin ortam değişkeninle yapılır; anahtar sohbete veya dosyaya yazılmaz.
+> Connections that do not come ready in the template and are opened if the project picks that service. `/start` Step 5 (external services) checks this table and suggests the setup for a matching service.
+> All are the vendor's own official servers (verified: 2026-10-12). Authentication happens in the browser (OAuth) or with your own environment variable; a key is never written to the chat or to a file.
 
-## Projede hazır gelenler
+## Ready in the project
 
-| Ne | Tip | Not |
+| What | Type | Note |
 |---|---|---|
-| Context7 | hepsi | Güncel kütüphane dokümanı |
-| Supabase (salt okunur), Sentry | web, mobil · backend'de Sentry | `DEV_REF` /start'ta doldurulur: **geliştirme** projesi, sadece okur. Prod ref'i AI ortamına (.mcp.json, .env.local) yazılmaz; prod'a bakmak gerekirse kullanıcı paneli açar |
-| Maestro | mobil | Mobil E2E (`.maestro/*.yaml`). Maestro CLI kurulu olmalı: `curl -fsSL "https://get.maestro.mobile.dev" \| bash` (Windows: WSL veya docs.maestro.dev) |
-| Expo | mobil | `expo@expo-plugins` eklentisiyle gelir: EAS build, iş akışları, TestFlight çökme kayıtları. Bağlanmak için `/mcp` → Expo hesabıyla giriş. Simülatör ve ekran görüntüsü için SDK 54+ ve `npx expo install expo-mcp --dev` |
+| Context7 | all | Current library docs |
+| Supabase (read-only), Sentry | web, mobile · Sentry for backend | `DEV_REF` is filled in at /start: the **development** project, read-only. The prod ref is not written to the AI environment (.mcp.json, .env.local); if prod needs a look, the user opens the dashboard |
+| Maestro | mobile | Mobile E2E (`.maestro/*.yaml`). The Maestro CLI must be installed: `curl -fsSL "https://get.maestro.mobile.dev" \| bash` (Windows: WSL or docs.maestro.dev) |
+| Expo | mobile | Comes with the `expo@expo-plugins` plugin: EAS build, workflows, TestFlight crash logs. To connect: `/mcp` → sign in with the Expo account. For simulator and screenshots: SDK 54+ and `npx expo install expo-mcp --dev` |
 
-## Gerektiğinde eklenenler (varsayılan kapalı)
+## Added when needed (off by default)
 
-Bu sunucular `.mcp.json`'da gelmez; gereken komut kullanıcıya sorup bu makineye ekler (`--scope local`, git'e girmez). İş bitince `/mcp` ile kapatılabilir. Windows'ta `npx` yerine `cmd /c npx` yaz.
+These servers do not come in `.mcp.json`; the command that needs one asks the user and adds it to this machine (`--scope local`, does not enter git). It can be turned off with `/mcp` when the work is done. On Windows write `cmd /c npx` instead of `npx`.
 
-| Ne | Kim ister | Kurulum (doğrulama: 2026-10-23) | Not |
+| What | Who asks for it | Setup (verified: 2026-10-23) | Note |
 |---|---|---|---|
-| Playwright MCP | Keşif amaçlı tarayıcı testi, uzun etkileşimli akış | `claude mcp add --scope local playwright -- npx -y @playwright/mcp@0.0.83` | Ekran görüntüsü için `node .claude/hooks/preview.mjs`. Etkileşimli deneme için önce Playwright CLI (her komut sorulur; proje klasöründe depodaki ayar dosyasını okur): `npx -y @playwright/cli@0.1.22 open <url>`, `snapshot`, `console`, `requests`, `screenshot`. CLI sayfa verisini bağlama zorlamaz, daha az token harcar |
-| Chrome DevTools MCP | `/findings-perf`, `/findings-ux` | `claude mcp add --scope local chrome-devtools -- npx -y chrome-devtools-mcp@1.10.1` | Performans izi (LCP, CLS, INP), ağ şelalesi, konsol |
-| Figma | `/design` (tasarım Figma'daysa) | `claude mcp add --scope local --transport http figma-remote-mcp https://mcp.figma.com/mcp` | OAuth (`/mcp`). Figma'nın resmi plugin'i (~17 skill) bağlam bütçesi yüzünden kullanılmaz |
-| rea (CLI, MCP değil) | `/research` (rakip özelliği nasıl çalışıyor), `/adopt` (kaynağı olmayan parça) | Kurulum yok: `npx -y rea-agents@6.2.0 <alt komut>`; alt komutlar `npx -y rea-agents@6.2.0 --help`. Node `^22.19` veya `>=24.11` ister | Sadece kullanıcının sahip olduğu veya incelemeye yetkili olduğu yazılım. Lisans sözleşmesi (EULA) tersine mühendisliği yasaklayabilir; ticari araçlar (IDA, Hopper, JEB) kendi lisansıyla. `setup` çalıştırılmaz (ajan ayarlarını değiştirir). Analiz yereldir; site incelemesi o siteye gerçek istek atar |
-| Supabase dev (yazma) | `/build` (dev'de deneme) | `claude mcp add --scope local --transport http supabase-dev "https://mcp.supabase.com/mcp?project_ref=DEV_REF&features=database,docs"` | Sadece **geliştirme** projesi veya branch'i (`DEV_REF`). Prod ref'i asla bu tanıma yazılmaz. Şema değişikliği yine migration dosyasıyla yapılır |
+| Playwright MCP | Exploratory browser testing, long interactive flow | `claude mcp add --scope local playwright -- npx -y @playwright/mcp@0.0.83` | For screenshots, `node .claude/hooks/preview.mjs`. For interactive trials, use the Playwright CLI first (every command is asked; in the project folder it reads the config file in the repo): `npx -y @playwright/cli@0.1.22 open <url>`, `snapshot`, `console`, `requests`, `screenshot`. The CLI does not force page data into the context, so it spends fewer tokens |
+| Chrome DevTools MCP | `/findings-perf`, `/findings-ux` | `claude mcp add --scope local chrome-devtools -- npx -y chrome-devtools-mcp@1.10.1` | Performance trace (LCP, CLS, INP), network waterfall, console |
+| Figma | `/design` (if the design is in Figma) | `claude mcp add --scope local --transport http figma-remote-mcp https://mcp.figma.com/mcp` | OAuth (`/mcp`). Figma's official plugin (~17 skills) is not used because of the context budget |
+| rea (CLI, not MCP) | `/research` (how a competitor feature works), `/adopt` (a part with no source) | No setup: `npx -y rea-agents@6.2.0 <alt komut>`; subcommands: `npx -y rea-agents@6.2.0 --help`. Needs Node `^22.19` or `>=24.11` | Only software the user owns or is authorized to inspect. The license agreement (EULA) may forbid reverse engineering; commercial tools (IDA, Hopper, JEB) follow their own license. `setup` is not run (it changes agent settings). The analysis is local; inspecting a site sends real requests to that site |
+| Supabase dev (write) | `/build` (trying things in dev) | `claude mcp add --scope local --transport http supabase-dev "https://mcp.supabase.com/mcp?project_ref=DEV_REF&features=database,docs"` | Only the **development** project or branch (`DEV_REF`). The prod ref is never written to this definition. Schema changes are still made with a migration file |
 
-## Servis seçilince açılanlar
+## Opened when a service is chosen
 
-| Servis | Kurulum | Kimlik | Dikkat |
+| Service | Setup | Credentials | Caution |
 |---|---|---|---|
-| GitHub | `/plugin install github@claude-plugins-official` | `GITHUB_PERSONAL_ACCESS_TOKEN` ortam değişkeni (ince ayarlı, sadece bu repo) | Geniş yetkili token verme |
-| Stripe | `claude mcp add --transport http stripe https://mcp.stripe.com --scope project` | OAuth (`/mcp`) | Önce test modu hesabıyla bağlan |
-| Vercel | CLI: `npx -y vercel@63.1.1` (`/release` kullanır). Log ve build durumu için isteğe bağlı MCP: `claude mcp add --transport http vercel https://mcp.vercel.com --scope project` | `vercel login` / OAuth (`/mcp`) | Deploy ve satın alma yapabilir; `--prod`, `promote`, `rollback` her zaman sorulur (kalkan). Resmi plugin (30+ skill) bağlam bütçesi yüzünden kullanılmaz |
-| PostHog | `claude mcp add --transport http posthog https://mcp.posthog.com/mcp --scope project` | OAuth (`/mcp`), bölge otomatik | Ürün analitiği ve özellik bayrakları (`docs/operations/feature-flags.md`) |
-| Firebase | `/plugin install firebase@claude-plugins-official` | Firebase CLI girişi | Supabase yerine Firebase seçildiyse |
-| Linear | `/plugin install linear@claude-plugins-official` | OAuth | Yol haritası Linear'da tutulacaksa |
+| GitHub | `/plugin install github@claude-plugins-official` | `GITHUB_PERSONAL_ACCESS_TOKEN` environment variable (fine-grained, only this repo) | Do not give a broad-scope token |
+| Stripe | `claude mcp add --transport http stripe https://mcp.stripe.com --scope project` | OAuth (`/mcp`) | Connect with a test-mode account first |
+| Vercel | CLI: `npx -y vercel@63.1.1` (`/release` uses it). Optional MCP for logs and build status: `claude mcp add --transport http vercel https://mcp.vercel.com --scope project` | `vercel login` / OAuth (`/mcp`) | It can deploy and purchase; `--prod`, `promote`, `rollback` are always asked (shield). The official plugin (30+ skills) is not used because of the context budget |
+| PostHog | `claude mcp add --transport http posthog https://mcp.posthog.com/mcp --scope project` | OAuth (`/mcp`), region automatic | Product analytics and feature flags (`docs/operations/feature-flags.md`) |
+| Firebase | `/plugin install firebase@claude-plugins-official` | Firebase CLI login | If Firebase was chosen instead of Supabase |
+| Linear | `/plugin install linear@claude-plugins-official` | OAuth | If the roadmap will be kept in Linear |
 
-## Kural
+## Rule
 
-- Her MCP aracının yaptığı işlem senin hesabının yetkisiyle yapılır. Yazma yetkisi olanlarda (Stripe, Vercel, GitHub) kalıcı veya para harcatan işlem kullanıcı onayı olmadan yapılmaz.
-- Yeni bir MCP eklemek `teknik` karardır; listede olmayan bir sunucu önerilirse önce `source-research` ile kaynağını ve bakım durumunu doğrula, `.mcp.json`'a sürüm sabitleyerek ekle.
-- Kullanılmayan MCP'yi kapat: her araç tanımı her oturumda bağlama yük ekler.
+- Every action an MCP tool takes runs with your account's permissions. For tools with write access (Stripe, Vercel, GitHub), no permanent or money-spending action is taken without user approval.
+- Adding a new MCP is a `teknik` decision; if a server not on the list is suggested, first verify its source and maintenance status with `source-research`, and add it to `.mcp.json` with a pinned version.
+- Turn off an MCP you do not use: every tool definition adds load to the context in every session.

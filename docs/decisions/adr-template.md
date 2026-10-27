@@ -1,25 +1,25 @@
-# ADR-NNNN: [Kısa başlık]
+# ADR-NNNN: [Short title]
 
-- **Tarih:** YYYY-AA-GG
-- **Durum:** Önerildi / Kabul edildi / Yerine geçti: ADR-NNNN
-- **Kapı:** tek yönlü / çift yönlü
-- **Karar günlüğü:** #N (`docs/decisions/log.md`)
-- **Kurul görüşü:** [katılan üyeler ve sonuç]
+- **Date:** YYYY-AA-GG
+- **Status:** Proposed / Accepted / Superseded by: ADR-NNNN
+- **Door:** one-way / two-way
+- **Decision log:** #N (`docs/decisions/log.md`)
+- **Board opinion:** [members who took part and the result]
 
-## Bağlam
+## Context
 
-[Hangi problem bu kararı gerektirdi? Kısıtlar neler?]
+[Which problem required this decision? What are the constraints?]
 
-## Seçenekler
+## Options
 
-| Seçenek | Artı | Eksi |
+| Option | Pro | Con |
 |---|---|---|
 | | | |
 
-## Karar
+## Decision
 
-[Ne seçildi ve neden? Kullanıcının seçimi.]
+[What was chosen and why? The user's choice.]
 
-## Sonuçlar
+## Consequences
 
-[Neyi kolaylaştırır, neyi zorlaştırır, neye bağımlı kılar? Geri dönmek gerekirse maliyeti ne?]
+[What does it make easier, what does it make harder, what does it make us depend on? What is the cost of going back?]

@@ -1,5 +1,5 @@
-# Expo SDK'ya bağlı paketler Dependabot ile değil, 'npx expo install --fix' ile güncellenir.
-# Güvenlik güncellemeleri için: GitHub > Settings > Code security > Dependabot security updates: Açık.
+# Packages tied to the Expo SDK are updated with 'npx expo install --fix', not with Dependabot.
+# For security updates: GitHub > Settings > Code security > Dependabot security updates: On.
 version: 2
 updates:
   - package-ecosystem: npm

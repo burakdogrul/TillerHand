@@ -15,7 +15,7 @@ test('Ö-19.1 every 3 hours (GitHub Free private repos: 2,000 min/month); read-o
   for (const t of ['web-saas', 'backend']) {
     const wf = read(`kit/templates/${t}/.github/workflows/live-monitoring.yml`);
     assert.match(wf, /cron: "17 \*\/3 \* \* \*"/, `${t}: every 3 hours`);
-    assert.match(wf, /3 saatte bir CANLI/, `${t}: the comment follows the schedule`);
+    assert.match(wf, /the LIVE (site|environment) every 3 hours/, `${t}: the comment follows the schedule`);
     assert.match(wf, /secrets\.LIVE_TEST_/, `${t}: the test account stays a secret`);
   }
   const smoke = read('kit/templates/web-saas/tests/live/smoke.spec.ts');

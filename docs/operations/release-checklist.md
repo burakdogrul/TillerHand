@@ -1,75 +1,75 @@
-# Canlıya Alma Kontrol Listesi
+# Go-Live Checklist
 
-> İlk lansmandan önce **tamamı**, sonraki her sürümde **"Her sürüm"** bölümü.
-> `/release` komutu otomatik kontrol edilebilenleri çalıştırır, gerisini sana sorar.
-> Tipe özel ek maddeler: `docs/architecture/stack.md` → "Canlıya alma".
-> İşaretler: ✅ tamam · ❌ eksik · ➖ bu projede geçerli değil
+> Before the first launch, **all of it**; for every later release, the **"Every release"** section.
+> The `/release` command runs the items that can be checked automatically and asks you about the rest.
+> Project-type-specific extra items: `docs/architecture/stack.md` → "Canlıya alma" (go live).
+> Marks: ✅ done · ❌ missing · ➖ not applicable to this project
 
-## A. Her sürüm (her deploy öncesi)
+## A. Every release (before each deploy)
 
-- [ ] CI `main` dalında yeşil (testler, lint, tip kontrolü, build, sır taraması)
-- [ ] `docs/quality/test-plan.md` → manuel kontrol listesi yapıldı
-- [ ] Yeni ortam değişkenleri prod ortamına eklendi
-- [ ] DB migration varsa: **önce yedek**, sonra migration; migration geri alınabilir mi kontrol edildi
-- [ ] `CHANGELOG.md` güncellendi, sürüm numarası verildi
-- [ ] Geri alma (rollback) yolu biliniyor: [Örn: Vercel'de önceki deploy'a "Promote", `git revert`]
-- [ ] Deploy sonrası duman testi: ana sayfa, giriş, ana akış, hata takibinde yeni hata yok
+- [ ] CI is green on the `main` branch (tests, lint, type check, build, secret scan)
+- [ ] The manual checklist in `docs/quality/test-plan.md` was done
+- [ ] New environment variables were added to the prod environment
+- [ ] If there is a DB migration: **backup first**, then the migration; checked that the migration can be rolled back
+- [ ] `CHANGELOG.md` updated, version number given
+- [ ] The rollback path is known: [e.g. "Promote" the previous deploy in Vercel, `git revert`]
+- [ ] Smoke test after deploy: home page, login, main flow, no new error in error tracking
 
-## B. İlk lansman (bir kez, sonra yılda bir gözden geçir)
+## B. First launch (once, then review yearly)
 
-### Kod ve kalite
-- [ ] `docs/product/roadmap.md` Faz 1-2 tamam
-- [ ] Kritik akış testleri (`docs/quality/test-plan.md` K1-K5) yeşil
-- [ ] Debug kodu, `console.log`, test verisi, sahte kullanıcılar temizlendi
-- [ ] 404, 500 ve bakım sayfaları/ekranları var
+### Code and quality
+- [ ] `docs/product/roadmap.md` Phase 1-2 done
+- [ ] Critical flow tests (`docs/quality/test-plan.md` K1-K5) are green
+- [ ] Debug code, `console.log`, test data, fake users cleaned up
+- [ ] 404, 500 and maintenance pages/screens exist
 
-### Güvenlik
-- [ ] `docs/security/checklist.md` tüm maddeler tamam; `security-auditor` ajanı engelleyici bulgu vermedi
-- [ ] Prod anahtarları lokal/test anahtarlarından ayrı
-- [ ] GitHub: `main` dalı korumalı (CI zorunlu), Dependabot güvenlik güncellemeleri açık, gizli tarama (secret scanning) açık
-- [ ] AI özelliği varsa: `docs/ai/guide.md` → "Canlıya alma" tamam
-- [ ] Admin hesapları güçlü şifre + 2FA (hosting, DB, domain, e-posta, ödeme, kod deposu)
+### Security
+- [ ] All items in `docs/security/checklist.md` are done; the `security-auditor` agent gave no blocking finding
+- [ ] Prod keys are separate from local/test keys
+- [ ] GitHub: `main` branch is protected (CI required), Dependabot security updates on, secret scanning on
+- [ ] If there is an AI feature: `docs/ai/guide.md` → "Canlıya alma" (go live) is done
+- [ ] Admin accounts have a strong password + 2FA (hosting, DB, domain, email, payment, code repository)
 
-### Yasal
-- [ ] `docs/legal/privacy-kvkk.md` metinleri yayında ve linkli
-- [ ] Çerez bandı çalışıyor, onay öncesi analitik yüklenmiyor
+### Legal
+- [ ] The texts in `docs/legal/privacy-kvkk.md` are published and linked
+- [ ] The cookie banner works, analytics does not load before consent
 
-### Hesaplar, bayraklar, izleme
-- [ ] `docs/operations/accounts.md` eksiksiz: her servis, hesap sahibi, 2FA, bitiş tarihleri
-- [ ] Riskli özellikler bayrak arkasında; acil kapatma en az bir kez denendi (`docs/operations/feature-flags.md`)
-- [ ] Canlıda sentetik izleme açık (`.github/workflows/live-monitoring.yml`, `LIVE_URL` değişkeni tanımlı, 3 saatte bir), panoda "Canlı izleme · başarılı" görünüyor ve bir hata denemesiyle uyarı geldiği görüldü
-- [ ] `docs/product/unit-economics.md`: katkı payı pozitif, başa baş noktası biliniyor
-- [ ] Harcama alarmları: Ücretli her servisin tavanı veya uyarısı kurulu ve bir kez denendi (`docs/operations/spend-alarms.md`); AI/ücretli API çağrısında kullanıcı başı kota ve genel günlük bütçe var
-- [ ] Kabul testlerinin tamamı yeşil (MVP kriterleri)
-- [ ] Son `/qa` raporunda (`docs/quality/qa/`) "kaldı" yok; web projesinde arayüz kriterleri tarayıcıda koşuldu
+### Accounts, flags, monitoring
+- [ ] `docs/operations/accounts.md` is complete: every service, account owner, 2FA, expiry dates
+- [ ] Risky features are behind flags; the kill switch was tried at least once (`docs/operations/feature-flags.md`)
+- [ ] Synthetic monitoring is on in production (`.github/workflows/live-monitoring.yml`, `LIVE_URL` variable defined, every 3 hours), the dashboard shows "Live monitoring · succeeded", and an alert was seen to arrive after a test failure
+- [ ] `docs/product/unit-economics.md`: contribution margin is positive, break-even point is known
+- [ ] Spend alarms: every paid service has a cap or alert set up and tried once (`docs/operations/spend-alarms.md`); an AI/paid API call has a per-user quota and a global daily budget
+- [ ] All acceptance tests are green (MVP criteria)
+- [ ] The last `/qa` report (`docs/quality/qa/`) has no "kaldı" (remaining) item; in a web project the interface criteria were run in the browser
 
-### Altyapı
-> Adımlar sağlayıcıya göre `docs/operations/deploy-setup.md`'de (`/release first` → Dağıtım kurulumu).
-- [ ] Alan adı, SSL, `www` yönlendirmesi
-- [ ] Prod veritabanı ayrı proje/örnek; otomatik yedekleme açık
-- [ ] **Yedekten geri yükleme bir kez denendi** (denenmemiş yedek, yedek değildir)
-- [ ] E-posta gönderimi: alan adı doğrulandı (SPF, DKIM, DMARC), spam'e düşmüyor
-- [ ] Hata takibi (Sentry vb.) prod'da aktif, alarm e-postası/bildirim geliyor
-- [ ] Uptime izleme (UptimeRobot, Better Stack vb.) kuruldu
-- [ ] Log saklama süresi belirlendi
+### Infrastructure
+> Steps by provider are in `docs/operations/deploy-setup.md` (`/release first` → Deploy setup).
+- [ ] Domain, SSL, `www` redirect
+- [ ] Prod database is a separate project/instance; automatic backup is on
+- [ ] **Restore from backup was tried once** (an untried backup is not a backup)
+- [ ] Email sending: domain verified (SPF, DKIM, DMARC), does not land in spam
+- [ ] Error tracking (Sentry etc.) is active in prod, the alarm email/notification arrives
+- [ ] Uptime monitoring (UptimeRobot, Better Stack etc.) is set up
+- [ ] Log retention period is defined
 
-### Maliyet
-- [ ] Tüm ücretli servislerde (hosting, DB, AI API, e-posta) harcama limiti/alarmı ayarlı
-- [ ] Ücretsiz katman limitleri biliniyor; aşınca ne olacağı (durma mı, faturalama mı?) biliniyor
-- [ ] Aylık tahmini maliyet `docs/architecture/overview.md` → dış servisler tablosunda
+### Cost
+- [ ] A spend limit/alarm is set on all paid services (hosting, DB, AI API, email)
+- [ ] Free tier limits are known; what happens when they are exceeded (stop or billing?) is known
+- [ ] The estimated monthly cost is in `docs/architecture/overview.md` → the external services table ("dış servisler")
 
-### Performans ve görünürlük
-- [ ] Tipe özel performans hedefleri (`docs/architecture/stack.md`) karşılandı
-- [ ] Analitik (gizlilik dostu) kuruldu, temel olaylar (kayıt, ana eylem) izleniyor
+### Performance and visibility
+- [ ] Project-type-specific performance targets (`docs/architecture/stack.md`) are met
+- [ ] Analytics (privacy-friendly) is set up, basic events (sign-up, main action) are tracked
 
-### Hazırlık
-- [ ] `docs/product/launch.md` → "Lansman öncesi" tamam
-- [ ] Destek kanalı (e-posta/form) var ve biri bakıyor
-- [ ] `README.md`: kurulum, ortam değişkenleri, deploy adımları güncel
-- [ ] Tipe özel maddeler (`docs/architecture/stack.md` → "Canlıya alma") tamam
+### Preparation
+- [ ] `docs/product/launch.md` → "Lansman öncesi" (before launch) is done
+- [ ] A support channel (email/form) exists and someone watches it
+- [ ] `README.md`: setup, environment variables, deploy steps are current
+- [ ] Project-type-specific items (`docs/architecture/stack.md` → "Canlıya alma") are done
 
-## C. Lansman sonrası ilk 72 saat
+## C. First 72 hours after launch
 
-- [ ] Hata takibi günde 2 kez kontrol
-- [ ] Maliyet paneli günde 1 kez kontrol
-- [ ] İlk kullanıcı geri bildirimleri `docs/product/roadmap.md` → Faz 4'e eklendi
+- [ ] Check error tracking twice a day
+- [ ] Check the cost panel once a day
+- [ ] First user feedback was added to `docs/product/roadmap.md` → "Faz 4" (Phase 4)

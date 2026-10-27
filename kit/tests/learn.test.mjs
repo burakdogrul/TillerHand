@@ -47,7 +47,7 @@ test('Ö-21.1 the second bug of the same class raises a proposal; "diğer", free
 });
 
 test('Ö-21.1 the class list is the same in the template, /fix-bug and the dashboard', () => {
-  const template = read('docs/product/specs/_template.md').match(/^\*\*Sınıf:\*\* \[sadece hata: (.*)\]$/m)[1].split(' / ');
+  const template = read('docs/product/specs/_template.md').match(/^\*\*Sınıf:\*\* \[bug only: (.*)\]$/m)[1].split(' / ');
   const fixBug = [...read('.claude/commands/fix-bug.md').match(/write exactly one of this list: (.*?`diğer`)/)[1].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
   assert.deepEqual(template, [...BUG_CLASSES, 'diğer']);
   assert.deepEqual(fixBug, [...BUG_CLASSES, 'diğer']);
@@ -64,7 +64,7 @@ test('Ö-21.1 no rule file changes without approval', () => {
   // The places a rule can land (AGENTS.md, CLAUDE.md, .claude/hookify.*.local.md) are all "ask" in Claude Code
   const ask = JSON.parse(read('.claude/settings.json')).permissions.ask;
   for (const rule of ['Edit(./AGENTS.md)', 'Edit(./CLAUDE.md)', 'Edit(./.claude/**)']) assert.ok(ask.includes(rule), rule);
-  assert.match(read('docs/product/specs/_template.md'), /^\*\*Sınıf:\*\* \[sadece hata: .*\/ diğer\]$/m);
+  assert.match(read('docs/product/specs/_template.md'), /^\*\*Sınıf:\*\* \[bug only: .*\/ diğer\]$/m);
 });
 
 test('Ö-21.2 every learned rule carries source and date; /maintain monthly reviews those over 90 days', () => {

@@ -39,14 +39,14 @@ test('F-04 no prod identity in templates: MCP points to the dev project, .env.ex
     const mcp = read(`kit/templates/${t}/.mcp.json`);
     assert.ok(mcp.includes('project_ref=DEV_REF&read_only=true') && !mcp.includes('PROJE_REF'), t);
   }
-  for (const t of ['web-saas', 'mobile', 'backend']) assert.match(read(`kit/templates/${t}/.env.example`), /GELİŞTİRME \(dev\)/, t);
+  for (const t of ['web-saas', 'mobile', 'backend']) assert.match(read(`kit/templates/${t}/.env.example`), /DEVELOPMENT \(dev\)/, t);
   assert.match(read('docs/operations/accounts.md'), /## Ortamlar \(dev \/ prod\)/);
   assert.match(read('.claude/commands/release.md'), /Dev\/prod separation \(blocking\)/);
 });
 
 test('F-07 the complexity budget is in all three templates\' CI, the refactor round is in the roadmap', () => {
   for (const t of ['web-saas', 'mobile', 'backend']) assert.ok(read(`kit/templates/${t}/.github/workflows/ci.yml`).includes('node .claude/hooks/budget.mjs --check --base "$BASE"'), t);
-  assert.equal((read('docs/product/roadmap.md').match(/Refactor turu/g) ?? []).length, 2);
+  assert.equal((read('docs/product/roadmap.md').match(/Refactor round/g) ?? []).length, 2);
   assert.match(read('.claude/commands/start.md'), /"Refactor round"/);
 });
 

@@ -1,39 +1,39 @@
-# Hesaplar ve Son Tarihler
+# Accounts and Deadlines
 
-> Projenin bağlı olduğu her dış hesap burada. Tek kişilik projelerde en sık yaşanan felaketler kod değil:
-> alan adının süresinin dolması, kartın geçersiz olup servisin durması, 2FA'sız hesabın ele geçirilmesi,
-> kimde olduğu unutulan bir anahtar. `/dashboard` panosu **30 gün içinde dolan tarihleri** "Dikkat" alanında gösterir.
+> Every external account the project depends on is listed here. In one-person projects the most common disasters are not code:
+> an expired domain, an invalid card that stops a service, a hijacked account without 2FA,
+> a key nobody remembers owning. The `/dashboard` dashboard shows **dates expiring within 30 days** in the "Dikkat" (attention) area.
 >
-> **Buraya asla şifre, anahtar veya token yazma.** Sadece hangi hesap, kimde, ne zaman bitiyor.
-> Tarihler `YYYY-AA-GG` biçiminde olmalı (pano okur).
+> **Never write a password, key or token here.** Write only which account, who holds it, when it ends.
+> Dates must use the `YYYY-AA-GG` format (the dashboard reads them).
 
 ## Hesaplar
 
-| Servis | Amaç | Hesap sahibi | 2FA | Plan / aylık maliyet | Bitiş / yenileme | Anahtar yenileme | Not |
+| Service | Purpose | Account owner | 2FA | Plan / monthly cost | Expiry / renewal | Key rotation | Note |
 |---|---|---|---|---|---|---|---|
-| [GitHub] | Kod deposu | [e-posta] | [evet/hayır] | [Ücretsiz] | - | - | |
-| [Alan adı kayıt firması] | Alan adı | | | | [YYYY-AA-GG] | - | Otomatik yenileme açık mı? |
+| [GitHub] | Code repository | [email] | [yes/no] | [Free] | - | - | |
+| [Domain registrar] | Domain name | | | | [YYYY-AA-GG] | - | Is auto-renewal on? |
 | [Hosting] | | | | | | | |
-| [Veritabanı] | | | | | | [YYYY-AA-GG] | |
-| [E-posta servisi] | | | | | | | |
-| [Ödeme sağlayıcı] | | | | | | | |
-| [Hata takibi] | | | | | | | |
-| [AI sağlayıcı] | | | | | | [YYYY-AA-GG] | Harcama limiti: |
-| [Apple / Google geliştirici] | Mağaza | | | | [YYYY-AA-GG] | | Yıllık üyelik |
+| [Database] | | | | | | [YYYY-AA-GG] | |
+| [Email service] | | | | | | | |
+| [Payment provider] | | | | | | | |
+| [Error tracking] | | | | | | | |
+| [AI provider] | | | | | | [YYYY-AA-GG] | Spend limit: |
+| [Apple / Google developer] | Store | | | | [YYYY-AA-GG] | | Annual membership |
 
 ## Ortamlar (dev / prod)
 
-> Proje ref'i ve URL sır değildir; anahtarlar yine buraya yazılmaz. `/release` bu tabloyu okur: prod ref'i
-> `.mcp.json`'da, `.claude/`'da veya kodda geçerse yayını engeller.
+> A project ref and a URL are not secrets; keys are still not written here. `/release` reads this table: it blocks the release
+> if the prod ref appears in `.mcp.json`, in `.claude/` or in code.
 
-| Ortam | Servis | Proje ref / URL | Kim bağlanır |
+| Environment | Service | Project ref / URL | Who connects |
 |---|---|---|---|
-| dev | [Supabase] | [dev ref] | Yerel ortam, AI (MCP salt-okunur ve `supabase-dev`), CI dışındaki denemeler |
-| prod | [Supabase] | [prod ref] | Sadece barındırma (Vercel / EAS ortam değişkenleri). AI ve yerel ortam bağlanmaz |
+| dev | [Supabase] | [dev ref] | Local environment, AI (MCP read-only and `supabase-dev`), trials outside CI |
+| prod | [Supabase] | [prod ref] | Hosting only (Vercel / EAS environment variables). AI and the local environment do not connect |
 
-## Kurallar
+## Rules
 
-- Her yeni dış servis eklendiğinde (`/start` Adım 5, yeni entegrasyon) bu tabloya satır eklenir.
-- Kritik hesaplarda 2FA zorunlu: kod deposu, hosting, veritabanı, alan adı, ödeme, e-posta.
-- Ödeme kartının son kullanma tarihini de "Bitiş" sütununa yaz (kart bitince servisler durur).
-- `/maintain quarterly` bu tabloyu gözden geçirir; `/release ilk` boş satır bırakmaz.
+- Add a row to this table whenever a new external service is added (`/start` Step 5, a new integration).
+- 2FA is mandatory on critical accounts: code repository, hosting, database, domain, payment, email.
+- Also write the payment card's expiry date in the "Expiry" column (services stop when the card expires).
+- `/maintain quarterly` reviews this table; `/release first` leaves no empty row.

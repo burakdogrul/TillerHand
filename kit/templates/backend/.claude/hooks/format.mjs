@@ -19,6 +19,6 @@ const fmt = ruff('format', '--quiet');
 if (fmt.error) process.exit(0); // no uv/ruff: skip silently
 const check = ruff('check', '--fix', '--quiet');
 if (check.status === 1 && check.stdout.trim()) {
-  process.stderr.write(`Ruff bu dosyada düzeltilmesi gereken hatalar buldu:\n${check.stdout}`);
+  process.stderr.write(`Ruff found errors in this file that need fixing:\n${check.stdout}`);
   process.exit(2);
 }

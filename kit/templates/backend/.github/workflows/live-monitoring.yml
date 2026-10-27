@@ -1,12 +1,12 @@
-# Canlıda sentetik izleme: /health ve kritik uçları 3 saatte bir CANLI ortamda dener.
-# Neden 3 saat: GitHub Free özel depoda ayda 2.000 Actions dakikası var; saatlik koşu ~2.160 dk eder (docs.github.com, 2026-10-25).
-# /health yanıtı LIVE_MAX_SECONDS (Variables, varsayılan 2) saniyeyi aşarsa da alarm verir.
-# Bozulursa "live-monitoring" etiketli bir issue açar (zaten açıksa yenisini açmaz).
-# Etkinleştirmek için:
+# Synthetic monitoring in production: tries /health and the critical endpoints in the LIVE environment every 3 hours.
+# Why 3 hours: GitHub Free gives 2,000 Actions minutes a month in a private repo; an hourly run would cost ~2,160 min (docs.github.com, 2026-10-25).
+# It also raises an alarm if the /health response takes longer than LIVE_MAX_SECONDS (Variables, default 2) seconds.
+# If something breaks it opens an issue labeled "live-monitoring" (it does not open a new one if one is already open).
+# To enable:
 #   1. Settings > Variables > LIVE_URL = https://api.alanadin.com
-#   2. Kritik uç testleri (veri silmeyen, test hesabıyla sınırlı): tests/live/ altına pytest olarak
-#   3. Gerekirse Settings > Secrets > LIVE_TEST_TOKEN (prod'da yetkisi kısıtlı test hesabı)
-name: Canlı izleme
+#   2. Critical endpoint tests (that delete no data, limited to a test account): as pytest under tests/live/
+#   3. If needed, Settings > Secrets > LIVE_TEST_TOKEN (a test account with restricted rights in prod)
+name: Live monitoring
 
 on:
   schedule:
@@ -24,17 +24,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - name: Sağlık ve yanıt süresi
+      - name: Health and response time
         run: |
           t=$(curl -fsS -o /dev/null --max-time 10 -w '%{time_total}' "$LIVE_URL/health")
-          echo "/health: ${t} sn (sınır ${MAX} sn)"
+          echo "/health: ${t} s (limit ${MAX} s)"
           awk -v t="$t" -v max="$MAX" 'BEGIN { exit (t > max) }'
         env:
           LIVE_URL: ${{ vars.LIVE_URL }}
           MAX: ${{ vars.LIVE_MAX_SECONDS || '2' }}
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2 (no floating v10 tag)
         if: hashFiles('tests/live/**') != ''
-      - name: Kritik uçlar (canlı)
+      - name: Critical endpoints (live)
         if: hashFiles('tests/live/**') != ''
         # pytest exit 5 = no test collected (only __init__.py or fixtures yet): not an alarm
         run: |
@@ -43,13 +43,13 @@ jobs:
         env:
           BASE_URL: ${{ vars.LIVE_URL }}
           LIVE_TEST_TOKEN: ${{ secrets.LIVE_TEST_TOKEN }}
-      - name: Bozulduysa issue aç
+      - name: Open an issue if broken
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$(gh issue list --label live-monitoring --state open --json number -q '.[].number')" ]; then
             gh label create live-monitoring --color D03B3B --force
-            gh issue create --label live-monitoring --title "Canlı izleme: API bozuk" \
-              --body "Çalışma kaydı: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            gh issue create --label live-monitoring --title "Live monitoring: API is broken" \
+              --body "Run log: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           fi

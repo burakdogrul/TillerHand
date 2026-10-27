@@ -1,20 +1,21 @@
-# Kararlar
+# Decisions
 
-> İki bölüm var:
-> 1. **Karar günlüğü:** Sorulan her karar tek satır. Kapı: `tek` (geri dönüşü pahalı) / `çift` (kolay geri alınır). Kim verdi: `kullanıcı` veya `otomatik` (soru modu kapalıyken).
-> 2. **ADR'ler** (Architecture Decision Record): Mimariyi veya uzun vadeyi etkileyen kararlar ve bütün tek yönlü kararlar ayrı dosyada: `docs/decisions/adr-NNNN-kisa-ad.md` (şablon: `adr-template.md`).
+> There are two sections:
+> 1. **Decision log ("Karar günlüğü"):** one line for every decision asked. Door (Kapı): `tek` (one-way, costly to reverse) / `çift` (two-way, easy to reverse). Decided by: `kullanıcı` (user) or `otomatik` (automatic, when question mode is off).
+> 2. **ADRs** (Architecture Decision Record): decisions that affect the architecture or the long term, and all one-way decisions, go in a separate file: `docs/decisions/adr-NNNN-kisa-ad.md` (template: `adr-template.md`).
 >
-> Bir karar sormadan önce buraya bak: daha önce verilmişse tekrar sorma, ona uy.
-> Kararlar silinmez; değişirse yeni satır eklenir ve eskisinin yanına "→ #N ile değişti" yazılır.
+> Look here before asking a decision: if it was made before, do not ask again, follow it.
+> Decisions are never deleted; if one changes, a new line is added and "→ changed by #N" is written next to the old one.
+> The decision log columns stay Turkish: Tarih = date, Aşama = stage, Konu = topic, Soru = question, Seçilen = chosen, Kapı = door, Karar veren = decided by.
 
 ## Karar günlüğü
 
-`/dashboard` panosu bu tabloyu okur; sütunları değiştirme.
+`/dashboard` reads this table; do not change the columns.
 
 | # | Tarih | Aşama | Konu | Soru | Seçilen | Kapı | Karar veren |
 |---|---|---|---|---|---|---|---|
 
-## ADR listesi
+## ADR list
 
-| ADR | Başlık | Durum | Günlük no |
+| ADR | Title | Status | Log no |
 |---|---|---|---|
