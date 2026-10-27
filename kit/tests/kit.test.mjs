@@ -96,6 +96,7 @@ test('lang install: the template path carries the chosen language into .kit.json
   for (const [name, state] of [['dil-yok', null], ['dil-bozuk', JSON.stringify({ lang: '../x' })], ['dil-json', '{"lang": ']]) {
     const q = cloneKit(name);
     fs.rmSync(path.join(q, '.claude/state/lang.json'), { force: true }); // the developer's own choice must not leak into the clone
+    fs.mkdirSync(path.join(q, '.claude/state'), { recursive: true }); // .claude/state is gitignored: a clean checkout has no such folder
     if (state !== null) write(path.join(q, '.claude/state/lang.json'), state);
     const s = installType(q, '--type', 'backend');
     assert.equal(s.status, 0, s.stderr);
