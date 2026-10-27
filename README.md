@@ -35,16 +35,21 @@
 |---|---|
 | **Soru odaklı** | Ürün, teknik, tasarım, veri, güvenlik ve maliyet kararları gerekçeli seçeneklerle sorulur. Tasarım soruları görsel önizlemeyle gelir. |
 | **Uzman kurulu** | Ürün, Mimar, Güvenlik, UX, KVKK, QA ve diğer üyeler planı, görevi, commit'i ve fazı denetler. |
-| **Önce test** | Kabul testleri koddan önce yazılır ve önce kırmızı olur. "Bitti" demeden çalıştığı gösterilir. |
+| **Testi ayrı ajan yazar** | Kabul ve saldırgan testlerini kodu yazan değil, ayrı bir ajan koddan önce yazar ve önce kırmızı olur. Kodu yazan test dosyasına dokunamaz; dolaylı yoldan değişen test commit'e giremez. "Bitti" demeden çalıştığı gösterilir. |
+| **Spec ve sapma kontrolü** | Büyük işte ve her hatada mevcut, beklenen ve değişmemesi gereken davranış yazılır; değişmemesi gerekenin testi yoksa kapı kırmızıdır. |
 | **Bulgu raporları** | Teknik, iş, güvenlik, UX, performans ve hukuk için en önemli 20 bulgu; puanlı, düzeltme yöntemiyle. |
 | **Koruma katmanları** | Sır, yıkıcı komut, onaysız prod deploy, zayıflatılan test ve harita dışı dosya daha olmadan durdurulur. |
-| **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit. |
+| **Canlı önizleme** | Arayüz görevinde dev sunucu açılır, masaüstü ve mobil ekran görüntüsü alınır; `/qa` kabul kriterlerini gerçek tarayıcıda dener. |
+| **Canlıya ve sonrasına** | `/release first` hosting, alan adı, yedek ve geri almayı sağlayıcı sağlayıcı kurdurur. Web ve backend projelerinde canlı site 3 saatte bir duman testiyle izlenir. |
+| **Türkiye eki** | İsteğe bağlı. iyzico ve PayTR bildirimlerinin imza doğrulaması saldırgan testiyle gelir; KVKK yurt dışı aktarım, e-Fatura/e-Arşiv ve Türkçe İ/ı maddeleri birincil kaynağa bağlıdır. |
+| **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit; komutlar tek tıkla kopyalanır. |
 | **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur, iş buna göre planlanır. Uyarı verir, işi durdurmaz. |
 | **Doğru kaynak** | Değişebilen bilgi (sürüm, fiyat, mevzuat) birincil kaynaktan, kaynak ve tarihle doğrulanır. |
 | **Geri alma** | `/rollback` son çalışan hale döner; geçmiş silinmez, yarım iş saklanır. |
 | **Anlatıcı mod** | İstersen her değişikliği yazılım bilmeyen birine anlatır gibi sade Türkçe açıklar. |
 | **Seni tanır** | Nasıl çalışmak istediğini (konuşma, soru, rapor, kod tarzı) öğrenir. Onayladığın tercihler tüm projelerinde geçerli olur ve bilgisayarında kalır. |
-| **Rol bazlı model** | Planlama, kod, inceleme ve doküman için modeli ve effort'u her görevin başında sen seçersin. Kod, inceleme ve doküman işleri seçtiğin modelde çalışan alt ajanlara gider. |
+| **Rol bazlı model** | Planlama, kod, test, inceleme ve doküman için modeli ve effort'u her görevin başında sen seçersin. Test rolüne koddan farklı bir model önerilir: aynı model aynı kör noktayı paylaşır. |
+| **Hatadan öğrenir** | Aynı türden hata tekrar edince onu önleyecek tek bir kural önerir; sen onaylarsan eklenir. |
 
 ## Hiç bilmiyorsan: adım adım
 
@@ -58,7 +63,7 @@ Kod yazmayı bilmen gerekmez. Git, terminal ve kurulum işlerini Claude yapar; s
 1. Projen için bir klasör aç ve Claude masaüstü uygulamasında **Code** sekmesinde seç.
 2. Kiti kur. İki yoldan birini seç:
    - Claude'a yaz: `bu klasörde npx tillerhand init komutunu çalıştır`.
-   - Ya da plugin ile, sırayla: `/plugin marketplace add burakdogrul/TillerHand`, `/plugin install tillerhand@tillerhand`, `/tillerhand:init`.
+   - TillerHand plugin'ini [bir kez kurduysan](#hızlı-başlangıç) Claude'a `/tillerhand:init` yaz.
 3. Aynı klasörde **yeni oturum aç**. Kitin komutları ve korumaları yeni oturumda yüklenir.
 
 **3. Başlat**
@@ -97,11 +102,18 @@ npx tillerhand init
 claude
 ```
 
-**2. Claude Code plugin:** terminal açmadan, Claude Code içinden. Plugin yalnız kurulumu yapar; kit yine projeye dosya olarak kopyalanır. Kurulumdan sonra plugin kapatılabilir.
+**2. Claude Code plugin:** bilgisayara bir kez kurulur, sonra her yeni projede tek komut. Plugin yalnız kurulumu yapar; kit yine projeye dosya olarak kopyalanır ve her seferinde son sürüm gelir.
+
+Bir kez, Claude Code'da (masaüstü uygulamasında `/plugin` açılmazsa terminalde `claude plugin marketplace add …` ve `claude plugin install …` olarak):
 
 ```text
 /plugin marketplace add burakdogrul/TillerHand
 /plugin install tillerhand@tillerhand
+```
+
+Her yeni projede, proje klasöründe açılan oturumda:
+
+```text
 /tillerhand:init
 ```
 
@@ -214,9 +226,10 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 | Yıkıcı komut kalkanı | `DROP`, koşulsuz `DELETE`, `db reset` engellenir; prod deploy ve geri alma sorulur |
 | Paket kapısı | Var olmayan paketi engeller (kurulumda ve `npx`, `uvx` ile çalıştırmada); çok yeni veya popüler bir pakete benzeyeni sorar |
 | Yapı koruyucu | Harita dışı dosyayı sorar, dağınıklık dosyalarını engeller |
+| Test ayrımı | Test dosyasına yalnız `test-writer` ajanı yazar; ana oturum ve kod ajanı denerse engellenir |
 | Test koruması | Silinen, atlanan veya gevşetilen testi sorar |
 | Deterministik kapı | Lint, tip, test ve Semgrep çalışmadan commit açılmaz; koda yazılmış makineye özel yolu yakalar |
-| Commit kapısı | Kurul denetimi ve yeşil kapı olmadan commit atılmaz |
+| Commit kapısı | Kurul denetimi ve yeşil kapı olmadan commit atılmaz; patch veya betikle değişen test dosyası da durur |
 | Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazar |
 | Kapsam kalkanı | Onaylı planın dışındaki dosyaya yazım sorulur |
 | Yapılandırma onayı | Kural ve koruma dosyaları onayın olmadan değişmez |
@@ -250,7 +263,7 @@ Tüm komutlar, ayarlar, araçlar ve skill'ler **[rehberde](https://burakdogrul.g
 
 ## Codex ve Antigravity
 
-Kit Claude Code için yazıldı; kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü, durum çubuğu ve commit kapısı bu araçlarda yok. Kurulum: `node <kit>/kit/kit.mjs init --tool codex` (veya `antigravity`).
+Kit Claude Code için yazıldı; kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü, durum çubuğu ve commit kapısı bu araçlarda yok. Bu araçlar ajan kimliği bildirmediği için test ayrımı orada kural metninde kalır. Kurulum: `node <kit>/kit/kit.mjs init --tool codex` (veya `antigravity`).
 
 ## Ölçüm
 

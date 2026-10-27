@@ -37,16 +37,21 @@
 |---|---|
 | **Question-driven** | Product, technical, design, data, security and cost decisions come as reasoned options. Design questions come with visual previews. |
 | **Expert board** | Product, Architect, Security, UX, Privacy, QA and other members review the plan, each task, each commit and each phase. |
-| **Tests first** | Acceptance tests are written before the code and start red. Nothing is called done without proof that it works. |
+| **A separate agent writes the tests** | Acceptance and adversarial tests are written before the code by a separate agent, not the one writing the code, and they start red. The coder can't touch test files, and a test changed by indirect means can't get into a commit. Nothing is called done without proof that it works. |
+| **Specs and drift checks** | Larger tasks and every bug get a spec of current, expected and must-not-change behavior; if a must-not-change behavior has no test, the gate is red. |
 | **Findings reports** | The top 20 findings for tech, business, security, UX, performance and legal; scored, with how to fix them. |
 | **Guardrails** | Secrets, destructive commands, unapproved prod deploys, weakened tests and stray files are stopped before they happen. |
-| **Dashboard** | `dashboard.html`: status, what needs attention, decisions, board, findings, quality, operations, usage. |
+| **Live preview** | For UI tasks the dev server is started and desktop and mobile screenshots are taken; `/qa` runs the acceptance criteria in a real browser. |
+| **Launch and after** | `/release first` walks you through hosting, domain, backups and rollback, provider by provider. Web and backend projects get a smoke test against the live site every 3 hours. |
+| **Turkey add-on** | Optional. Signature checks for iyzico and PayTR notifications come with an adversarial test; the KVKK cross-border transfer, e-Invoice/e-Archive and Turkish İ/ı items each link to a primary source. |
+| **Dashboard** | `dashboard.html`: status, what needs attention, decisions, board, findings, quality, operations, usage; commands copy with one click. |
 | **Usage-aware** | Reads the 5-hour and weekly limits and plans work around them. It warns; it never stops the work. |
 | **Sourced facts** | Anything that changes (versions, prices, regulations) is checked against a primary source, with link and date. |
 | **Rollback** | `/rollback` returns to the last working state; history is kept, unfinished work is saved. |
 | **Narrator mode** | Optionally explains every change in plain language, as if to someone who doesn't code. |
 | **Learns how you work** | Picks up how you like to work (tone, questions, reports, code style). Preferences you approve apply to all your projects and stay on your computer. |
-| **Model per role** | You pick the model and effort for planning, coding, review and docs at the start of each task. Coding, review and doc work go to subagents running on your choice. |
+| **Model per role** | You pick the model and effort for planning, coding, testing, review and docs at the start of each task. The test role is offered a different model from the coding role: the same model shares the same blind spots. |
+| **Learns from bugs** | When the same kind of bug comes back, it proposes one rule to prevent it; the rule is added only if you approve. |
 
 ## Step by step for beginners
 
@@ -60,7 +65,7 @@ You don't need to know how to code. Claude handles git, the terminal and install
 1. Make a folder for your project and select it in the **Code** tab of the Claude desktop app.
 2. Install the kit. Pick one:
    - Tell Claude: `run npx tillerhand init in this folder`.
-   - Or use the plugin, in order: `/plugin marketplace add burakdogrul/TillerHand`, `/plugin install tillerhand@tillerhand`, `/tillerhand:init`.
+   - If you've [installed the TillerHand plugin once](#quick-start), type `/tillerhand:init` to Claude.
 3. **Start a new session** in the same folder. The kit's commands and guardrails load in the new session.
 
 **3. Start**
@@ -99,11 +104,18 @@ npx tillerhand init
 claude
 ```
 
-**2. Claude Code plugin:** no terminal, all inside Claude Code. The plugin only runs the install; the kit is still copied into the project as files. You can turn the plugin off afterwards.
+**2. Claude Code plugin:** install it on your computer once, then one command in every new project. The plugin only runs the install; the kit is still copied into the project as files, and each run fetches the latest version.
+
+Once, in Claude Code (if `/plugin` doesn't open in the desktop app, run `claude plugin marketplace add …` and `claude plugin install …` in a terminal instead):
 
 ```text
 /plugin marketplace add burakdogrul/TillerHand
 /plugin install tillerhand@tillerhand
+```
+
+In every new project, in a session opened in the project folder:
+
+```text
 /tillerhand:init
 ```
 
@@ -216,9 +228,10 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | Destructive-command shield | Blocks `DROP`, unconditional `DELETE`, `db reset`; asks before prod deploys and rollbacks |
 | Package gate | Blocks packages that don't exist (on install and on `npx`, `uvx` runs); asks about very new ones or lookalikes of popular ones |
 | Structure guard | Asks about files outside the map, blocks clutter files |
+| Test separation | Only the `test-writer` agent writes test files; the main session and the coding agent are blocked |
 | Test guard | Asks before a test is deleted, skipped or weakened |
 | Deterministic gate | No commit until lint, type check, tests and Semgrep have run; catches machine-specific paths written into code |
-| Commit gate | No commit without a board review and a green gate |
+| Commit gate | No commit without a board review and a green gate; a test file changed by a patch or a script stops it too |
 | Edit lock | With `/freeze <folder>` on, the AI writes only inside that folder |
 | Scope shield | Asks before writing to a file outside the approved plan |
 | Config approval | Rule and guard files never change without your approval |
@@ -252,7 +265,7 @@ Every command, setting, tool and skill is in the **[guide](https://burakdogrul.g
 
 ## Codex and Antigravity
 
-The kit is built for Claude Code; its rules, commands and guardrails also work in OpenAI Codex and Google Antigravity. There the board runs on a single model, and the question UI, status bar and commit gate are not available. Install with `node <kit>/kit/kit.mjs init --tool codex` (or `antigravity`).
+The kit is built for Claude Code; its rules, commands and guardrails also work in OpenAI Codex and Google Antigravity. There the board runs on a single model, and the question UI, status bar and commit gate are not available. These tools don't report which agent is running, so test separation stays a written rule there. Install with `node <kit>/kit/kit.mjs init --tool codex` (or `antigravity`).
 
 ## Measured
 
