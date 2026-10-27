@@ -3,6 +3,11 @@
 Kit sürümü `kit/VERSION` dosyasında. Bir projeyi güncellemek: projede `/kit-update`.
 "Elle uyarla" notu olan maddeler projeye ait dosyalardadır; güncelleme bunlara dokunmaz.
 
+## [3.40.0] - 2026-10-27
+
+### Eklenen
+- **Claude Code plugin olarak kurulum.** Depo artık bir plugin marketplace'i: `/plugin marketplace add burakdogrul/TillerHand`, `/plugin install tillerhand@tillerhand`, sonra `/tillerhand:init`. Plugin yalnız kurulum skill'i taşır; kit yine projeye dosya olarak kopyalanır, korumalar ve izin listesi projede kalır. Kurulumdan sonra plugin kapatılabilir.
+
 ## [3.39.4] - 2026-10-27
 
 ### Düzeltilen

@@ -1,0 +1,12 @@
+{
+  "name": "tillerhand",
+  "owner": { "name": "Burak Doğrul" },
+  "description": "TillerHand: Claude Code ile fikirden canlıya ürün çıkaran Türkçe başlangıç kiti.",
+  "plugins": [
+    {
+      "name": "tillerhand",
+      "source": "./kit/plugin",
+      "description": "TillerHand kitini bu klasöre kurar: kurallar, komutlar, korumalar ve proje şablonları (npx tillerhand init)."
+    }
+  ]
+}

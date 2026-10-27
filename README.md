@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.39.4-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.40.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -89,6 +89,14 @@ Claude sırayla soru sorar. **Her sorunun ilk seçeneği önerilendir**; emin de
 mkdir yeni-proje && cd yeni-proje
 npx tillerhand init
 claude
+```
+
+Claude Code plugin olarak (kurulum skill'i; kit yine projeye dosya olarak kopyalanır):
+
+```text
+/plugin marketplace add burakdogrul/TillerHand
+/plugin install tillerhand@tillerhand
+/tillerhand:init
 ```
 
 npm yerine git ile (kit, proje içinde `vibe-kit/` klasöründe durur ve `.gitignore`'a girer):

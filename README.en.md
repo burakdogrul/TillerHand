@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.39.4-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.40.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -91,6 +91,14 @@ Claude asks its questions one by one. **The first option is always the recommend
 mkdir my-app && cd my-app
 npx tillerhand init
 claude
+```
+
+As a Claude Code plugin (an install skill; the kit is still copied into the project as files):
+
+```text
+/plugin marketplace add burakdogrul/TillerHand
+/plugin install tillerhand@tillerhand
+/tillerhand:init
 ```
 
 With git instead of npm (the kit stays in a `vibe-kit/` folder inside the project and goes into `.gitignore`):
