@@ -30,11 +30,11 @@ try {
     next = t(root, 'session.begin');
   } else {
     const a = d.fields;
-    notes.push(`Phase: ${a['Aktif faz'] ?? '-'} · Task: ${a['Aktif görev'] ?? '-'} · Question mode: ${a['Soru modu'] ?? 'açık'} · Board: ${d.board.state}`);
-    if (/başlangıç/i.test(a['Aktif faz'] ?? '') && d.installed) {
-      const command = /uyum/i.test(a['Aktif faz']) ? '/adopt' : '/start';
-      notes.push(`${command} was left unfinished (step ${a['Başlangıç adımı']}). Suggest the user continue with ${command} where they left off.`);
-      next = t(root, 'session.resume', { command, step: a['Başlangıç adımı'] });
+    notes.push(`Phase: ${a['Active phase'] ?? '-'} · Task: ${a['Active task'] ?? '-'} · Question mode: ${a['Question mode'] ?? 'açık'} · Board: ${d.board.state}`);
+    if (/başlangıç/i.test(a['Active phase'] ?? '') && d.installed) {
+      const command = /uyum/i.test(a['Active phase']) ? '/adopt' : '/start';
+      notes.push(`${command} was left unfinished (step ${a['Setup step']}). Suggest the user continue with ${command} where they left off.`);
+      next = t(root, 'session.resume', { command, step: a['Setup step'] });
     } else {
       const task = d.phases.flatMap((f) => f.tasks).find((x) => !x.done);
       const code = task?.text.match(/^(G-\d+)/)?.[1];

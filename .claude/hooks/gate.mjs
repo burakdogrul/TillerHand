@@ -18,12 +18,15 @@ import { spawnSync } from 'node:child_process';
 import { changes } from './commit-gate.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
 import { findRoot, isMain } from './shared.mjs';
+import { normalize } from './labels.mjs';
 import { specInvariants } from './dashboard-data.mjs';
 
-// Keys of the AGENTS.md → Komutlar block (Turkish template text, matched as written)
-const CHECKS = ['lint', 'tip kontrol', 'test'];
+// Keys of the AGENTS.md → Commands block (Turkish keys of pre-3.48 projects are read through normalize)
+const CHECKS = ['lint', 'type check', 'test'];
 // The approval also covers the dev command and the preview address: preview.mjs runs the one and opens the other
-const APPROVED = [...CHECKS, 'geliştirme', 'önizleme'];
+const APPROVED = [...CHECKS, 'dev', 'preview'];
+// The digest keeps the pre-3.48 names, so an approval given before the English labels stays valid
+const DIGEST_NAME = { 'type check': 'tip kontrol', dev: 'geliştirme', preview: 'önizleme' };
 const TIMEOUT = 10 * 60 * 1000;
 const BUFFER = 64 * 1024 * 1024;
 // A red check shows its last 30 lines; a longer output is kept whole in a file, read only when the tail is not enough
@@ -37,9 +40,9 @@ function failed(root, name, r) {
   return { output: lines.slice(-30).join('\n'), note: `last 30 lines; full output in ${rel}` };
 }
 
-// Only the "## Komutlar" section is read: a "test:" line elsewhere must not count as a command
+// Only the "## Commands" section is read: a "test:" line elsewhere must not count as a command
 export function readCommands(md, names = CHECKS) {
-  const section = md.match(/^## Komutlar[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
+  const section = normalize(md).match(/^## Commands[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
   return names.map((name) => {
     const value = section.match(new RegExp(`^${name}:[ \\t]*(.*?)[ \\t\\r]*$`, 'm'))?.[1];
     return { name, command: value && !/^\[.*\]$/.test(value) ? value : null };
@@ -54,7 +57,7 @@ export function approvalPath(root) {
   const key = crypto.createHash('sha256').update(realRoot.toLowerCase()).digest('hex').slice(0, 32);
   return path.join(os.userInfo().homedir, '.vibe-kit', 'gate-approval', `${key}.json`);
 }
-const digest = (list) => crypto.createHash('sha256').update(JSON.stringify(list.map((k) => [k.name, k.command]))).digest('hex');
+const digest = (list) => crypto.createHash('sha256').update(JSON.stringify(list.map((k) => [DIGEST_NAME[k.name] ?? k.name, k.command]))).digest('hex');
 export const commandList = (list) => list.filter((k) => k.command).map((k) => `- ${k.name}: ${k.command}`).join('\n');
 export const readAgents = (root) => { try { return fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'); } catch { return ''; } };
 export const approvedCommands = (root) => readCommands(readAgents(root), APPROVED);

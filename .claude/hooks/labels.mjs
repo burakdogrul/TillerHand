@@ -54,8 +54,12 @@ const COMMAND_KEYS = ['dev', 'preview', 'typeCheck'];
 const PAIRS = Object.entries(LABELS).filter(([k]) => !COMMAND_KEYS.includes(k)).map(([, v]) => v)
   .sort((a, b) => b.tr.length - a.tr.length);
 const BOLD = PAIRS.map(({ tr, en }) => [new RegExp(`^\\*\\*${esc(tr)}:\\*\\*`), `**${en}:**`]);
-// The label must end at a non-letter: "## Faz 1" changes, "## Fazla mesai" does not.
-const HEADING = PAIRS.map(({ tr, en }) => [new RegExp(`^## ${esc(tr)}(?![\\p{L}\\p{N}])`, 'u'), `## ${en}`]);
+// The label must end at a non-letter: "## Faz 1" changes, "## Fazla mesai" does not. A PRD heading may be numbered
+// ("## 6. Kapsam dışı"), the CHANGELOG one is bracketed ("## [Yayınlanmamış]").
+const HEADING = [
+  [new RegExp(`^## \\[${esc(LABELS.unreleased.tr)}\\]`), `## [${LABELS.unreleased.en}]`],
+  ...PAIRS.map(({ tr, en }) => [new RegExp(`^## (\\d+\\. )?${esc(tr)}(?![\\p{L}\\p{N}])`, 'u'), `## $1${en}`]),
+];
 const COMMAND = COMMAND_KEYS.map((k) => [new RegExp(`^${esc(LABELS[k].tr)}:`), `${LABELS[k].en}:`]);
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 const COMMANDS_HEADING = /^## (Komutlar|Commands)(?![\p{L}\p{N}])/u;

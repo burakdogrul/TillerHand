@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readStatus, readText, sections, findSection, tally, tableRows } from './status-read.mjs';
+import { verdict } from './labels.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
 import { readModels, modelsFile, modelsNote, roleLabel } from './models.mjs';
@@ -63,18 +64,18 @@ const firstSentence = (b) => (b ?? '').split('\n').map((s) => s.trim()).find((s)
 const mvp = findSection(prd, '5. MVP').split(/^### /m).slice(1).map((p) => {
   const [title, ...body] = p.split('\n');
   const text = body.join('\n');
-  return { title: title.trim(), priority: text.match(/\*\*Öncelik:\*\*\s*(.+)/)?.[1]?.trim() ?? '', ...tally(text) };
+  return { title: title.trim(), priority: text.match(/\*\*Priority:\*\*\s*(.+)/)?.[1]?.trim() ?? '', ...tally(text) };
 }).filter((o) => !o.title.includes('[') && o.title !== '...');
-const outOfScope = findSection(prd, '6. Kapsam dışı').split('\n').map((s) => s.trim()).filter((s) => /^- \S/.test(s) && !s.includes('[')).map((s) => s.slice(2));
+const outOfScope = findSection(prd, '6. Out of scope').split('\n').map((s) => s.trim()).filter((s) => /^- \S/.test(s) && !s.includes('[')).map((s) => s.slice(2));
 
-const stack = tableRows(sections(readText(file('docs/architecture/stack.md')))['Seçilen teknolojiler'], 2).map(([layer, choice]) => ({ layer, choice }));
+const stack = tableRows(sections(readText(file('docs/architecture/stack.md')))['Chosen technologies'], 2).map(([layer, choice]) => ({ layer, choice }));
 const criticalFlows = tableRows(findSection(sections(readText(file('docs/quality/test-plan.md'))), '1. Kritik'), 6)
   .map(([no, feed, , kind, fileName, state]) => ({ no, feed, kind, fileName, state }));
 const cost = tableRows(readText(file('docs/workflow/cost-log.md')), 6)
   .map(([date, job, size, startPct, endPct, diff]) => ({ date, job, size, diff: parseFloat(String(diff).replace('%', '').replace(',', '.')) }));
-const maintenance = tableRows(sections(readText(file('docs/operations/maintenance.md')))['Bakım kaydı'], 4)
+const maintenance = tableRows(sections(readText(file('docs/operations/maintenance.md')))['Maintenance log'], 4)
   .map(([date, kind, findings, work]) => ({ date, kind, findings, work }));
-const unreleased = findSection(sections(readText(file('CHANGELOG.md'))), '[Yayınlanmamış]')
+const unreleased = findSection(sections(readText(file('CHANGELOG.md'))), '[Unreleased]')
   .split('\n').map((s) => s.trim()).filter((s) => /^- \S/.test(s)).map((s) => s.slice(2));
 const lastRetro = Object.keys(sections(readText(file('docs/quality/retros.md')))).filter((b) => /^\d{4}-/.test(b)).pop() ?? '';
 const designDirection = tableRows(findSection(sections(readText(file('docs/design/design-guide.md'))), '1. Seçilen'), 2)
@@ -115,7 +116,7 @@ const alerts = [];
 const addAlert = (sev, text, action = '') => alerts.push({ sev, text, action });
 if (d.kitPending) addAlert('info', L('dashboard.alert.kitPending'), L('dashboard.act.startIdea'));
 if (d.handoffPending) addAlert('warn', L('dashboard.alert.handoffPending'), '/handoff devral');
-const lastReject = [...d.board.meetings].reverse().find((t) => /RET/i.test(t.result) && !/KOŞULLU/i.test(t.result));
+const lastReject = [...d.board.meetings].reverse().find((t) => verdict(t.result) === 'reject');
 if (lastReject && !lastReject.decision) addAlert('critical', L('dashboard.alert.boardReject', { kind: lastReject.kind, scope: lastReject.scope, critical: lastReject.critical || L('dashboard.criticalFinding') }), L('dashboard.act.askClaudeFix'));
 const limitLevel = level(limit);
 const limitShort = limit ? [[L('dashboard.limit5h'), limit.five_hour], [L('dashboard.limitWeeklyLower'), limit.seven_day]].filter(([, p]) => p)
@@ -128,9 +129,9 @@ for (const s of d.issues.slice(0, 5)) addAlert('warn', L('dashboard.alert.openIs
 for (const r of repeatedBugClasses(root)) addAlert('info', L('dashboard.alert.repeatedBug', { count: r.specs.length, cls: r.cls, specs: r.specs.join(', ') }), '/retro');
 if (git?.changed.length > 15) addAlert('info', L('dashboard.alert.uncommitted', { count: git.changed.length }), L('dashboard.act.commitOrWrapUp'));
 if (git?.progressStale >= 3) addAlert('info', L('dashboard.alert.progressStale', { count: git.progressStale }), '/wrap-up');
-const off = (a['Soru modu'] ?? '').match(/kapalı konular:\s*(.+)$/i)?.[1];
+const off = (a['Question mode'] ?? '').match(/kapalı konular:\s*(.+)$/i)?.[1];
 if (off && !/^yok$/i.test(off)) addAlert('info', L('dashboard.alert.closedTopics', { topics: off }), L('dashboard.act.askModeOpen'));
-if (d.installed && d.board.state === 'kurulmadı' && !/başlangıç/i.test(a['Aktif faz'] ?? '')) addAlert('info', L('dashboard.alert.boardNotSetUp'), '/board setup');
+if (d.installed && d.board.state === 'kurulmadı' && !/başlangıç/i.test(a['Active phase'] ?? '')) addAlert('info', L('dashboard.alert.boardNotSetUp'), '/board setup');
 if (github?.liveMonitoring?.length) addAlert('critical', L('dashboard.alert.liveMonitoring', { title: github.liveMonitoring[0].title }), L('dashboard.act.fixLive', { number: github.liveMonitoring[0].number }));
 else if (github?.liveRun?.conclusion === 'failure') addAlert('critical', L('dashboard.alert.liveRunFailed'), L('dashboard.act.fixLiveShort'));
 const lastMain = github?.runs?.find((c) => /^(main|master)$/.test(c.headBranch) && c.workflowName === 'CI');
@@ -150,8 +151,8 @@ if (fb.newCount) addAlert('info', L('dashboard.alert.newFeedback', { count: fb.n
 const enabledPackages = (() => { try { return packageStatus(root).filter((p) => p.enabled).map((p) => p.name); } catch { return []; } })();
 if (enabledPackages.length) addAlert('info', L('dashboard.alert.packagesOn', { names: enabledPackages.join(', ') }), L('dashboard.act.packagesOff'));
 const cmdMode = (() => { try { return commandMode(root).mode; } catch { return 'light'; } })();
-if (cmdMode !== 'full' && /^Tam\b/.test(a['Profil'] ?? '')) addAlert('info', L('dashboard.alert.cmdListLight'), L('dashboard.act.cmdFull'));
-else if (cmdMode !== 'light' && !/^Tam\b/.test(a['Profil'] ?? '')) addAlert('info', L('dashboard.alert.cmdListHeavy', { mode: cmdMode === 'full' ? L('dashboard.cmdModeFull') : L('dashboard.cmdModeMixed') }), L('dashboard.act.cmdLight'));
+if (cmdMode !== 'full' && /^Tam\b/.test(a['Profile'] ?? '')) addAlert('info', L('dashboard.alert.cmdListLight'), L('dashboard.act.cmdFull'));
+else if (cmdMode !== 'light' && !/^Tam\b/.test(a['Profile'] ?? '')) addAlert('info', L('dashboard.alert.cmdListHeavy', { mode: cmdMode === 'full' ? L('dashboard.cmdModeFull') : L('dashboard.cmdModeMixed') }), L('dashboard.act.cmdLight'));
 if (assets.codeMapDays > 30) addAlert('info', L('dashboard.alert.codeMapStale', { days: assets.codeMapDays }), L('dashboard.act.understand'));
 if (context?.percent >= 70 && Date.now() - context.readAt < 3600e3) addAlert('warn', L('dashboard.alert.contextFull', { percent: context.percent }), L('dashboard.act.wrapUpClear'));
 for (const r of Object.values(findings.latest)) if (r.critical > 0) addAlert('warn', L('dashboard.alert.findingsCritical', { kind: kindName(r.kind), critical: r.critical, health: r.health }), `docs/findings/${r.kind}/latest.md`);
@@ -181,7 +182,7 @@ const feed = [
   .sort((x, y) => toDate(y.time) - toDate(x.time)).slice(0, 50);
 
 const autoDecisions = d.decisions.filter((k) => /otomatik/i.test(k.decidedBy)).length;
-const rejectCount = d.board.meetings.filter((t) => /RET/.test(t.result) && !/KOŞULLU/.test(t.result)).length;
+const rejectCount = d.board.meetings.filter((t) => verdict(t.result) === 'reject').length;
 const mvpCriteria = mvp.reduce((t, o) => ({ done: t.done + o.done, total: t.total + o.total }), { done: 0, total: 0 });
 const avgCost = Object.entries(cost.reduce((m, r) => {
   if (!Number.isNaN(r.diff)) (m[r.size] ??= []).push(r.diff);
@@ -212,8 +213,10 @@ const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true
 const kpi = (label, value, sub = '', bar = '') => `<div class="kpi"><div class="kpi-l">${e(label)}</div><div class="kpi-v">${value}</div>${bar}<div class="kpi-s">${sub}</div></div>`;
 
 // ---------- sections ----------
-const activeIndex = Math.max(0, [{ name: 'Başlangıç' }, ...d.phases].findIndex((f) => (a['Aktif faz'] ?? '').toLowerCase().startsWith(f.name.toLowerCase().split(' ').slice(0, 2).join(' '))));
-const start = (a['Başlangıç adımı'] ?? '0/9').split('/').map(Number);
+// A pre-3.48 value says "Faz 1"; the roadmap headings are read as "Phase 1"
+const activePhase = (a['Active phase'] ?? '').replace(/^faz\b/i, 'Phase');
+const activeIndex = Math.max(0, [{ name: 'Başlangıç' }, ...d.phases].findIndex((f) => activePhase.toLowerCase().startsWith(f.name.toLowerCase().split(' ').slice(0, 2).join(' '))));
+const start = (a['Setup step'] ?? '0/9').split('/').map(Number);
 const stageStrip = `<ol class="steps">${[{ name: 'Başlangıç', done: start[0] || 0, total: start[1] || 9 }, ...d.phases].map((f, i) =>
   `<li class="step${i === activeIndex ? ' now' : ''}${f.total && f.done === f.total ? ' done' : ''}"><span class="step-n">${i === 0 ? e(L('dashboard.stageStartLetter')) : i - 1}</span><div class="step-b"><b>${e(i === 0 ? L('dashboard.stageStart') : f.name.replace(/\s*\(.*\)$/, ''))}</b>${progressBar(f.done, f.total)}<span class="muted num">${f.done}/${f.total}</span></div></li>`).join('')}</ol>`;
 
@@ -230,9 +233,9 @@ function feedRow(x) {
 }
 
 const roadmapSection = d.phases.length ? d.phases.map((f) => `
-<details class="card faz" ${f.name.toLowerCase().startsWith((a['Aktif faz'] ?? '#').toLowerCase().split(' ').slice(0, 2).join(' ')) ? 'open' : ''}>
+<details class="card faz" ${f.name.toLowerCase().startsWith((activePhase || '#').toLowerCase().split(' ').slice(0, 2).join(' ')) ? 'open' : ''}>
   <summary><b>${e(f.name)}</b><span class="faz-bar">${progressBar(f.done, f.total)}<span class="num muted">${f.done}/${f.total}</span></span></summary>
-  <ul class="tasks">${f.tasks.map((g) => `<li class="${g.done ? 'ok' : ''}${(a['Aktif görev'] && g.text.startsWith(a['Aktif görev'])) ? ' active' : ''}"><span class="chk" aria-hidden="true">${g.done ? '✓' : ''}</span><span>${md(g.text)}</span></li>`).join('')}</ul>
+  <ul class="tasks">${f.tasks.map((g) => `<li class="${g.done ? 'ok' : ''}${(a['Active task'] && g.text.startsWith(a['Active task'])) ? ' active' : ''}"><span class="chk" aria-hidden="true">${g.done ? '✓' : ''}</span><span>${md(g.text)}</span></li>`).join('')}</ul>
 </details>`).join('') : empty(L('dashboard.noRoadmap'));
 
 const decisionTable = d.decisions.length ? `
@@ -245,7 +248,7 @@ const boardSection = `
 <div class="grid2">
   <section class="card"><h3>${L('dashboard.members')} · ${e(d.board.state === 'kuruldu' ? L('dashboard.boardSetUp') : d.board.state === 'kurulmadı' ? L('dashboard.notSetUp') : d.board.state)}</h3>${d.board.members.length ? `<ul class="members">${d.board.members.map((u) => `<li><b>${e(u.member)}</b><span class="muted small">${e(u.model)} · ${e(u.focus)}</span></li>`).join('')}</ul>` : empty(L('dashboard.boardNotSetUp'), '/board setup')}
     <p class="muted small">${L('dashboard.commitReview', { value: e(onOff(d.board.commitReview)) })}</p></section>
-  <section class="card"><h3>${L('dashboard.summary')}</h3><div class="kpis mini">${kpi(L('dashboard.kpiMeetings'), d.board.meetings.length)}${kpi('RET', rejectCount, rejectCount ? badge('critical', L('dashboard.criticalFinding')) : '')}${kpi(L('dashboard.kpiApproval'), d.board.meetings.length ? `%${percent(d.board.meetings.filter((t) => /^ONAY/i.test(t.result)).length, d.board.meetings.length)}` : '-')}</div></section>
+  <section class="card"><h3>${L('dashboard.summary')}</h3><div class="kpis mini">${kpi(L('dashboard.kpiMeetings'), d.board.meetings.length)}${kpi('RET', rejectCount, rejectCount ? badge('critical', L('dashboard.criticalFinding')) : '')}${kpi(L('dashboard.kpiApproval'), d.board.meetings.length ? `%${percent(d.board.meetings.filter((t) => verdict(t.result) === 'approve').length, d.board.meetings.length)}` : '-')}</div></section>
 </div>
 <section class="card"><h3>${L('dashboard.councilHeading')}</h3>${councils.length ? (() => {
   const latest = councils[0];
@@ -460,12 +463,12 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
 <div class="hero">
   <section class="card" aria-labelledby="simdi">
     <div class="now-l" id="simdi">${L('dashboard.now')}</div>
-    <div class="now-v">${e(a['Aktif faz'] ?? '-')} · ${md(a['Aktif görev'] ?? '-')}</div>
+    <div class="now-v">${e(a['Active phase'] ?? '-')} · ${md(a['Active task'] ?? '-')}</div>
     <div class="now-grid">
-      <div><div class="now-l">${L('dashboard.questionMode')}</div><div>${e(a['Soru modu'] ?? '-')}</div></div>
-      <div><div class="now-l">${L('dashboard.profile')}</div><div>${e(a['Profil'] ?? '-')}</div></div>
-      <div><div class="now-l">${L('dashboard.lastUpdate')}</div><div class="num">${e(a['Son güncelleme'] ?? '-')}</div></div>
-      ${/başlangıç/i.test(a['Aktif faz'] ?? '') ? `<div><div class="now-l">${L('dashboard.startStep')}</div><div class="num">${e(a['Başlangıç adımı'] ?? '-')}</div></div>` : ''}
+      <div><div class="now-l">${L('dashboard.questionMode')}</div><div>${e(a['Question mode'] ?? '-')}</div></div>
+      <div><div class="now-l">${L('dashboard.profile')}</div><div>${e(a['Profile'] ?? '-')}</div></div>
+      <div><div class="now-l">${L('dashboard.lastUpdate')}</div><div class="num">${e(a['Last updated'] ?? '-')}</div></div>
+      ${/başlangıç/i.test(a['Active phase'] ?? '') ? `<div><div class="now-l">${L('dashboard.startStep')}</div><div class="num">${e(a['Setup step'] ?? '-')}</div></div>` : ''}
     </div>
     <div class="next"><div class="now-l">${L('dashboard.nextStep')}</div><div>${md(next)}${copyBtn(next)}</div>${cmdOf(next) ? `<div class="muted small">${e(L('dashboard.pasteHint'))}</div>` : ''}</div>
     ${d.state ? `<div class="now-l" style="margin-top:14px">${L('dashboard.status')}</div><p style="margin-top:4px">${md(d.state)}</p>` : ''}

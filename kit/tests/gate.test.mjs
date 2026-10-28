@@ -46,9 +46,9 @@ after(() => {
 test('F-03 commands come from the AGENTS.md → Komutlar block; an empty one is unset', () => {
   const md = '## Komutlar\n\n```bash\n# /start doldurur\ngeliştirme:  npm run dev\ntest:        npm run test   # vitest\nlint:        [ ]\ntip kontrol: npx tsc --noEmit\nbuild:       npm run build\n```\n';
   assert.deepEqual(readCommands(md), [
-    { name: 'lint', command: null }, { name: 'tip kontrol', command: 'npx tsc --noEmit' }, { name: 'test', command: 'npm run test   # vitest' },
+    { name: 'lint', command: null }, { name: 'type check', command: 'npx tsc --noEmit' }, { name: 'test', command: 'npm run test   # vitest' },
   ]);
-  assert.deepEqual(readCommands('# başlık yok'), [{ name: 'lint', command: null }, { name: 'tip kontrol', command: null }, { name: 'test', command: null }]);
+  assert.deepEqual(readCommands('# başlık yok'), [{ name: 'lint', command: null }, { name: 'type check', command: null }, { name: 'test', command: null }]);
 });
 
 test('F-03 gate: a red check shows its last lines, a green one writes no output, empty and Semgrep are skipped', () => {
@@ -59,7 +59,7 @@ test('F-03 gate: a red check shows its last lines, a green one writes no output,
   assert.match(r.stdout, /HATA satiri/);
   assert.match(r.stdout, /✅ lint/);
   assert.doesNotMatch(r.stdout, /lint temiz/, 'a green check\'s output costs no tokens');
-  assert.match(r.stdout, /tip kontrol.*unset/);
+  assert.match(r.stdout, /type check.*unset/);
   assert.match(r.stdout, /Semgrep.*skipped/);
   const state = JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8'));
   assert.equal(state.passed, false);

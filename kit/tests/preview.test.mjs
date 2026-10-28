@@ -108,8 +108,8 @@ test('Ö-17.3 missing lines and an unapproved command: clear message, nothing ru
   assert.ok(!fs.existsSync(path.join(p, 'dev.pid')), 'an unapproved dev command does not run');
   const prompt = spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], { input: JSON.stringify({ tool_input: { command: 'node .claude/hooks/gate.mjs --approve' } }), encoding: 'utf8', env: env() });
   const reason = JSON.parse(prompt.stdout).hookSpecificOutput.permissionDecisionReason;
-  assert.match(reason, /geliştirme: node dev\.mjs/, 'the gate approval prompt shows the dev command');
-  assert.match(reason, /önizleme: http:\/\/127\.0\.0\.1/, 'and the preview address');
+  assert.match(reason, /- dev: node dev\.mjs/, 'the gate approval prompt shows the dev command');
+  assert.match(reason, /- preview: http:\/\/127\.0\.0\.1/, 'and the preview address');
 });
 
 test('F-17 audit: only a plain local address is accepted (shell characters, user info, other hosts)', () => {
@@ -190,4 +190,15 @@ test('F-17 mobile project: the step is skipped with a message', () => {
   assert.match(r.stdout, /Expo Go/);
   assert.equal(calls(), '', 'no browser is opened');
   fs.rmSync(path.join(p, '.kit.json'));
+});
+
+test('AC-48.2 preview: an English Commands block (dev / preview) starts the server and takes both screenshots', async () => {
+  reset();
+  write('AGENTS.md', `# X\n\n## Commands\n\n\`\`\`bash\ndev:  node launcher.mjs ${port}\npreview:    http://127.0.0.1:${port}\ntest:        [ ]\nlint:        [ ]\ntype check: [ ]\nbuild:       [ ]\n\`\`\`\n`);
+  approve();
+  const r = preview({}, 'G-48');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  for (const f of ['desktop.png', 'mobile.png']) assert.ok(fs.existsSync(path.join(p, '.previews', 'G-48', f)), f);
+  assert.match(calls(), new RegExp(`open http://127\\.0\\.0\\.1:${port}`));
+  assert.ok(await gone(pid()), 'the server it started is stopped');
 });

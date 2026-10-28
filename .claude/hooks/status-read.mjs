@@ -1,13 +1,15 @@
 // Reads the project state from the docs. Used by statusline, session-start and the dashboard.
-// Formats read: **Label:** lines and ## sections in docs/workflow/progress.md, checkboxes under "## Faz" headings
-// in docs/product/roadmap.md, the "Karar günlüğü" in docs/decisions/log.md and the docs/workflow/board.md tables.
+// Formats read: **Label:** lines and ## sections in docs/workflow/progress.md, checkboxes under "## Phase" headings
+// in docs/product/roadmap.md, the "Decision log" in docs/decisions/log.md and the docs/workflow/board.md tables.
+// Labels are read in English: readText turns the Turkish ones of pre-3.48 projects into English.
 // Must stay fast: the status line calls it on every refresh (git and heavy reads are in dashboard.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import { t } from './lang.mjs';
+import { normalize } from './labels.mjs';
 
 // Only a regular file: a folder or a link to a folder named like a test or report file must not throw (EISDIR)
-export const readText = (p) => { try { return fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : ''; } catch { return ''; } };
+export const readText = (p) => { try { return fs.statSync(p).isFile() ? normalize(fs.readFileSync(p, 'utf8')) : ''; } catch { return ''; } };
 
 export function sections(text, level = '## ') {
   const result = {};
@@ -57,7 +59,7 @@ export function readStatus(root) {
 
   const roadmap = sections(readText(d('docs/product/roadmap.md')));
   const phases = Object.entries(roadmap)
-    .filter(([b]) => /^Faz \d/.test(b))
+    .filter(([b]) => /^Phase \d/.test(b))
     .map(([name, body]) => ({
       name, ...tally(body),
       tasks: body.split('\n').map((s) => s.match(/^\s*- \[( |x)\]\s*(.+)$/i)).filter(Boolean)
@@ -66,7 +68,7 @@ export function readStatus(root) {
   const taskCount = phases.reduce((a, f) => ({ done: a.done + f.done, total: a.total + f.total }), { done: 0, total: 0 });
 
   // 8 columns (with Kapı, kit 2.3+) or the old 7 columns
-  const decisions = tableRows(sections(readText(d('docs/decisions/log.md')))['Karar günlüğü'], 7)
+  const decisions = tableRows(sections(readText(d('docs/decisions/log.md')))['Decision log'], 7)
     .map((c) => (c.length >= 8 ? c : [...c.slice(0, 6), '', c[6]]))
     .map(([no, date, stage, topic, question, chosen, door, decidedBy]) => ({ no, date, stage, topic, question, chosen, door, decidedBy }));
 
@@ -82,10 +84,10 @@ export function readStatus(root) {
   const boardLabels = labels(boardText);
   const boardSections = sections(boardText);
   const board = {
-    state: boardLabels['Durum'] ?? 'kurulmadı',
-    commitReview: boardLabels['Commit denetimi'] ?? 'açık',
-    members: tableRows(boardSections['Üyeler'], 5).map(([member, agent, model, focus, meetings]) => ({ member, agent, model, focus, meetings })),
-    meetings: tableRows(boardSections['Toplantı günlüğü'], 8)
+    state: boardLabels['Status'] ?? 'kurulmadı',
+    commitReview: boardLabels['Commit review'] ?? 'açık',
+    members: tableRows(boardSections['Members'], 5).map(([member, agent, model, focus, meetings]) => ({ member, agent, model, focus, meetings })),
+    meetings: tableRows(boardSections['Meeting log'], 8)
       .map(([no, date, kind, scope, attendees, result, critical, decision]) => ({ no, date, kind, scope, attendees, result, critical, decision })),
   };
 
@@ -98,13 +100,13 @@ export function readStatus(root) {
     kitPending: kit ? kit.type === null : fs.existsSync(d('kit/kit.mjs')),
     kit,
     fields,
-    state: (progressSections['Şu anki durum'] ?? '').split('\n').filter((s) => s.trim() && !s.startsWith('>')).join(' ').trim(),
-    lastSession: rows(progressSections['Son oturumda yapılanlar']),
-    next: rows(progressSections['Sıradaki adım']),
-    pending: rows(progressSections['Bekleyen kararlar']),
-    issues: rows(progressSections['Açık sorunlar / bloklayıcılar']),
-    leftOff: rows(findSection(progressSections, 'Kaldığı yer')),
-    handoffPending: /^\*\*Durum:\*\*\s*bekliyor/im.test(readText(d('docs/workflow/handoff.md'))),
+    state: (progressSections['Current state'] ?? '').split('\n').filter((s) => s.trim() && !s.startsWith('>')).join(' ').trim(),
+    lastSession: rows(progressSections['Done last session']),
+    next: rows(progressSections['Next step']),
+    pending: rows(progressSections['Pending decisions']),
+    issues: rows(progressSections['Open issues / blockers']),
+    leftOff: rows(findSection(progressSections, 'Where we left off')),
+    handoffPending: /^\*\*Status:\*\*\s*bekliyor/im.test(readText(d('docs/workflow/handoff.md'))),
     phases,
     taskCount,
     decisions,

@@ -53,7 +53,7 @@ export async function preview(root, task) {
   if (kit.type === 'mobile') return { code: 0, text: 'Preview skipped: in a mobile project a web screenshot does not show what the phone shows. Ask the user to open the screen on the phone or in Expo Go and check it.' };
   const list = approvedCommands(root);
   const command = (name) => list.find((k) => k.name === name).command;
-  const url = command('önizleme'), dev = command('geliştirme');
+  const url = command('preview'), dev = command('dev');
   if (!url) return fail('AGENTS.md → Komutlar has no `önizleme:` line, or it is empty. Add it (example: `önizleme:    http://localhost:3000`) or produce the evidence by hand in this task.');
   if (!LOCAL.test(url)) return fail(`the önizleme address must be local (http://localhost:<port>, 127.0.0.1 or [::1]). Now: ${url}`);
   if (!isApproved(root, list)) return { code: 1, text: `Preview · ${approvalNeeded(list)}` };

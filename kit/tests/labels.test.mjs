@@ -336,3 +336,49 @@ test('A-48.6 verdict: empty, null, non-string and label-only input fail closed t
     assert.equal(verdict(input), 'unknown', JSON.stringify(input));
   }
 });
+
+// ---------- 3.48.0 step 2: two more heading forms (PRD "## 6. Kapsam dışı", CHANGELOG "## [Yayınlanmamış]") ----------
+
+test('AC-48.1 normalize: the numbered PRD heading "## N. Kapsam dışı" becomes "## N. Out of scope", number and rest kept', async () => {
+  const { normalize } = await load();
+  assert.equal(normalize('## 6. Kapsam dışı (out of scope: NOT built in this release)'), '## 6. Out of scope (out of scope: NOT built in this release)');
+  assert.equal(normalize('## 6. Kapsam dışı'), '## 6. Out of scope');
+  assert.equal(normalize('## 10. Kapsam dışı (later)'), '## 10. Out of scope (later)');
+  const prd = ['# PRD', '', '## 5. MVP scope', '', '**Öncelik:** Must have', '', '## 6. Kapsam dışı (out of scope)', '', '- Native app', '', '## 7. Main user flows', ''];
+  const want = ['# PRD', '', '## 5. MVP scope', '', '**Priority:** Must have', '', '## 6. Out of scope (out of scope)', '', '- Native app', '', '## 7. Main user flows', ''];
+  assert.equal(normalize(prd.join('\n')), want.join('\n'));
+  assert.equal(normalize(prd.join('\r\n')), want.join('\r\n'), 'CRLF kept');
+});
+
+test('AC-48.1 normalize: the CHANGELOG heading "## [Yayınlanmamış]" becomes "## [Unreleased]", released versions untouched', async () => {
+  const { normalize } = await load();
+  const tr = ['# Changelog', '', '## [Yayınlanmamış]', '', '### Added', '- PDF', '', '## [0.1.0] - 2026-10-01', '', '### Added', '- Skeleton', ''];
+  const en = ['# Changelog', '', '## [Unreleased]', '', '### Added', '- PDF', '', '## [0.1.0] - 2026-10-01', '', '### Added', '- Skeleton', ''];
+  assert.equal(normalize(tr.join('\n')), en.join('\n'));
+  assert.equal(normalize(tr.join('\r\n')), en.join('\r\n'), 'CRLF kept');
+});
+
+test('AC-48.1 normalize: the new heading forms are idempotent and English input is unchanged', async () => {
+  const { normalize } = await load();
+  for (const doc of ['## 6. Out of scope (out of scope: NOT built)', '## [Unreleased]', '## 6. Out of scope\n- a\n## [Unreleased]\n- b\n']) {
+    assert.equal(normalize(doc), doc);
+  }
+  for (const doc of ['## 6. Kapsam dışı (x)\n- a\n', '## [Yayınlanmamış]\n- b\n']) assert.equal(normalize(normalize(doc)), normalize(doc));
+});
+
+test('A-48.1 normalize: look-alike headings, prose, code fences and longer words stay byte-identical', async () => {
+  const { normalize } = await load();
+  const doc = [
+    '## 6. Kapsam dışında kalanlar',
+    '## 6. Kapsam dışıdır',
+    '## [Yayınlanmamışlar]',
+    'See ## 6. Kapsam dışı in the PRD and ## [Yayınlanmamış] in the CHANGELOG.',
+    '- ## [Yayınlanmamış]',
+    '```md',
+    '## 6. Kapsam dışı (x)',
+    '## [Yayınlanmamış]',
+    '```',
+    '| ## 6. Kapsam dışı | x |',
+  ].join('\n');
+  assert.equal(normalize(doc), doc);
+});

@@ -49,13 +49,13 @@ try {
   } else {
     const a = d.fields;
     // The values in progress.md stay Turkish (açık / kapalı); only what the line shows is localized
-    const question = (a['Soru modu'] ?? 'açık')
+    const question = (a['Question mode'] ?? 'açık')
       .replace(/^(açık|kapalı)(?=$|\s)/i, (m) => t(root, m.toLowerCase() === 'açık' ? 'statusline.modeOpen' : 'statusline.modeOff'))
       .replace(/\s*·\s*kapalı konular:\s*yok/i, '')
       .replace(/\s*·\s*kapalı konular:\s*(.*)$/i, (_, topics) => ` ${t(root, 'statusline.closed', { topics })}`);
-    parts.push(`▶ ${a['Aktif faz'] ?? '-'}`);
-    if (/başlangıç/i.test(a['Aktif faz'] ?? '')) parts.push(t(root, 'statusline.step', { step: a['Başlangıç adımı'] ?? '-' }));
-    else parts.push(a['Aktif görev'] ?? '-', t(root, 'statusline.task', { done: d.taskCount.done, total: d.taskCount.total }));
+    parts.push(`▶ ${a['Active phase'] ?? '-'}`);
+    if (/başlangıç/i.test(a['Active phase'] ?? '')) parts.push(t(root, 'statusline.step', { step: a['Setup step'] ?? '-' }));
+    else parts.push(a['Active task'] ?? '-', t(root, 'statusline.task', { done: d.taskCount.done, total: d.taskCount.total }));
     parts.push(t(root, 'statusline.question', { mode: question }));
     if (d.pending.length) parts.push(t(root, 'statusline.pending', { count: d.pending.length }));
   }

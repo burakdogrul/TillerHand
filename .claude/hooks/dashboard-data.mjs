@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readText, sections, tableRows, labels } from './status-read.mjs';
+import { normalize } from './labels.mjs';
 import { t } from './lang.mjs';
 
 const DAY = 864e5;
@@ -121,7 +122,7 @@ export function specInvariants(root, since = 0) {
   try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.md') && !f.startsWith('_')).sort(); } catch { return { invariants: [], unreadable: [] }; }
   const list = [], unreadable = [];
   for (const f of files) {
-    const body = sections(readText(path.join(dir, f)))['Değişmemesi gereken davranış'] ?? '';
+    const body = sections(readText(path.join(dir, f)))['Behavior that must not change'] ?? '';
     for (const line of body.split(/\r?\n/)) {
       const m = line.match(/^\s*-\s*(Ö-(\d{2})\.(\d+))/);
       if (m) list.push({ spec: f, id: m[1], key: key(m[2], m[3]) });
@@ -145,8 +146,8 @@ export function repeatedBugClasses(root) {
   const byClass = new Map();
   for (const f of files) {
     const text = readText(path.join(dir, f));
-    if (!/^\*\*Tür:\*\*[ \t]*hata\b/im.test(text)) continue;
-    const raw = text.match(/^\*\*Sınıf:\*\*[ \t]*`?([^\s`,.[\]]+)/im)?.[1] ?? '';
+    if (!/^\*\*Type:\*\*[ \t]*hata\b/im.test(text)) continue;
+    const raw = text.match(/^\*\*Class:\*\*[ \t]*`?([^\s`,.[\]]+)/im)?.[1] ?? '';
     // YETKI and YETKİ both mean yetki: try the Turkish and the plain lowercase
     const cls = [raw.toLocaleLowerCase('tr'), raw.toLowerCase()].find((c) => BUG_CLASSES.includes(c));
     if (!cls) continue;
@@ -183,7 +184,7 @@ export function envWarnings(root) {
 }
 
 export function flags(text, now = Date.now()) {
-  return tableRows(sections(text)['Bayraklar'], 7).filter(([name]) => name)
+  return tableRows(sections(normalize(text))['Flags'], 7).filter(([name]) => name)
     .map(([name, purpose, state, owner, added, removal, killSwitchTested]) => ({
       name, purpose, state, owner, added, removal, killSwitchTested,
       isOverdue: isDate(removal) && daysLeft(removal, now) < 0,
@@ -193,14 +194,14 @@ export function flags(text, now = Date.now()) {
 
 // ---------- unit economics ----------
 export function unitEconomics(text) {
-  const e = labels(text);
+  const e = labels(normalize(text));
   const s = (k) => { const v = parseFloat(String(e[k] ?? '').replace(/[^\d.,-]/g, '').replace(',', '.')); return Number.isFinite(v) ? v : 0; };
-  const price = s('Fiyat (kullanıcı başı aylık)');
-  const commission = s('Ödeme komisyonu (%)');
-  const fixedCost = s('Sabit aylık maliyet');
-  const variableCost = s('Kullanıcı başı değişken maliyet (aylık)');
-  const target = s('Hedef aktif kullanıcı');
-  const freeShare = Math.min(99, s('Ücretsiz kullanıcı oranı (%)'));
+  const price = s('Price (per user, monthly)');
+  const commission = s('Payment fee (%)');
+  const fixedCost = s('Fixed monthly cost');
+  const variableCost = s('Variable cost per user (monthly)');
+  const target = s('Target active users');
+  const freeShare = Math.min(99, s('Free user share (%)'));
   if (!price && !fixedCost && !variableCost) return null;
   const margin = price * (1 - commission / 100) - variableCost;
   // Every paying user also carries the variable cost of the free users
@@ -210,7 +211,7 @@ export function unitEconomics(text) {
   const revenue = paying * price * (1 - commission / 100);
   const cost = fixedCost + target * variableCost;
   return {
-    currency: e['Para birimi'] || '',
+    currency: e['Currency'] || '',
     price, margin, effectiveMargin,
     breakEven: effectiveMargin > 0 ? Math.ceil(fixedCost / effectiveMargin) : null,
     target, revenue, cost, profit: revenue - cost,
@@ -230,7 +231,7 @@ export function feedback(text) {
 // Comprehension check answers (F-22, narrator mode); null without rows so the card is left out
 export function learning(text) {
   // Only "doğru" / "yanlış" rows count; a skipped or malformed answer is not a wrong one
-  const rows = tableRows(sections(text)['Kayıtlar'], 4).filter(([, , , result]) => /^(doğru|yanlış)/i.test(result))
+  const rows = tableRows(sections(normalize(text))['Records'], 4).filter(([, , , result]) => /^(doğru|yanlış)/i.test(result))
     .map(([date, task, concept, result]) => ({ concept, right: /^doğru/i.test(result) }));
   if (!rows.length) return null;
   const missed = new Map();
@@ -240,7 +241,7 @@ export function learning(text) {
 }
 
 export function metrics(text) {
-  return tableRows(sections(text)['Kayıtlar'], 9)
+  return tableRows(sections(normalize(text))['Records'], 9)
     .map(([period, taskCount, duration, limit, fixes, reverts, duplicates, critical, acceptance]) => ({ period, taskCount, duration, limit, fixes, reverts, duplicates, critical, acceptance }));
 }
 
@@ -306,7 +307,7 @@ export function councilMinutes(root) {
       file: `docs/workflow/council/${f}`,
       topic: text.match(/^#\s+Konsey:\s*(.+)$/m)?.[1] ?? f.replace(/\.md$/, ''),
       date: a['Tarih'] ?? f.slice(0, 10),
-      kind: a['Tür'] ?? '-',
+      kind: a['Tür'] ?? a['Type'] ?? '-',
       decision: a['Karar'] || a['Öneri'] || null,
       consensus: a['Uzlaşma']?.match(/\d+/) ? Number(a['Uzlaşma'].match(/\d+/)[0]) : null,
       disputed: Number(a['Tartışmalı'] ?? 0) || 0,

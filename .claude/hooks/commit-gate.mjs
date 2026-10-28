@@ -3,7 +3,7 @@
 //   PreToolUse (Bash) hook: without review approval it stops the commit with exit code 2 and says what to do.
 //   node .claude/hooks/commit-gate.mjs --approve "<members who took part, or a note>"   binds the approval to the current changes.
 //   node .claude/hooks/commit-gate.mjs --skip "<reason>"   only when the user asks: skips the board and the gate (always asked).
-// Exempt: no board set up, "Commit denetimi: kapalı" in docs/workflow/board.md, or only docs changed.
+// Exempt: no board set up, "Commit review: off" (or the old "Commit denetimi: kapalı") in docs/workflow/board.md, or only docs changed.
 // Commits the user makes from their own terminal are not affected (this is a Claude Code hook).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { findRoot, isMain } from './shared.mjs';
 import { t } from './lang.mjs';
+import { normalize } from './labels.mjs';
 import { unquote } from './destructive-guard.mjs';
 import { isTestFile, isTestConfig, digest, readRecord } from './test-guard.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
@@ -104,7 +105,7 @@ function hasBoard() {
 
 function reviewOff() {
   try {
-    return /^\*\*Commit denetimi:\*\*\s*kapalı/im.test(fs.readFileSync(path.join(root, 'docs', 'workflow', 'board.md'), 'utf8'));
+    return /^\*\*Commit review:\*\*\s*(off|kapalı)/im.test(normalize(fs.readFileSync(path.join(root, 'docs', 'workflow', 'board.md'), 'utf8')));
   } catch {
     return false;
   }
