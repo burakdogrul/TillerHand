@@ -68,6 +68,37 @@ test('accounts and flags: date math, 2FA, overdue', () => {
   assert.equal(b[0].untested, false);
 });
 
+const flagTable = (header, answer) => `## Bayraklar\n\n| Flag | Purpose | Status | Owner | Added | Removal | ${header} |\n|---|---|---|---|---|---|---|\n| new_payment | payment | on | me | 2026-09-01 | 2026-12-01 | ${answer} |\n`;
+const untestedOf = (answer, header = 'Kill switch tested') => flags(flagTable(header, answer), Date.parse('2026-10-11T12:00:00'))[0].untested;
+
+test('Ö-yes.1 flags: English "yes" in the kill switch column counts as tested', () => {
+  for (const answer of ['yes', 'Yes', 'YES', 'yes (2026-10-01)']) {
+    assert.equal(untestedOf(answer), false, `"${answer}" must be tested`);
+  }
+  assert.equal(untestedOf('yes', 'Test'), false, 'older "Test" header too');
+});
+
+test('Ö-yes.2 flags: Turkish answers evet / ✅ / var still count as tested', () => {
+  for (const answer of ['evet', '✅', 'var']) {
+    assert.equal(untestedOf(answer), false, `"${answer}" must be tested`);
+  }
+});
+
+test('Ö-yes.3 flags: no / hayır / - / empty / "not yet" / words merely starting with "yes" stay untested', () => {
+  for (const answer of ['no', 'hayır', '-', '', 'not yet', 'yesterday', 'yesterday (2026-10-01)', 'yeses']) {
+    assert.equal(untestedOf(answer), true, `"${answer}" must be untested`);
+  }
+});
+
+test('Ö-yes.4 accounts: 2FA column yes -> noTwoFactor false, no -> true (regression guard)', () => {
+  const now = Date.parse('2026-10-11T12:00:00');
+  const row = (answer) => accounts(`## Hesaplar\n\n| Service | Purpose | Owner | 2FA | Plan | Expiry | Key | Note |\n|---|---|---|---|---|---|---|---|\n| Domain | site | me | ${answer} | 300 TL/yr | 2026-10-21 | - | |\n`, now)[0].noTwoFactor;
+  assert.equal(row('yes'), false);
+  assert.equal(row('Yes'), false);
+  assert.equal(row('no'), true);
+  assert.equal(row('No'), true);
+});
+
 test('unit economics: margin, break-even, free user share', () => {
   const text = '**Para birimi:** TL\n**Fiyat (kullanıcı başı aylık):** 200\n**Ödeme komisyonu (%):** 5\n**Sabit aylık maliyet:** 1500\n**Kullanıcı başı değişken maliyet (aylık):** 20\n**Hedef aktif kullanıcı:** 100\n**Ücretsiz kullanıcı oranı (%):** 50';
   const e = unitEconomics(text);

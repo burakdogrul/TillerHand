@@ -3,6 +3,12 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.47.1] - 2026-10-28
+
+### Fixed
+- The dashboard counts an English `yes` in the feature flags "Kill switch tested" column as tested (`evet`, `✅` and `var` still work).
+- `/build` and `/fix-bug` look for the gate's current "command approval needed" message.
+
 ## [3.47.0] - 2026-10-28
 
 ### Changed

@@ -187,7 +187,7 @@ export function flags(text, now = Date.now()) {
     .map(([name, purpose, state, owner, added, removal, killSwitchTested]) => ({
       name, purpose, state, owner, added, removal, killSwitchTested,
       isOverdue: isDate(removal) && daysLeft(removal, now) < 0,
-      untested: !/^(evet|✅|var)/i.test(killSwitchTested ?? ''),
+      untested: !/^(evet|✅|var|yes\b)/i.test(killSwitchTested ?? ''),
     }));
 }
 
