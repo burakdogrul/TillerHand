@@ -10,6 +10,7 @@ import { readLimits, summary } from './usage.mjs';
 import { detectTool, findRoot, sessionNote } from './shared.mjs';
 import { prefsNote } from './prefs.mjs';
 import { readLang, t } from './lang.mjs';
+import { isValue } from './labels.mjs';
 
 const notes = [];
 let next = '';
@@ -30,9 +31,10 @@ try {
     next = t(root, 'session.begin');
   } else {
     const a = d.fields;
-    notes.push(`Phase: ${a['Active phase'] ?? '-'} · Task: ${a['Active task'] ?? '-'} · Question mode: ${a['Question mode'] ?? 'açık'} · Board: ${d.board.state}`);
-    if (/başlangıç/i.test(a['Active phase'] ?? '') && d.installed) {
-      const command = /uyum/i.test(a['Active phase']) ? '/adopt' : '/start';
+    notes.push(`Phase: ${a['Active phase'] ?? '-'} · Task: ${a['Active task'] ?? '-'} · Question mode: ${a['Question mode'] ?? 'on'} · Board: ${d.board.state}`);
+    if (isValue(a['Active phase'], 'setup') && d.installed) {
+      // "Setup (adopt)", before 3.48 "Başlangıç (uyum)"
+      const command = /\((adopt|uyum)\)/i.test(a['Active phase']) ? '/adopt' : '/start';
       notes.push(`${command} was left unfinished (step ${a['Setup step']}). Suggest the user continue with ${command} where they left off.`);
       next = t(root, 'session.resume', { command, step: a['Setup step'] });
     } else {
@@ -41,7 +43,7 @@ try {
       if (code) next = t(root, 'session.next', { code, title: task.text.replace(/^G-\d+:\s*/, '').split(' — ')[0].replace(/\*\*/g, '').slice(0, 70) });
     }
     if (d.handoffPending) {
-      notes.push('Handoff note waiting (docs/workflow/handoff.md): the project is being taken over from another person or account. Suggest /handoff devral before starting work.');
+      notes.push('Handoff note waiting (docs/workflow/handoff.md): the project is being taken over from another person or account. Suggest /handoff take before starting work.');
       next = next ? t(root, 'session.handoffThen', { next }) : t(root, 'session.handoff');
     }
     if (next) notes.push(next);

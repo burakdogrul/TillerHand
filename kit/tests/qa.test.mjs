@@ -38,10 +38,10 @@ test('Ö-18.1 the QA report comes from JUnit: passed, failed with its reason and
   assert.match(file, /^\d{4}-\d{2}-\d{2}-\d{6}\.md$/, 'seconds: two runs in a minute do not overwrite each other');
   const stamp = file.slice(0, -3);
   const text = fs.readFileSync(path.join(p, 'docs/quality/qa', file), 'utf8');
-  assert.match(text, new RegExp(`\\| Ö-01\\.1 Zorunlu alan boşsa kaydedilmez \\| geçti \\| \\.previews/qa-${stamp}/Ö-01\\.1\\.png \\|`));
+  assert.match(text, new RegExp(`\\| Ö-01\\.1 Zorunlu alan boşsa kaydedilmez \\| passed \\| \\.previews/qa-${stamp}/Ö-01\\.1\\.png \\|`));
   assert.ok(fs.existsSync(path.join(p, '.previews', `qa-${stamp}`, 'Ö-01.2.png')), 'the evidence is copied: the next Playwright run empties its folder');
-  assert.match(text, /\| kaldı \| [^|]+ \| Error: expect\(locator\)\.toBeVisible\(\) \/ beklenen satır yok \|/, 'first Error line, the pipe replaced');
-  assert.match(text, /\| Ö-02\.1 PDF indirilir \| koşulmadı \| {2}\| {2}\|/);
+  assert.match(text, /\| failed \| [^|]+ \| Error: expect\(locator\)\.toBeVisible\(\) \/ beklenen satır yok \|/, 'first Error line, the pipe replaced');
+  assert.match(text, /\| Ö-02\.1 PDF indirilir \| not run \| {2}\| {2}\|/);
   const s = qaSummary(text);
   assert.deepEqual([s.passed, s.failed, s.notRun], [1, 1, 1]);
   assert.deepEqual(s.failures.map((f) => [f.criterion, f.note]), [['Ö-01.2 Kayıt listede görünür', 'Error: expect(locator).toBeVisible() / beklenen satır yok']]);

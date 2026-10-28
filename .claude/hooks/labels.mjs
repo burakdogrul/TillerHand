@@ -41,7 +41,65 @@ export const LABELS = {
   variableCost: { en: 'Variable cost per user (monthly)', tr: 'Kullanıcı başı değişken maliyet (aylık)' },
   targetUsers: { en: 'Target active users', tr: 'Hedef aktif kullanıcı' },
   freeShare: { en: 'Free user share (%)', tr: 'Ücretsiz kullanıcı oranı (%)' },
+  accounts: { en: 'Accounts', tr: 'Hesaplar' },
+  inbox: { en: 'Inbox', tr: 'Gelen kutusu' },
+  themes: { en: 'Themes', tr: 'Temalar' },
+  reports: { en: 'Reports', tr: 'Raporlar' },
+  alarms: { en: 'Alarms', tr: 'Alarmlar' },
+  chosenDirection: { en: 'Chosen direction', tr: 'Seçilen yön' },
+  valueProposition: { en: 'Value proposition', tr: 'Değer önerisi' },
+  criticalFlows: { en: 'Critical flows', tr: 'Kritik akışlar' },
+  learnedRules: { en: 'Learned rules', tr: 'Öğrenilen kurallar' },
+  rule: { en: 'Rule', tr: 'Kural' },
 };
+
+// Values hooks read at known label or column positions. Readers compare with isValue(); never normalized in place.
+export const VALUES = {
+  on: { en: 'on', tr: 'açık' },
+  off: { en: 'off', tr: 'kapalı' },
+  none: { en: 'none', tr: 'yok' },
+  setup: { en: 'Setup', tr: 'Başlangıç' },
+  notSetUp: { en: 'not set up', tr: 'kurulmadı' },
+  setUp: { en: 'set up', tr: 'kuruldu' },
+  full: { en: 'Full', tr: 'Tam' },
+  light: { en: 'Light', tr: 'Hafif' },
+  standard: { en: 'Standard', tr: 'Standart' },
+  waiting: { en: 'waiting', tr: 'bekliyor' },
+  automatic: { en: 'automatic', tr: 'otomatik' },
+  user: { en: 'user', tr: 'kullanıcı' },
+  oneWay: { en: 'one-way', tr: 'tek' },
+  twoWay: { en: 'two-way', tr: 'çift' },
+  yes: { en: 'yes', tr: 'evet' },
+  no: { en: 'no', tr: 'hayır' },
+  right: { en: 'right', tr: 'doğru' },
+  wrong: { en: 'wrong', tr: 'yanlış' },
+  passed: { en: 'passed', tr: 'geçti' },
+  failed: { en: 'failed', tr: 'kaldı' },
+  notRun: { en: 'not run', tr: 'koşulmadı' },
+  bug: { en: 'bug', tr: 'hata' },
+  feature: { en: 'feature', tr: 'özellik' },
+  request: { en: 'request', tr: 'istek' },
+  complaint: { en: 'complaint', tr: 'şikayet' },
+  praise: { en: 'praise', tr: 'övgü' },
+  question: { en: 'question', tr: 'soru' },
+  new: { en: 'new', tr: 'yeni' },
+  planned: { en: 'planned', tr: 'planlandı' },
+  done: { en: 'done', tr: 'yapıldı' },
+  rejected: { en: 'rejected', tr: 'reddedildi' },
+  merged: { en: 'merged', tr: 'birleşti' },
+};
+
+// The value in either language, case-insensitive (Turkish-aware), whole or followed by a non-letter:
+// "açık · kapalı konular: yok" is on, "açıklama" is not.
+export function isValue(text, key) {
+  if (!Object.hasOwn(VALUES, key)) throw new Error(`unknown value: ${key}`);
+  if (typeof text !== 'string') return false;
+  // Turkish lowercase for "AÇIK", plain lowercase for "FAILED" (Turkish would give "faıled")
+  const lower = (x) => [x.toLocaleLowerCase('tr'), x.toLowerCase()];
+  const texts = lower(text.trim());
+  return Object.values(VALUES[key]).flatMap(lower).some((w) =>
+    texts.some((s) => s.startsWith(w) && !/^[\p{L}\p{N}]/u.test(s.slice(w.length))));
+}
 
 export function label(key) {
   if (!Object.hasOwn(LABELS, key)) throw new Error(`unknown label: ${key}`);

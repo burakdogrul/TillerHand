@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readStatus, readText, sections, findSection, tally, tableRows } from './status-read.mjs';
-import { verdict } from './labels.mjs';
+import { verdict, isValue } from './labels.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
 import { readModels, modelsFile, modelsNote, roleLabel } from './models.mjs';
@@ -22,7 +22,7 @@ const root = path.resolve(args.find((a) => !a.startsWith('--')) ?? process.env.C
 const file = (f) => path.join(root, f);
 // Every visible text comes from messages.mjs in the project language (L = t with this project's root)
 const L = (key, vars) => t(root, key, vars);
-const dateKind = (k) => (k === 'bitiş' ? L('dashboard.dateExpiry') : L('dashboard.dateKeyRotation'));
+const dateKind = (k) => (k === 'expiry' ? L('dashboard.dateExpiry') : L('dashboard.dateKeyRotation'));
 const kindName = (k) => (Object.hasOwn(FINDING_KINDS, k) ? L(`dashboard.findingKind.${k}`) : k);
 // The dashboard is made in the user's language: none before /start or /adopt asks it
 const lang = readLang(root);
@@ -69,7 +69,7 @@ const mvp = findSection(prd, '5. MVP').split(/^### /m).slice(1).map((p) => {
 const outOfScope = findSection(prd, '6. Out of scope').split('\n').map((s) => s.trim()).filter((s) => /^- \S/.test(s) && !s.includes('[')).map((s) => s.slice(2));
 
 const stack = tableRows(sections(readText(file('docs/architecture/stack.md')))['Chosen technologies'], 2).map(([layer, choice]) => ({ layer, choice }));
-const criticalFlows = tableRows(findSection(sections(readText(file('docs/quality/test-plan.md'))), '1. Kritik'), 6)
+const criticalFlows = tableRows(findSection(sections(readText(file('docs/quality/test-plan.md'))), '1. Critical'), 6)
   .map(([no, feed, , kind, fileName, state]) => ({ no, feed, kind, fileName, state }));
 const cost = tableRows(readText(file('docs/workflow/cost-log.md')), 6)
   .map(([date, job, size, startPct, endPct, diff]) => ({ date, job, size, diff: parseFloat(String(diff).replace('%', '').replace(',', '.')) }));
@@ -78,7 +78,7 @@ const maintenance = tableRows(sections(readText(file('docs/operations/maintenanc
 const unreleased = findSection(sections(readText(file('CHANGELOG.md'))), '[Unreleased]')
   .split('\n').map((s) => s.trim()).filter((s) => /^- \S/.test(s)).map((s) => s.slice(2));
 const lastRetro = Object.keys(sections(readText(file('docs/quality/retros.md')))).filter((b) => /^\d{4}-/.test(b)).pop() ?? '';
-const designDirection = tableRows(findSection(sections(readText(file('docs/design/design-guide.md'))), '1. Seçilen'), 2)
+const designDirection = tableRows(findSection(sections(readText(file('docs/design/design-guide.md'))), '1. Chosen'), 2)
   .filter(([, choice]) => choice && !choice.startsWith('[')).map(([area, choice]) => ({ area, choice }));
 
 const assets = producedAssets(root);
@@ -115,7 +115,7 @@ const findings = findingReports(readText(file('docs/findings/README.md')));
 const alerts = [];
 const addAlert = (sev, text, action = '') => alerts.push({ sev, text, action });
 if (d.kitPending) addAlert('info', L('dashboard.alert.kitPending'), L('dashboard.act.startIdea'));
-if (d.handoffPending) addAlert('warn', L('dashboard.alert.handoffPending'), '/handoff devral');
+if (d.handoffPending) addAlert('warn', L('dashboard.alert.handoffPending'), '/handoff take');
 const lastReject = [...d.board.meetings].reverse().find((t) => verdict(t.result) === 'reject');
 if (lastReject && !lastReject.decision) addAlert('critical', L('dashboard.alert.boardReject', { kind: lastReject.kind, scope: lastReject.scope, critical: lastReject.critical || L('dashboard.criticalFinding') }), L('dashboard.act.askClaudeFix'));
 const limitLevel = level(limit);
@@ -129,9 +129,9 @@ for (const s of d.issues.slice(0, 5)) addAlert('warn', L('dashboard.alert.openIs
 for (const r of repeatedBugClasses(root)) addAlert('info', L('dashboard.alert.repeatedBug', { count: r.specs.length, cls: r.cls, specs: r.specs.join(', ') }), '/retro');
 if (git?.changed.length > 15) addAlert('info', L('dashboard.alert.uncommitted', { count: git.changed.length }), L('dashboard.act.commitOrWrapUp'));
 if (git?.progressStale >= 3) addAlert('info', L('dashboard.alert.progressStale', { count: git.progressStale }), '/wrap-up');
-const off = (a['Question mode'] ?? '').match(/kapalı konular:\s*(.+)$/i)?.[1];
-if (off && !/^yok$/i.test(off)) addAlert('info', L('dashboard.alert.closedTopics', { topics: off }), L('dashboard.act.askModeOpen'));
-if (d.installed && d.board.state === 'kurulmadı' && !/başlangıç/i.test(a['Active phase'] ?? '')) addAlert('info', L('dashboard.alert.boardNotSetUp'), '/board setup');
+const off = (a['Question mode'] ?? '').match(/(?:kapalı konular|closed topics):\s*(.+)$/i)?.[1];
+if (off && !isValue(off, 'none')) addAlert('info', L('dashboard.alert.closedTopics', { topics: off }), L('dashboard.act.askModeOpen'));
+if (d.installed && isValue(d.board.state, 'notSetUp') && !isValue(a['Active phase'], 'setup')) addAlert('info', L('dashboard.alert.boardNotSetUp'), '/board setup');
 if (github?.liveMonitoring?.length) addAlert('critical', L('dashboard.alert.liveMonitoring', { title: github.liveMonitoring[0].title }), L('dashboard.act.fixLive', { number: github.liveMonitoring[0].number }));
 else if (github?.liveRun?.conclusion === 'failure') addAlert('critical', L('dashboard.alert.liveRunFailed'), L('dashboard.act.fixLiveShort'));
 const lastMain = github?.runs?.find((c) => /^(main|master)$/.test(c.headBranch) && c.workflowName === 'CI');
@@ -151,8 +151,8 @@ if (fb.newCount) addAlert('info', L('dashboard.alert.newFeedback', { count: fb.n
 const enabledPackages = (() => { try { return packageStatus(root).filter((p) => p.enabled).map((p) => p.name); } catch { return []; } })();
 if (enabledPackages.length) addAlert('info', L('dashboard.alert.packagesOn', { names: enabledPackages.join(', ') }), L('dashboard.act.packagesOff'));
 const cmdMode = (() => { try { return commandMode(root).mode; } catch { return 'light'; } })();
-if (cmdMode !== 'full' && /^Tam\b/.test(a['Profile'] ?? '')) addAlert('info', L('dashboard.alert.cmdListLight'), L('dashboard.act.cmdFull'));
-else if (cmdMode !== 'light' && !/^Tam\b/.test(a['Profile'] ?? '')) addAlert('info', L('dashboard.alert.cmdListHeavy', { mode: cmdMode === 'full' ? L('dashboard.cmdModeFull') : L('dashboard.cmdModeMixed') }), L('dashboard.act.cmdLight'));
+if (cmdMode !== 'full' && isValue(a['Profile'], 'full')) addAlert('info', L('dashboard.alert.cmdListLight'), L('dashboard.act.cmdFull'));
+else if (cmdMode !== 'light' && !isValue(a['Profile'], 'full')) addAlert('info', L('dashboard.alert.cmdListHeavy', { mode: cmdMode === 'full' ? L('dashboard.cmdModeFull') : L('dashboard.cmdModeMixed') }), L('dashboard.act.cmdLight'));
 if (assets.codeMapDays > 30) addAlert('info', L('dashboard.alert.codeMapStale', { days: assets.codeMapDays }), L('dashboard.act.understand'));
 if (context?.percent >= 70 && Date.now() - context.readAt < 3600e3) addAlert('warn', L('dashboard.alert.contextFull', { percent: context.percent }), L('dashboard.act.wrapUpClear'));
 for (const r of Object.values(findings.latest)) if (r.critical > 0) addAlert('warn', L('dashboard.alert.findingsCritical', { kind: kindName(r.kind), critical: r.critical, health: r.health }), `docs/findings/${r.kind}/latest.md`);
@@ -175,13 +175,13 @@ const fixRatio = (kindCounts.feat ?? 0) + (kindCounts.fix ?? 0) ? Math.round(((k
 
 const feed = [
   ...(git?.commits ?? []).slice(0, 60).map((c) => ({ time: c.date, kind: 'commit', title: c.message, extra: c.hash })),
-  ...d.decisions.map((k) => ({ time: k.date, kind: 'karar', title: `${k.question} → ${k.chosen}`, extra: `${k.topic} · ${k.decidedBy}` })),
-  ...d.board.meetings.map((t) => ({ time: t.date, kind: 'kurul', title: `${t.kind}: ${t.scope} → ${t.result}`, extra: t.attendees })),
-  ...maintenance.map((b) => ({ time: b.date, kind: 'bakım', title: `${b.kind}: ${b.findings}`, extra: b.work })),
+  ...d.decisions.map((k) => ({ time: k.date, kind: 'decision', title: `${k.question} → ${k.chosen}`, extra: `${k.topic} · ${k.decidedBy}` })),
+  ...d.board.meetings.map((t) => ({ time: t.date, kind: 'board', title: `${t.kind}: ${t.scope} → ${t.result}`, extra: t.attendees })),
+  ...maintenance.map((b) => ({ time: b.date, kind: 'maintenance', title: `${b.kind}: ${b.findings}`, extra: b.work })),
 ].filter((x) => x.time && !Number.isNaN(toDate(x.time).getTime()))
   .sort((x, y) => toDate(y.time) - toDate(x.time)).slice(0, 50);
 
-const autoDecisions = d.decisions.filter((k) => /otomatik/i.test(k.decidedBy)).length;
+const autoDecisions = d.decisions.filter((k) => isValue(k.decidedBy, 'automatic')).length;
 const rejectCount = d.board.meetings.filter((t) => verdict(t.result) === 'reject').length;
 const mvpCriteria = mvp.reduce((t, o) => ({ done: t.done + o.done, total: t.total + o.total }), { done: 0, total: 0 });
 const avgCost = Object.entries(cost.reduce((m, r) => {
@@ -196,9 +196,9 @@ const percent = (b, t) => (t ? Math.round((b / t) * 100) : 0);
 const progressBar = (b, t, cls = '') => `<div class="bar ${cls}" role="img" aria-label="${b}/${t}"><span style="width:${percent(b, t)}%"></span></div>`;
 const empty = (text, action = '') => `<p class="empty">${md(text)}${action ? ` <code>${e(action)}</code>` : ''}</p>`;
 const SEV = { critical: ['⛔', 'dashboard.sevCritical'], warn: ['⚠', 'dashboard.sevWarn'], info: ['ℹ', 'dashboard.sevInfo'], good: ['✓', 'dashboard.sevGood'] };
-const FEED_KEYS = { commit: 'dashboard.feedCommit', karar: 'dashboard.feedDecision', kurul: 'dashboard.feedBoard', 'bakım': 'dashboard.feedMaintenance' };
+const FEED_KEYS = { commit: 'dashboard.feedCommit', decision: 'dashboard.feedDecision', board: 'dashboard.feedBoard', maintenance: 'dashboard.feedMaintenance' };
 const feedLabel = (k) => (Object.hasOwn(FEED_KEYS, k) ? L(FEED_KEYS[k]) : k);
-const onOff = (v) => (v === 'açık' ? L('dashboard.on') : v === 'kapalı' ? L('dashboard.off') : v);
+const onOff = (v) => (isValue(v, 'on') ? L('dashboard.on') : isValue(v, 'off') ? L('dashboard.off') : v);
 // A text for the page's own script: a single-quoted JS string, no tag can end the script block
 const jsStr = (key) => `'${L(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\u003c')}'`;
 const badge = (sev, caption) => `<span class="badge ${sev}"><span class="ic" aria-hidden="true">${SEV[sev][0]}</span> ${e(caption ?? L(SEV[sev][1]))}</span>`;
@@ -208,16 +208,16 @@ const TOPICS = ['urun', 'teknik', 'tasarim', 'icerik', 'veri', 'guvenlik', 'mali
 
 // The command to paste into Claude: "`/build G-013` …" or "/wrap-up ve /clear" → first command, without its <placeholder> or note
 const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/ ve | ile | and | to |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
-const copyBtn = (s) => { const c = cmdOf(s); return c ? ` <button class="kopyala" type="button" data-cmd="${e(c)}" aria-label="${e(L('dashboard.copyAria', { command: c }))}">${e(L('dashboard.copy'))}</button>` : ''; };
-const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${L(SEV[x.sev][1])}: </span>${md(x.text)}</span>${x.action ? `<span class="eylem">→ ${md(x.action)}${copyBtn(x.action)}</span>` : ''}</li>`;
+const copyBtn = (s) => { const c = cmdOf(s); return c ? ` <button class="copy-cmd" type="button" data-cmd="${e(c)}" aria-label="${e(L('dashboard.copyAria', { command: c }))}">${e(L('dashboard.copy'))}</button>` : ''; };
+const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${L(SEV[x.sev][1])}: </span>${md(x.text)}</span>${x.action ? `<span class="action">→ ${md(x.action)}${copyBtn(x.action)}</span>` : ''}</li>`;
 const kpi = (label, value, sub = '', bar = '') => `<div class="kpi"><div class="kpi-l">${e(label)}</div><div class="kpi-v">${value}</div>${bar}<div class="kpi-s">${sub}</div></div>`;
 
 // ---------- sections ----------
 // A pre-3.48 value says "Faz 1"; the roadmap headings are read as "Phase 1"
-const activePhase = (a['Active phase'] ?? '').replace(/^faz\b/i, 'Phase');
-const activeIndex = Math.max(0, [{ name: 'Başlangıç' }, ...d.phases].findIndex((f) => activePhase.toLowerCase().startsWith(f.name.toLowerCase().split(' ').slice(0, 2).join(' '))));
+const activePhase = (a['Active phase'] ?? '').replace(/^faz\b/i, 'Phase').replace(/^başlangıç(?![\p{L}\p{N}])/iu, 'Setup');
+const activeIndex = Math.max(0, [{ name: 'Setup' }, ...d.phases].findIndex((f) => activePhase.toLowerCase().startsWith(f.name.toLowerCase().split(' ').slice(0, 2).join(' '))));
 const start = (a['Setup step'] ?? '0/9').split('/').map(Number);
-const stageStrip = `<ol class="steps">${[{ name: 'Başlangıç', done: start[0] || 0, total: start[1] || 9 }, ...d.phases].map((f, i) =>
+const stageStrip = `<ol class="steps">${[{ name: 'Setup', done: start[0] || 0, total: start[1] || 9 }, ...d.phases].map((f, i) =>
   `<li class="step${i === activeIndex ? ' now' : ''}${f.total && f.done === f.total ? ' done' : ''}"><span class="step-n">${i === 0 ? e(L('dashboard.stageStartLetter')) : i - 1}</span><div class="step-b"><b>${e(i === 0 ? L('dashboard.stageStart') : f.name.replace(/\s*\(.*\)$/, ''))}</b>${progressBar(f.done, f.total)}<span class="muted num">${f.done}/${f.total}</span></div></li>`).join('')}</ol>`;
 
 const overview = `
@@ -229,24 +229,24 @@ const overview = `
 <section class="card"><h3>${L('dashboard.stages')}</h3>${stageStrip}</section>`;
 
 function feedRow(x) {
-  return `<li class="feed-i t-${x.kind.replace('ı', 'i')}"><span class="ft">${e(feedLabel(x.kind))}</span><div><div>${md(x.title)}</div><div class="muted small">${fmtDate(x.time)}${x.extra ? ' · ' + e(x.extra) : ''}</div></div></li>`;
+  return `<li class="feed-i t-${x.kind}"><span class="ft">${e(feedLabel(x.kind))}</span><div><div>${md(x.title)}</div><div class="muted small">${fmtDate(x.time)}${x.extra ? ' · ' + e(x.extra) : ''}</div></div></li>`;
 }
 
 const roadmapSection = d.phases.length ? d.phases.map((f) => `
-<details class="card faz" ${f.name.toLowerCase().startsWith((activePhase || '#').toLowerCase().split(' ').slice(0, 2).join(' ')) ? 'open' : ''}>
-  <summary><b>${e(f.name)}</b><span class="faz-bar">${progressBar(f.done, f.total)}<span class="num muted">${f.done}/${f.total}</span></span></summary>
+<details class="card phase" ${f.name.toLowerCase().startsWith((activePhase || '#').toLowerCase().split(' ').slice(0, 2).join(' ')) ? 'open' : ''}>
+  <summary><b>${e(f.name)}</b><span class="phase-bar">${progressBar(f.done, f.total)}<span class="num muted">${f.done}/${f.total}</span></span></summary>
   <ul class="tasks">${f.tasks.map((g) => `<li class="${g.done ? 'ok' : ''}${(a['Active task'] && g.text.startsWith(a['Active task'])) ? ' active' : ''}"><span class="chk" aria-hidden="true">${g.done ? '✓' : ''}</span><span>${md(g.text)}</span></li>`).join('')}</ul>
 </details>`).join('') : empty(L('dashboard.noRoadmap'));
 
 const decisionTable = d.decisions.length ? `
-<div class="filters" role="group" aria-label="${e(L('dashboard.topicFilter'))}"><button class="chip on" data-k="hepsi">${L('dashboard.all')} (${d.decisions.length})</button>${TOPICS.filter((k) => d.decisions.some((x) => x.topic === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.decisions.filter((x) => x.topic === k).length})</button>`).join('')}<button class="chip" data-k="otomatik">${L('dashboard.auto')} (${autoDecisions})</button><button class="chip" data-k="tek">${L('dashboard.oneWay')} (${d.decisions.filter((k) => /^tek/i.test(k.door)).length})</button></div>
-<div class="tw"><table id="kararlar"><thead><tr><th>#</th><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.stage')}</th><th>${L('dashboard.th.topic')}</th><th>${L('dashboard.th.question')}</th><th>${L('dashboard.th.chosen')}</th><th>${L('dashboard.th.door')}</th><th>${L('dashboard.th.decidedBy')}</th></tr></thead><tbody>
-${[...d.decisions].reverse().map((k) => `<tr data-k="${e(k.topic)}" data-v="${/otomatik/i.test(k.decidedBy) ? 'otomatik' : ''}" data-kapi="${/^tek/i.test(k.door) ? 'tek' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.date)}</td><td>${e(k.stage)}</td><td><span class="tag">${e(k.topic)}</span></td><td>${md(k.question)}</td><td><b>${md(k.chosen)}</b></td><td>${/^tek/i.test(k.door) ? badge('warn', L('dashboard.oneWay')) : k.door ? `<span class="muted small">${e(k.door)}</span>` : ''}</td><td>${/otomatik/i.test(k.decidedBy) ? badge('warn', L('dashboard.auto')) : badge('good', L('dashboard.user'))}</td></tr>`).join('')}
+<div class="filters" role="group" aria-label="${e(L('dashboard.topicFilter'))}"><button class="chip on" data-k="all">${L('dashboard.all')} (${d.decisions.length})</button>${TOPICS.filter((k) => d.decisions.some((x) => x.topic === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.decisions.filter((x) => x.topic === k).length})</button>`).join('')}<button class="chip" data-k="automatic">${L('dashboard.auto')} (${autoDecisions})</button><button class="chip" data-k="one-way">${L('dashboard.oneWay')} (${d.decisions.filter((k) => isValue(k.door, 'oneWay')).length})</button></div>
+<div class="tw"><table id="decision-table"><thead><tr><th>#</th><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.stage')}</th><th>${L('dashboard.th.topic')}</th><th>${L('dashboard.th.question')}</th><th>${L('dashboard.th.chosen')}</th><th>${L('dashboard.th.door')}</th><th>${L('dashboard.th.decidedBy')}</th></tr></thead><tbody>
+${[...d.decisions].reverse().map((k) => `<tr data-k="${e(k.topic)}" data-v="${isValue(k.decidedBy, 'automatic') ? 'automatic' : ''}" data-door="${isValue(k.door, 'oneWay') ? 'one-way' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.date)}</td><td>${e(k.stage)}</td><td><span class="tag">${e(k.topic)}</span></td><td>${md(k.question)}</td><td><b>${md(k.chosen)}</b></td><td>${isValue(k.door, 'oneWay') ? badge('warn', L('dashboard.oneWay')) : k.door ? `<span class="muted small">${e(k.door)}</span>` : ''}</td><td>${isValue(k.decidedBy, 'automatic') ? badge('warn', L('dashboard.auto')) : badge('good', L('dashboard.user'))}</td></tr>`).join('')}
 </tbody></table></div>` : empty(L('dashboard.noDecisions'));
 
 const boardSection = `
 <div class="grid2">
-  <section class="card"><h3>${L('dashboard.members')} · ${e(d.board.state === 'kuruldu' ? L('dashboard.boardSetUp') : d.board.state === 'kurulmadı' ? L('dashboard.notSetUp') : d.board.state)}</h3>${d.board.members.length ? `<ul class="members">${d.board.members.map((u) => `<li><b>${e(u.member)}</b><span class="muted small">${e(u.model)} · ${e(u.focus)}</span></li>`).join('')}</ul>` : empty(L('dashboard.boardNotSetUp'), '/board setup')}
+  <section class="card"><h3>${L('dashboard.members')} · ${e(isValue(d.board.state, 'setUp') ? L('dashboard.boardSetUp') : isValue(d.board.state, 'notSetUp') ? L('dashboard.notSetUp') : d.board.state)}</h3>${d.board.members.length ? `<ul class="members">${d.board.members.map((u) => `<li><b>${e(u.member)}</b><span class="muted small">${e(u.model)} · ${e(u.focus)}</span></li>`).join('')}</ul>` : empty(L('dashboard.boardNotSetUp'), '/board setup')}
     <p class="muted small">${L('dashboard.commitReview', { value: e(onOff(d.board.commitReview)) })}</p></section>
   <section class="card"><h3>${L('dashboard.summary')}</h3><div class="kpis mini">${kpi(L('dashboard.kpiMeetings'), d.board.meetings.length)}${kpi('RET', rejectCount, rejectCount ? badge('critical', L('dashboard.criticalFinding')) : '')}${kpi(L('dashboard.kpiApproval'), d.board.meetings.length ? `%${percent(d.board.meetings.filter((t) => verdict(t.result) === 'approve').length, d.board.meetings.length)}` : '-')}</div></section>
 </div>
@@ -273,7 +273,7 @@ ${qa ? `<section class="card"><h3>${L('dashboard.lastQa', { name: e(qa.name) })}
 <section class="card"><h3>${L('dashboard.acceptanceTests')}</h3>${acceptance.total ? `<div class="kpis mini">${kpi(L('dashboard.th.criterion'), acceptance.total)}${kpi(L('dashboard.kpiTested'), `${acceptance.tested}/${acceptance.total}`, '', progressBar(acceptance.tested, acceptance.total))}${kpi(L('dashboard.kpiPassing'), `${acceptance.passing}/${acceptance.total}`, acceptance.reportTime ? L('dashboard.reportTime', { when: new Date(acceptance.reportTime).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }) : L('dashboard.noJunit'), progressBar(acceptance.passing, acceptance.total, 'good'))}</div>` : empty(L('dashboard.noAcceptanceIds'))}</section>
 <section class="card"><h3>${L('dashboard.metricsMonthly')}</h3>${metricRecords.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.period')}</th><th>${L('dashboard.th.task')}</th><th>${L('dashboard.th.avgMinutes')}</th><th>${L('dashboard.th.avgLimit')}</th><th>${L('dashboard.th.fixes')}</th><th>${L('dashboard.th.reverts')}</th><th>${L('dashboard.th.duplicateCode')}</th><th>${L('dashboard.th.openCritical')}</th><th>${L('dashboard.th.acceptance')}</th></tr></thead><tbody>${[...metricRecords].reverse().slice(0, 8).map((m) => `<tr><td class="nw">${e(m.period)}</td><td class="num">${e(m.taskCount)}</td><td class="num">${e(m.duration)}</td><td class="num">${e(m.limit)}</td><td class="num">${e(m.fixes)}</td><td class="num">${e(m.reverts)}</td><td class="num">${e(m.duplicates)}</td><td class="num">${e(m.critical)}</td><td class="num">${e(m.acceptance)}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noMetrics'))}</section>
 <section class="card"><h3>${L('dashboard.criticalFlowTests')}</h3>${criticalFlows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.flow')}</th><th>${L('dashboard.th.testKind')}</th><th>${L('dashboard.th.file')}</th><th>${L('dashboard.status')}</th></tr></thead><tbody>${criticalFlows.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(k.feed)}</td><td>${e(k.kind)}</td><td>${md(k.fileName)}</td><td>${/✅|yeşil|var/i.test(k.state) ? badge('good', L('dashboard.present')) : badge('warn', L('dashboard.missing'))}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noTestPlan'))}</section>
-<section class="card"><h3>${L('dashboard.maintenanceLog')}</h3>${maintenance.length ? `<ul class="feed compact">${[...maintenance].reverse().slice(0, 8).map((b) => feedRow({ time: b.date, kind: 'bakım', title: `${b.kind}: ${b.findings}`, extra: b.work })).join('')}</ul>` : empty(L('dashboard.noMaintenance'), '/maintain weekly')}
+<section class="card"><h3>${L('dashboard.maintenanceLog')}</h3>${maintenance.length ? `<ul class="feed compact">${[...maintenance].reverse().slice(0, 8).map((b) => feedRow({ time: b.date, kind: 'maintenance', title: `${b.kind}: ${b.findings}`, extra: b.work })).join('')}</ul>` : empty(L('dashboard.noMaintenance'), '/maintain weekly')}
 ${lastRetro ? `<p class="muted small">${L('dashboard.lastRetro', { value: e(lastRetro) })}</p>` : ''}</section>`;
 
 const maxDay = Math.max(1, ...Object.values(dayCounts));
@@ -281,7 +281,7 @@ const activity = `
 <section class="card"><h3>${L('dashboard.commitsLast14')} <span class="muted small">${L('dashboard.totalParen', { total: days.reduce((t, g) => t + dayCounts[g], 0) })}</span></h3>
   <div class="spark" role="img" aria-label="${e(L('dashboard.sparkAria'))}">${days.map((g) => `<div class="sb" data-tip="${e(L('dashboard.commitTip', { date: toDate(g).toLocaleDateString(loc, { day: 'numeric', month: 'short', weekday: 'short' }), count: dayCounts[g] }))}"><span style="height:${dayCounts[g] ? Math.max(6, (dayCounts[g] / maxDay) * 100) : 0}%"></span></div>`).join('')}</div>
   <div class="spark-x muted small"><span>${toDate(days[0]).toLocaleDateString(loc, { day: 'numeric', month: 'short' })}</span><span>${L('dashboard.today')}</span></div>
-  <details class="tablo-gor"><summary class="muted small">${L('dashboard.showTable')}</summary><div class="tw"><table><thead><tr><th>${L('dashboard.th.day')}</th><th>${L('dashboard.th.commit')}</th></tr></thead><tbody>${days.map((g) => `<tr><td class="num">${g}</td><td class="num">${dayCounts[g]}</td></tr>`).join('')}</tbody></table></div></details>
+  <details class="table-view"><summary class="muted small">${L('dashboard.showTable')}</summary><div class="tw"><table><thead><tr><th>${L('dashboard.th.day')}</th><th>${L('dashboard.th.commit')}</th></tr></thead><tbody>${days.map((g) => `<tr><td class="num">${g}</td><td class="num">${dayCounts[g]}</td></tr>`).join('')}</tbody></table></div></details>
 </section>
 <section class="card"><h3>${L('dashboard.feed')}</h3>${feed.length ? `<ul class="feed">${feed.map(feedRow).join('')}</ul>` : empty(L('dashboard.noActivity'))}</section>`;
 
@@ -289,7 +289,7 @@ const product = `
 <div class="grid2">
   <section class="card"><h3>${L('dashboard.product')}</h3>
     <h4>${L('dashboard.problem')}</h4>${firstSentence(findSection(prd, '1. Problem')) ? `<p>${md(firstSentence(findSection(prd, '1. Problem')))}</p>` : empty(L('dashboard.noPrd'), '/start')}
-    <h4>${L('dashboard.valueProp')}</h4>${firstSentence(findSection(prd, '3. Değer')) ? `<p>${md(firstSentence(findSection(prd, '3. Değer')))}</p>` : empty('-')}
+    <h4>${L('dashboard.valueProp')}</h4>${firstSentence(findSection(prd, '3. Value')) ? `<p>${md(firstSentence(findSection(prd, '3. Value')))}</p>` : empty('-')}
     ${outOfScope.length ? `<h4>${L('dashboard.outOfScope')}</h4><ul>${outOfScope.map((k) => `<li>${md(k)}</li>`).join('')}</ul>` : ''}</section>
   <section class="card"><h3>${L('dashboard.mvpFeatures')}</h3>${mvp.length ? `<div class="rows">${mvp.map((o) => `<div class="row"><span>${md(o.title)} ${o.priority ? `<span class="tag">${e(o.priority)}</span>` : ''}</span>${progressBar(o.done, o.total)}<span class="num muted">${o.done}/${o.total}</span></div>`).join('')}</div>` : empty(L('dashboard.noMvp'))}
   ${acceptance.total ? `<h4>${L('dashboard.criteriaResults')}</h4><div class="tw"><table><thead><tr><th>${L('dashboard.th.criterion')}</th><th>PRD</th><th>${L('dashboard.th.test')}</th></tr></thead><tbody>${acceptance.list.map((k) => `<tr><td><code>${e(k.id)}</code> ${md(k.text)}</td><td>${k.checked ? '✓' : ''}</td><td>${k.result === 'passed' ? badge('good', L('dashboard.passedBadge')) : k.result === 'failed' ? badge('critical', L('dashboard.failedBadge')) : k.test ? badge('info', L('dashboard.noResult')) : badge('warn', L('dashboard.noTest'))}</td></tr>`).join('')}</tbody></table></div>` : ''}</section>
@@ -301,7 +301,7 @@ const product = `
 </div>
 <div class="grid2">
   <section class="card"><h3>${L('dashboard.unitEconomics')}</h3>${economics ? `<div class="kpis mini">${kpi(L('dashboard.kpiMargin'), `${economics.margin.toFixed(1)} ${e(economics.currency)}`, L('dashboard.perPayingUserMonth'))}${kpi(L('dashboard.kpiBreakEven'), economics.breakEven ?? '—', economics.breakEven ? L('dashboard.payingUsers') : L('dashboard.negativeMargin'))}${kpi(L('dashboard.atTarget', { target: economics.target }), `${economics.profit >= 0 ? '+' : ''}${Math.round(economics.profit)} ${e(economics.currency)}`, L('dashboard.monthlyProfitLoss'))}${economics.variableRatio != null ? kpi(L('dashboard.variableOverPrice'), `%${Math.round(economics.variableRatio)}`, economics.variableRatio > 30 ? badge('warn', L('dashboard.over30')) : '') : ''}</div>` : empty(L('dashboard.noInputs'), 'docs/product/unit-economics.md')}</section>
-  <section class="card"><h3>${L('dashboard.userFeedback')}</h3>${fb.records.length ? `<div class="kpis mini">${kpi(L('dashboard.kpiTotal'), fb.records.length)}${kpi(L('dashboard.kpiNew'), fb.newCount)}${kpi(L('dashboard.kpiPlanned'), fb.records.filter((k) => /planland/i.test(k.state)).length)}</div>${fb.themes.length ? `<h4>${L('dashboard.topThemes')}</h4><div class="rows">${fb.themes.slice(0, 5).map((t) => `<div class="row"><span>${md(t.theme)}</span>${progressBar(t.count, fb.themes[0].count)}<span class="num muted">${t.count}</span></div>`).join('')}</div>` : ''}` : empty(L('dashboard.noFeedback'), '/user-feedback')}</section>
+  <section class="card"><h3>${L('dashboard.userFeedback')}</h3>${fb.records.length ? `<div class="kpis mini">${kpi(L('dashboard.kpiTotal'), fb.records.length)}${kpi(L('dashboard.kpiNew'), fb.newCount)}${kpi(L('dashboard.kpiPlanned'), fb.records.filter((k) => k.state === 'planned').length)}</div>${fb.themes.length ? `<h4>${L('dashboard.topThemes')}</h4><div class="rows">${fb.themes.slice(0, 5).map((t) => `<div class="row"><span>${md(t.theme)}</span>${progressBar(t.count, fb.themes[0].count)}<span class="num muted">${t.count}</span></div>`).join('')}</div>` : ''}` : empty(L('dashboard.noFeedback'), '/user-feedback')}</section>
 </div>
 ${learnt ? `<section class="card"><h3>${L('dashboard.learning')}</h3><div class="kpis mini">${kpi(L('dashboard.kpiRight'), learnt.right)}${kpi(L('dashboard.kpiWrong'), learnt.wrong)}${kpi(L('dashboard.kpiSuccess'), `%${percent(learnt.right, learnt.right + learnt.wrong)}`)}</div>${learnt.missed.length ? `<h4>${L('dashboard.oftenMissed')}</h4><div class="rows">${learnt.missed.slice(0, 5).map((m) => `<div class="row"><span>${md(m.concept)}</span>${progressBar(m.count, learnt.missed[0].count)}<span class="num muted">${m.count}</span></div>`).join('')}</div>` : ''}</section>` : ''}
 <div class="grid2">
@@ -357,9 +357,9 @@ const findingsSection = `
 <p class="muted small">${L('dashboard.scoringNote')}</p></section>`;
 
 const TABS = [
-  ['genel', L('dashboard.tabOverview'), overview], ['yol', L('dashboard.tabRoadmap'), roadmapSection], ['kararlar', L('dashboard.tabDecisions'), decisionTable],
-  ['kurul', L('dashboard.board'), boardSection], ['bulgular', L('dashboard.tabFindings'), findingsSection], ['kalite', L('dashboard.tabQuality'), quality], ['aktivite', L('dashboard.tabActivity'), activity],
-  ['urun', L('dashboard.tabProduct'), product], ['operasyon', L('dashboard.tabOperations'), operations], ['limit', L('dashboard.tabLimit'), limitSection],
+  ['overview', L('dashboard.tabOverview'), overview], ['roadmap', L('dashboard.tabRoadmap'), roadmapSection], ['decisions', L('dashboard.tabDecisions'), decisionTable],
+  ['board', L('dashboard.board'), boardSection], ['findings', L('dashboard.tabFindings'), findingsSection], ['quality', L('dashboard.tabQuality'), quality], ['activity', L('dashboard.tabActivity'), activity],
+  ['product', L('dashboard.tabProduct'), product], ['operations', L('dashboard.tabOperations'), operations], ['limit', L('dashboard.tabLimit'), limitSection],
 ];
 
 const next = d.next[0] ?? (d.kitPending ? L('dashboard.startIdeaCode') : '-');
@@ -391,16 +391,16 @@ code{font:.86em var(--mono);background:var(--sunk);padding:.08em .38em;border-ra
 .now-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 16px}
 .next{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--accent-soft)}
 .next .now-l{color:var(--accent)}
-.kopyala{font:600 .72rem/1 var(--sans);padding:4px 8px;margin-left:6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;vertical-align:1px}
-.kopyala:hover{border-color:var(--accent);color:var(--accent)}
+.copy-cmd{font:600 .72rem/1 var(--sans);padding:4px 8px;margin-left:6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;vertical-align:1px}
+.copy-cmd:hover{border-color:var(--accent);color:var(--accent)}
 .att{list-style:none;padding:0;gap:8px}.att li{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;padding:8px 10px;border-radius:8px;background:var(--sunk)}
-.att li.critical{background:var(--crit-bg)}.att li.warn{background:var(--warn-bg)}.att .eylem{grid-column:2;font-size:.8rem;color:var(--muted)}
+.att li.critical{background:var(--crit-bg)}.att li.warn{background:var(--warn-bg)}.att .action{grid-column:2;font-size:.8rem;color:var(--muted)}
 .badge{display:inline-flex;gap:4px;align-items:center;font:600 .74rem/1 var(--sans);padding:4px 8px;border-radius:999px;white-space:nowrap}
 .badge.good{background:var(--good-bg);color:var(--fg)}.badge.warn{background:var(--warn-bg);color:var(--fg)}.badge.critical{background:var(--crit-bg);color:var(--fg)}.badge.info{background:var(--info-bg);color:var(--fg)}
 .ic{font-weight:700}.good .ic{color:var(--good)}.warn .ic{color:#b07800}.critical .ic{color:var(--crit)}.info .ic{color:var(--muted)}
 @media (prefers-color-scheme:dark){.warn .ic{color:var(--warn)}}
 .health{font-size:.85rem;padding:6px 12px}
-.daha{margin-top:8px}.daha summary{cursor:pointer;font-size:.84rem;color:var(--accent);font-weight:600;padding:4px 0}.daha .att{margin-top:8px}
+.more{margin-top:8px}.more summary{cursor:pointer;font-size:.84rem;color:var(--accent);font-weight:600;padding:4px 0}.more .att{margin-top:8px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.kpis.mini{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin-bottom:12px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:4px;align-content:start;min-width:0}
 .kpis.mini .kpi{background:var(--sunk);border:0}
@@ -421,8 +421,8 @@ code{font:.86em var(--mono);background:var(--sunk);padding:.08em .38em;border-ra
 .step.now .step-n{background:var(--accent);color:var(--surface);border-color:var(--accent)}.step.done .step-n{background:var(--good);color:#fff;border-color:var(--good)}
 .step-b{display:grid;gap:5px;min-width:0}.step-b b{font-size:.86rem}
 .rows{display:grid;gap:10px}.row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(60px,1fr) auto;gap:10px;align-items:center}
-details.faz summary{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;cursor:pointer;list-style:none}
-details.faz summary::-webkit-details-marker{display:none}.faz-bar{display:flex;gap:8px;align-items:center;min-width:200px}.faz-bar .bar{flex:1}
+details.phase summary{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;cursor:pointer;list-style:none}
+details.phase summary::-webkit-details-marker{display:none}.phase-bar{display:flex;gap:8px;align-items:center;min-width:200px}.phase-bar .bar{flex:1}
 .tasks{list-style:none;padding:0;margin-top:12px;gap:2px}.tasks li{display:grid;grid-template-columns:20px 1fr;gap:8px;padding:6px 8px;border-radius:6px}
 .tasks li.ok{color:var(--muted)}.tasks li.active{background:var(--accent-soft)}
 .chk{width:16px;height:16px;border:1.5px solid var(--line);border-radius:4px;display:grid;place-items:center;font-size:.7rem;margin-top:2px}
@@ -436,7 +436,7 @@ th{font:600 .7rem/1.2 var(--mono);text-transform:uppercase;letter-spacing:.06em;
 .chip.on{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 .feed{list-style:none;padding:0;gap:0}.feed-i{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.feed-i:last-child{border-bottom:0}
 .ft{font:600 .68rem/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;padding:4px 6px;border-radius:5px;background:var(--sunk);text-align:center;align-self:start}
-.t-karar .ft{background:var(--accent-soft);color:var(--accent)}.t-kurul .ft{background:var(--warn-bg)}.t-bakim .ft{background:var(--good-bg)}
+.t-decision .ft{background:var(--accent-soft);color:var(--accent)}.t-board .ft{background:var(--warn-bg)}.t-maintenance .ft{background:var(--good-bg)}
 .members{list-style:none;padding:0;gap:8px}.members li{display:grid;gap:2px;padding:8px 10px;border-radius:8px;background:var(--sunk)}
 .dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}.dl dt{color:var(--muted);font-size:.84rem}.dl dd{margin:0}
 .links a{margin-right:8px}
@@ -444,7 +444,7 @@ th{font:600 .7rem/1.2 var(--mono);text-transform:uppercase;letter-spacing:.06em;
 .sb{height:100%;display:flex;align-items:flex-end;cursor:default;position:relative}.sb span{display:block;width:100%;background:var(--accent);border-radius:4px 4px 0 0}
 .sb:hover span{filter:brightness(1.15)}.spark-x{display:flex;justify-content:space-between;margin-top:4px}
 #tip{position:fixed;pointer-events:none;background:var(--fg);color:var(--bg);font-size:.78rem;padding:5px 8px;border-radius:6px;opacity:0;transition:opacity .1s;z-index:10}
-.tablo-gor{margin-top:10px}.empty{color:var(--muted);font-size:.88rem}
+.table-view{margin-top:10px}.empty{color:var(--muted);font-size:.88rem}
 .lim{display:grid;gap:8px;padding:12px;border-radius:10px;background:var(--sunk)}.lim-h{display:flex;justify-content:space-between;align-items:center}
 footer{color:var(--muted);font-size:.78rem;padding-top:8px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
@@ -456,27 +456,27 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
     ${badge(health, health === 'good' ? L('dashboard.sevGood') : health === 'warn' ? L('dashboard.healthWarn') : L('dashboard.healthCritical')).replace('class="badge', 'class="badge health')}
     ${d.kit?.type ? `<span class="pill">${e(d.kit.type)}${d.kit.addons?.length ? ' + ' + e(d.kit.addons.join(', ')) : ''}</span><span class="pill">${e(L('dashboard.kitVersion', { version: d.kit.version }))}</span>${d.kit.tool?.some((t) => t !== 'claude') ? `<span class="pill">${e(d.kit.tool.join(' + '))}</span>` : ''}` : `<span class="pill">${e(L('dashboard.kitNotInstalled'))}</span>`}
     ${git?.branch ? `<span class="pill">⎇ ${e(git.branch)}</span>` : ''}
-    <label class="refresh"><input type="checkbox" id="oto" checked> ${e(L('dashboard.autoRefresh'))}</label>
+    <label class="refresh"><input type="checkbox" id="auto-refresh" checked> ${e(L('dashboard.autoRefresh'))}</label>
   </div>
 </header>
 
 <div class="hero">
-  <section class="card" aria-labelledby="simdi">
-    <div class="now-l" id="simdi">${L('dashboard.now')}</div>
+  <section class="card" aria-labelledby="now">
+    <div class="now-l" id="now">${L('dashboard.now')}</div>
     <div class="now-v">${e(a['Active phase'] ?? '-')} · ${md(a['Active task'] ?? '-')}</div>
     <div class="now-grid">
       <div><div class="now-l">${L('dashboard.questionMode')}</div><div>${e(a['Question mode'] ?? '-')}</div></div>
       <div><div class="now-l">${L('dashboard.profile')}</div><div>${e(a['Profile'] ?? '-')}</div></div>
       <div><div class="now-l">${L('dashboard.lastUpdate')}</div><div class="num">${e(a['Last updated'] ?? '-')}</div></div>
-      ${/başlangıç/i.test(a['Active phase'] ?? '') ? `<div><div class="now-l">${L('dashboard.startStep')}</div><div class="num">${e(a['Setup step'] ?? '-')}</div></div>` : ''}
+      ${isValue(a['Active phase'], 'setup') ? `<div><div class="now-l">${L('dashboard.startStep')}</div><div class="num">${e(a['Setup step'] ?? '-')}</div></div>` : ''}
     </div>
     <div class="next"><div class="now-l">${L('dashboard.nextStep')}</div><div>${md(next)}${copyBtn(next)}</div>${cmdOf(next) ? `<div class="muted small">${e(L('dashboard.pasteHint'))}</div>` : ''}</div>
     ${d.state ? `<div class="now-l" style="margin-top:14px">${L('dashboard.status')}</div><p style="margin-top:4px">${md(d.state)}</p>` : ''}
     ${d.lastSession.length ? `<div class="now-l" style="margin-top:10px">${L('dashboard.lastSession')}</div><ul style="margin-top:4px">${d.lastSession.slice(0, 4).map((x) => `<li>${md(x)}</li>`).join('')}</ul>` : ''}
   </section>
-  <section class="card" aria-labelledby="dikkat">
-    <h3 id="dikkat">${L('dashboard.attention')} <span class="muted small">(${alerts.length})</span></h3>
-    ${alerts.length ? `<ul class="att">${alerts.slice(0, 6).map(alertRow).join('')}</ul>${alerts.length > 6 ? `<details class="daha"><summary>${L('dashboard.moreItems', { count: alerts.length - 6 })}</summary><ul class="att">${alerts.slice(6).map(alertRow).join('')}</ul></details>` : ''}` : `<p>${badge('good', L('dashboard.allGood'))} ${L('dashboard.allGoodText')}</p>`}
+  <section class="card" aria-labelledby="attention">
+    <h3 id="attention">${L('dashboard.attention')} <span class="muted small">(${alerts.length})</span></h3>
+    ${alerts.length ? `<ul class="att">${alerts.slice(0, 6).map(alertRow).join('')}</ul>${alerts.length > 6 ? `<details class="more"><summary>${L('dashboard.moreItems', { count: alerts.length - 6 })}</summary><ul class="att">${alerts.slice(6).map(alertRow).join('')}</ul></details>` : ''}` : `<p>${badge('good', L('dashboard.allGood'))} ${L('dashboard.allGoodText')}</p>`}
   </section>
 </div>
 
@@ -524,14 +524,14 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
     c.addEventListener('click', function () {
       document.querySelectorAll('.filters .chip').forEach(function (x) { x.classList.toggle('on', x === c); });
       var k = c.dataset.k;
-      document.querySelectorAll('#kararlar tbody tr').forEach(function (r) {
-        r.hidden = !(k === 'hepsi' || r.dataset.k === k || (k === 'otomatik' && r.dataset.v === 'otomatik') || (k === 'tek' && r.dataset.kapi === 'tek'));
+      document.querySelectorAll('#decision-table tbody tr').forEach(function (r) {
+        r.hidden = !(k === 'all' || r.dataset.k === k || (k === 'automatic' && r.dataset.v === 'automatic') || (k === 'one-way' && r.dataset.door === 'one-way'));
       });
     });
   });
 
   // file:// may refuse the clipboard API: fall back to a selected textarea
-  document.querySelectorAll('.kopyala').forEach(function (b) {
+  document.querySelectorAll('.copy-cmd').forEach(function (b) {
     b.addEventListener('click', function () {
       var c = b.dataset.cmd;
       function done(ok) { b.textContent = ok ? ${jsStr('dashboard.copied')} : ${jsStr('dashboard.copyFailed')}; setTimeout(function () { b.textContent = ${jsStr('dashboard.copy')}; }, 1500); }
@@ -546,7 +546,7 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
     el.addEventListener('mouseleave', function () { tip.style.opacity = 0; });
   });
 
-  var auto = document.getElementById('oto'), timer;
+  var auto = document.getElementById('auto-refresh'), timer;
   try { auto.checked = localStorage.getItem('durum-oto') !== '0'; } catch (er) {}
   function schedule() { clearTimeout(timer); if (auto.checked) timer = setTimeout(function () { location.reload(); }, 30000); }
   auto.addEventListener('change', function () { try { localStorage.setItem('durum-oto', auto.checked ? '1' : '0'); } catch (er) {} schedule(); });

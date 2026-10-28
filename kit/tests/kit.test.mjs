@@ -261,7 +261,7 @@ test('session start: the next command is shown to the user (after /clear)', () =
 
   const handoff = path.join(p, 'docs/workflow/handoff.md');
   write(handoff, '# Devir notu\n\n**Durum:** bekliyor\n**Devreden:** a\n');
-  assert.match(oturum(p).systemMessage, /Devir notu var: \/handoff devral/);
+  assert.match(oturum(p).systemMessage, /Devir notu var: \/handoff take/);
   const r = node(path.join(p, '.claude/hooks/dashboard.mjs'), p);
   assert.equal(r.status, 0, r.stderr);
   assert.ok(read(path.join(p, 'dashboard.html')).includes('Devir notu bekliyor'), 'the dashboard shows the handoff note in the alert list');

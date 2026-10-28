@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readText, sections, tableRows, labels } from './status-read.mjs';
-import { normalize } from './labels.mjs';
+import { normalize, isValue, VALUES } from './labels.mjs';
 import { t } from './lang.mjs';
 
 const DAY = 864e5;
@@ -82,8 +82,8 @@ export function junitResults(xmlTexts) {
 export function qaSummary(text) {
   const rows = tableRows(text, 4).map(([criterion, result, evidence, note]) => ({ criterion, result, evidence, note }));
   if (!rows.length) return null;
-  const count = (r) => rows.filter((x) => x.result === r).length;
-  return { passed: count('geçti'), failed: count('kaldı'), notRun: count('koşulmadı'), failures: rows.filter((x) => x.result === 'kaldı') };
+  const count = (k) => rows.filter((x) => isValue(x.result, k)).length;
+  return { passed: count('passed'), failed: count('failed'), notRun: count('notRun'), failures: rows.filter((x) => isValue(x.result, 'failed')) };
 }
 
 function junitFiles(root) {
@@ -136,9 +136,11 @@ export function specInvariants(root, since = 0) {
 }
 
 // Bug classes seen in two or more bug specs (F-21): a repeat is the cue to propose a rule. Only the fixed list counts
-// ("diğer" and free text never do). A group closes once every spec has a "**Kural:**" answer (rule added or not needed);
+// ("diğer"/"other" and free text never do). A group closes once every spec has a "**Rule:**" answer (rule added or not needed);
 // a new undecided spec in a decided class opens it again (the rule did not prevent the bug).
-export const BUG_CLASSES = ['boş-girdi', 'doğrulama', 'yetki', 'tarih-saat', 'yerel-dil', 'sıralama', 'eşzamanlılık', 'yapılandırma', 'dış-servis', 'sözleşme', 'arayüz-durumu'];
+export const BUG_CLASSES = ['empty-input', 'validation', 'authorization', 'date-time', 'locale', 'sorting', 'concurrency', 'configuration', 'external-service', 'contract', 'ui-state'];
+// Pre-3.48 specs name the class in Turkish, in the same order; both count as one class under the English name
+const BUG_CLASSES_TR = ['boş-girdi', 'doğrulama', 'yetki', 'tarih-saat', 'yerel-dil', 'sıralama', 'eşzamanlılık', 'yapılandırma', 'dış-servis', 'sözleşme', 'arayüz-durumu'];
 export function repeatedBugClasses(root) {
   const dir = path.join(root, 'docs/product/specs');
   let files = [];
@@ -146,12 +148,13 @@ export function repeatedBugClasses(root) {
   const byClass = new Map();
   for (const f of files) {
     const text = readText(path.join(dir, f));
-    if (!/^\*\*Type:\*\*[ \t]*hata\b/im.test(text)) continue;
+    if (!isValue(text.match(/^\*\*Type:\*\*[ \t]*(.*)$/im)?.[1], 'bug')) continue;
     const raw = text.match(/^\*\*Class:\*\*[ \t]*`?([^\s`,.[\]]+)/im)?.[1] ?? '';
     // YETKI and YETKİ both mean yetki: try the Turkish and the plain lowercase
-    const cls = [raw.toLocaleLowerCase('tr'), raw.toLowerCase()].find((c) => BUG_CLASSES.includes(c));
+    const cls = [raw.toLocaleLowerCase('tr'), raw.toLowerCase()]
+      .map((c) => (BUG_CLASSES.includes(c) ? c : BUG_CLASSES[BUG_CLASSES_TR.indexOf(c)])).find(Boolean);
     if (!cls) continue;
-    const decided = /^\*\*Kural:\*\*[ \t]*[^\s[]/im.test(text);
+    const decided = /^\*\*Rule:\*\*[ \t]*[^\s[]/im.test(text);
     byClass.set(cls, [...(byClass.get(cls) ?? []), { f, decided }]);
   }
   return [...byClass].filter(([, list]) => list.length > 1 && list.some((s) => !s.decided)).map(([cls, list]) => ({ cls, specs: list.map((s) => s.f) }));
@@ -159,12 +162,12 @@ export function repeatedBugClasses(root) {
 
 // ---------- accounts and flags ----------
 export function accounts(text, now = Date.now()) {
-  return tableRows(sections(text)['Hesaplar'], 8)
+  return tableRows(sections(normalize(text))['Accounts'], 8)
     .filter(([service]) => service && !service.startsWith('['))
     .map(([service, purpose, owner, twoFactor, plan, expiry, keyRotation]) => {
-      const dates = [['bitiş', expiry], ['anahtar yenileme', keyRotation]].filter(([, t]) => isDate(t))
+      const dates = [['expiry', expiry], ['keyRotation', keyRotation]].filter(([, t]) => isDate(t))
         .map(([kind, t]) => ({ kind, date: t, left: daysLeft(t, now) }));
-      return { service, purpose, owner, twoFactor, plan, dates, noTwoFactor: /^(hayır|yok|no)$/i.test(twoFactor) };
+      return { service, purpose, owner, twoFactor, plan, dates, noTwoFactor: isValue(twoFactor, 'no') || isValue(twoFactor, 'none') };
     });
 }
 
@@ -188,7 +191,7 @@ export function flags(text, now = Date.now()) {
     .map(([name, purpose, state, owner, added, removal, killSwitchTested]) => ({
       name, purpose, state, owner, added, removal, killSwitchTested,
       isOverdue: isDate(removal) && daysLeft(removal, now) < 0,
-      untested: !/^(evet|✅|var|yes\b)/i.test(killSwitchTested ?? ''),
+      untested: !(isValue(killSwitchTested, 'yes') || /^(✅|var\b)/i.test(killSwitchTested ?? '')),
     }));
 }
 
@@ -220,19 +223,24 @@ export function unitEconomics(text) {
 }
 
 // ---------- feedback and metrics ----------
+const FEEDBACK_KINDS = ['bug', 'request', 'complaint', 'praise', 'question'];
+const FEEDBACK_STATES = ['new', 'planned', 'done', 'rejected', 'merged'];
+// A known value in either language becomes the English one; anything else stays as written
+const inEnglish = (v, keys) => VALUES[keys.find((k) => isValue(v, k))]?.en ?? v;
 export function feedback(text) {
-  const b = sections(text);
-  const records = tableRows(b['Gelen kutusu'], 9).map(([no, date, source, user, summary, kind, theme, priority, state]) => ({ no, date, summary, kind, theme, priority, state }));
-  const themes = tableRows(b['Temalar'], 3).map(([theme, count, feature, decision]) => ({ theme, count: parseInt(count, 10) || 0, feature, decision }))
+  const b = sections(normalize(text));
+  const records = tableRows(b['Inbox'], 9).map(([no, date, source, user, summary, kind, theme, priority, state]) =>
+    ({ no, date, summary, kind: inEnglish(kind, FEEDBACK_KINDS), theme, priority, state: inEnglish(state, FEEDBACK_STATES) }));
+  const themes = tableRows(b['Themes'], 3).map(([theme, count, feature, decision]) => ({ theme, count: parseInt(count, 10) || 0, feature, decision }))
     .sort((x, y) => y.count - x.count);
-  return { records, themes, newCount: records.filter((k) => /yeni/i.test(k.state)).length };
+  return { records, themes, newCount: records.filter((k) => k.state === 'new').length };
 }
 
 // Comprehension check answers (F-22, narrator mode); null without rows so the card is left out
 export function learning(text) {
-  // Only "doğru" / "yanlış" rows count; a skipped or malformed answer is not a wrong one
-  const rows = tableRows(sections(normalize(text))['Records'], 4).filter(([, , , result]) => /^(doğru|yanlış)/i.test(result))
-    .map(([date, task, concept, result]) => ({ concept, right: /^doğru/i.test(result) }));
+  // Only right / wrong rows count; a skipped or malformed answer is not a wrong one
+  const rows = tableRows(sections(normalize(text))['Records'], 4).filter(([, , , result]) => isValue(result, 'right') || isValue(result, 'wrong'))
+    .map(([date, task, concept, result]) => ({ concept, right: isValue(result, 'right') }));
   if (!rows.length) return null;
   const missed = new Map();
   for (const r of rows) if (!r.right) missed.set(r.concept, (missed.get(r.concept) ?? 0) + 1);
@@ -246,12 +254,19 @@ export function metrics(text) {
 }
 
 // ---------- finding reports ----------
-export const FINDING_KINDS = { tech: 'Teknik', business: 'İş', security: 'Güvenlik', ux: 'UX', perf: 'Performans', legal: 'Hukuk' };
+export const FINDING_KINDS = { tech: 'Tech', business: 'Business', security: 'Security', ux: 'UX', perf: 'Performance', legal: 'Legal' };
+// Pre-3.48 report tables name the area in Turkish
+const FINDING_KINDS_TR = { tech: 'Teknik', business: 'İş', security: 'Güvenlik', ux: 'UX', perf: 'Performans', legal: 'Hukuk' };
+const findingKind = (v) => {
+  const low = [v.toLocaleLowerCase('tr'), v.toLowerCase()];
+  const named = Object.keys(FINDING_KINDS).find((k) => [k, FINDING_KINDS[k], FINDING_KINDS_TR[k]].some((n) => low.includes(n.toLocaleLowerCase('tr')) || low.includes(n.toLowerCase())));
+  return named ?? low[1];
+};
 export function findingReports(text) {
   const count = (x) => { const n = parseInt(String(x ?? '').trim().replace(/^[^\d-]+/, ''), 10); return Number.isFinite(n) ? n : null; };
-  const rows = tableRows(sections(text)['Raporlar'], 7)
+  const rows = tableRows(sections(normalize(text))['Reports'], 7)
     .map(([date, kind, health, previous, findings, critical, report]) => ({
-      date, kind: kind.toLowerCase(), health: count(health), previous: count(previous), findings: count(findings), critical: count(critical) ?? 0, report,
+      date, kind: findingKind(kind), health: count(health), previous: count(previous), findings: count(findings), critical: count(critical) ?? 0, report,
     }))
     .filter((r) => r.date && r.health != null);
   const latest = {};
@@ -284,7 +299,7 @@ export function producedAssets(root) {
 
 // ---------- Spend alarms (docs/operations/spend-alarms.md) ----------
 export function spendAlarms(text, now = Date.now()) {
-  return tableRows(sections(text)['Alarmlar'], 6).filter(([service]) => service)
+  return tableRows(sections(normalize(text))['Alarms'], 6).filter(([service]) => service)
     .map(([service, kind, amount, thresholds, where, lastCheck]) => ({
       service, kind, amount, thresholds, where, lastCheck,
       unset: !/\d/.test(amount ?? ''),

@@ -25,22 +25,22 @@ test('Ö-21.1 the second bug of the same class raises a proposal; "diğer", free
     for (const [f, cls] of [['a', 'diğer'], ['b', 'DİĞER'], ['c', ''], ['d', ''], ['e', 'saat sorunu'], ['f', 'saat sorunu']]) write(`docs/product/specs/${f}.md`, spec('hata', cls));
     write('docs/product/specs/g.md', spec('hata', '`YETKI`'));
     write('docs/product/specs/h.md', spec('hata', 'yetki,'));
-    assert.deepEqual(repeatedBugClasses(p), [{ cls: 'yetki', specs: ['g.md', 'h.md'] }, { cls: 'tarih-saat', specs: ['saat-dilimi.md', 'takvim.md'] }]);
+    assert.deepEqual(repeatedBugClasses(p), [{ cls: 'authorization', specs: ['g.md', 'h.md'] }, { cls: 'date-time', specs: ['saat-dilimi.md', 'takvim.md'] }]);
     write('.kit.json', JSON.stringify({ type: 'web-saas', version: '3.24.0' }));
     const html = () => {
       const r = spawnSync(process.execPath, [path.join(REPO, '.claude/hooks/dashboard.mjs'), p, '--quiet'], { encoding: 'utf8' });
       assert.equal(r.status, 0, r.stderr);
       return fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8');
     };
-    assert.match(html(), /Aynı hata sınıfı 2 kez: tarih-saat[\s\S]{0,300}\/retro/);
+    assert.match(html(), /Aynı hata sınıfı 2 kez: date-time[\s\S]{0,300}\/retro/);
     // Answered (rule added or not needed): the alert closes and the question is not asked again
     const decided = (s, answer) => s.replace('\n\n## Mevcut', `\n**Kural:** ${answer} · 2026-10-25\n\n## Mevcut`);
     write('docs/product/specs/saat-dilimi.md', decided(spec('hata', 'tarih-saat'), 'AGENTS.md'));
     write('docs/product/specs/takvim.md', decided(spec('hata', 'tarih-saat'), 'gerek yok'));
-    assert.doesNotMatch(html(), /Aynı hata sınıfı \d+ kez: tarih-saat/);
+    assert.doesNotMatch(html(), /Aynı hata sınıfı \d+ kez: (date-time|tarih-saat)/);
     // A third bug of the class after the answer: the rule did not prevent it, ask again
     write('docs/product/specs/ucuncu.md', spec('hata', 'tarih-saat'));
-    assert.match(html(), /Aynı hata sınıfı 3 kez: tarih-saat/);
+    assert.match(html(), /Aynı hata sınıfı 3 kez: date-time/);
   } finally {
     fs.rmSync(p, { recursive: true, force: true });
   }
@@ -48,9 +48,9 @@ test('Ö-21.1 the second bug of the same class raises a proposal; "diğer", free
 
 test('Ö-21.1 the class list is the same in the template, /fix-bug and the dashboard', () => {
   const template = read('docs/product/specs/_template.md').match(/^\*\*Sınıf:\*\* \[bug only: (.*)\]$/m)[1].split(' / ');
-  const fixBug = [...read('.claude/commands/fix-bug.md').match(/write exactly one of this list: (.*?`diğer`)/)[1].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
-  assert.deepEqual(template, [...BUG_CLASSES, 'diğer']);
-  assert.deepEqual(fixBug, [...BUG_CLASSES, 'diğer']);
+  const fixBug = [...read('.claude/commands/fix-bug.md').match(/write exactly one of this list: (.*?`other`)/)[1].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+  assert.deepEqual(template, [...BUG_CLASSES, 'other']);
+  assert.deepEqual(fixBug, [...BUG_CLASSES, 'other']);
 });
 
 test('Ö-21.1 no rule file changes without approval', () => {
@@ -64,7 +64,7 @@ test('Ö-21.1 no rule file changes without approval', () => {
   // The places a rule can land (AGENTS.md, CLAUDE.md, .claude/hookify.*.local.md) are all "ask" in Claude Code
   const ask = JSON.parse(read('.claude/settings.json')).permissions.ask;
   for (const rule of ['Edit(./AGENTS.md)', 'Edit(./CLAUDE.md)', 'Edit(./.claude/**)']) assert.ok(ask.includes(rule), rule);
-  assert.match(read('docs/product/specs/_template.md'), /^\*\*Sınıf:\*\* \[bug only: .*\/ diğer\]$/m);
+  assert.match(read('docs/product/specs/_template.md'), /^\*\*Sınıf:\*\* \[bug only: .*\/ other\]$/m);
 });
 
 test('Ö-21.2 every learned rule carries source and date; /maintain monthly reviews those over 90 days', () => {

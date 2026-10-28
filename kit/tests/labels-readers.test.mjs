@@ -181,7 +181,7 @@ function dashboard(p) {
 const summaryKpis = (html) => [...(html.match(/<h3>Summary<\/h3><div class="kpis mini">([\s\S]*?)<\/section>/)?.[1] ?? '')
   .matchAll(/<div class="kpi-v">([^<]*)</g)].map((m) => m[1]);
 const activeStep = (html) => html.match(/<li class="step now[^"]*"><span class="step-n">([^<]*)<\/span>/)?.[1] ?? null;
-const openPhase = (html) => [...html.matchAll(/<details class="card faz" open>\s*<summary><b>([^<]*)<\/b>/g)].map((m) => m[1]);
+const openPhase = (html) => [...html.matchAll(/<details class="card phase" open>\s*<summary><b>([^<]*)<\/b>/g)].map((m) => m[1]);
 
 // ---------- status-read: readStatus ----------
 
@@ -240,7 +240,7 @@ test('AC-48.2 readStatus: no handoff waiting and no board file fall back the sam
     delete files['docs/workflow/board.md'];
     const s = readStatus(project(files));
     assert.equal(s.handoffPending, false, v);
-    assert.deepEqual(s.board, { state: 'kurulmadı', commitReview: 'açık', members: [], meetings: [] }, v);
+    assert.deepEqual(s.board, { state: 'not set up', commitReview: 'on', members: [], meetings: [] }, v);
   }
 });
 
@@ -281,7 +281,7 @@ test('AC-48.2 specInvariants: "## Behavior that must not change" lists the same 
 });
 
 test('AC-48.2 repeatedBugClasses: "**Type:** hata" + "**Class:**" count like "**Tür:**" + "**Sınıf:**"', () => {
-  const want = [{ cls: 'yetki', specs: ['2026-10-01-a.md', '2026-10-02-b.md'] }];
+  const want = [{ cls: 'authorization', specs: ['2026-10-01-a.md', '2026-10-02-b.md'] }];
   assert.deepEqual(repeatedBugClasses(project(SPECS.tr)), want);
   assert.deepEqual(repeatedBugClasses(project(SPECS.en)), want);
 });

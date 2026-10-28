@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { readStatus } from './status-read.mjs';
 import { writeLimits, readLimits, level } from './usage.mjs';
 import { t } from './lang.mjs';
+import { isValue } from './labels.mjs';
 
 let root = process.cwd();
 let input = {};
@@ -48,13 +49,14 @@ try {
     parts.push(t(root, 'statusline.notSetUp'));
   } else {
     const a = d.fields;
-    // The values in progress.md stay Turkish (açık / kapalı); only what the line shows is localized
-    const question = (a['Question mode'] ?? 'açık')
-      .replace(/^(açık|kapalı)(?=$|\s)/i, (m) => t(root, m.toLowerCase() === 'açık' ? 'statusline.modeOpen' : 'statusline.modeOff'))
-      .replace(/\s*·\s*kapalı konular:\s*yok/i, '')
-      .replace(/\s*·\s*kapalı konular:\s*(.*)$/i, (_, topics) => ` ${t(root, 'statusline.closed', { topics })}`);
+    // progress.md says on / off (açık / kapalı before 3.48); only what the line shows is localized
+    const mode = a['Question mode'] ?? 'on';
+    const question = mode
+      .replace(/^\S+/, (m) => (isValue(m, 'on') ? t(root, 'statusline.modeOpen') : isValue(m, 'off') ? t(root, 'statusline.modeOff') : m))
+      .replace(/\s*·\s*(?:kapalı konular|closed topics):\s*(?:yok|none)\s*$/i, '')
+      .replace(/\s*·\s*(?:kapalı konular|closed topics):\s*(.*)$/i, (_, topics) => ` ${t(root, 'statusline.closed', { topics })}`);
     parts.push(`▶ ${a['Active phase'] ?? '-'}`);
-    if (/başlangıç/i.test(a['Active phase'] ?? '')) parts.push(t(root, 'statusline.step', { step: a['Setup step'] ?? '-' }));
+    if (isValue(a['Active phase'], 'setup')) parts.push(t(root, 'statusline.step', { step: a['Setup step'] ?? '-' }));
     else parts.push(a['Active task'] ?? '-', t(root, 'statusline.task', { done: d.taskCount.done, total: d.taskCount.total }));
     parts.push(t(root, 'statusline.question', { mode: question }));
     if (d.pending.length) parts.push(t(root, 'statusline.pending', { count: d.pending.length }));

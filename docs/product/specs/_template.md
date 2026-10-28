@@ -4,10 +4,10 @@
 > The "behavior that must not change" lines start with an acceptance criterion id (`- Ö-01.1: ...`). The gate (`gate.mjs --run`) goes red if these ids have no test or if they are red in the last test report.
 > The gate reads only the test report written in its own run; if the test command writes no JUnit report, it only checks that the test exists.
 > If you change behavior on purpose or change a criterion id, update this file first; if the spec is no longer valid, move it to `docs/archive/`.
-> The labels, values and one heading below stay Turkish because the dashboard reads them. Tür = type (özellik = feature, hata = bug), Sınıf = class, Kural = rule, "Değişmemesi gereken davranış" = behavior that must not change. Bug classes: boş-girdi = empty input, doğrulama = validation, yetki = authorization, tarih-saat = date-time, yerel-dil = locale, sıralama = ordering, eşzamanlılık = concurrency, yapılandırma = configuration, dış-servis = external service, sözleşme = contract, arayüz-durumu = UI state, diğer = other.
+> The labels, values and one heading below stay Turkish because the dashboard reads them. Tür = type (özellik = feature, hata = bug), Sınıf = class, Kural = rule, "Değişmemesi gereken davranış" = behavior that must not change.
 
 **Tür:** [özellik / hata]
-**Sınıf:** [bug only: boş-girdi / doğrulama / yetki / tarih-saat / yerel-dil / sıralama / eşzamanlılık / yapılandırma / dış-servis / sözleşme / arayüz-durumu / diğer]
+**Sınıf:** [bug only: empty-input / validation / authorization / date-time / locale / sorting / concurrency / configuration / external-service / contract / ui-state / other]
 **Kural:** [bug only, written by `/fix-bug` when the same class repeats: where the added rule is, or "gerek yok" (not needed) · YYYY-AA-GG]
 
 ## Current behavior

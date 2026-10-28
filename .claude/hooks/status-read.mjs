@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { t } from './lang.mjs';
-import { normalize } from './labels.mjs';
+import { normalize, isValue } from './labels.mjs';
 
 // Only a regular file: a folder or a link to a folder named like a test or report file must not throw (EISDIR)
 export const readText = (p) => { try { return fs.statSync(p).isFile() ? normalize(fs.readFileSync(p, 'utf8')) : ''; } catch { return ''; } };
@@ -84,8 +84,8 @@ export function readStatus(root) {
   const boardLabels = labels(boardText);
   const boardSections = sections(boardText);
   const board = {
-    state: boardLabels['Status'] ?? 'kurulmadı',
-    commitReview: boardLabels['Commit review'] ?? 'açık',
+    state: boardLabels['Status'] ?? 'not set up',
+    commitReview: boardLabels['Commit review'] ?? 'on',
     members: tableRows(boardSections['Members'], 5).map(([member, agent, model, focus, meetings]) => ({ member, agent, model, focus, meetings })),
     meetings: tableRows(boardSections['Meeting log'], 8)
       .map(([no, date, kind, scope, attendees, result, critical, decision]) => ({ no, date, kind, scope, attendees, result, critical, decision })),
@@ -106,7 +106,7 @@ export function readStatus(root) {
     pending: rows(progressSections['Pending decisions']),
     issues: rows(progressSections['Open issues / blockers']),
     leftOff: rows(findSection(progressSections, 'Where we left off')),
-    handoffPending: /^\*\*Status:\*\*\s*bekliyor/im.test(readText(d('docs/workflow/handoff.md'))),
+    handoffPending: isValue(readText(d('docs/workflow/handoff.md')).match(/^\*\*Status:\*\*(.*)$/im)?.[1], 'waiting'),
     phases,
     taskCount,
     decisions,
