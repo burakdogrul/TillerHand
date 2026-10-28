@@ -12,13 +12,13 @@ const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s).trim());
 export const daysLeft = (date, now = Date.now()) => Math.ceil((Date.parse(`${date}T00:00:00`) - now) / DAY);
 
 // ---------- acceptance tests ----------
-// A criterion id is "Ö-01.1" in the PRD and "Ö-01.1" or "O_01_1" in tests; all normalize to the key "O_01_1".
-// Not after a letter: "ISO-27.1" or "DEMO_01_2" is not a criterion
-const CRITERION_ID = /(?<![A-Za-z])[ÖO][-_](\d{2})[._](\d+)/g;
+// A criterion id is "AC-01.1" in the PRD and "AC-01.1" or "AC_01_1" in tests; before 3.48 "Ö-01.1" / "O_01_1".
+// All four normalize to the key "O_01_1". Not after a letter: "ISO-27.1", "DEMO_01_2" or "MAC_01_1" is not a criterion
+const CRITERION_ID = /(?<![A-Za-z])(?:AC|[ÖO])[-_](\d{2})[._](\d+)/g;
 const key = (m1, m2) => `O_${m1}_${m2}`;
 
 export function prdCriteria(prdText) {
-  return [...prdText.matchAll(/^\s*- \[( |x)\]\s*(Ö-(\d{2})\.(\d+))\s*:?\s*(.*)$/gim)]
+  return [...prdText.matchAll(/^\s*- \[( |x)\]\s*((?:AC|Ö)-(\d{2})\.(\d+))\s*:?\s*(.*)$/gim)]
     .filter((m) => !m[5].startsWith('['))
     .map((m) => ({ id: m[2], key: key(m[3], m[4]), text: m[5].trim(), checked: m[1].toLowerCase() === 'x' }));
 }
@@ -112,10 +112,10 @@ export function acceptanceStatus(root) {
   };
 }
 
-// "Must not change" lines of the specs (F-23): each Ö id, whether a test carries it and its JUnit result.
+// "Must not change" lines of the specs (F-23): each AC id, whether a test carries it and its JUnit result.
 // since: only reports written at or after this time count (the gate passes its own start: an old red report must not
 // stop a commit whose tests pass now). Files starting with "_" (the template) are skipped. unreadable: lines that name
-// an id but not in the "- Ö-01.1: ..." form, so the check would silently skip them.
+// an id but not in the "- AC-01.1: ..." form, so the check would silently skip them.
 export function specInvariants(root, since = 0) {
   const dir = path.join(root, 'docs/product/specs');
   let files = [];
@@ -124,9 +124,9 @@ export function specInvariants(root, since = 0) {
   for (const f of files) {
     const body = sections(readText(path.join(dir, f)))['Behavior that must not change'] ?? '';
     for (const line of body.split(/\r?\n/)) {
-      const m = line.match(/^\s*-\s*(Ö-(\d{2})\.(\d+))/);
+      const m = line.match(/^\s*-\s*((?:AC|Ö)-(\d{2})\.(\d+))/);
       if (m) list.push({ spec: f, id: m[1], key: key(m[2], m[3]) });
-      else if (/[ÖO][-_]\d{2}[._]\d+/.test(line)) unreadable.push({ spec: f, line: line.trim() });
+      else if (/(?<![A-Za-z])(?:AC|[ÖO])[-_]\d{2}[._]\d+/.test(line)) unreadable.push({ spec: f, line: line.trim() });
     }
   }
   if (!list.length) return { invariants: [], unreadable };

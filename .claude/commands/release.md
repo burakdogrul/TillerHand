@@ -9,9 +9,9 @@ Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.m
 
 0. **Model and effort** (`docs/workflow/models.md`): ask the two screens from `/build` step 0b and record them. Audit agents (board, `security-auditor`) run with the review role.
 1. **Run what can be checked automatically:**
-   - In `first` mode, read the limit first; a full audit is expensive (`docs/workflow/usage-limits.md`). If `node .claude/hooks/tools.mjs --required guvenlik` reports it is off, ask to switch it on. If the board is set up, hold a **go-live board meeting** (the full board, `.claude/board/rules.md`).
+   - In `first` mode, read the limit first; a full audit is expensive (`docs/workflow/usage-limits.md`). If `node .claude/hooks/tools.mjs --required security` reports it is off, ask to switch it on. If the board is set up, hold a **go-live board meeting** (the full board, `.claude/board/rules.md`).
    - In `first` mode, first suggest `/findings-all security,legal,perf` (with its estimated cost); Critical findings in the reports block the release.
-   - In `first` mode, optional: an architecture map for humans via Understand-Anything, for the person who will take over maintenance after release (`yayin` package; `/understand --language en`, then `/understand-onboard`). The first run reads all the code: state the cost and ask.
+   - In `first` mode, optional: an architecture map for humans via Understand-Anything, for the person who will take over maintenance after release (`release` package; `/understand --language en`, then `/understand-onboard`). The first run reads all the code: state the cost and ask.
    - In `first` mode, start in parallel: the `security-auditor` subagent (whole codebase; do not run it again if it already joins the board meeting), the `security-review` skill, `ponytail:ponytail-audit` (quality, places that break under load); if there is an interface, `impeccable:impeccable` → `audit` (accessibility, performance, responsive)
    - Status of the last CI run (`gh run list --branch main --limit 1`, if gh is installed)
    - Lint, type check, tests, build (`AGENTS.md` → Komutlar)

@@ -31,11 +31,11 @@ Motion's job is to give information: what changed, where it came from, is the sy
 
 | Stack | Library |
 |---|---|
-| Web (React/Next.js) | CSS transitions for simple cases; **Motion** (`motion/react`) for springs, layout and enter/exit. GSAP only if a landing page needs scroll-driven storytelling (`gsap-skills:`, `tasarim` package; free, commercial use included, forbidden in a no-code animation tool that competes with Webflow). |
+| Web (React/Next.js) | CSS transitions for simple cases; **Motion** (`motion/react`) for springs, layout and enter/exit. GSAP only if a landing page needs scroll-driven storytelling (`gsap-skills:`, `design` package; free, commercial use included, forbidden in a no-code animation tool that competes with Webflow). |
 | Web 3D | **three.js**; **React Three Fiber** + drei in React. The skills are copied in `/start` step 3c (`threejs-*`). |
 | Mobile (Expo) | **react-native-reanimated** (runs on the UI thread); use Reanimated layout animations instead of `LayoutAnimation`. Haptic feedback on important actions. |
 
-Adding a new animation library is a `teknik` decision; ask.
+Adding a new animation library is a `tech` decision; ask.
 
 ## 3D
 

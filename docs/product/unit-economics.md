@@ -39,4 +39,4 @@
 - **Contribution margin** = price × (1 − commission) − variable cost. If it is negative, every new paying user causes a loss.
 - **Break-even** = fixed cost ÷ contribution margin (number of paying users).
 - Free users also create variable cost; the calculation includes it through the "Ücretsiz kullanıcı oranı (%)" input (free user share).
-- If variable cost passes 30% of the price, a price or usage-limit decision is asked as a `maliyet` topic.
+- If variable cost passes 30% of the price, a price or usage-limit decision is asked as a `cost` topic.

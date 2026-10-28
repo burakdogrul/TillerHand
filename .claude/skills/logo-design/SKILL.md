@@ -5,7 +5,7 @@ description: Designs a brand logo: asks brand questions first, presents 4-6 SVG 
 
 # Logo design
 
-A logo is not an image-generation request. It is **code**: editable SVG built from simple geometric shapes that reads at every size. Ask decisions per `docs/workflow/decision-protocol.md` (design decision = visual preview). If the `tasarim` topic is closed in question mode, go with the recommended option and still produce the previews.
+A logo is not an image-generation request. It is **code**: editable SVG built from simple geometric shapes that reads at every size. Ask decisions per `docs/workflow/decision-protocol.md` (design decision = visual preview). If the `design` topic is closed in question mode, go with the recommended option and still produce the previews.
 
 ## 1. Brand summary (questions)
 
@@ -62,5 +62,5 @@ Output folder: `public/brand/` for web, `assets/brand/` for mobile (allowed in t
 - `docs/design/brand.md`:
   - Brand summary and the reason for the chosen concept
   - Usage rules: clear space (half the symbol height), minimum size, color codes, what not to do (stretch, shadow, rotate, change color)
-- Write the choices to `docs/decisions/log.md` (topic: `tasarim`) and to `docs/design/design-guide.md` → decision log.
+- Write the choices to `docs/decisions/log.md` (topic: `design`) and to `docs/design/design-guide.md` → decision log.
 - If there is a slogan or brand text, run it through `humanizer:humanizer`.

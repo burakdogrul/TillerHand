@@ -38,5 +38,5 @@ These servers do not come in `.mcp.json`; the command that needs one asks the us
 ## Rule
 
 - Every action an MCP tool takes runs with your account's permissions. For tools with write access (Stripe, Vercel, GitHub), no permanent or money-spending action is taken without user approval.
-- Adding a new MCP is a `teknik` decision; if a server not on the list is suggested, first verify its source and maintenance status with `source-research`, and add it to `.mcp.json` with a pinned version.
+- Adding a new MCP is a `tech` decision; if a server not on the list is suggested, first verify its source and maintenance status with `source-research`, and add it to `.mcp.json` with a pinned version.
 - Turn off an MCP you do not use: every tool definition adds load to the context in every session.

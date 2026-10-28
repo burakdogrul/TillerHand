@@ -169,7 +169,7 @@ function specCheck(root, since) {
   const unknown = list.filter((k) => k.test && !k.result).length;
   const notes = [`${list.length} behaviors that must not change`,
     unknown && `${unknown} tests have no result in this run (the test command writes no JUnit report)`,
-    unreadable.length && `${unreadable.length} lines could not be read, write them as "- Ö-01.1: ...": ${unreadable.map((u) => `${u.spec}: ${u.line}`).join(' · ')}`];
+    unreadable.length && `${unreadable.length} lines could not be read, write them as "- AC-01.1: ...": ${unreadable.map((u) => `${u.spec}: ${u.line}`).join(' · ')}`];
   return { name: 'Spec', status: bad.length ? 'failed' : 'passed', note: notes.filter(Boolean).join('; '),
     output: bad.length ? bad.map((k) => `${k.id} (${k.spec}): ${k.test ? 'test red' : 'no test'}`).join('\n') : undefined };
 }

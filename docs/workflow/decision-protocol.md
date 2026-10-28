@@ -9,13 +9,15 @@ Every choice that affects one of the following is a **decision point** and is as
 
 | Topic (code) | Examples |
 |---|---|
-| `urun` | Feature scope, priority, MVP boundary, user flow, price, target audience |
-| `teknik` | Language, framework, database, auth method, hosting, adding a library, API style, architecture, folder structure |
-| `tasarim` | Style direction, color, typeface, page/screen layout, component style, amount of animation, icon set, dark theme |
-| `icerik` | Interface texts, tone of voice, form of address, landing page copy, email texts |
-| `veri` | Data model, fields, relations, retention period, deletion behavior, migration |
-| `guvenlik` | Authorization model, roles, session length, rate limits, personal data handling |
-| `maliyet` | Choice of paid service, plan tier, AI model choice, spending limits |
+| `product` | Feature scope, priority, MVP boundary, user flow, price, target audience |
+| `tech` | Language, framework, database, auth method, hosting, adding a library, API style, architecture, folder structure |
+| `design` | Style direction, color, typeface, page/screen layout, component style, amount of animation, icon set, dark theme |
+| `content` | Interface texts, tone of voice, form of address, landing page copy, email texts |
+| `data` | Data model, fields, relations, retention period, deletion behavior, migration |
+| `security` | Authorization model, roles, session length, rate limits, personal data handling |
+| `cost` | Choice of paid service, plan tier, AI model choice, spending limits |
+
+Projects set up before 3.48 may use the old Turkish codes (`urun`, `teknik`, `tasarim`, `icerik`, `veri`, `guvenlik`, `maliyet`); they mean the same topic. Write the English code.
 
 **Not a decision point** (not asked; apply it and report it briefly in the status block): file/variable/function names (follow `docs/product/glossary.md`), the internal layout of code, formatting, repeating a pattern the project has already decided.
 
@@ -53,21 +55,21 @@ Classify every decision before asking and state it in the question text:
 
 ## 4. Question mode
 
-The state is kept in the `**Soru modu:**` line of `docs/workflow/progress.md`. Default: `açık · kapalı konular: yok`.
+The state is kept in the `**Question mode:**` line of `docs/workflow/progress.md` (before 3.48 `**Soru modu:**`). Default: `on · closed topics: none`.
 
 | What the user says | What you do |
 |---|---|
-| "don't ask", "never ask", `/ask-mode off hepsi` | All topics closed |
-| "don't ask about design", "you pick the colors", `/ask-mode off tasarim` | Only that topic closed (match it to the topic codes; if unsure, ask which topic is meant) |
-| "ask again", "keep asking", `/ask-mode on [konu\|hepsi]` | Topic(s) open again |
+| "don't ask", "never ask", `/ask-mode off all` | All topics closed |
+| "don't ask about design", "you pick the colors", `/ask-mode off design` | Only that topic closed (match it to the topic codes; if unsure, ask which topic is meant) |
+| "ask again", "keep asking", `/ask-mode on [topic\|all]` | Topic(s) open again |
 
-**On a closed topic:** Pick the "(Recommended)" option and apply it. Write `karar veren: otomatik` in the log. List it in the "Auto decisions" line of the status block. Even when the design topic is closed, produce the previews under `.previews/` so the user can look later.
+**On a closed topic:** Pick the "(Recommended)" option and apply it. Write `automatic` in the log's "Decided by" column. List it in the "Auto decisions" line of the status block. Even when the design topic is closed, produce the previews under `.previews/` so the user can look later.
 
 **Regardless of question mode, always ask for approval:** data deletion, prod deploy, an action that spends money, any command that cannot be undone, the "Never" list in `AGENTS.md`.
 
 ## 5. Visual preview for design decisions
 
-Every `tasarim` decision is asked with visuals. The user chooses an image, not text.
+Every `design` decision is asked with visuals. The user chooses an image, not text.
 
 1. Produce one sample per option: `.previews/NN-konu/a.html`, `b.html`, `c.html` (NN is the sequence number). Also an `index.html` that shows them all side by side or one below the other.
 2. Build the samples with **real content** (the product name, real titles and texts from the PRD); no lorem ipsum.

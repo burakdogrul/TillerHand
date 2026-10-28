@@ -37,13 +37,14 @@ test('enabling a package: writes to personal settings, keeps other keys and plug
   assert.equal(l.enabledPlugins['ui-ux-pro-max@ui-ux-pro-max-skill'], true);
   assert.ok(!('gsap-skills@gsap-skills' in l.enabledPlugins), 'a plugin the project does not know is not added');
   assert.equal(json(path.join(p, '.claude/settings.json')).enabledPlugins['taste-skill@taste-skill'], false, 'the project settings do not change');
-  assert.equal(packageStatus(p).find((d) => d.name === 'tasarim').enabled, true);
+  // 3.48.0: package names are English; the old name "tasarim" still works as input
+  assert.equal(packageStatus(p).find((d) => d.name === 'design').enabled, true);
 
   setPackage(p, 'tasarim', false);
   const k = json(path.join(p, '.claude/settings.local.json'));
   assert.ok(!('taste-skill@taste-skill' in k.enabledPlugins), 'disabling deletes the personal override, back to the project default');
   assert.equal(k.enabledPlugins['foo@bar'], true);
-  assert.equal(packageStatus(p).find((d) => d.name === 'tasarim').enabled, false);
+  assert.equal(packageStatus(p).find((d) => d.name === 'design').enabled, false);
   fs.rmSync(p, { recursive: true, force: true });
 });
 
@@ -71,12 +72,14 @@ test('--required: a disabled package exits 2 and says how to enable it, 0 when e
   const p = project();
   const off = run(p, ['--required', 'tasarim']);
   assert.equal(off.status, 2);
-  assert.match(off.stdout, /Package tasarim is disabled/);
-  assert.match(off.stdout, /--enable tasarim/);
+  // 3.48.0: the old name is still taken as input, the output names the English package
+  assert.match(off.stdout, /Package design is disabled/);
+  assert.match(off.stdout, /--enable design\b/);
   assert.equal(run(p, ['--enable', 'tasarim']).status, 0);
   const enabled = run(p, ['--required', 'tasarim']);
   assert.equal(enabled.status, 0);
-  assert.match(enabled.stdout, /Package tasarim is enabled/);
+  assert.match(enabled.stdout, /Package design is enabled/);
+  assert.equal(run(p, ['--required', 'design']).status, 0, 'the English name is the same package');
   assert.equal(run(p, []).status, 0, 'durum tablosu');
   fs.rmSync(p, { recursive: true, force: true });
 });

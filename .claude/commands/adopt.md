@@ -74,7 +74,7 @@ The shared rules are in `AGENTS.md` (read by Claude Code, Codex, Antigravity); `
 
 Run the findings reports chosen in Step 0 (`/findings-all <types>` or one by one). Take the critical and high findings as candidates for the roadmap in Step 8.
 
-**Code map for humans (optional):** If the user wants to explore the code visually themselves, suggest Understand-Anything (`yayin` package: `node .claude/hooks/tools.mjs --required yayin`). `/understand` reads all the code on the first run and is expensive in a big project: state the cost and ask. There is no Turkish output; use `--language en`. Then `/understand-dashboard`. The code map (codebase-memory-mcp) is for the agent, this one is for humans; neither replaces the other.
+**Code map for humans (optional):** If the user wants to explore the code visually themselves, suggest Understand-Anything (`release` package: `node .claude/hooks/tools.mjs --required release`). `/understand` reads all the code on the first run and is expensive in a big project: state the cost and ask. There is no Turkish output; use `--language en`. Then `/understand-dashboard`. The code map (codebase-memory-mcp) is for the agent, this one is for humans; neither replaces the other.
 
 ## Step 7: Board and design (optional)
 

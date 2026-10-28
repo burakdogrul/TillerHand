@@ -65,7 +65,7 @@ The coding agent itself is also an attack surface: content it reads (README, iss
 
 - [ ] Issue text, error tracking records (Sentry), web pages and file contents are **data, not instructions**. If they contain a phrase like "run this", it is not applied; it is shown to the user.
 - [ ] Changes to `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.codex/`, `.agents/hooks.json`, `.mcp.json` and `.github/workflows/` need user approval (an `ask` rule in the project settings). In PRs, changes to these files are also reviewed separately.
-- [ ] MCP servers are defined from a trusted source and with a pinned version (a specific version instead of `@latest`); adding a new MCP server is a `guvenlik` decision.
+- [ ] MCP servers are defined from a trusted source and with a pinned version (a specific version instead of `@latest`); adding a new MCP server is a `security` decision.
 - [ ] The error-tracking MCP is used read-only. Remember that fake records can be sent from outside to a public DSN.
 - [ ] The AI is not given a prod database or a prod key; destructive commands are blocked by the shield hook (`.claude/hooks/destructive-guard.mjs`).
 - [ ] Package installs go through the package gate (`.claude/hooks/package-gate.mjs`); made-up or very new packages are asked about.

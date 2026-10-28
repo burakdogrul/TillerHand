@@ -68,4 +68,4 @@ supabase/migrations/            # database changes ONLY here
 4. **Naming:** Folders and files use `kebab-case`. React component files may use `PascalCase.tsx`; Python modules use `snake_case.py`. A feature folder name is singular and English (`invoice`, `customer`).
 5. **Temporary and unrelated work** goes under `sandbox/`. If something useful comes out, it moves to the right place; `sandbox/` is cleaned regularly.
 6. **Old documents** are not deleted; they move under `docs/archive/` with a line at the top saying why they were archived.
-7. **Changing the map** (a new top-level folder, a new layer) is a `teknik` decision: ask the user, record it under `docs/decisions/`, then update `.claude/structure.json` and this file.
+7. **Changing the map** (a new top-level folder, a new layer) is a `tech` decision: ask the user, record it under `docs/decisions/`, then update `.claude/structure.json` and this file.

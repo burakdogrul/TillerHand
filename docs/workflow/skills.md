@@ -14,8 +14,8 @@
 | humanizer | humanizer | `humanizer:` |
 | ponytail | ponytail | `ponytail:` |
 | mattpocock-skills | mattpocock | `mattpocock-skills:` |
-| gsap-skills (GreenSock, official) | gsap-skills | `gsap-skills:` (`tasarim` package) |
-| understand-anything | understand-anything | `/understand --language en`, `/understand-dashboard`, `/understand-onboard` (`yayin` package; `--auto-update` is not used). While on, the session-start hook updates the graph without asking when it is stale and spends tokens: switch the package off with `/tools` when the job is done |
+| gsap-skills (GreenSock, official) | gsap-skills | `gsap-skills:` (`design` package) |
+| understand-anything | understand-anything | `/understand --language en`, `/understand-dashboard`, `/understand-onboard` (`release` package; `--auto-update` is not used). While on, the session-start hook updates the graph without asking when it is stale and spends tokens: switch the package off with `/tools` when the job is done |
 | security-guidance, claude-security, hookify, claude-md-management, session-report | claude-plugins-official (Anthropic) | automatic hook / `/claude-security`, `/hookify`, `/revise-claude-md`, `/session-report` |
 | typescript-lsp (web, mobile) · pyright-lsp (backend) | claude-plugins-official | Language server: type errors and go to definition. Needs `npm i -g typescript-language-server typescript` or `npm i -g pyright` |
 | supabase, postgres-best-practices | supabase-agent-skills | `supabase:`, `postgres-best-practices:` (web, mobile; only postgres in backend) |
@@ -56,14 +56,14 @@ The skill descriptions of every plugin that is on are loaded into the context in
 | Package | Plugins | Command that switches it on |
 |---|---|---|
 | Core (always on) | caveman, ponytail, mattpocock-skills, impeccable, humanizer, security-guidance, hookify, claude-md-management + stack plugins | - |
-| `tasarim` | taste-skill, ui-ux-pro-max, gsap-skills | `/design` |
-| `guvenlik` | Trail of Bits (7), claude-security | `/findings-security`, `/findings-all`, `/release first` |
-| `yayin` | understand-anything, session-report | `/release`, `/handoff`, `/adopt` |
+| `design` | taste-skill, ui-ux-pro-max, gsap-skills | `/design` |
+| `security` | Trail of Bits (7), claude-security | `/findings-security`, `/findings-all`, `/release first` |
+| `release` | understand-anything, session-report | `/release`, `/handoff`, `/adopt` |
 | `video` | remotion | `motion-video` |
 
 - Switching a package on in the middle of a session breaks the prompt cache and the whole context is read again. The cheapest time is at a phase boundary, together with `/clear`.
-- Exact measurement: `/context` (Skills line), `/doctor`; unused skills: `/skill-doctor`. Rough measurement: `/tools olc`. `/maintain monthly` checks this.
-- Moving a plugin into the core or out of a package is a `teknik` decision.
+- Exact measurement: `/context` (Skills line), `/doctor`; unused skills: `/skill-doctor`. Rough measurement: `/tools measure`. `/maintain monthly` checks this.
+- Moving a plugin into the core or out of a package is a `tech` decision.
 
 **Command list (Light/Full):** The kit's command descriptions go into the same list (~1,600 tokens). In the Light and Standard profile, the 20 commands outside the core are listed by name only with `skillOverrides` → `name-only`: they stay in the `/` menu, Claude can call them by name, their description does not enter the context. The core that keeps its description: start, adopt, build, fix-bug, plan-task, design, tools, review-changes, wrap-up, release. Full profile: `node .claude/hooks/tools.mjs --commands full`; to go back: `--commands light`. The setting is in `.claude/settings.json` (team-wide); your own `skillOverrides` values are kept. It has no effect in Codex and Antigravity. List: `.claude/hooks/tools.mjs` → `CORE_COMMANDS`, `LIGHT_COMMANDS`.
 
@@ -72,7 +72,7 @@ The skill descriptions of every plugin that is on are loaded into the context in
 - In backend projects the interface design plugins (including impeccable) come switched off (`kit/templates/backend/.claude/settings.merge.json`).
 - Stack-specific skills (Supabase, Expo, web quality, LSP) are switched on only in the related project type.
 - The end-of-turn review of security-guidance comes switched off (`ENABLE_STOP_REVIEW=0`, quota). The pattern scan at edit time (free) and the commit review are on. If the quota is comfortable, it can be switched on from `.claude/settings.json` → `env`.
-- Adding a new plugin is a `teknik` decision: is there already a skill that does the same job, is the source trustworthy, what is the context cost? Third-party skills are an attack surface: read the SKILL.md content before installing.
+- Adding a new plugin is a `tech` decision: is there already a skill that does the same job, is the source trustworthy, what is the context cost? Third-party skills are an attack surface: read the SKILL.md content before installing.
 
 ## Communication
 

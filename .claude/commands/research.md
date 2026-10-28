@@ -43,5 +43,5 @@ Work by the rules of the `source-research` skill: every claim with source, date 
 1. Summarize the report (at most 10 lines) and give the file path.
 2. Ask about the opportunities with **multi-select**: "Which should be added to the project?" Each option should state the difficulty and which competitor has it.
 3. For the selected ones, ask: MVP or a later phase? If the MVP grows, say so clearly.
-4. Add the selected ones to `docs/product/prd.md` (feature + acceptance criterion draft) and to `docs/product/roadmap.md` (task). Write the decisions to `docs/decisions/log.md` with the `urun` topic.
+4. Add the selected ones to `docs/product/prd.md` (feature + acceptance criterion draft) and to `docs/product/roadmap.md` (task). Write the decisions to `docs/decisions/log.md` with the `product` topic.
 5. If the value proposition or target audience needs to change, ask that as a separate decision.

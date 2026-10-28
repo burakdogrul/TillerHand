@@ -206,7 +206,10 @@ const verdictBadge = (k) => badge({ conditional: 'warn', reject: 'critical' }[ve
 const badge = (sev, caption) => `<span class="badge ${sev}"><span class="ic" aria-hidden="true">${SEV[sev][0]}</span> ${e(caption ?? L(SEV[sev][1]))}</span>`;
 const fmtDate = (t) => { const z = toDate(t); return Number.isNaN(z.getTime()) ? e(t) : z.toLocaleString(loc, { day: '2-digit', month: 'short', hour: t.length > 10 ? '2-digit' : undefined, minute: t.length > 10 ? '2-digit' : undefined }); };
 const limitSeverity = (p, k) => (p == null ? 'info' : p >= THRESHOLDS[k].red ? 'critical' : p >= THRESHOLDS[k].yellow ? 'warn' : 'good');
-const TOPICS = ['urun', 'teknik', 'tasarim', 'icerik', 'veri', 'guvenlik', 'maliyet'];
+const TOPICS = ['product', 'tech', 'design', 'content', 'data', 'security', 'cost'];
+// Decision log topics before 3.48, in the same order; they count under the English topic
+const TOPICS_TR = ['urun', 'teknik', 'tasarim', 'icerik', 'veri', 'guvenlik', 'maliyet'];
+const topicKey = (topic = '') => { const k = topic.trim().toLowerCase(); return TOPICS[TOPICS_TR.indexOf(k)] ?? k; };
 
 // The command to paste into Claude: "`/build G-013` …" or "/wrap-up ve /clear" → first command, without its <placeholder> or note
 const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/ ve | ile | and | to |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
@@ -241,9 +244,9 @@ const roadmapSection = d.phases.length ? d.phases.map((f) => `
 </details>`).join('') : empty(L('dashboard.noRoadmap'));
 
 const decisionTable = d.decisions.length ? `
-<div class="filters" role="group" aria-label="${e(L('dashboard.topicFilter'))}"><button class="chip on" data-k="all">${L('dashboard.all')} (${d.decisions.length})</button>${TOPICS.filter((k) => d.decisions.some((x) => x.topic === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.decisions.filter((x) => x.topic === k).length})</button>`).join('')}<button class="chip" data-k="automatic">${L('dashboard.auto')} (${autoDecisions})</button><button class="chip" data-k="one-way">${L('dashboard.oneWay')} (${d.decisions.filter((k) => isValue(k.door, 'oneWay')).length})</button></div>
+<div class="filters" role="group" aria-label="${e(L('dashboard.topicFilter'))}"><button class="chip on" data-k="all">${L('dashboard.all')} (${d.decisions.length})</button>${TOPICS.filter((k) => d.decisions.some((x) => topicKey(x.topic) === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.decisions.filter((x) => topicKey(x.topic) === k).length})</button>`).join('')}<button class="chip" data-k="automatic">${L('dashboard.auto')} (${autoDecisions})</button><button class="chip" data-k="one-way">${L('dashboard.oneWay')} (${d.decisions.filter((k) => isValue(k.door, 'oneWay')).length})</button></div>
 <div class="tw"><table id="decision-table"><thead><tr><th>#</th><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.stage')}</th><th>${L('dashboard.th.topic')}</th><th>${L('dashboard.th.question')}</th><th>${L('dashboard.th.chosen')}</th><th>${L('dashboard.th.door')}</th><th>${L('dashboard.th.decidedBy')}</th></tr></thead><tbody>
-${[...d.decisions].reverse().map((k) => `<tr data-k="${e(k.topic)}" data-v="${isValue(k.decidedBy, 'automatic') ? 'automatic' : ''}" data-door="${isValue(k.door, 'oneWay') ? 'one-way' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.date)}</td><td>${e(k.stage)}</td><td><span class="tag">${e(k.topic)}</span></td><td>${md(k.question)}</td><td><b>${md(k.chosen)}</b></td><td>${isValue(k.door, 'oneWay') ? badge('warn', L('dashboard.oneWay')) : k.door ? `<span class="muted small">${e(k.door)}</span>` : ''}</td><td>${isValue(k.decidedBy, 'automatic') ? badge('warn', L('dashboard.auto')) : badge('good', L('dashboard.user'))}</td></tr>`).join('')}
+${[...d.decisions].reverse().map((k) => `<tr data-k="${e(topicKey(k.topic))}" data-v="${isValue(k.decidedBy, 'automatic') ? 'automatic' : ''}" data-door="${isValue(k.door, 'oneWay') ? 'one-way' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.date)}</td><td>${e(k.stage)}</td><td><span class="tag">${e(k.topic)}</span></td><td>${md(k.question)}</td><td><b>${md(k.chosen)}</b></td><td>${isValue(k.door, 'oneWay') ? badge('warn', L('dashboard.oneWay')) : k.door ? `<span class="muted small">${e(k.door)}</span>` : ''}</td><td>${isValue(k.decidedBy, 'automatic') ? badge('warn', L('dashboard.auto')) : badge('good', L('dashboard.user'))}</td></tr>`).join('')}
 </tbody></table></div>` : empty(L('dashboard.noDecisions'));
 
 const boardSection = `

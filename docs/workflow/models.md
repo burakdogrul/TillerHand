@@ -36,7 +36,7 @@ Opus is the most expensive model and Haiku the cheapest. When the limit turns ye
 - **Subagents:** Code writing, review and docs work goes to a subagent with the Agent tool. The call passes the role's `model` and `effort` value; the value in the call overrides the `model:` line in the agent file.
 - **Aliases:** `opus`, `sonnet`, `haiku` (also `fable`) always go to the newest model of that family. To pin to a specific version, use the full model ID or the `ANTHROPIC_DEFAULT_OPUS_MODEL` (SONNET, HAIKU) environment variable.
 - **Effort:** In a subagent call, effort can be passed in Claude Code v2.1.292 and later. If the `CLAUDE_CODE_EFFORT_LEVEL` environment variable is set, it overrides all effort choices. A model may not support every level.
-- **Question mode:** If the `maliyet` topic is closed, no question is asked and the last choice stays valid.
+- **Question mode:** If the `cost` topic is closed, no question is asked and the last choice stays valid.
 - **Exceptions:** The commit (light) board review runs on every commit, so it stays at `haiku` and `low` (`.claude/board/rules.md`). The decision council (`.claude/board/council.md`) deliberately compares different models; the role choice does not apply to it.
 
 Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config (2026-10-26).

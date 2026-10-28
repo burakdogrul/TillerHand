@@ -5,7 +5,7 @@
 //   node .claude/hooks/tools.mjs --disable <package>   deletes the personal override, back to the project default
 //   node .claude/hooks/tools.mjs --required <package>  0 if enabled, 2 if disabled (commands call it in their first step)
 //   node .claude/hooks/tools.mjs --measure             skill and agent description load of installed plugins
-//   node .claude/hooks/tools.mjs --commands light|full non-core kit commands listed by name only (Hafif/Standart) or in full (Tam)
+//   node .claude/hooks/tools.mjs --commands light|full non-core kit commands listed by name only (Light/Standard profile) or in full (Full)
 // Why: the skill list is capped at 1% of the context; past that, descriptions drop and skills get missed. Plugin skills cannot
 // be turned off one by one, a plugin is on or off as a whole. Enabling mid-session breaks the prompt cache: best at a phase boundary, with /clear.
 import fs from 'node:fs';
@@ -14,20 +14,20 @@ import path from 'node:path';
 import { missingPlugins } from './plugins-sync.mjs';
 import { findRoot, isMain } from './shared.mjs';
 
-// Keys are the package names users type (/tools ac tasarim): they stay Turkish
+// Keys are the package names users type (/tools on design)
 export const PACKAGES = {
-  tasarim: {
+  design: {
     description: 'Style directions, palette and typefaces, GSAP',
     command: '/design',
     plugins: ['taste-skill@taste-skill', 'ui-ux-pro-max@ui-ux-pro-max-skill', 'gsap-skills@gsap-skills'],
   },
-  guvenlik: {
+  security: {
     description: 'Deep security scan',
     command: '/findings-security, /release',
     plugins: ['differential-review', 'insecure-defaults', 'sharp-edges', 'static-analysis', 'supply-chain-risk-auditor', 'agentic-actions-auditor', 'fp-check']
       .map((e) => `${e}@trailofbits`).concat('claude-security@claude-plugins-official'),
   },
-  yayin: {
+  release: {
     description: 'Code map for humans, session report',
     command: '/release, /handoff, /adopt',
     plugins: ['understand-anything@understand-anything', 'session-report@claude-plugins-official'],
@@ -50,9 +50,13 @@ function readJson(p) {
   }
 }
 
+// Package names before 3.48; they still work as input
+const OLD_NAMES = { tasarim: 'design', guvenlik: 'security', yayin: 'release' };
+export const packageName = (name) => OLD_NAMES[name] ?? name;
+
 function pkg(name) {
-  if (!Object.hasOwn(PACKAGES, name ?? '')) throw new Error(`Unknown package: ${name}. Options: ${Object.keys(PACKAGES).join(', ')}`);
-  return PACKAGES[name];
+  if (!Object.hasOwn(PACKAGES, packageName(name ?? ''))) throw new Error(`Unknown package: ${name}. Options: ${Object.keys(PACKAGES).join(', ')}`);
+  return PACKAGES[packageName(name)];
 }
 
 export function packageStatus(root) {
@@ -144,7 +148,8 @@ const tokenOf = (measurement, ids) => {
 const NOTE = 'After enabling, run /reload-plugins. Enabling mid-session breaks the prompt cache; best at a phase boundary, together with /clear.';
 if (isMain(import.meta.url)) {
   const root = findRoot();
-  const [flag, name] = process.argv.slice(2);
+  const [flag, typed] = process.argv.slice(2);
+  const name = packageName(typed);
   try {
     if (flag === '--enable' || flag === '--disable') {
       const ids = setPackage(root, name, flag === '--enable');

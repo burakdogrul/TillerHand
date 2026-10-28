@@ -48,7 +48,7 @@ About half of AI code has a security hole (Veracode, 2025). So for every endpoin
 | Log injection | A line break (`
 `) and a fake log line in the input | Escaped / single line in the logs |
 
-Test names start with the prefix `SALDIRI:`. The `security-auditor` agent counts missing adversarial tests as KRİTİK.
+Test names start with the prefix `ATTACK:` (tests written before 3.48 may use `SALDIRI:`; both count). The `security-auditor` agent counts missing adversarial tests as KRİTİK.
 
 **If Supabase is used,** the adversarial test of the database layer comes ready: `tests/security/rls.mjs`. An anonymous user and a second user try to read, update, delete and write on behalf of the first user's rows; it is red if there is a public table with RLS off or not registered in the test. It runs only against local Supabase (CI `rls` job, no secret needed). Every new table is added to the `TABLES` list. Tests at the application layer (server action, route handler) are still written separately according to the table above.
 

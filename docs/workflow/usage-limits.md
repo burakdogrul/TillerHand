@@ -53,7 +53,7 @@ On the Max plan the percentages are lower. As the log fills day by day, the esti
    - **Continue with a cheaper model:** Move the code role to a lower model (e.g. `node .claude/hooks/models.mjs --set code=haiku:medium`; `docs/workflow/models.md`). The main agent only coordinates and verifies the result. Security, data model and architecture decisions stay in the planning role.
    - **Lighten the board:** Only `security-auditor` + `board-architect` join plan-end and task-end meetings. Run the commit review only on code files, with a single member.
 3. **If the weekly limit is yellow or red,** also warn in one line: the weekly limit resets late.
-4. If the user chose an option, write the decision to the `docs/decisions/log.md` decision log as topic `maliyet`.
+4. If the user chose an option, write the decision to the `docs/decisions/log.md` decision log as topic `cost`.
 5. **Task = session.** Every turn re-reads the whole session context; the files and outputs of the previous task cost money in the next one for nothing. When a task is done and committed, suggest `/clear` (regardless of the context percentage). The new session continues from `docs/workflow/progress.md`.
 
 ## 4. Limit warnings while working

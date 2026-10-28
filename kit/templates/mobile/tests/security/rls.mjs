@@ -59,13 +59,13 @@ function publicTables(t) {
   }
 }
 
-test('SALDIRI: RLS is on for every public table', (t) => {
+test('ATTACK: RLS is on for every public table', (t) => {
   const tables = publicTables(t);
   if (!tables) return;
   assert.deepEqual(tables.filter((x) => !x.rls).map((x) => x.name), [], 'table with RLS off: write "alter table ... enable row level security" and a policy');
 });
 
-test('SALDIRI: RLS every public table is registered in this test', (t) => {
+test('ATTACK: RLS every public table is registered in this test', (t) => {
   const tables = publicTables(t);
   if (!tables) return;
   const registered = new Set([...TABLES, ...PUBLIC_TABLES].map((x) => x.name));
@@ -73,7 +73,7 @@ test('SALDIRI: RLS every public table is registered in this test', (t) => {
 });
 
 for (const { name, owner, sample, key = 'id' } of TABLES) {
-  test(`SALDIRI: RLS ${name} is closed to other users and to anonymous`, async () => {
+  test(`ATTACK: RLS ${name} is closed to other users and to anonymous`, async () => {
     const [a, b] = users;
     const anon = client(ANON);
     const { data: row, error } = await a.c.from(name).insert({ ...sample(), [owner]: a.id }).select().single();
@@ -92,7 +92,7 @@ for (const { name, owner, sample, key = 'id' } of TABLES) {
 }
 
 for (const { name, sample } of PUBLIC_TABLES) {
-  test(`SALDIRI: RLS ${name} is public to read but closed to writes`, async () => {
+  test(`ATTACK: RLS ${name} is public to read but closed to writes`, async () => {
     assert.ok((await client(ANON).from(name).insert(sample())).error, 'anonymous can write');
     assert.ok((await users[1].c.from(name).insert(sample())).error, 'a signed-in user can write');
   });

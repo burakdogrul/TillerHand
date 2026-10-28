@@ -3,7 +3,7 @@
 //   node .claude/hooks/qa-report.mjs [junit file]   default: test-results-qa/junit.xml (the /qa run has its own output folder:
 //   Playwright empties its output folder at every run, a shared one would delete the acceptance report and the evidence)
 //   → docs/quality/qa/<YYYY-MM-DD-HHMMSS>.md: one row per PRD criterion (passed / failed / not run), the first failure line,
-//   evidence test-results-qa/shots/<Ö-id>.png copied to .previews/qa-<stamp>/ (kept out of git, outlives the next run).
+//   evidence test-results-qa/shots/<AC-id>.png copied to .previews/qa-<stamp>/ (kept out of git, outlives the next run).
 //   Exit code: 0 nothing failed, 1 a criterion failed, 2 nothing to report (no JUnit file, no PRD criterion, no test ran).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,7 +27,7 @@ export function qaReport(root, junit = 'test-results-qa/junit.xml', now = new Da
   let prd;
   try { prd = fs.readFileSync(path.join(root, 'docs/product/prd.md'), 'utf8'); } catch { return none('docs/product/prd.md not found.'); }
   const criteria = prdCriteria(prd);
-  if (!criteria.length) return none('the PRD has no acceptance criterion with an id (`- [ ] Ö-01.1: ...`).');
+  if (!criteria.length) return none('the PRD has no acceptance criterion with an id (`- [ ] AC-01.1: ...`).');
   const results = new Map();
   for (const c of junitCases(xml)) {
     for (const k of c.keys) {
@@ -54,7 +54,7 @@ export function qaReport(root, junit = 'test-results-qa/junit.xml', now = new Da
     return { criterion: `${k.id} ${k.text}`, result: !r ? 'not run' : r.failed ? 'failed' : 'passed', evidence, note: r?.failed ? reasonLine(r.reason) : '' };
   });
   const count = (x) => rows.filter((r) => r.result === x).length;
-  if (!count('passed') && !count('failed')) return none(`no test result tied to a PRD criterion in ${junit} (the test name must start with the id: \`Ö-01.1 ...\`; did the server start?).`);
+  if (!count('passed') && !count('failed')) return none(`no test result tied to a PRD criterion in ${junit} (the test name must start with the id: \`AC-01.1 ...\`; did the server start?).`);
   const counts = { passed: count('passed'), failed: count('failed'), notRun: count('not run') };
   const file = `docs/quality/qa/${stamp}.md`;
   const md = `${t(root, 'qaReport.title', { stamp })}\n\n${t(root, 'qaReport.result', { summary: t(root, 'qaReport.summary', counts), count: rows.length, junit })}\n\n` +
