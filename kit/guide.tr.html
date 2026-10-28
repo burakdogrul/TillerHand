@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.47.1</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.48.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -481,17 +481,17 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
       <div class="moment">
         <div class="window">
           <div class="bar"><i></i><i></i><i></i><span>Kurul · görev sonu toplantısı</span></div>
-<pre class="term">MEMBER: Güvenlik · VERDICT: <span class="r">RET</span>
+<pre class="term">MEMBER: Güvenlik · VERDICT: <span class="r">REJECT</span>
 FINDINGS:
-<span class="r">[KRİTİK]</span> app/api/invoice/[id]/route.ts:14
+<span class="r">[CRITICAL]</span> app/api/invoice/[id]/route.ts:14
   Fatura sahibi kontrol edilmiyor; başka
   kullanıcının id'siyle fatura okunur.
   <span class="g">→ Sorguya user_id koşulu ekle.</span>
-MEMBER: QA · VERDICT: <span class="g">ONAY</span>
+MEMBER: QA · VERDICT: <span class="g">APPROVE</span>
 ASK THE USER: yok</pre>
         </div>
         <h3>Kurul bir açığı yakalar</h3>
-        <p>Kritik bulgu (RET) varsa görev bitmiş sayılmaz. Sana üç yol sunulur: düzelt, riski gerekçesiyle kabul et ya da görevi geri al.</p>
+        <p>Kritik bulgu (REJECT) varsa görev bitmiş sayılmaz. Sana üç yol sunulur: düzelt, riski gerekçesiyle kabul et ya da görevi geri al.</p>
       </div>
       <div class="moment">
         <div class="window">
@@ -515,7 +515,7 @@ ve adını .env.example'a boş değerle ekle.
 Aşama: Faz 1 · Görev: G-012 (7/23)
 Soru modu: açık · Limit: 5s %34 hf %5
 Yapıldı: kayıt formu + doğrulama, test yeşil
-Kurul: <span class="g">ONAY</span> (ux, qa)
+Kurul: <span class="g">APPROVE</span> (ux, qa)
 Sıradaki: G-013 şifre sıfırlama
 Bekleyen karar: e-posta servisi</pre>
         </div>
@@ -584,7 +584,7 @@ Bekleyen karar: e-posta servisi</pre>
     <p>Çalışma şekli</p>
     <a href="#protokol">Karar protokolü</a>
     <a href="#sihirbaz">/start sihirbazı</a>
-    <a href="#tasarim">Tasarım akışı</a>
+    <a href="#design">Tasarım akışı</a>
     <a href="#asamalar">Dört aşama</a>
     <a href="#kurul">Uzman kurulu</a>
     <p>Kalite ve güvenlik</p>
@@ -671,7 +671,7 @@ node vibe-kit/kit/kit.mjs init</pre>
     <li><b>Aç:</b> Aynı klasörde <b>yeni oturum</b> aç; kitin komutları ve korumaları yeni oturumda yüklenir. Eklentileri kurmayı önerirse kabul et.</li>
     <li><b>Başlat:</b> <code>/start fikrin</code> yaz (kodun zaten varsa <a href="#adopt"><code>/adopt</code></a>). <b>Her sorunun ilk seçeneği önerilendir</b>; emin değilsen onu seç. Pro'daysan ilk sorular için öneri: profil <b>Hafif</b>, planlama derinliği <b>Hızlı</b> (5 saatlik limitin ~%25-35'i), pano <b>Evet</b>, anlatıcı mod <b>Evet</b>.</li>
   </ol>
-  <div class="note accent"><b>Bilmen gerekenler.</b> Pro'da 5 saatlik ve haftalık kullanım limiti var; Claude %90, %95 ve %99'da uyarır ama işi durdurmaz. Limit dolup iş kesilirse yenilenince <code>/build</code> ile kaldığın yerden devam edersin. Veritabanı, tasarım ve maliyet gibi kararlar sorulmadan verilmez; ödeme, veri silme ve canlıya alma gibi geri dönüşü zor işler her zaman onay ister. Projeyi başkasına bırakacaksan <code>/handoff</code>; devralan <code>/handoff devral</code> ile aynı yerden devam eder.</div>
+  <div class="note accent"><b>Bilmen gerekenler.</b> Pro'da 5 saatlik ve haftalık kullanım limiti var; Claude %90, %95 ve %99'da uyarır ama işi durdurmaz. Limit dolup iş kesilirse yenilenince <code>/build</code> ile kaldığın yerden devam edersin. Veritabanı, tasarım ve maliyet gibi kararlar sorulmadan verilmez; ödeme, veri silme ve canlıya alma gibi geri dönüşü zor işler her zaman onay ister. Projeyi başkasına bırakacaksan <code>/handoff</code>; devralan <code>/handoff take</code> ile aynı yerden devam eder.</div>
 </section>
 
 <section id="adopt">
@@ -750,7 +750,7 @@ npx tillerhand init
     <div class="table-wrap" style="margin:0"><table>
       <thead><tr><th>Sen ne dersin</th><th>Ne olur</th></tr></thead>
       <tbody>
-        <tr><td>"tasarımda sorma"</td><td>Sadece <code>tasarim</code> konusu kapanır. AI önerilen seçeneği seçer, kararı "otomatik" diye kaydeder ve durum bloğunda bildirir. Önizlemeler yine üretilir.</td></tr>
+        <tr><td>"tasarımda sorma"</td><td>Sadece <code>design</code> konusu kapanır. AI önerilen seçeneği seçer, kararı "automatic" diye kaydeder ve durum bloğunda bildirir. Önizlemeler yine üretilir.</td></tr>
         <tr><td>"hiç sorma"</td><td>Tüm konular kapanır.</td></tr>
         <tr><td>"tekrar sor"</td><td>Konu(lar) yeniden açılır.</td></tr>
         <tr><td><code>/ask-mode</code></td><td>Mevcut modu ve otomatik verilen kararları gösterir; <code>on</code> / <code>off &lt;konu&gt;</code> ile değiştirir.</td></tr>
@@ -762,10 +762,10 @@ npx tillerhand init
     <tbody>
       <tr><td class="f">urun</td><td>MVP kapsamı, öncelik, kullanıcı akışı, fiyat</td></tr>
       <tr><td class="f">teknik</td><td>Dil, framework, veritabanı, auth, hosting, kütüphane ekleme, API stili</td></tr>
-      <tr><td class="f">tasarim</td><td>Stil yönü, renk, yazı tipi, düzen, bileşen stili, animasyon, koyu tema</td></tr>
+      <tr><td class="f">design</td><td>Stil yönü, renk, yazı tipi, düzen, bileşen stili, animasyon, koyu tema</td></tr>
       <tr><td class="f">icerik</td><td>Metinler, ses tonu, sen/siz, başlık ve CTA alternatifleri</td></tr>
       <tr><td class="f">veri</td><td>Veri modeli, silme davranışı, saklama süresi</td></tr>
-      <tr><td class="f">guvenlik</td><td>Roller, oturum süresi, hız sınırları, kişisel veri</td></tr>
+      <tr><td class="f">security</td><td>Roller, oturum süresi, hız sınırları, kişisel veri</td></tr>
       <tr><td class="f">maliyet</td><td>Ücretli servis, plan seviyesi, AI modeli, harcama limiti</td></tr>
     </tbody>
   </table></div>
@@ -794,7 +794,7 @@ npx tillerhand init
   <div class="note">Stack seçilince projenin README'sindeki Gereksinimler/Kurulum bölümü ve sürüm dosyası (<code>.nvmrc</code> / <code>.python-version</code>) doldurulur; proje başka bilgisayarda aynı şekilde kurulabilir. <code>/release</code> ve aylık <code>/maintain</code> bunu temiz bir klasörde kurarak sınar.</div>
 </section>
 
-<section id="tasarim">
+<section id="design">
   <p class="path">/design · görsel önizleme</p>
   <h2>Tasarımı görerek seçersin</h2>
   <p class="lead">Her tasarım kararında seçenek başına gerçek içerikle bir örnek üretilir (<code>.previews/</code>), tarayıcıda açılır, ekran görüntüsü gösterilir; sonra sorulur. Her stil yönü kendi skill'iyle çizilir, böylece seçenekler arasındaki fark gerçek olur.</p>
@@ -846,7 +846,7 @@ npx tillerhand init
         <span role="listitem">kapı + kurul → commit</span><i aria-hidden="true">→</i>
         <span role="listitem">/wrap-up</span>
       </div>
-      <div class="gate"><b>"Bitti" tanımı</b><ul><li>Görevde çıkan tüm kararlar soruldu ve kaydedildi</li><li>Testler yeşil, çalıştığına dair kanıt gösterildi</li><li>Arayüz varsa DESIGN.md'ye uygun, Impeccable critique yapıldı, metinler Humanizer'dan geçti</li><li>Görev sonu kurul toplantısında RET yok</li></ul></div>
+      <div class="gate"><b>"Bitti" tanımı</b><ul><li>Görevde çıkan tüm kararlar soruldu ve kaydedildi</li><li>Testler yeşil, çalıştığına dair kanıt gösterildi</li><li>Arayüz varsa DESIGN.md'ye uygun, Impeccable critique yapıldı, metinler Humanizer'dan geçti</li><li>Görev sonu kurul toplantısında REJECT yok</li></ul></div>
     </div>
   </div>
   <div class="phase">
@@ -905,12 +905,12 @@ npx tillerhand init
       <tr><td>Eklentiler</td><td>Çekirdek 6 + tipin LSP ve stack skill'leri</td><td>Çekirdek 8 + stack; paketler gerekince</td><td>Çekirdek 8 + stack; paketler gerekince</td></tr>
       <tr><td>Commit denetimi</td><td>Kapalı</td><td>Açık</td><td>Açık</td></tr>
       <tr><td>Komut listesi</td><td>10 çekirdek komut açıklamalı, gerisi sadece adıyla (~1.100 token az)</td><td>Hafif gibi</td><td>Hepsi açıklamalı</td></tr>
-      <tr><td>Toplantı konseyi</td><td>Yok</td><td>Faz sonu, canlıya alma</td><td>Plan, faz sonu, canlıya alma, RET</td></tr>
+      <tr><td>Toplantı konseyi</td><td>Yok</td><td>Faz sonu, canlıya alma</td><td>Plan, faz sonu, canlıya alma, REJECT</td></tr>
       <tr><td>Karar konseyi</td><td>Veritabanı, auth</td><td>Veritabanı, auth</td><td>Tüm tek yönlü kararlar</td></tr>
     </tbody>
   </table></div>
   <p>Karar konseyinde sana sorulan sorunun "(Önerilen)" seçeneği konseyden gelir; her seçeneğin altında konseyin oyu ve azınlık görüşü yazar. Tutanaklar <code>docs/workflow/council/</code>'da, özeti panonun Kurul sekmesinde.</p>
-  <div class="note">RET geldiğinde görev bitmiş sayılmaz. Sana üç seçenek sunulur: düzelt (önerilen), riski kabul et ve gerekçeyi kaydet, ya da görevi geri al. Üyeler arasında görüş ayrılığı varsa iki görüş yan yana konur ve karar sana sorulur.</div>
+  <div class="note">REJECT geldiğinde görev bitmiş sayılmaz. Sana üç seçenek sunulur: düzelt (önerilen), riski kabul et ve gerekçeyi kaydet, ya da görevi geri al. Üyeler arasında görüş ayrılığı varsa iki görüş yan yana konur ve karar sana sorulur.</div>
 </section>
 
 <section id="kontroller">
@@ -950,7 +950,7 @@ npx tillerhand init
       <tr><td>Yapılandırma onayı</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> ve iş akışı dosyaları onayın olmadan değişmez</td></tr>
       <tr><td>Test ayrımı</td><td>Testleri kodu yazan değil, ayrı bir ajan (<code>test-writer</code>, farklı model önerilir) koddan önce yazar. Test dosyasına bu ajan dışında kimse yazamaz: ana oturum ve kod ajanı denerse engellenir. Patch veya betikle dolaylı değişen test dosyası da commit kapısında durur. Böylece kodu yazan testi kendi koduna göre şekillendiremez</td></tr>
       <tr><td>Test koruması</td><td>Beklenti silmek veya yoruma almak, <code>.skip</code>/<code>.only</code>, gevşek beklenti, test dosyasını silmek veya taşımak ve test ayarında kapsamı daraltmak sorulur; kabukla test dosyasına yazmak da</td></tr>
-      <tr><td>Deterministik kapı</td><td><code>gate.mjs --run</code>: lint, tip kontrolü, test ve Semgrep çalışır; çıktı kurula girdi olur, kırmızı kontrol RET sayılır. Spec'teki "değişmemesi gereken" davranışların testi yoksa veya kırmızıysa kapı kırmızıdır. Eklenen bir satırda bu makineye özel bir yol (proje klasörünün ya da ev klasörünün tam yolu) varsa da kırmızıdır. Yeni veya değişen komut önce sana gösterilip onaylatılır</td></tr>
+      <tr><td>Deterministik kapı</td><td><code>gate.mjs --run</code>: lint, tip kontrolü, test ve Semgrep çalışır; çıktı kurula girdi olur, kırmızı kontrol REJECT sayılır. Spec'teki "değişmemesi gereken" davranışların testi yoksa veya kırmızıysa kapı kırmızıdır. Eklenen bir satırda bu makineye özel bir yol (proje klasörünün ya da ev klasörünün tam yolu) varsa da kırmızıdır. Yeni veya değişen komut önce sana gösterilip onaylatılır</td></tr>
       <tr><td>Commit kapısı</td><td>Kurul denetimi ve aynı değişiklikler için yeşil kapı olmadan commit atılmaz; görev sonu onayı commit için de geçerli, aynı değişiklik iki kez denetlenmez; denetimi atlamak (<code>--skip</code>) her seferinde sorulur</td></tr>
       <tr><td>Düzenleme kilidi</td><td><code>/freeze &lt;klasör&gt;</code> açıkken AI sadece o klasöre yazar; kabukla dışarı yazmak sorulur, sembolik bağdan kaçılamaz</td></tr>
       <tr><td>Kapsam kalkanı</td><td><code>/plan-task</code> onayından sonra planın dosya listesi kaydedilir; listede olmayan mevcut dosyaya yazım sorulur. Kalkanı açmak ve kapatmak da sorulur</td></tr>
@@ -1021,7 +1021,7 @@ AGENTS.md · CLAUDE.md · README.md · CHANGELOG.md</pre>
       <h3 style="margin-top:0">Her cevabın sonunda: durum bloğu</h3>
 <pre class="term">── Durum ─────────────────────────────
 Aşama: Faz 1 · Görev: G-012 (7/23) · Soru modu: açık · Limit: 5s %34 hf %5
-Yapıldı: kayıt formu + doğrulama, test yeşil · Kurul: ONAY (ux, qa)
+Yapıldı: kayıt formu + doğrulama, test yeşil · Kurul: APPROVE (ux, qa)
 Otomatik kararlar: yok
 Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
       <h3>Her zaman: alt durum çubuğu</h3>
@@ -1080,7 +1080,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <article class="tile"><h3>Doğru kaynak</h3><p class="stack">source-research · Context7 · Firecrawl (isteğe bağlı)</p><ul><li>Önce resmî doküman, mevzuat, standart</li><li>Her iddiaya kaynak, tarih, güven seviyesi (A-D)</li><li>Kütüphane dokümanı Context7'den güncel</li><li>Firecrawl API anahtarı senin ortam değişkeninde kalır</li></ul></article>
     <article class="tile"><h3>Dağıtım kurulumu</h3><p class="stack">/release first · deploy-setup.md</p><ul><li>Hosting, ortam değişkenleri, alan adı ve DNS, yedek, geri alma provası</li><li>Vercel, Supabase, Railway, EAS; adımlar kaynaklı ve tarihli</li><li>Sırrı sen panelde girersin; sohbete ve dosyaya yazılmaz</li></ul></article>
     <article class="tile"><h3>Öğrenen kurallar</h3><p class="stack">/fix-bug · /retro · hookify · AGENTS.md</p><ul><li>Aynı hata sınıfı ikinci kez gelince /fix-bug kural önerir; panoda da uyarı çıkar</li><li>Mekanik kural hookify'a, gerisi AGENTS.md'ye; sen onaylamadan yazılmaz</li><li>Her kuralda kaynak ve tarih; /maintain 90 günden eskileri sorar</li><li>Auto memory /start'ta sorulur, önerilen kapalı</li></ul></article>
-    <article class="tile"><h3>Kişisel tercihler</h3><p class="stack">~/.vibe-kit/tercihler.md · prefs.mjs</p><ul><li>Bir davranışı düzelttiğinde ya da nasıl çalışmak istediğini söylediğinde AI not alır</li><li>Görev ve oturum sonunda "tercih olarak kaydedeyim mi?" diye sorar; onaylamadığın yazılmaz</li><li>Tercihler tüm projelerinde geçerli, her oturumda yüklenir; git'e girmez</li><li>Listele: <code>node .claude/hooks/prefs.mjs --list</code>, sil: <code>--remove &lt;no&gt;</code></li></ul></article>
+    <article class="tile"><h3>Kişisel tercihler</h3><p class="stack">~/.vibe-kit/preferences.md · prefs.mjs</p><ul><li>Bir davranışı düzelttiğinde ya da nasıl çalışmak istediğini söylediğinde AI not alır</li><li>Görev ve oturum sonunda "tercih olarak kaydedeyim mi?" diye sorar; onaylamadığın yazılmaz</li><li>Tercihler tüm projelerinde geçerli, her oturumda yüklenir; git'e girmez</li><li>Listele: <code>node .claude/hooks/prefs.mjs --list</code>, sil: <code>--remove &lt;no&gt;</code></li></ul></article>
     <article class="tile"><h3>Rol bazlı model</h3><p class="stack">docs/workflow/models.md · models.mjs</p><ul><li>Beş rol: planlama, kod yazma, test yazma, inceleme, doküman ve araştırma</li><li>Her görevin başında rol başına tek soru (model ve effort birlikte), iki ekranda</li><li>Önerilen: plan Opus, kod Sonnet, test Opus, inceleme Sonnet, doküman Haiku; hepsi yüksek effort. Test, koddan farklı model: aynı kör noktayı paylaşmaz</li><li>Test, inceleme ve doküman işleri seçilen modelle alt ajanda; plan ana oturumda</li><li>Roadmap işareti, maliyet satırı ve progress etiketleri <code>progress.mjs</code> ile yazılır; model çağrısı harcanmaz, biçim bozulmaz</li><li>Alt ajan yalnız karlıysa: <code>flow.mjs</code> görev büyüklüğüne, bağlama ve limite bakar; küçük görev ana oturumda kalır, kurul üyeleri değişen yollardan seçilir, sayısı limite göre azalır; üye en fazla 5 bulgu yazar</li></ul></article>
     <article class="tile"><h3>Türkiye eki</h3><p class="stack">--addons tr · docs/legal/turkiye.md</p><ul><li>KVKK yurt dışı aktarım: standart sözleşme, 5 iş günü bildirim</li><li>e-Fatura ve e-Arşiv eşikleri (GİB)</li><li>iyzico ve PayTR bildirim imzası kodu ve saldırgan testi</li><li>İ/ı ve Türkçe sıralama testleri; hukuki görüş değildir</li></ul></article>
     <article class="tile"><h3>Tarayıcıda QA ve önizleme</h3><p class="stack">/qa · preview.mjs · Playwright CLI</p><ul><li>Arayüz kriterleri gerçek tarayıcıda test olarak koşar</li><li>Rapor test sonucundan yazılır, panoda kart</li><li>/build arayüz görevinde masaüstü ve mobil ekran görüntüsü</li></ul></article>
@@ -1187,7 +1187,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
       <tr><td class="f">/user-feedback</td><td>Kullanıcı geri bildirimini temalara ayırır, yol haritasına aldırır</td></tr>
       <tr><td class="f">/retro</td><td>Dersleri projeye yazar; kite önerileri TillerHand reposunda bir dala</td></tr>
       <tr><td class="f">/research [konu]</td><td>Makaleler, GitHub'daki benzer projeler ve rakip ürünler; fark tablosu; seçilen özellikler PRD'ye</td></tr>
-      <tr><td class="f">/handoff [devral]</td><td>Projeyi başka kişiye veya hesaba devreder ya da devralır; aynı yerden devam</td></tr>
+      <tr><td class="f">/handoff [take]</td><td>Projeyi başka kişiye veya hesaba devreder ya da devralır; aynı yerden devam</td></tr>
       <tr><td class="f">/tools [ac|kapat|olc|komutlar]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer; komut listesini hafif veya tam yapar</td></tr>
       <tr><td class="f">/kit-update</td><td>Projeyi TillerHand'in son sürümüne çeker; çakışmaları sorar; <code>--tool</code> ile araç, <code>--addons</code> ile ek ekler</td></tr>
       <tr><td class="f">/language [dil]</td><td>Konuşma dilini değiştirir (Türkçe, İngilizce ya da başka bir dil); hook metinlerinin çevirisini ve panoyu yeniler</td></tr>
@@ -1245,7 +1245,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.47.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.48.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

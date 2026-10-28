@@ -3,6 +3,25 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.48.0] - 2026-10-29
+
+### Changed
+- **Labels, values and arguments the tools read are English now.** New projects get English templates: `**Active phase:**`, `**Question mode:** on · closed topics: none`, `## Where we left off`, `## Commands` with `dev:` / `preview:` / `type check:`, `# [PROJECT NAME]`, and so on. Board and council members write `VERDICT: APPROVE | CONDITIONAL | REJECT`, findings `[CRITICAL|IMPORTANT|SUGGESTION]`, and the council minutes use `Opinion`, `Reviewer`, `VOTES:` (`AGREE` / `DISAGREE` / `OVERSTATED`), `RANKING:` and `## 3. Overall ranking`.
+- **Ids and prefixes.** Acceptance criteria are `AC-01.1` (`AC_01_1` in Python test names), adversarial tests start with `ATTACK:`, and dates in templates are `YYYY-MM-DD`.
+- **Commands.** `/handoff take`, `/tools on|off|measure|commands light|full`, `/ask-mode on|off <topic|all>`. Decision topics are `product`, `tech`, `design`, `content`, `data`, `security`, `cost`. Package names are `design`, `security`, `release`, `video`. Cost log sizes are `S` / `M` / `L`. Bug classes are English (`authorization`, `date-time`, … `other`).
+- **Values.** Board `not set up` / `set up`, commit review `on` / `off`, handoff `waiting`, decision log `automatic` / `user` and `one-way` / `two-way`, QA results `passed` / `failed` / `not run`, feedback types and statuses, learning `right` / `wrong`.
+- **The narrator output style is `narrator`** (was `anlatici`). The update replaces an unchanged old copy and the `outputStyle` setting.
+- Writers keep the language of the file they write into: a council section, a progress label or a question-mode line in an older Turkish file stays Turkish.
+
+### Compatibility
+- Project files from earlier versions keep working. Every hook still reads the Turkish labels, values, verdicts, ids (`Ö-01.1`, `O_01_1`), prefixes (`SALDIRI:`) and arguments (`/handoff devral`, `/tools ac`, `tasarim`, `hepsi`, `K/O/B`), and counts them together with the English ones on the dashboard.
+- Adapt by hand (optional): nothing has to change. To move a project file to English, take the kit's template as `.kit-new` and copy your content over.
+
+### Fixed
+- The dashboard's question-mode hint suggested `/ask-mode ac`; it is `/ask-mode on`.
+- A council decision or meeting result that only contained the letters "RET" inside a word (for example "INTERPRETATION B") got a reject badge.
+- `**Commit review:** offer` no longer counts as review switched off.
+
 ## [3.47.1] - 2026-10-28
 
 ### Fixed

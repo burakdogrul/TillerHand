@@ -168,9 +168,10 @@ const VERDICTS = [['KOŞULLU ONAY', 'conditional'], ['CONDITIONAL', 'conditional
 // Board result in either language. Fail-closed: anything that is not one clean verdict is 'unknown'.
 export function verdict(text) {
   if (typeof text !== 'string') return 'unknown';
-  const s = text.trim().replace(/^\*\*[^*]+:\*\*\s*/, '').toUpperCase();
+  // "**Result:** RET", "**RET**"; after the word only the end, a dash, a bracket or ": , ; ." ("RET: güvenlik")
+  const s = text.trim().replace(/^\*\*[^*]+:\*\*\s*/, '').replace(/^\*\*([^*]+)\*\*/, '$1').toUpperCase();
   for (const [word, result] of VERDICTS) {
-    if (s.startsWith(word) && /^\s*(?:$|[—–(-])/.test(s.slice(word.length))) return result;
+    if (s.startsWith(word) && /^(?:\s*(?:$|[—–(-])|[:,;.])/.test(s.slice(word.length))) return result;
   }
   return 'unknown';
 }

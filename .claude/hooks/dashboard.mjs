@@ -202,8 +202,8 @@ const feedLabel = (k) => (Object.hasOwn(FEED_KEYS, k) ? L(FEED_KEYS[k]) : k);
 const onOff = (v) => (isValue(v, 'on') ? L('dashboard.on') : isValue(v, 'off') ? L('dashboard.off') : v);
 // A text for the page's own script: a single-quoted JS string, no tag can end the script block
 const jsStr = (key) => `'${L(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\u003c')}'`;
-// A board verdict in either language; an option name (decision council) or anything else is shown as good
-const verdictBadge = (k) => badge({ conditional: 'warn', reject: 'critical' }[verdict(k)] ?? 'good', k);
+// A board verdict in either language; an option name (decision council) or an unreadable result is neutral
+const verdictBadge = (k) => badge({ approve: 'good', conditional: 'warn', reject: 'critical' }[verdict(k)] ?? 'info', k);
 const badge = (sev, caption) => `<span class="badge ${sev}"><span class="ic" aria-hidden="true">${SEV[sev][0]}</span> ${e(caption ?? L(SEV[sev][1]))}</span>`;
 const fmtDate = (t) => { const z = toDate(t); return Number.isNaN(z.getTime()) ? e(t) : z.toLocaleString(loc, { day: '2-digit', month: 'short', hour: t.length > 10 ? '2-digit' : undefined, minute: t.length > 10 ? '2-digit' : undefined }); };
 const limitSeverity = (p, k) => (p == null ? 'info' : p >= THRESHOLDS[k].red ? 'critical' : p >= THRESHOLDS[k].yellow ? 'warn' : 'good');
@@ -254,7 +254,7 @@ const boardSection = `
 <div class="grid2">
   <section class="card"><h3>${L('dashboard.members')} · ${e(isValue(d.board.state, 'setUp') ? L('dashboard.boardSetUp') : isValue(d.board.state, 'notSetUp') ? L('dashboard.notSetUp') : d.board.state)}</h3>${d.board.members.length ? `<ul class="members">${d.board.members.map((u) => `<li><b>${e(u.member)}</b><span class="muted small">${e(u.model)} · ${e(u.focus)}</span></li>`).join('')}</ul>` : empty(L('dashboard.boardNotSetUp'), '/board setup')}
     <p class="muted small">${L('dashboard.commitReview', { value: e(onOff(d.board.commitReview)) })}</p></section>
-  <section class="card"><h3>${L('dashboard.summary')}</h3><div class="kpis mini">${kpi(L('dashboard.kpiMeetings'), d.board.meetings.length)}${kpi('RET', rejectCount, rejectCount ? badge('critical', L('dashboard.criticalFinding')) : '')}${kpi(L('dashboard.kpiApproval'), d.board.meetings.length ? `%${percent(d.board.meetings.filter((t) => verdict(t.result) === 'approve').length, d.board.meetings.length)}` : '-')}</div></section>
+  <section class="card"><h3>${L('dashboard.summary')}</h3><div class="kpis mini">${kpi(L('dashboard.kpiMeetings'), d.board.meetings.length)}${kpi(L('dashboard.kpiRejects'), rejectCount, rejectCount ? badge('critical', L('dashboard.criticalFinding')) : '')}${kpi(L('dashboard.kpiApproval'), d.board.meetings.length ? `%${percent(d.board.meetings.filter((t) => verdict(t.result) === 'approve').length, d.board.meetings.length)}` : '-')}</div></section>
 </div>
 <section class="card"><h3>${L('dashboard.councilHeading')}</h3>${councils.length ? (() => {
   const latest = councils[0];

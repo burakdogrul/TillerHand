@@ -105,7 +105,8 @@ function hasBoard() {
 
 function reviewOff() {
   try {
-    return /^\*\*Commit review:\*\*\s*(off|kapalı)/im.test(normalize(fs.readFileSync(path.join(root, 'docs', 'workflow', 'board.md'), 'utf8')));
+    // The whole word: "**Commit review:** offer" does not switch the review off
+    return /^\*\*Commit review:\*\*[ \t]*(off|kapalı)(?![\p{L}\p{N}])/imu.test(normalize(fs.readFileSync(path.join(root, 'docs', 'workflow', 'board.md'), 'utf8')));
   } catch {
     return false;
   }

@@ -42,10 +42,12 @@ export function qaReport(root, junit = 'test-results-qa/junit.xml', now = new Da
   const rows = criteria.map((k) => {
     const r = results.get(k.key);
     let evidence = '';
-    const shot = path.join(root, path.dirname(junit), 'shots', `${k.id}.png`);
+    // The test may name the screenshot in the other id form (PRD "Ö-01.1", test "AC-01.1", or the other way round)
+    const names = [k.id, k.id.replace(/^Ö-/, 'AC-'), k.id.replace(/^AC-/, 'Ö-')];
+    const shot = [...new Set(names)].map((n) => path.join(root, path.dirname(junit), 'shots', `${n}.png`))
+      .find((p) => { try { return fs.lstatSync(p).isFile(); } catch { return false; } });
     // Only a real screenshot file: a shots/<id>.png link would copy any local file into .previews/
-    let real = false;
-    try { real = fs.lstatSync(shot).isFile(); } catch { /* no screenshot */ }
+    const real = !!shot;
     if (r && !linked && real) {
       fs.mkdirSync(shots, { recursive: true });
       fs.copyFileSync(shot, path.join(shots, `${k.id}.png`));

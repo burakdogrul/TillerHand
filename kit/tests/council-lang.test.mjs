@@ -525,7 +525,7 @@ test('A-48.14 council-lang: a decision text with RET only inside a word is not a
     },
     meetings: { zqmonay: 'ONAY', zqmsecret: 'ONAY — Secret store rotated', zqminterp: 'APPROVE — INTERPRETATION B noted' },
   });
-  assert.equal(b.zqcontrol, 'good');
+  assert.equal(b.zqcontrol, 'info');
   assert.deepEqual([b.zqinterp, b.zqtrinterp, b.zqsecret], [b.zqcontrol, b.zqcontrol, b.zqcontrol], 'an option name is not a verdict');
   assert.deepEqual([b.zqmsecret, b.zqminterp], [b.zqmonay, b.zqmonay], 'an approval that mentions a "secret" stays an approval');
 });

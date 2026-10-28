@@ -52,7 +52,7 @@ function readJson(p) {
 
 // Package names before 3.48; they still work as input
 const OLD_NAMES = { tasarim: 'design', guvenlik: 'security', yayin: 'release' };
-export const packageName = (name) => OLD_NAMES[name] ?? name;
+export const packageName = (name) => (Object.hasOwn(OLD_NAMES, name ?? '') ? OLD_NAMES[name] : name);
 
 function pkg(name) {
   if (!Object.hasOwn(PACKAGES, packageName(name ?? ''))) throw new Error(`Unknown package: ${name}. Options: ${Object.keys(PACKAGES).join(', ')}`);

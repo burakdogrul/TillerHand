@@ -408,8 +408,11 @@ function renameKitFiles(project, record, report) {
   for (const [from, to] of Object.entries(RENAMED)) {
     const old = path.join(project, from);
     if (!fs.existsSync(old)) { delete record[from]; continue; }
-    if (record[from] === hash(old)) { fs.rmSync(old); delete record[from]; report.updated.push(`${from} -> ${to}`); }
-    else report.conflicts.push(`${from} (renamed to ${to} in the kit; yours was changed, so it stays: move your changes over and delete it)`);
+    if (record[from] === hash(old)) { fs.rmSync(old); delete record[from]; report.updated.push(`${from} -> ${to}`); continue; }
+    // Changed by the user: theirs from now on (no longer tracked, so it is not reported again), and their style setting stays
+    if (from in record) report.conflicts.push(`${from} (renamed to ${to} in the kit; yours was changed, so it stays and keeps working)`);
+    delete record[from];
+    delete RENAMED_STYLES[path.basename(from, '.md')];
   }
   // The setting that picks the style by name: personal (settings.local.json) or for the team (settings.json)
   for (const name of ['settings.local.json', 'settings.json']) {

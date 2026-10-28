@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.47.1</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.48.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -481,17 +481,17 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
       <div class="moment">
         <div class="window">
           <div class="bar"><i></i><i></i><i></i><span>Board · task-end meeting</span></div>
-<pre class="term">MEMBER: Security · VERDICT: <span class="r">RET</span>
+<pre class="term">MEMBER: Security · VERDICT: <span class="r">REJECT</span>
 FINDINGS:
-<span class="r">[KRİTİK]</span> app/api/invoice/[id]/route.ts:14
+<span class="r">[CRITICAL]</span> app/api/invoice/[id]/route.ts:14
   The invoice owner is not checked; another
   user's id reads their invoice.
   <span class="g">→ Add a user_id condition to the query.</span>
-MEMBER: QA · VERDICT: <span class="g">ONAY</span>
+MEMBER: QA · VERDICT: <span class="g">APPROVE</span>
 ASK THE USER: none</pre>
         </div>
         <h3>The board catches a hole</h3>
-        <p>With a critical finding (RET) the task is not done. You get three paths: fix it, accept the risk with a reason, or roll the task back.</p>
+        <p>With a critical finding (REJECT) the task is not done. You get three paths: fix it, accept the risk with a reason, or roll the task back.</p>
       </div>
       <div class="moment">
         <div class="window">
@@ -513,7 +513,7 @@ an environment variable and add its name to .env.example with an empty value.
           <div class="bar"><i></i><i></i><i></i><span>At the end of every answer</span></div>
 <pre class="term">── Status ──────────────────────
 Phase: 1 · Task: G-012 (7/23) · Question mode: open · Limit: 5h 34% weekly 5%
-Done: signup form + validation, tests green · Board: <span class="g">ONAY</span> (ux, qa) · Auto decisions: none
+Done: signup form + validation, tests green · Board: <span class="g">APPROVE</span> (ux, qa) · Auto decisions: none
 Next: G-013 password reset · pending decision: email service</pre>
         </div>
         <h3>You always know where you are</h3>
@@ -581,7 +581,7 @@ Next: G-013 password reset · pending decision: email service</pre>
     <p>How it works</p>
     <a href="#protokol">Decision protocol</a>
     <a href="#sihirbaz">The /start wizard</a>
-    <a href="#tasarim">Design flow</a>
+    <a href="#design">Design flow</a>
     <a href="#asamalar">Four stages</a>
     <a href="#kurul">Expert board</a>
     <p>Quality and security</p>
@@ -668,7 +668,7 @@ node vibe-kit/kit/kit.mjs init</pre>
     <li><b>Open:</b> Open a <b>new session</b> in the same folder; the kit's commands and guardrails load in the new session. If it offers to install the plugins, accept.</li>
     <li><b>Start:</b> Type <code>/start your idea</code> (or <a href="#adopt"><code>/adopt</code></a> if you already have code). <b>The first option of every question is the recommended one</b>; if you're unsure, pick it. If you're on Pro, suggested answers for the first questions: profile <b>Light</b>, planning depth <b>Quick</b> (~25-35% of your 5-hour limit), dashboard <b>Yes</b>, narrator mode <b>Yes</b>.</li>
   </ol>
-  <div class="note accent"><b>Good to know.</b> Pro has a 5-hour and a weekly usage limit; Claude warns at 90%, 95% and 99% but does not stop the work. If the limit runs out and the work is cut off, you continue from where you left off with <code>/build</code> after it resets. Decisions such as database, design and cost are never made without asking; hard-to-undo steps such as payment, data deletion and going live always need approval. To hand the project to someone else use <code>/handoff</code>; the new owner continues from the same place with <code>/handoff devral</code>.</div>
+  <div class="note accent"><b>Good to know.</b> Pro has a 5-hour and a weekly usage limit; Claude warns at 90%, 95% and 99% but does not stop the work. If the limit runs out and the work is cut off, you continue from where you left off with <code>/build</code> after it resets. Decisions such as database, design and cost are never made without asking; hard-to-undo steps such as payment, data deletion and going live always need approval. To hand the project to someone else use <code>/handoff</code>; the new owner continues from the same place with <code>/handoff take</code>.</div>
 </section>
 
 <section id="adopt">
@@ -747,7 +747,7 @@ npx tillerhand init
     <div class="table-wrap" style="margin:0"><table>
       <thead><tr><th>What you say</th><th>What happens</th></tr></thead>
       <tbody>
-        <tr><td>"don't ask about design"</td><td>Only the <code>tasarim</code> topic is closed. The AI picks the recommended option, records the decision as "otomatik" (automatic) and reports it in the status block. Previews are still produced.</td></tr>
+        <tr><td>"don't ask about design"</td><td>Only the <code>design</code> topic is closed. The AI picks the recommended option, records the decision as "automatic" and reports it in the status block. Previews are still produced.</td></tr>
         <tr><td>"don't ask anything"</td><td>All topics are closed.</td></tr>
         <tr><td>"ask again"</td><td>The topic(s) reopen.</td></tr>
         <tr><td><code>/ask-mode</code></td><td>Shows the current mode and the automatic decisions; changes it with <code>on</code> / <code>off &lt;topic&gt;</code>.</td></tr>
@@ -759,10 +759,10 @@ npx tillerhand init
     <tbody>
       <tr><td class="f">urun</td><td>MVP scope, priority, user flow, price</td></tr>
       <tr><td class="f">teknik</td><td>Language, framework, database, auth, hosting, adding a library, API style</td></tr>
-      <tr><td class="f">tasarim</td><td>Style direction, color, typeface, layout, component style, animation, dark theme</td></tr>
+      <tr><td class="f">design</td><td>Style direction, color, typeface, layout, component style, animation, dark theme</td></tr>
       <tr><td class="f">icerik</td><td>Copy, tone of voice, formal/informal address, headline and CTA alternatives</td></tr>
       <tr><td class="f">veri</td><td>Data model, delete behavior, retention period</td></tr>
-      <tr><td class="f">guvenlik</td><td>Roles, session length, rate limits, personal data</td></tr>
+      <tr><td class="f">security</td><td>Roles, session length, rate limits, personal data</td></tr>
       <tr><td class="f">maliyet</td><td>Paid service, plan tier, AI model, spending limit</td></tr>
     </tbody>
   </table></div>
@@ -791,7 +791,7 @@ npx tillerhand init
   <div class="note">When the stack is chosen, the Requirements/Setup section of the project's README and the version file (<code>.nvmrc</code> / <code>.python-version</code>) are filled in; the project can be set up the same way on another computer. <code>/release</code> and the monthly <code>/maintain</code> test this by installing it in a clean folder.</div>
 </section>
 
-<section id="tasarim">
+<section id="design">
   <p class="path">/design · visual preview</p>
   <h2>You choose design by seeing it</h2>
   <p class="lead">For every design decision, a sample with real content is produced for each option (<code>.previews/</code>), opened in the browser, and a screenshot is shown; then you are asked. Each style direction is drawn with its own skill, so the differences between the options are real.</p>
@@ -843,7 +843,7 @@ npx tillerhand init
         <span role="listitem">gate + board → commit</span><i aria-hidden="true">→</i>
         <span role="listitem">/wrap-up</span>
       </div>
-      <div class="gate"><b>Definition of "done"</b><ul><li>All decisions that came up in the task were asked and recorded</li><li>Tests are green, proof that it works was shown</li><li>If there is an interface: it matches DESIGN.md, an Impeccable critique was done, the copy passed through Humanizer</li><li>No RET in the task-end board meeting</li></ul></div>
+      <div class="gate"><b>Definition of "done"</b><ul><li>All decisions that came up in the task were asked and recorded</li><li>Tests are green, proof that it works was shown</li><li>If there is an interface: it matches DESIGN.md, an Impeccable critique was done, the copy passed through Humanizer</li><li>No REJECT in the task-end board meeting</li></ul></div>
     </div>
   </div>
   <div class="phase">
@@ -902,12 +902,12 @@ npx tillerhand init
       <tr><td>Plugins</td><td>Core 6 + the type's LSP and stack skills</td><td>Core 8 + stack; packs when needed</td><td>Core 8 + stack; packs when needed</td></tr>
       <tr><td>Commit review</td><td>Off</td><td>On</td><td>On</td></tr>
       <tr><td>Command list</td><td>10 core commands with descriptions, the rest by name only (~1,100 tokens less)</td><td>Like Light</td><td>All with descriptions</td></tr>
-      <tr><td>Meeting council</td><td>None</td><td>Phase end, going live</td><td>Plan, phase end, going live, RET</td></tr>
+      <tr><td>Meeting council</td><td>None</td><td>Phase end, going live</td><td>Plan, phase end, going live, REJECT</td></tr>
       <tr><td>Decision council</td><td>Database, auth</td><td>Database, auth</td><td>All one-way decisions</td></tr>
     </tbody>
   </table></div>
   <p>The "(Recommended)" option of a question asked in the decision council comes from the council; under each option you see the council's vote and the minority opinion. Minutes are in <code>docs/workflow/council/</code>, with a summary in the dashboard's Board tab.</p>
-  <div class="note">When a RET comes, the task is not counted as done. You get three options: fix it (recommended), accept the risk and record the reason, or roll the task back. If members disagree, the two opinions are shown side by side and the decision is asked from you.</div>
+  <div class="note">When a REJECT comes, the task is not counted as done. You get three options: fix it (recommended), accept the risk and record the reason, or roll the task back. If members disagree, the two opinions are shown side by side and the decision is asked from you.</div>
 </section>
 
 <section id="kontroller">
@@ -947,7 +947,7 @@ npx tillerhand init
       <tr><td>Config approval</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> and workflow files don't change without your approval</td></tr>
       <tr><td>Test separation</td><td>The tests are written before the code by a separate agent (<code>test-writer</code>, a different model is recommended), not by whoever writes the code. Nobody but this agent can write to a test file: the main session and the code agent are blocked if they try. A test file changed indirectly by a patch or script also stops at the commit gate. So whoever writes the code can't shape the test to fit their own code</td></tr>
       <tr><td>Test protection</td><td>Deleting or commenting out an assertion, <code>.skip</code>/<code>.only</code>, a loosened assertion, deleting or moving a test file, and narrowing coverage in the test config are asked; so is writing to a test file through the shell</td></tr>
-      <tr><td>Deterministic gate</td><td><code>gate.mjs --run</code>: lint, type check, tests and Semgrep run; the output feeds the board, and a red check counts as RET. If the "must not change" behaviors in the spec have no test or the test is red, the gate is red. It is also red if an added line contains a path specific to this machine (the full path of the project folder or the home folder). A new or changed command is first shown to you for approval</td></tr>
+      <tr><td>Deterministic gate</td><td><code>gate.mjs --run</code>: lint, type check, tests and Semgrep run; the output feeds the board, and a red check counts as REJECT. If the "must not change" behaviors in the spec have no test or the test is red, the gate is red. It is also red if an added line contains a path specific to this machine (the full path of the project folder or the home folder). A new or changed command is first shown to you for approval</td></tr>
       <tr><td>Commit gate</td><td>No commit without a board review and a green gate for the same changes; the task-end approval also counts for the commit, so the same change is not reviewed twice; skipping the review (<code>--skip</code>) is asked every time</td></tr>
       <tr><td>Edit lock</td><td>While <code>/freeze &lt;folder&gt;</code> is on, the AI writes only to that folder; writing outside through the shell is asked, and a symlink can't escape it</td></tr>
       <tr><td>Scope shield</td><td>After <code>/plan-task</code> approval, the plan's file list is saved; writing to an existing file not on the list is asked. Turning the shield on and off is asked too</td></tr>
@@ -1018,7 +1018,7 @@ AGENTS.md · CLAUDE.md · README.md · CHANGELOG.md</pre>
       <h3 style="margin-top:0">At the end of every answer: the status block</h3>
 <pre class="term">── Status ──────────────────────
 Phase: 1 · Task: G-012 (7/23) · Question mode: open · Limit: 5h 34% weekly 5%
-Done: signup form + validation, tests green · Board: ONAY (ux, qa) · Auto decisions: none
+Done: signup form + validation, tests green · Board: APPROVE (ux, qa) · Auto decisions: none
 Next: G-013 password reset · pending decision: email service</pre>
       <h3>Always: the status line</h3>
 <pre class="term">▶ Phase 1 · G-012 · task 7/23 · questions: open · 5h 34% · weekly 5% · context 42%</pre>
@@ -1076,7 +1076,7 @@ Next: G-013 password reset · pending decision: email service</pre>
     <article class="tile"><h3>The right source</h3><p class="stack">source-research · Context7 · Firecrawl (optional)</p><ul><li>Official docs, law and standards first</li><li>Every claim gets a source, a date and a confidence level (A-D)</li><li>Library docs come up to date from Context7</li><li>The Firecrawl API key stays in your own environment variable</li></ul></article>
     <article class="tile"><h3>Deployment setup</h3><p class="stack">/release first · deploy-setup.md</p><ul><li>Hosting, environment variables, domain and DNS, backup, rollback rehearsal</li><li>Vercel, Supabase, Railway, EAS; steps with sources and dates</li><li>You enter the secret in the dashboard; it is not written to the chat or to a file</li></ul></article>
     <article class="tile"><h3>Rules that learn</h3><p class="stack">/fix-bug · /retro · hookify · AGENTS.md</p><ul><li>When the same error class comes a second time, /fix-bug suggests a rule; a warning shows on the dashboard too</li><li>Mechanical rules go to hookify, the rest to AGENTS.md; nothing is written without your approval</li><li>Every rule has a source and a date; /maintain asks about those older than 90 days</li><li>Auto memory is asked at /start, off is recommended</li></ul></article>
-    <article class="tile"><h3>Personal preferences</h3><p class="stack">~/.vibe-kit/tercihler.md · prefs.mjs</p><ul><li>When you correct a behavior or say how you want to work, the AI takes a note</li><li>At the end of a task and a session it asks "save this as a preference?"; what you don't approve is not written</li><li>Preferences apply to all your projects and load in every session; they don't go into git</li><li>List: <code>node .claude/hooks/prefs.mjs --list</code>, remove: <code>--remove &lt;no&gt;</code></li></ul></article>
+    <article class="tile"><h3>Personal preferences</h3><p class="stack">~/.vibe-kit/preferences.md · prefs.mjs</p><ul><li>When you correct a behavior or say how you want to work, the AI takes a note</li><li>At the end of a task and a session it asks "save this as a preference?"; what you don't approve is not written</li><li>Preferences apply to all your projects and load in every session; they don't go into git</li><li>List: <code>node .claude/hooks/prefs.mjs --list</code>, remove: <code>--remove &lt;no&gt;</code></li></ul></article>
     <article class="tile"><h3>Model per role</h3><p class="stack">docs/workflow/models.md · models.mjs</p><ul><li>Five roles: planning, coding, test writing, review, docs and research</li><li>One question per role at the start of each task (model and effort together), on two screens</li><li>Recommended: plan Opus, code Sonnet, tests Opus, review Sonnet, docs Haiku; all at high effort. Tests use a different model from the code: they don't share the same blind spot</li><li>Test, review and docs work runs in a subagent with the chosen model; the plan runs in the main session</li><li>The roadmap mark, the cost line and the progress labels are written by <code>progress.mjs</code>; no model call is spent and the format doesn't break</li><li>A subagent only when it pays off: <code>flow.mjs</code> looks at task size, context and limit; a small task stays in the main session, board members are chosen from the changed paths and their number shrinks with the limit; a member writes at most 5 findings</li></ul></article>
     <article class="tile"><h3>Turkey add-on</h3><p class="stack">--addons tr · docs/legal/turkiye.md</p><ul><li>KVKK transfer abroad: standard contract, 5-business-day notification</li><li>e-Fatura and e-Arşiv thresholds (GİB)</li><li>iyzico and PayTR notification signature code and adversarial test</li><li>İ/ı and Turkish sorting tests; not legal advice</li></ul></article>
     <article class="tile"><h3>QA and preview in the browser</h3><p class="stack">/qa · preview.mjs · Playwright CLI</p><ul><li>Interface criteria run as tests in a real browser</li><li>The report is written from the test result, a card on the dashboard</li><li>On an interface task /build takes desktop and mobile screenshots</li></ul></article>
@@ -1183,7 +1183,7 @@ Next: G-013 password reset · pending decision: email service</pre>
       <tr><td class="f">/user-feedback</td><td>Sorts user feedback into themes and has you add them to the roadmap</td></tr>
       <tr><td class="f">/retro</td><td>Writes the lessons into the project; kit suggestions go to a branch in the TillerHand repo</td></tr>
       <tr><td class="f">/research [topic]</td><td>Articles, similar projects on GitHub and competing products; a difference table; chosen features go into the PRD</td></tr>
-      <tr><td class="f">/handoff [devral]</td><td>Hands the project to another person or account, or takes it over; continues from the same place</td></tr>
+      <tr><td class="f">/handoff [take]</td><td>Hands the project to another person or account, or takes it over; continues from the same place</td></tr>
       <tr><td class="f">/tools [ac|kapat|olc|komutlar]</td><td>Shows, turns on or turns off context packs; measures the skill load; makes the command list light or full</td></tr>
       <tr><td class="f">/kit-update</td><td>Brings the project to TillerHand's latest version; asks about conflicts; adds a tool with <code>--tool</code> and an add-on with <code>--addons</code></td></tr>
       <tr><td class="f">/language [language]</td><td>Changes the conversation language (Turkish, English or another language); refreshes the translation of the hook messages and the dashboard</td></tr>
@@ -1241,7 +1241,7 @@ Next: G-013 password reset · pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.47.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.48.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

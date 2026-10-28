@@ -28,7 +28,7 @@
 
 Each feature is a user story + acceptance criteria. A feature without acceptance criteria is not ready.
 Each criterion has an id (`AC-01.1`). Acceptance tests carry this id in the test name; the `/dashboard` reads MVP progress from **test results**, not from checkboxes (`docs/quality/test-plan.md` §1a).
-The label "Priority" (priority) stays Turkish: the dashboard reads it.
+The dashboard reads the "Priority" label; keep its wording.
 
 ### AC-01: [Feature name]
 **Story:** As a [user], I want to [action], so that [benefit].

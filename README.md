@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.47.1-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.48.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -90,7 +90,7 @@ The first question is the language: Turkish, English or another one. Claude then
 **Good to know**
 - **Limits:** Pro has 5-hour and weekly limits. Claude warns at 90%, 95% and 99%; if a limit runs out, continue with `/build` once it resets.
 - **Approval:** Database, design and cost decisions are never made without asking. Deleting data, payments and going live always need your approval.
-- **Handoff:** Leaving the project to someone else? Use `/handoff`; they continue from the same point with `/handoff devral`.
+- **Handoff:** Leaving the project to someone else? Use `/handoff`; they continue from the same point with `/handoff take`.
 
 ## Quick start
 
