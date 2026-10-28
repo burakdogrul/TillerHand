@@ -400,6 +400,31 @@ function install({ type, addons, keepKit, project, tool }) {
   }
 }
 
+// Kit files that got a new name (3.48: English). An unchanged old copy goes away and the new one is copied as usual;
+// one the user changed stays where it is (reported), so nothing they wrote is lost.
+const RENAMED = { '.claude/output-styles/anlatici.md': '.claude/output-styles/narrator.md' };
+const RENAMED_STYLES = { anlatici: 'narrator' };
+function renameKitFiles(project, record, report) {
+  for (const [from, to] of Object.entries(RENAMED)) {
+    const old = path.join(project, from);
+    if (!fs.existsSync(old)) { delete record[from]; continue; }
+    if (record[from] === hash(old)) { fs.rmSync(old); delete record[from]; report.updated.push(`${from} -> ${to}`); }
+    else report.conflicts.push(`${from} (renamed to ${to} in the kit; yours was changed, so it stays: move your changes over and delete it)`);
+  }
+  // The setting that picks the style by name: personal (settings.local.json) or for the team (settings.json)
+  for (const name of ['settings.local.json', 'settings.json']) {
+    const file = path.join(project, '.claude', name);
+    try {
+      const s = JSON.parse(read(file));
+      if (Object.hasOwn(RENAMED_STYLES, s.outputStyle)) {
+        s.outputStyle = RENAMED_STYLES[s.outputStyle];
+        fs.writeFileSync(file, JSON.stringify(s, null, 2) + '\n');
+        report.updated.push(`.claude/${name} (outputStyle: ${s.outputStyle})`);
+      }
+    } catch { /* no such settings, or not JSON: leave it */ }
+  }
+}
+
 function update({ project, addons: newAddons, tool }) {
   project = path.resolve(project);
   const recordPath = path.join(project, '.kit.json');
@@ -413,6 +438,7 @@ function update({ project, addons: newAddons, tool }) {
 
   const { copies, patches } = layers(ROOT, layerNames(j.type, allAddons));
   const report = { added: [], updated: [], conflicts: [], removed: [] };
+  renameKitFiles(project, record, report);
   const addedAddons = newAddons.filter((e) => !oldAddons.includes(e)).map((e) => `addons/${e}`);
   const fromAddedAddon = (source) => addedAddons.some((a) => source.startsWith(path.join(TEMPLATES, a) + path.sep));
 

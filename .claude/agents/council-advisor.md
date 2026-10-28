@@ -24,9 +24,9 @@ ASSESSMENT:
 - <option>: pro · con · cost of reversal (one line)
 RISK: <the biggest risk of the option you chose and how to reduce it>
 ASSUMPTION: <the unknown that would change your answer, if any>
-ÖNERİ: <the name of one of the options, verbatim>
+RECOMMENDATION: <the name of one of the options, verbatim>
 ```
 
 ## Stage 2 (cross-review)
 
-Follow the instruction you are given. Evaluate and rank by checking the claims in the other opinions. Give the ranking in exactly the requested format: first the `SIRALAMA:` line, then the `1. Görüş X` lines.
+Follow the instruction you are given. Evaluate and rank by checking the claims in the other opinions. Give the ranking in exactly the requested format: first the `RANKING:` line, then the `1. Opinion X` lines.

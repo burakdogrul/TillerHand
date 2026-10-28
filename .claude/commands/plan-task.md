@@ -24,7 +24,7 @@ In this step **do not write code**, only produce the plan.
 **Steps:** [numbered, each verifiable]
 **Data model / API change:** [if any; is a migration needed?]
 **New dependency:** [if any: package name + why + why the built-in alternative is not enough]
-**Acceptance tests:** [which criterion ids (Ö-01.1...), test file; written BEFORE the code and red first]
+**Acceptance tests:** [which criterion ids (AC-01.1...), test file; written BEFORE the code and red first]
 **Adversarial tests:** [if there is an endpoint that returns or writes data: IDOR, unauthenticated, role, XSS, input limit]
 **Flag:** [not needed / flag name + emergency shutoff path]
 **Tests:** [other tests; critical flow? → docs/quality/test-plan.md]
@@ -33,11 +33,11 @@ In this step **do not write code**, only produce the plan.
 **Left out of scope:** [...]
 ```
 
-4b. **Feature spec (only for work touching 3 or more files):** Write `docs/product/specs/<task id>.md` from `_template.md`: current, expected and must-not-change behavior. Each must-not-change line starts with an acceptance criterion id that has a test (`- Ö-01.1: ...`); the gate stops if these tests are missing or red. Do not write a spec for smaller work.
+4b. **Feature spec (only for work touching 3 or more files):** Write `docs/product/specs/<task id>.md` from `_template.md`: current, expected and must-not-change behavior. Each must-not-change line starts with an acceptance criterion id that has a test (`- AC-01.1: ...`); the gate stops if these tests are missing or red. Do not write a spec for smaller work.
 5. If the task does not fit one session, split it into subtasks and propose them for `docs/product/roadmap.md`.
 6. Write the decisions to the `docs/decisions/log.md` log; write an ADR for architectural and one-way decisions (`docs/decisions/adr-NNNN-*.md`).
 
-7. **Board plan meeting** (`.claude/board/rules.md` §2-4; if the board is set up): `board-product`, `board-architect` and the members relevant to the plan review the plan. Add the synthesis to the plan as "Board opinion". If there is a RET, do not present the plan for approval before fixing it. Ask the decisions the members want asked.
+7. **Board plan meeting** (`.claude/board/rules.md` §2-4; if the board is set up): `board-product`, `board-architect` and the members relevant to the plan review the plan. Add the synthesis to the plan as "Board opinion". If there is a REJECT, do not present the plan for approval before fixing it. Ask the decisions the members want asked.
 
 To get the plan approved, use AskUserQuestion: "Approve / Change this / Split the task". Wait for my approval. After approval it will be implemented with `/build`.
 

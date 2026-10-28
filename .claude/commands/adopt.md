@@ -9,7 +9,7 @@ This is a **9-step alignment wizard** (0-9). It is the counterpart of `/start` f
 
 **Prerequisite:** The kit must be installed in this folder with `init` (`.kit.json` exists, `type` empty). If not installed, give the user the install command: `node <kit folder>/kit/kit.mjs init`. A new session must be opened after installation.
 
-**Resuming:** If `docs/workflow/progress.md` → `**Aktif faz:** Başlangıç (uyum)` and `**Başlangıç adımı:**` is greater than 0, resume from that step. When a step ends, update this line (`N/9`) and the `**Son güncelleme:**` line, then write the status block.
+**Resuming:** If `docs/workflow/progress.md` → `**Active phase:** Setup (adopt)` (before 3.48: `Başlangıç (uyum)`) and `**Setup step:**` is greater than 0, resume from that step. When a step ends, update this line (`N/9`) and the `**Last updated:**` line, then write the status block.
 
 **Respect existing code:** Installation does not overwrite the project's files; the kit's version is placed next to it as `<file>.kit-new`. Handle them one by one in Step 2.
 
@@ -18,12 +18,12 @@ This is a **9-step alignment wizard** (0-9). It is the counterpart of `/start` f
 ## Step 0: Preparation
 
 0. **Language (before anything else):** Apply the language question at the start of `/start` Step 0 exactly (question in English, Turkish / English / Other, `node .claude/hooks/lang.mjs --set <code>`, translation if needed). If a language is already chosen, do not ask again.
-1. `docs/workflow/progress.md` → `**Aktif faz:** Başlangıç (uyum)`, `**Başlangıç adımı:** 0/9`.
+1. `docs/workflow/progress.md` → `**Active phase:** Setup (adopt)`, `**Setup step:** 0/9`.
 2. Apply these items from `/start` Step 0 exactly: Profile (0), narrator mode (0b), tool (0c), auto memory (0d), model and effort (0e, `docs/workflow/models.md`), environment check (1), plugins (2), caveman (3), code map (5), notifications (6), dashboard (6b). The code map is even more useful in an existing project; make "Install" the recommended option.
 3. **Scan depth:** Read the limit and ask. Show the estimated costs:
    - **Quick scan (Recommended, on Pro):** Structure, stack, tests, git history, docs. About 10-20% of the 5-hour limit.
    - **Deep scan:** In addition to the quick scan, the selected findings reports (`/findings-tech`, `-security`, `-ux` etc.). About 8-15% more per report. Ask which reports to run with multi-select.
-   Append the choice to the `**Profil:**` line (e.g. `Hafif · scan: Hızlı`).
+   Append the choice to the `**Profile:**` line (e.g. `Light · scan: Quick`).
 
 ## Step 1: Scan (read-only)
 
@@ -49,7 +49,7 @@ Show the findings as a short table. In a quick scan do not dive into the code: o
 
 Write what the code says as a draft, ask what cannot be understood from the code (AskUserQuestion, in rounds):
 1. **`docs/product/prd.md`:** Problem, target user, current features (from the code), draft acceptance criteria. Ask: Were the project's purpose and audience understood correctly? **What do you dislike, what do you want to improve?** (multi-select + free text). Which features are missing or unfinished?
-2. **`docs/architecture/stack.md`:** Fill the "Seçilen teknolojiler" (chosen technologies) table with the current stack. Choices different from the kit's catalog are not errors; proposing a change is a separate decision and is asked only if there is a serious reason (security, an end-of-life version, cost).
+2. **`docs/architecture/stack.md`:** Fill the "Chosen technologies" (chosen technologies) table with the current stack. Choices different from the kit's catalog are not errors; proposing a change is a separate decision and is asked only if there is a serious reason (security, an end-of-life version, cost).
 3. **`docs/architecture/overview.md`, `docs/product/glossary.md`:** Data model, services, main concepts.
 3b. **Research (expensive step, optional):** Suggest `/research` for comparison with similar projects and competitors (quick: about 10-15% of the limit). Do it / Leave for later. Selected features go into Phase 3 in Step 8.
 4. **README:** The "Requirements" and "Installation" sections (`/start` Step 4 item 3a). A missing lock file or version file becomes one of the first tasks in Step 8.
@@ -58,7 +58,7 @@ Write what the code says as a draft, ask what cannot be understood from the code
 
 The shared rules are in `AGENTS.md` (read by Claude Code, Codex, Antigravity); `CLAUDE.md` imports it with `@AGENTS.md` and keeps only Claude Code-specific additions.
 
-1. Take the kit's `AGENTS.md` (or `AGENTS.md.kit-new`) as the base; fill the project name, the one-sentence description and the "Komutlar" (commands) section. `CLAUDE.md` becomes the kit's `CLAUDE.md.kit-new` version. If `init` wrote `@AGENTS.md.kit-new` into `CLAUDE.md` because of the project's `AGENTS.md`, change this line to `@AGENTS.md`.
+1. Take the kit's `AGENTS.md` (or `AGENTS.md.kit-new`) as the base; fill the project name, the one-sentence description and the "Commands" (commands) section. `CLAUDE.md` becomes the kit's `CLAUDE.md.kit-new` version. If `init` wrote `@AGENTS.md.kit-new` into `CLAUDE.md` because of the project's `AGENTS.md`, change this line to `@AGENTS.md`.
 2. Read the old `CLAUDE.md` (and the old `AGENTS.md` if any) and list the project-specific rules in them (code style, forbidden commands, package manager, environment notes, places to be careful). Filter out those that are the same as the kit's rules.
 3. Ask the rest with **multi-select**: "Which of the old rules should go into the new AGENTS.md?" If any conflicts with a kit rule, point it out separately.
 4. Add the selected ones to `AGENTS.md` as a `## Project rules` section (after "Core rules"; only the Claude Code-specific ones go to `CLAUDE.md`). Keep the old ones as `docs/archive/claude-md-eski.md` (and `agents-md-eski.md`), delete the `.kit-new` files.
@@ -84,10 +84,10 @@ Expensive steps: state the cost first (`docs/workflow/usage-limits.md`), then as
 
 ## Step 8: Alignment roadmap → `docs/product/roadmap.md`
 
-Rewrite the kit's "Faz 0" template (Phase 0) for this project. Order matters:
-1. **Phase 0: Safe ground.** Lock file and version file, README setup steps, CI and pre-commit, the state of the red tests. Then a separate task for each critical flow: "Ö-xx end-to-end test (by the correct behavior)".
+Rewrite the kit's "Phase 0" template for this project. Order matters:
+1. **Phase 0: Safe ground.** Lock file and version file, README setup steps, CI and pre-commit, the state of the red tests. Then a separate task for each critical flow: "AC-xx end-to-end test (by the correct behavior)".
 2. **Phase 1: Move the structure.** The project is moved to the kit's folder structure (`docs/architecture/structure.md`). Each feature is a separate task (single session). Rules:
-   - The move is done on a separate branch (`uyum/yapi`).
+   - The move is done on a separate branch (`adopt/structure`).
    - At the end of each task the tests and the app must work. If the tests are green, the working point is saved (`checkpoint.mjs --save`). If it breaks, return with `/rollback`.
    - Until the move ends, the old folders are temporarily added to the `.claude/structure.json` → `allow` list (so the CI structure check does not stay red). This is a structure decision: ask the user. The last task of Phase 1 is deleting these temporary lines.
 3. **Phase 2: Findings.** Things the user dislikes, conflicts between the code and the correct behavior, and the critical items of the findings reports, in order of importance.
@@ -97,7 +97,7 @@ Ask: "Which one should we start with in Phase 2?" Summarize the roadmap and get 
 
 ## Step 9: Closing
 
-1. `docs/workflow/progress.md`: Active phase `Faz 0`, active task `G-001`, start step `9/9`, next step, pending decisions.
+1. `docs/workflow/progress.md`: Active phase `Phase 0`, active task `G-001`, start step `9/9`, next step, pending decisions.
 2. Run `node .claude/hooks/dashboard.mjs`.
 3. Give a summary: type and stack, current test state, critical flows, rules moved to AGENTS.md, structure gap, the 3 most important findings, first task, remaining limit.
 4. Suggest a commit: `docs: kit uyumu (adopt)`.

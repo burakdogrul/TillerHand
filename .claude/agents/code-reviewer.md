@@ -31,7 +31,7 @@ Do not write something you are not sure about as a finding. If it is doubtful, w
 No praise, no summary. Only findings, starting with the most serious; at most ~15 lines in total, one line per finding:
 
 ```
-[KRİTİK|ÖNEMLİ|KÜÇÜK] file:line — Problem. Concrete scenario (which input causes what). Suggestion.
+[CRITICAL|IMPORTANT|MINOR] file:line — Problem. Concrete scenario (which input causes what). Suggestion.
 ```
 
-Last line: **Ready to commit** or **Fix first: [short list of the KRİTİK and ÖNEMLİ items]**.
+Last line: **Ready to commit** or **Fix first: [short list of the CRITICAL and IMPORTANT items]**.

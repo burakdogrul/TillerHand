@@ -372,7 +372,7 @@ export const MESSAGES = {
   'dashboard.act.wrapUpClear': { tr: '/wrap-up ve /clear', en: '/wrap-up and /clear' },
   'dashboard.alert.findingsCritical': { tr: '{kind} bulgu raporunda {critical} kritik bulgu var (sağlık {health}/100).', en: 'The {kind} finding report has {critical} critical findings (health {health}/100).' },
   'dashboardData.prodRefInMcp': { tr: 'Prod projesinin ref\'i ({ref}) .mcp.json\'da: AI prod\'a bağlanabiliyor.', en: 'The prod project\'s ref ({ref}) is in .mcp.json: the AI can connect to prod.' },
-  'dashboardData.prodRefAction': { tr: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)', en: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)' },
+  'dashboardData.prodRefAction': { tr: '.mcp.json → dev ref (docs/operations/accounts.md → Environments)', en: '.mcp.json → dev ref (docs/operations/accounts.md → Ortamlar)' },
   'dashboardData.rlsMissing': { tr: 'Supabase kullanılıyor ama RLS saldırgan testi yok (tests/security/rls.mjs).', en: 'Supabase is in use but there is no RLS attacker test (tests/security/rls.mjs).' },
   'dashboardData.rlsAction': { tr: '/kit-update ile şablonu al, tabloları TABLES\'a ekle', en: 'Get the template with /kit-update, add the tables to TABLES' },
   'guard.commit.skipAsk': { tr: 'Commit kapısı: --skip kurul denetimini ve deterministik kapıyı aşar. Sadece kullanıcı açıkça isterse onayla.', en: 'Commit gate: --skip bypasses the board review and the deterministic gate. Approve only if the user explicitly asks.' },

@@ -5,7 +5,7 @@
 
 ## Decision points
 
-`/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that fit this project best; the **recommended** label is the default, but if another option fits the PRD better, recommend it and say why. If a claim that can change (price, free tier, limit) has a `(kaynak: <adres>, YYYY-AA-GG)` note next to it and the note is newer than 90 days, it is not researched again.
+`/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that fit this project best; the **recommended** label is the default, but if another option fits the PRD better, recommend it and say why. If a claim that can change (price, free tier, limit) has a `(source: <url>, YYYY-MM-DD)` note next to it and the note is newer than 90 days, it is not researched again.
 
 | # | Decision | Options (when each is better) |
 |---|---|---|
@@ -14,13 +14,13 @@
 | 3 | Backend | **Supabase** (recommended: auth + Postgres + storage + RLS) · Firebase (real-time, strong offline sync) · Your own API (complex business logic; separate backend project) · None (entirely on the device) |
 | 4 | Local data | **SecureStore + MMKV** (recommended: settings and tokens) · SQLite / expo-sqlite (lots of offline data) · WatermelonDB (offline-first, sync) |
 | 5 | Data and state management | **TanStack Query + Zustand** (recommended) · Redux Toolkit (large team, strict structure) |
-| 6 | In-app purchases | None · **RevenueCat** (recommended: two stores through one API, subscription analytics; free up to 2,500 dollars of monthly tracked revenue, 1% of revenue above that (kaynak: https://www.revenuecat.com/pricing, 2026-10-26)) · Direct StoreKit + Play Billing (no RevenueCat fee, the store commission is still charged; a lot of work) |
+| 6 | In-app purchases | None · **RevenueCat** (recommended: two stores through one API, subscription analytics; free up to 2,500 dollars of monthly tracked revenue, 1% of revenue above that (source: https://www.revenuecat.com/pricing, 2026-10-26)) · Direct StoreKit + Play Billing (no RevenueCat fee, the store commission is still charged; a lot of work) |
 | 7 | Notifications | **expo-notifications** (recommended) · OneSignal (marketing campaigns, segmentation) · None |
 | 8 | UI components | **Your own components + a theme file** (recommended: full match with DESIGN.md) · Tamagui (shared web + mobile) · React Native Paper (ready-made Material components) |
 | 9 | Analytics and errors | **Sentry + PostHog** (recommended) · Firebase Analytics + Crashlytics (if Firebase was chosen) |
 | 10 | Test | **Jest + RNTL + Maestro** (recommended) · Detox (deeper e2e, hard to set up) |
 
-## Seçilen teknolojiler
+## Chosen technologies
 
 > `/start` fills this in at Step 4 from the decision points. The table below is the **recommended** stack and counts only as a suggestion until approved.
 > If the choice differs, the commands, folders, rules, verification and checks sections of this file are rewritten to match the choice.
@@ -36,7 +36,7 @@
 | Error tracking | Sentry (`@sentry/react-native`) | |
 | Test | Jest + React Native Testing Library, Maestro (e2e) | |
 
-## Komutlar (commands)
+## Commands (commands)
 
 ```bash
 npx expo start                          # development
@@ -115,7 +115,7 @@ app.config.ts  eas.json
 
 ## Acceptance tests and feature flags
 
-**Acceptance tests** (`docs/quality/test-plan.md` §1a): The name of the Jest test or Maestro flow carries the criterion id (`Ö-01.1`). The dashboard reads the JUnit report:
+**Acceptance tests** (`docs/quality/test-plan.md` §1a): The name of the Jest test or Maestro flow carries the criterion id (`AC-01.1`). The dashboard reads the JUnit report:
 
 ```bash
 npx jest --reporters=default --reporters=jest-junit   # JEST_JUNIT_OUTPUT_DIR=test-results

@@ -6,7 +6,7 @@
 //   node .claude/hooks/prefs.mjs --add <category> "<preference>"     only with the user's approval (asked)
 //   node .claude/hooks/prefs.mjs --remove <no>                   (asked)
 // Categories: conversation, questions, reports, code, avoid (the pre-3.48 konusma, sorular, raporlar, kod, kacin still work).
-// A project rule goes to AGENTS.md → Öğrenilen kurallar, not here.
+// A project rule goes to AGENTS.md → Learned rules, not here.
 // Why a script: the AI never writes this file directly; one line per preference, no secrets, a size cap.
 // The same rules apply when reading: any program on the machine can write this file, so what is loaded is checked
 // again and is labeled as style preferences that cannot change permissions or rules.

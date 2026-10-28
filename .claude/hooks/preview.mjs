@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Live preview (F-17): opens the dev server, takes desktop (1440) and mobile (390) screenshots, stops what it started.
 //   node .claude/hooks/preview.mjs <task>   → .previews/<task>/desktop.png and mobile.png · exit code: 0 done or skipped, 1 error
-//   Commands come from AGENTS.md → Komutlar: geliştirme (dev server) and önizleme (local address). Nothing runs or is opened
+//   Commands come from AGENTS.md → Commands: dev (dev server) and preview (local address). Nothing runs or is opened
 //   without the gate approval (gate.mjs --approve covers both lines). A server already answering is used and left open.
 //   Mobile (Expo) projects are skipped: a web screenshot is not what the phone shows.
 //   Screenshots: @playwright/cli (pinned, via npx). PREVIEW_CLI=<node script> replaces it in tests; PREVIEW_TIMEOUT_MS: wait for the address.
@@ -54,8 +54,8 @@ export async function preview(root, task) {
   const list = approvedCommands(root);
   const command = (name) => list.find((k) => k.name === name).command;
   const url = command('preview'), dev = command('dev');
-  if (!url) return fail('AGENTS.md → Komutlar has no `önizleme:` line, or it is empty. Add it (example: `önizleme:    http://localhost:3000`) or produce the evidence by hand in this task.');
-  if (!LOCAL.test(url)) return fail(`the önizleme address must be local (http://localhost:<port>, 127.0.0.1 or [::1]). Now: ${url}`);
+  if (!url) return fail('AGENTS.md → Commands has no `preview:` line, or it is empty. Add it (example: `preview:     http://localhost:3000`) or produce the evidence by hand in this task.');
+  if (!LOCAL.test(url)) return fail(`the preview address must be local (http://localhost:<port>, 127.0.0.1 or [::1]). Now: ${url}`);
   if (!isApproved(root, list)) return { code: 1, text: `Preview · ${approvalNeeded(list)}` };
   const dir = `.previews/${String(task || 'son').replace(/[^\w-]/g, '-')}`;
   // A linked folder from the repo would send the files elsewhere
@@ -77,7 +77,7 @@ export async function preview(root, task) {
   process.once('SIGTERM', onSignal);
   try {
     if (!(await answers(url))) {
-      if (!dev) return fail(`${url} is not up and AGENTS.md → Komutlar has no \`geliştirme:\` command.`);
+      if (!dev) return fail(`${url} is not up and AGENTS.md → Commands has no \`dev:\` command.`);
       // Output goes to a file, not a pipe: the screenshot steps block the event loop and a full pipe would freeze the server
       const fd = fs.openSync(logFile, 'w');
       // A process group on POSIX so the whole tree can be stopped; on Windows detached would open a console window
@@ -90,7 +90,7 @@ export async function preview(root, task) {
       while (!up && running() && Date.now() < deadline) { await sleep(500); up = await answers(url); }
       if (!up) {
         return fail(running()
-          ? `${url} did not come up within ${Math.round(wait / 1000)} s. Are the address and port the same as \`önizleme:\` in AGENTS.md → Komutlar?${block(devLog())}`
+          ? `${url} did not come up within ${Math.round(wait / 1000)} s. Are the address and port the same as \`preview:\` in AGENTS.md → Commands?${block(devLog())}`
           : `the dev server exited before it came up (${child.exitCode ?? child.signalCode}): ${dev}${block(devLog())}`);
       }
     }

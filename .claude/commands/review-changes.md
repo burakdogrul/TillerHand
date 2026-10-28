@@ -16,10 +16,10 @@ Do not review your own code yourself; hand it to independent agents.
 4. Merge the agents' findings, remove duplicates, order by severity:
 
 ```
-[KRİTİK|ÖNEMLİ|KÜÇÜK] file:line — problem. Suggestion.
+[CRITICAL|IMPORTANT|MINOR] file:line — problem. Suggestion.
 ```
 
 5. If you disagree with a finding, write the reason in one line; do not drop it silently.
 6. Last line: **Ready to commit** / **Fix first: [items]**.
 
-Do not fix the findings. Ask which ones to fix with a **multi-select** (KRİTİK ones marked as recommended). Then write the status block.
+Do not fix the findings. Ask which ones to fix with a **multi-select** (CRITICAL ones marked as recommended). Then write the status block.

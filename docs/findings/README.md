@@ -14,7 +14,7 @@ Reports that scan the project through different expert eyes. Each report ranks a
 
 Each type's folder holds dated reports and a copy of the latest report (`latest.md`).
 
-## Raporlar
+## Reports
 
 The `/dashboard` dashboard reads this table; do not change the columns. Write health and the previous score in the `NN` format.
 

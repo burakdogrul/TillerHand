@@ -9,7 +9,7 @@ Types: $ARGUMENTS (if empty: tech, business, security, ux, perf, legal)
 1b. **Package:** If `security` is selected, run `node .claude/hooks/tools.mjs --required security`. If it is off, ask once before starting the subagents (subagents use the session's plugins).
 2. **Preliminary info:** For business and legal, if `docs/findings/config.md` is empty, ask the sector and expert role once now; the subagents must not ask again.
 3. **Run in parallel:** Start a separate subagent for each selected type (Agent tool, in a single message, in the background; the review role's `model` and `effort`, `docs/workflow/models.md`). Give each agent this instruction: "Apply the steps of `.claude/findings/protocol.md` with `.claude/findings/lenses/<type>.md`; write the report; do NOT ask the roadmap question, leave the tasks you propose in the report's fix plan."
-4. **Combined summary:** When all reports are done, write `docs/findings/summary-YYYY-AA-GG.md`:
+4. **Combined summary:** When all reports are done, write `docs/findings/summary-YYYY-MM-DD.md`:
    - Health score per type and the difference from the previous one
    - The 10 highest-scoring findings across all types (single list, by score)
    - Topics that cross types (e.g. the same issue is both a security and a legal finding)

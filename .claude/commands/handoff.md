@@ -9,14 +9,14 @@ The project's state lives in files and git, not in the chat. A handoff means lea
 
 ## Hand over (no argument)
 
-1. Apply the `/wrap-up` steps (progress, roadmap, decisions, CHANGELOG). If there is unfinished work, fill in "Kaldığı yer" (where we left off).
+1. Apply the `/wrap-up` steps (progress, roadmap, decisions, CHANGELOG). If there is unfinished work, fill in "Where we left off" (where we left off).
 2. Write `docs/workflow/handoff.md` (overwrite if it exists):
 
 ```markdown
 # Handoff note
 
 **Status:** waiting
-**Date:** YYYY-AA-GG
+**Date:** YYYY-MM-DD
 **Handed over by:** [name or role]
 
 ## Where we left off
@@ -52,4 +52,4 @@ The project's state lives in files and git, not in the chat. A handoff means lea
 3. Run the tests and show the result. If red, compare with "Watch out" in the handoff note.
 4. If there are pending decisions, ask them now.
 5. In `docs/workflow/handoff.md`, set `**Status:** taken over` (a pre-3.48 note: `**Durum:** devralındı`) and add a `**Received by:**` line. Suggest a commit: `docs: handoff received`.
-6. Last line: the next command (`/build G-NNN`, or continue from "Kaldığı yer" if it is filled in).
+6. Last line: the next command (`/build G-NNN`, or continue from "Where we left off" if it is filled in).

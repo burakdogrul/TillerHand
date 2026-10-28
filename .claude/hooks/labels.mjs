@@ -51,6 +51,7 @@ export const LABELS = {
   criticalFlows: { en: 'Critical flows', tr: 'Kritik akışlar' },
   learnedRules: { en: 'Learned rules', tr: 'Öğrenilen kurallar' },
   rule: { en: 'Rule', tr: 'Kural' },
+  environments: { en: 'Environments (dev / prod)', tr: 'Ortamlar (dev / prod)' },
 };
 
 // Values hooks read at known label or column positions. Readers compare with isValue(); never normalized in place.

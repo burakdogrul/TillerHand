@@ -56,7 +56,7 @@ test('kur: web-saas + ai', () => {
   assert.ok(fs.existsSync(path.join(p, '.claude/findings/protocol.md')) && fs.existsSync(path.join(p, '.claude/commands/findings-business.md')), 'bulgu sistemi');
   assert.ok(!fs.existsSync(path.join(p, '.github/workflows/kit-tests.yml')), 'the kit-only workflow is not carried into the project');
   for (const sk of ['source-research', 'logo-design', 'ui-motion', 'motion-video']) assert.ok(fs.existsSync(path.join(p, `.claude/skills/${sk}/SKILL.md`)), `skill: ${sk}`);
-  assert.match(read(path.join(p, 'README.md')), /\[PROJE ADI\]/, 'README is the project template');
+  assert.match(read(path.join(p, 'README.md')), /\[PROJECT NAME\]/, 'README is the project template (English since 3.48.0)');
   const s = JSON.parse(read(path.join(p, '.claude/settings.json')));
   assert.ok(s.hooks.PostToolUse && s.hooks.PreToolUse && s.statusLine && s.enabledPlugins, 'settings merged');
   assert.ok(s.permissions.allow.includes('Bash(npm run lint)') && s.permissions.allow.includes('Bash(git status)'));
@@ -177,7 +177,7 @@ test('init: the kit stays in its own folder, the project is set up in its folder
   assert.ok(!fs.existsSync(path.join(game, 'kit')), 'the kit\'s own folder was not copied into the project');
   assert.ok(fs.existsSync(kitMjs), 'the kit folder was not touched');
   assert.match(read(path.join(game, '.gitignore')), /^git_repo\/$/m);
-  assert.match(read(path.join(game, 'README.md')), /^# \[PROJE ADI\]/m, 'the project\'s README template');
+  assert.match(read(path.join(game, 'README.md')), /^# \[PROJECT NAME\]/m, 'the project\'s README template (English since 3.48.0)');
   assert.deepEqual([record(game).type, record(game).kit], [null, 'git_repo']);
   const durum = spawnSync(process.execPath, [path.join(game, '.claude/hooks/statusline.mjs')], { input: JSON.stringify({ workspace: { project_dir: game } }), encoding: 'utf8' }).stdout;
   assert.match(durum, /Kit not set up.*\/adopt/, 'no language chosen before setup: English');
@@ -250,9 +250,15 @@ test('session start: the next command is shown to the user (after /clear)', () =
   assert.match(oturum(p).systemMessage, /\/start/);
   assert.equal(installType(p, '--type', 'backend').status, 0);
   const progress = path.join(p, 'docs/workflow/progress.md');
-  write(progress, read(progress).replace(/^\*\*Başlangıç adımı:\*\* .*$/m, '**Başlangıç adımı:** 4/9'));
+  // 3.48.0: the shipped progress.md is English; the label must exist, so the replace never silently does nothing
+  const set = (label, value) => {
+    const re = new RegExp(`^\\*\\*${label}:\\*\\* .*$`, 'm');
+    assert.match(read(progress), re, `the template has **${label}:**`);
+    write(progress, read(progress).replace(re, `**${label}:** ${value}`));
+  };
+  set('Setup step', '4/9');
   assert.match(oturum(p).systemMessage, /Devam: \/start \(adım 4\/9\)/);
-  write(progress, read(progress).replace(/^\*\*Aktif faz:\*\* .*$/m, '**Aktif faz:** Faz 0'));
+  set('Active phase', 'Phase 0');
   const filePath = path.join(p, 'docs/product/roadmap.md');
   write(filePath, read(filePath).replace('- [ ] G-001', '- [x] G-001'));
   const o = oturum(p);
@@ -277,12 +283,15 @@ test('status line and dashboard: before and after setup', () => {
   assert.match(statusBar(p), /Kit not set up/, 'no language chosen before setup: English');
   assert.equal(installType(p, '--type', 'web-saas').status, 0);
   const progress = path.join(p, 'docs/workflow/progress.md');
-  write(progress, read(progress).replace(/^\*\*Aktif faz:\*\* .*$/m, '**Aktif faz:** Faz 1').replace(/^\*\*Soru modu:\*\* .*$/m, '**Soru modu:** açık · kapalı konular: tasarim'));
+  // 3.48.0: the shipped progress.md is English (Turkish labels are covered in labels-readers.test.mjs)
+  assert.match(read(progress), /^\*\*Active phase:\*\* .*$/m);
+  assert.match(read(progress), /^\*\*Question mode:\*\* .*$/m);
+  write(progress, read(progress).replace(/^\*\*Active phase:\*\* .*$/m, '**Active phase:** Phase 1').replace(/^\*\*Question mode:\*\* .*$/m, '**Question mode:** on · closed topics: tasarim'));
   const decisions = path.join(p, 'docs/decisions/log.md');
   const separator = '|---|---|---|---|---|---|---|---|\n';
   assert.ok(read(decisions).includes(separator), 'decision log has 8 columns');
   write(decisions, read(decisions).replace(separator, separator + '| 1 | 2026-01-01 | Başlangıç | teknik | Framework? | Next.js | tek | kullanıcı |\n'));
-  assert.match(statusBar(p), /▶ Faz 1 · .* · görev 0\/\d+ · soru: açık \(kapalı: tasarim\)/);
+  assert.match(statusBar(p), /▶ Phase 1 · .* · görev 0\/\d+ · soru: açık \(kapalı: tasarim\)/);
   const r = node(path.join(p, '.claude/hooks/dashboard.mjs'), p);
   assert.equal(r.status, 0, r.stderr);
   const html = read(path.join(p, 'dashboard.html'));

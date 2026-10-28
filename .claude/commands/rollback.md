@@ -21,7 +21,7 @@ The user may not know git. Explain everything in plain language; if you use a gi
    - This rollback can also be undone with `/rollback`.
 4. If the user explicitly approves, run `node .claude/hooks/checkpoint.mjs --restore <hedef> --yes`.
 5. Run the project's test command (`AGENTS.md` → Komutlar, commands). Show the result: did it really return to a working state?
-6. Write the rollback to `docs/workflow/progress.md` → "Son oturumda yapılanlar" (done last session) and "Watch out" sections: which point it returned to, why, the stashed work.
+6. Write the rollback to `docs/workflow/progress.md` → "Done last session" (done last session) and "Watch out" sections: which point it returned to, why, the stashed work.
 7. When done, give a short report:
    - which state it returned to,
    - the test result,

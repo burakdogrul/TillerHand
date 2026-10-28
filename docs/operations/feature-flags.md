@@ -12,9 +12,9 @@
 - A feature that deletes, moves or exports data
 - A large interface change (to roll it out gradually)
 
-## Bayraklar
+## Flags
 
-The `/dashboard` dashboard reads this table. Date format `YYYY-AA-GG`, status `on` / `off` / `gradual %N`.
+The `/dashboard` dashboard reads this table. Date format `YYYY-MM-DD`, status `on` / `off` / `gradual %N`.
 
 | Flag | Purpose | Status | Owner | Added | Removal date | Kill switch tested |
 |---|---|---|---|---|---|---|

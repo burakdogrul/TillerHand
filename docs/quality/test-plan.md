@@ -3,7 +3,7 @@
 > Approach: **Balanced.** Automatic tests are required for critical flows; a manual checklist is enough for the rest.
 > Test tools and commands: `docs/architecture/stack.md`.
 
-## 1. Kritik akışlar (critical flows; automatic test REQUIRED)
+## 1. Critical flows (critical flows; automatic test REQUIRED)
 
 Every change that touches one of these flows comes with a test. If a test is red, there is no merge/deploy.
 
@@ -17,14 +17,14 @@ Every change that touches one of these flows comes with a test. If a test is red
 
 ## 1a. Acceptance tests (living specification)
 
-Every acceptance criterion in the PRD (like `Ö-01.1`) becomes a runnable test **before any code is written**, and it is red first.
+Every acceptance criterion in the PRD (like `AC-01.1`) becomes a runnable test **before any code is written**, and it is red first.
 The test name contains the criterion id. Examples:
 
 ```ts
-test('Ö-01.1 the form is not submitted with an invalid email', async ({ page }) => { /* ... */ });
+test('AC-01.1 the form is not submitted with an invalid email', async ({ page }) => { /* ... */ });
 ```
 ```python
-def test_O_01_1_invalid_email_form_not_submitted(client): ...   # Python: use "O_01_1" instead of "Ö-01.1"
+def test_AC_01_1_invalid_email_form_not_submitted(client): ...   # Python: use "AC_01_1" instead of "AC-01.1"
 ```
 
 - Tests are run so that they produce a JUnit XML report. The dashboard reads this report:

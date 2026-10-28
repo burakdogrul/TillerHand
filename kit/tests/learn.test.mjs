@@ -47,7 +47,8 @@ test('Ö-21.1 the second bug of the same class raises a proposal; "diğer", free
 });
 
 test('Ö-21.1 the class list is the same in the template, /fix-bug and the dashboard', () => {
-  const template = read('docs/product/specs/_template.md').match(/^\*\*Sınıf:\*\* \[bug only: (.*)\]$/m)[1].split(' / ');
+  // 3.48.0: the template label is English (**Class:**); old **Sınıf:** specs are read in the test above
+  const template = read('docs/product/specs/_template.md').match(/^\*\*Class:\*\* \[bug only: (.*)\]$/m)[1].split(' / ');
   const fixBug = [...read('.claude/commands/fix-bug.md').match(/write exactly one of this list: (.*?`other`)/)[1].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
   assert.deepEqual(template, [...BUG_CLASSES, 'other']);
   assert.deepEqual(fixBug, [...BUG_CLASSES, 'other']);
@@ -55,22 +56,22 @@ test('Ö-21.1 the class list is the same in the template, /fix-bug and the dashb
 
 test('Ö-21.1 no rule file changes without approval', () => {
   const fix = read('.claude/commands/fix-bug.md');
-  assert.match(fix, /another bug spec under `docs\/product\/specs\/` has the same `\*\*Sınıf:\*\*` value/);
+  assert.match(fix, /another bug spec under `docs\/product\/specs\/` has the same `\*\*Class:\*\*` value/);
   assert.match(fix, /Ask with AskUserQuestion, showing the rule text and the target file: Add \/ Later/);
   assert.match(fix, /If there is no approval, write to no rule file/);
   assert.match(fix, /do not add it to `\.gitignore`/);
-  for (const c of ['wrap-up', 'retro']) assert.match(read(`.claude/commands/${c}.md`), /The rule goes to the "Öğrenilen kurallar" \(learned rules\) section/, c);
+  for (const c of ['wrap-up', 'retro']) assert.match(read(`.claude/commands/${c}.md`), /The rule goes to the "Learned rules" (\(learned rules\) )?section/, c);
   assert.match(read('.claude/commands/adopt.md'), /auto memory \(0d\)/);
   // The places a rule can land (AGENTS.md, CLAUDE.md, .claude/hookify.*.local.md) are all "ask" in Claude Code
   const ask = JSON.parse(read('.claude/settings.json')).permissions.ask;
   for (const rule of ['Edit(./AGENTS.md)', 'Edit(./CLAUDE.md)', 'Edit(./.claude/**)']) assert.ok(ask.includes(rule), rule);
-  assert.match(read('docs/product/specs/_template.md'), /^\*\*Sınıf:\*\* \[bug only: .*\/ other\]$/m);
+  assert.match(read('docs/product/specs/_template.md'), /^\*\*Class:\*\* \[bug only: .*\/ other\]$/m);
 });
 
 test('Ö-21.2 every learned rule carries source and date; /maintain monthly reviews those over 90 days', () => {
-  assert.match(read('.claude/commands/fix-bug.md'), /\(kaynak: specs\/<a>\.md, specs\/<b>\.md · YYYY-AA-GG\)/);
+  assert.match(read('.claude/commands/fix-bug.md'), /\(source: specs\/<a>\.md, specs\/<b>\.md · YYYY-MM-DD\)/);
   assert.match(read('.claude/commands/retro.md'), /write source and date in the format of `\/fix-bug` step 8/);
-  assert.match(read('AGENTS.md'), /## Öğrenilen kurallar\n\n> .*\(kaynak: … · YYYY-AA-GG\)/);
+  assert.match(read('AGENTS.md'), /## Learned rules\n\n> .*\(source: … · YYYY-MM-DD\)/);
   const monthly = read('.claude/commands/maintain.md').split('\n').find((l) => l.includes('`monthly`:'));
   assert.match(monthly, /hookify\.\*\.local\.md[\s\S]*older than 90 days[\s\S]*Keep[\s\S]*Delete/);
 });

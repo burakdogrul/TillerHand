@@ -18,7 +18,7 @@ Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.m
    - Dependency vulnerability scan and Semgrep (`docs/security/checklist.md` §9)
    - Acceptance tests: are all MVP criteria green (JUnit report)? Do adversarial tests exist?
    - **RLS adversarial test (blocking):** If Supabase is used (`supabase/config.toml` exists), is `tests/security/rls.mjs` present and is the `rls` job in the last CI green? ❌ if the test is missing, red, or if a public table exists while the `TABLES` list is empty.
-   - **Dev/prod separation (blocking):** Does the prod ref in `docs/operations/accounts.md` → "Ortamlar" (environments) appear in `.mcp.json`, `.claude/`, `.codex/`, `.agents/` or the code (`git grep -n "<prod ref>" -- . ":!docs/operations/accounts.md"`)? ❌ if it does; 👤 if the prod row is empty. Ask the user to confirm that the local `.env.local` points at the dev project (👤; the AI does not read `.env` files).
+   - **Dev/prod separation (blocking):** Does the prod ref in `docs/operations/accounts.md` → "Environments (dev / prod)" appear in `.mcp.json`, `.claude/`, `.codex/`, `.agents/` or the code (`git grep -n "<prod ref>" -- . ":!docs/operations/accounts.md"`)? ❌ if it does; 👤 if the prod row is empty. Ask the user to confirm that the local `.env.local` points at the dev project (👤; the AI does not read `.env` files).
    - Is `docs/operations/accounts.md` complete, and is any date due within 30 days? Are risky features behind flags in `docs/operations/feature-flags.md`?
    - `docs/product/unit-economics.md`: is the contribution margin positive?
    - Secret scan (`docs/security/checklist.md` §9)

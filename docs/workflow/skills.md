@@ -141,7 +141,7 @@ First the style direction is chosen (`/design`). Each direction maps to a skill;
 | Every code change (smallest complete solution, no needless abstraction) | `ponytail:ponytail` |
 | Critical flow (auth, payment, data writes; `docs/quality/test-plan.md` K1-K5) | `mattpocock-skills:tdd` (the `test-writer` agent writes the red test, the code side turns it green) |
 | Return a broken project to the last working state | `/rollback` (`checkpoint.mjs`) |
-| Explain every step to a new user | Narrator mode: `.claude/output-styles/anlatici.md` (`outputStyle: anlatici`) |
+| Explain every step to a new user | Narrator mode: `.claude/output-styles/narrator.md` (`outputStyle: narrator`) |
 | Debugging (`/fix-bug`) | `mattpocock-skills:diagnosing-bugs` + `/freeze <folder>` |
 | Change review (`/review-changes`) | `ponytail:ponytail-review` + `code-reviewer` agent (+ `security-auditor`) |
 | Conformance review against task/spec (branch or PR) | `mattpocock-skills:code-review` |

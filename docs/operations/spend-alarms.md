@@ -4,9 +4,9 @@
 > This is separate from the Claude Code limit: here the subject is your own product's bill.
 > The `/dashboard` dashboard (Operations tab) reads the table below. It marks a paid row with an empty limit as "not set".
 
-## Alarmlar
+## Alarms
 
-One row per paid service. **Type:** `cap` (cap: the service stops or requests are rejected) or `alert` (alert: only warns). **Amount:** monthly, with currency (e.g. `50 USD`). **Last check:** `YYYY-AA-GG`.
+One row per paid service. **Type:** `cap` (cap: the service stops or requests are rejected) or `alert` (alert: only warns). **Amount:** monthly, with currency (e.g. `50 USD`). **Last check:** `YYYY-MM-DD`.
 
 | Service | Type | Amount | Alert thresholds | Set up at | Last check |
 |---|---|---|---|---|---|

@@ -19,7 +19,7 @@
 - [ ] The authorization check happens **on the server** (or in a DB rule); hiding a button in the interface is not authorization.
 - [ ] Every data query includes the check "does this record belong to this user?" (IDOR protection).
 - [ ] If DB row-level security (RLS etc.) is used, it is **on for every table** and its policies are verified with an adversarial test (Supabase: `tests/security/rls.mjs`, CI `rls` job; anonymous and a second user cannot read, write or delete).
-- [ ] Dev/prod separation: the local environment and the AI (MCP included) are connected only to the dev project; prod secrets live only in the hosting dashboard (`docs/operations/accounts.md` → "Ortamlar" (environments)).
+- [ ] Dev/prod separation: the local environment and the AI (MCP included) are connected only to the dev project; prod secrets live only in the hosting dashboard (`docs/operations/accounts.md` → "Environments" (environments)).
 - [ ] Admin operations are protected by a separate role.
 - [ ] Password reset, email verification and session lifetime come from a ready-made auth provider (do not write your own).
 - [ ] Sign-in and password-reset endpoints have a rate limit.

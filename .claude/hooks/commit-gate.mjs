@@ -249,7 +249,7 @@ async function hook() {
   if (approval?.signature === d.signature) {
     const failed = gate?.signature === d.signature ? gate.checks.filter((k) => k.status === 'failed').map((k) => k.name) : null;
     process.stderr.write(failed && !failed.length && gate.empty
-      ? 'Commit stopped: the deterministic gate is empty (no check ran). Fill in AGENTS.md → Komutlar and run the gate again.\n' +
+      ? 'Commit stopped: the deterministic gate is empty (no check ran). Fill in AGENTS.md → Commands and run the gate again.\n' +
         'If the user explicitly asks for this commit, use --skip "user request".\n'
       : failed
       ? `Commit stopped: the deterministic gate is red (${failed.join(', ') || 'failed'}). Fix it, run node .claude/hooks/gate.mjs --run again, then approve.\n` +

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Mechanical doc writes at task end, by script instead of a model call (0 tokens, the format cannot drift).
 //   node .claude/hooks/progress.mjs --done G-012                     roadmap: [ ] → [x]
-//   node .claude/hooks/progress.mjs --cost "<job>" <K|O|B|BOARD|DESIGN|FINDINGS> <start %> <end %> <min> ["<note>"]
+//   node .claude/hooks/progress.mjs --cost "<job>" <S|M|L|BOARD|DESIGN|FINDINGS> <start %> <end %> <min> ["<note>"]
 //   node .claude/hooks/progress.mjs --start [--limit N]           at task start: keeps the 5-hour % and the time
 //   node .claude/hooks/progress.mjs --cost "<job>" <size> ["<note>"] [--limit N]  start from --start, end now (once)
 //   node .claude/hooks/progress.mjs --task "<active task>" --did "<done>" --next "<next step>"
@@ -15,8 +15,10 @@ import { label, labelIn, normalize } from './labels.mjs';
 import { readLimits } from './usage.mjs';
 
 const REQUIRED = ['lastUpdated', 'activePhase', 'activeTask', 'setupStep', 'questionMode', 'profile'];
-const SIZES = ['K', 'O', 'B', 'BOARD', 'DESIGN', 'FINDINGS'];
-const USAGE = 'Usage: node .claude/hooks/progress.mjs [--done G-NNN] [--start] [--cost "<job>" <K|O|B|BOARD|DESIGN|FINDINGS> [<start %> <end %> <min>] ["<note>"]] [--limit N] [--task "<text>"] [--did "<text>"] [--next "<text>"] [--check]';
+const SIZES = ['S', 'M', 'L', 'BOARD', 'DESIGN', 'FINDINGS'];
+// Sizes before 3.48 (küçük / orta / büyük); still accepted, written as the English one
+export const OLD_SIZES = { K: 'S', O: 'M', B: 'L' };
+const USAGE = 'Usage: node .claude/hooks/progress.mjs [--done G-NNN] [--start] [--cost "<job>" <S|M|L|BOARD|DESIGN|FINDINGS> [<start %> <end %> <min>] ["<note>"]] [--limit N] [--task "<text>"] [--did "<text>"] [--next "<text>"] [--check]';
 // One line per value: a newline would break a label, a list item or a table row
 const line = (s) => clean(String(s).replace(/\s*\r?\n\s*/g, ' ')).trim();
 const today = () => new Date().toLocaleDateString('sv-SE');
@@ -37,7 +39,8 @@ export function markDone(text, id) {
 }
 
 export function costRow(args, date = today()) {
-  const [job, size, start, end, min, note = ''] = args;
+  const [job, typed, start, end, min, note = ''] = args;
+  const size = OLD_SIZES[typed] ?? typed;
   const nums = [start, end, min].map(Number);
   if (!job || !SIZES.includes(size) || nums.some((n) => !Number.isFinite(n) || n < 0) || args.length > 6) return null;
   // The end below the start means the 5-hour window renewed in between: the difference is unknown

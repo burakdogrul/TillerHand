@@ -10,6 +10,22 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (rel, root = ROOT) => fs.readFileSync(path.join(root, rel), 'utf8');
+// docs/workflow/progress.md as shipped in 3.47.1 (Turkish labels): projects set up before 3.48 keep this file
+const PROGRESS_TR_3_47_1 = [
+  '# Progress', '',
+  '> This file is loaded into the AI automatically in every session. **Do not exceed 40 lines.**',
+  '> It holds only the current state; history lives in `CHANGELOG.md`, `docs/decisions/log.md` and git.',
+  '> The status line and the `/dashboard` read the **bold-labeled** lines below; do not break their format.', '',
+  '**Son güncelleme:** -', '**Aktif faz:** Başlangıç', '**Aktif görev:** /start', '**Başlangıç adımı:** 0/9',
+  '**Soru modu:** açık · kapalı konular: yok', '**Profil:** -', '',
+  '## Şu anki durum', '', 'The project has not started yet. Start with `/start [fikir]`.', '',
+  '## Son oturumda yapılanlar', '', '- ', '',
+  '## Sıradaki adım', '', '1. `/start [proje fikrin, 1-3 cümle]`', '',
+  '## Bekleyen kararlar', '', '- ', '',
+  '## Kaldığı yer (if stopped because of a limit or midway)', '', '- ', '',
+  '## Açık sorunlar / bloklayıcılar', '', '- ', '',
+  '## Watch out (notes for the AI)', '', '- ', '',
+].join('\n');
 
 test('3.35.0 progress.mjs: marks the roadmap, adds a cost row, updates progress and keeps its labels', () => {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'progress-'));
@@ -26,31 +42,49 @@ test('3.35.0 progress.mjs: marks the roadmap, adds a cost row, updates progress 
   assert.match(run('--done', 'G-002').stdout, /G-002 is already marked/);
   assert.equal(run('--done', 'G-999').status, 1);
 
+  // 3.48.0: sizes are S / M / L; the old K / O / B are still accepted and written as S / M / L
   assert.equal(run('--cost', 'G-002 iskelet | ilk', 'O', '40', '52', '35', 'not').status, 0);
-  assert.ok(read('docs/workflow/cost-log.md', p).trimEnd().endsWith(`| ${today} | G-002 iskelet \\| ilk | O | 40 | 52 | 12 | 35 | not |`));
+  assert.ok(read('docs/workflow/cost-log.md', p).trimEnd().endsWith(`| ${today} | G-002 iskelet \\| ilk | M | 40 | 52 | 12 | 35 | not |`));
+  const beforeBad = read('docs/workflow/cost-log.md', p);
   assert.match(run('--cost', 'x', 'Q', '1', '2', '3').stderr, /Usage/);
-  assert.match(run('--cost', 'x', 'K', '90', '5', '3').stdout, /\| \? \|/, 'the window renewed: the difference is unknown');
+  assert.equal(read('docs/workflow/cost-log.md', p), beforeBad, 'an unknown size writes nothing');
+  assert.match(run('--cost', 'x', 'K', '90', '5', '3').stdout, /\| S \| 90 \| 5 \| \? \|/, 'the window renewed: the difference is unknown');
 
   // 3.38.0: --start keeps the start; --cost with only job and size fills start, end and minutes itself
-  assert.match(run('--cost', 'x', 'K').stderr, /--start/, 'no start saved yet');
+  assert.match(run('--cost', 'x', 'S').stderr, /--start/, 'no start saved yet');
   assert.equal(run('--start', '--limit', '30').status, 0);
-  assert.equal(run('--cost', 'G-003 lint', 'K', '--limit', '34').status, 0);
-  assert.ok(read('docs/workflow/cost-log.md', p).trimEnd().endsWith(`| ${today} | G-003 lint | K | 30 | 34 | 4 | 0 |  |`));
-  assert.match(run('--cost', 'y', 'K').stderr, /--start/, 'the start is used once');
+  assert.equal(run('--cost', 'G-003 lint', 'S', '--limit', '34').status, 0);
+  assert.ok(read('docs/workflow/cost-log.md', p).trimEnd().endsWith(`| ${today} | G-003 lint | S | 30 | 34 | 4 | 0 |  |`));
+  assert.match(run('--cost', 'y', 'S').stderr, /--start/, 'the start is used once');
 
+  // The shipped template (English since 3.48.0)
   assert.equal(run('--task', 'G-003 lint', '--did', 'G-002 bitti', '--next', '/build G-003').status, 0);
   const prog = read('docs/workflow/progress.md', p);
-  assert.match(prog, new RegExp(`^\\*\\*Son güncelleme:\\*\\* ${today}$`, 'm'));
-  assert.match(prog, /^\*\*Aktif görev:\*\* G-003 lint$/m);
-  assert.match(prog, /## Son oturumda yapılanlar\n\n- G-002 bitti\n\n## Sıradaki adım\n\n1\. \/build G-003\n\n## /);
+  assert.match(prog, new RegExp(`^\\*\\*Last updated:\\*\\* ${today}$`, 'm'));
+  assert.match(prog, /^\*\*Active task:\*\* G-003 lint$/m);
+  assert.match(prog, /## Done last session\n\n- G-002 bitti\n\n## Next step\n\n1\. \/build G-003\n\n## /);
   assert.equal(run('--did', 'satır\nkırık').status, 0);
   assert.match(read('docs/workflow/progress.md', p), /- G-002 bitti\n- satır kırık\n/, 'one line per entry');
 
   assert.equal(run('--check').status, 0);
-  fs.writeFileSync(path.join(p, 'docs/workflow/progress.md'), prog.replace('**Aktif faz:**', 'Aktif faz:'));
+  fs.writeFileSync(path.join(p, 'docs/workflow/progress.md'), prog.replace('**Active phase:**', 'Active phase:'));
   const bad = run('--check');
   assert.equal(bad.status, 1);
-  assert.match(bad.stdout, /broken bold labels: Active phase\./, '3.48.0: a broken Turkish label is reported by its English name');
+  assert.match(bad.stdout, /broken bold labels: Active phase\./);
+
+  // A pre-3.48 Turkish progress.md (the 3.47.1 template) keeps its Turkish labels
+  fs.writeFileSync(path.join(p, 'docs/workflow/progress.md'), PROGRESS_TR_3_47_1);
+  assert.equal(run('--task', 'G-003 lint', '--did', 'G-002 bitti', '--next', '/build G-003').status, 0);
+  const tr = read('docs/workflow/progress.md', p);
+  assert.match(tr, new RegExp(`^\\*\\*Son güncelleme:\\*\\* ${today}$`, 'm'));
+  assert.match(tr, /^\*\*Aktif görev:\*\* G-003 lint$/m);
+  assert.match(tr, /## Son oturumda yapılanlar\n\n- G-002 bitti\n\n## Sıradaki adım\n\n1\. \/build G-003\n\n## /);
+  assert.doesNotMatch(tr, /\*\*(Last updated|Active task):\*\*|## (Done last session|Next step)/, 'no English label is added to a Turkish file');
+  assert.equal(run('--check').status, 0);
+  fs.writeFileSync(path.join(p, 'docs/workflow/progress.md'), tr.replace('**Aktif faz:**', 'Aktif faz:'));
+  const badTr = run('--check');
+  assert.equal(badTr.status, 1);
+  assert.match(badTr.stdout, /broken bold labels: Active phase\./, '3.48.0: a broken Turkish label is reported by its English name');
   fs.rmSync(p, { recursive: true, force: true });
 
   assert.match(read('.claude/commands/build.md'), /progress\.mjs --done/);

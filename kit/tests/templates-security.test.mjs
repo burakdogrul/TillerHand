@@ -40,7 +40,8 @@ test('F-04 no prod identity in templates: MCP points to the dev project, .env.ex
     assert.ok(mcp.includes('project_ref=DEV_REF&read_only=true') && !mcp.includes('PROJE_REF'), t);
   }
   for (const t of ['web-saas', 'mobile', 'backend']) assert.match(read(`kit/templates/${t}/.env.example`), /DEVELOPMENT \(dev\)/, t);
-  assert.match(read('docs/operations/accounts.md'), /## Ortamlar \(dev \/ prod\)/);
+  // 3.48.0: English heading; the old "## Ortamlar (dev / prod)" is still read (dashboard.test.mjs "environment (3.13)")
+  assert.match(read('docs/operations/accounts.md'), /^## Environments \(dev \/ prod\)$/m);
   assert.match(read('.claude/commands/release.md'), /Dev\/prod separation \(blocking\)/);
 });
 

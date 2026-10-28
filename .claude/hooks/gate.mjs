@@ -2,7 +2,7 @@
 // Deterministic gate: lint, type check, tests and Semgrep run before the board meets; the output is input for the members.
 // Why: the model should not search for what lint/type/test catch, and a red check should not be left to a model decision (F-03).
 //   node .claude/hooks/gate.mjs --run      exit code: 0 green, 1 red
-//   Commands are read from AGENTS.md → Komutlar (lint, tip kontrol, test); an empty one ([ ]) counts as "unset".
+//   Commands are read from AGENTS.md → Commands (lint, type check, test); an empty one ([ ]) counts as "unset".
 //   If Semgrep is installed it runs on changed code files (override with SEMGREP=<executable>); otherwise skipped, CI runs it.
 //   The result goes to .claude/state/gate.json with the same change signature as the commit gate; the commit gate stops
 //   the commit on a red or stale result. A green check's output is not written, the last 30 lines of a red one are.
@@ -76,7 +76,7 @@ export function isApproved(root, list = approvedCommands(root)) {
 }
 
 function check(root, { name, command }) {
-  if (!command) return { name, status: 'unset', note: 'AGENTS.md → Komutlar' };
+  if (!command) return { name, status: 'unset', note: 'AGENTS.md → Commands' };
   const start = Date.now();
   // The command comes from AGENTS.md (a rule file, writes need approval); pipes and && need a shell
   const r = spawnSync(command, { cwd: root, shell: true, encoding: 'utf8', timeout: TIMEOUT, maxBuffer: BUFFER });
@@ -157,7 +157,7 @@ export function absPathCheck(root, files) {
   return { name, status: 'passed', ...(notes.length && { note: `${notes.length} lines have a path that looks like a user folder; fix it if it is machine-specific (does not block)`, output: list(notes) }) };
 }
 
-export const approvalNeeded = (list) => `command approval needed\nAGENTS.md → Komutlar is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
+export const approvalNeeded = (list) => `command approval needed\nAGENTS.md → Commands is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
   'Show the commands to the user and ask. If they approve: node .claude/hooks/gate.mjs --approve, then run the command again.';
 
 // Spec drift (F-23): a "must not change" behavior whose test is missing or red stops the gate; no result is only a note
@@ -196,7 +196,7 @@ export function runGate(root) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify({ signature, date: new Date().toISOString(), passed, empty, checks }, null, 2));
   const result = checks.some((k) => k.status === 'failed') ? 'Result: RED. The commit gate stays closed: fix it and run the gate again.'
-    : empty ? 'Result: EMPTY, no check ran. Fill in AGENTS.md → Komutlar; the commit gate stays closed (if the user wants, commit-gate.mjs --skip).'
+    : empty ? 'Result: EMPTY, no check ran. Fill in AGENTS.md → Commands; the commit gate stays closed (if the user wants, commit-gate.mjs --skip).'
     : 'Result: GREEN.';
   return { passed, text: [`## Gate · ${files.length} files changed`, ...checks.map(line), result].join('\n') };
 }

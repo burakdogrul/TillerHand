@@ -12,10 +12,10 @@
 - **Fix rate (%):** `fix` commits in the period ÷ (`feat` + `fix`). If high, new features break often.
 - **Rollbacks:** The number of `revert` commits in the period.
 - **Duplicate code (%):** The duplication ratio in the `npx jscpd` report.
-- **Open critical:** The number of board RET findings that are not closed.
+- **Open critical:** The number of board REJECT findings that are not closed.
 - **Acceptance tests (%):** The share of MVP acceptance criteria whose tests pass.
 
-## Kayıtlar
+## Records
 
 | Period | Completed tasks | Avg. task duration (min) | Avg. limit cost (%) | Fix rate (%) | Rollbacks | Duplicate code (%) | Open critical | Acceptance tests (%) | Note |
 |---|---|---|---|---|---|---|---|---|---|

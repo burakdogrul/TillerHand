@@ -45,7 +45,7 @@
 4. **Notify:** For a personal data breach, notify the KVKK Board within **72 hours** and inform the affected users (`docs/legal/privacy-kvkk.md`).
 5. **Learn:** Write it in the log below. Add the check that prevents a repeat to the matching list.
 
-## Bakım kaydı
+## Maintenance log
 
 | Date | Type | Findings | Done / task opened |
 |---|---|---|---|

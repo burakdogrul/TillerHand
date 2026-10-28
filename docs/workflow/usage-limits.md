@@ -46,9 +46,9 @@ Before `/start`, `/plan-task`, `/build`, `/board convene` and `/release` begin:
 On the Max plan the percentages are lower. As the log fills day by day, the estimate corrects itself.
 
 2. **If the estimate exceeds the remaining share** or the level is red, say so in one line ("Estimate 15%, remaining 10%: the work may be left unfinished; I can offer the options if you want") and start the work. Do not ask a question and do not wait for approval. If the user wants, offer these options:
-   - **Do what fits the limit, queue the rest:** Order the tasks by priority, do those that fit, and write the rest to `docs/workflow/progress.md` → "Sıradaki adım" (next step).
+   - **Do what fits the limit, queue the rest:** Order the tasks by priority, do those that fit, and write the rest to `docs/workflow/progress.md` → "Next step" (next step).
    - **Start everything; if cut off, continue after the reset:** Continue with the warnings in §4. To continue after the reset:
-     - In the desktop app, set up a scheduled task for the reset time (scheduled tasks). Task text: "Open this project and continue with `/build` from `docs/workflow/progress.md` → "Kaldığı yer" (where we left off)."
+     - In the desktop app, set up a scheduled task for the reset time (scheduled tasks). Task text: "Open this project and continue with `/build` from `docs/workflow/progress.md` → "Where we left off" (where we left off)."
      - In the terminal, if the session will stay open, set a one-time reminder/cron for the reset time. If it will not stay open, tell the user the reset time; when they reopen, the session-start note reminds them where they left off.
    - **Continue with a cheaper model:** Move the code role to a lower model (e.g. `node .claude/hooks/models.mjs --set code=haiku:medium`; `docs/workflow/models.md`). The main agent only coordinates and verifies the result. Security, data model and architecture decisions stay in the planning role.
    - **Lighten the board:** Only `security-auditor` + `board-architect` join plan-end and task-end meetings. Run the commit review only on code files, with a single member.
@@ -63,7 +63,7 @@ Work does not stop; a one-line warning is given once at each threshold:
 | 5-hour | What to do |
 |---|---|
 | 90% | Remind: "Limit 90%, resets at HH:MM." Continue the work. |
-| 95% | Warn: "Limit is very low (95%)." Quietly update `docs/workflow/progress.md` → **Kaldığı yer** (where we left off), so work can resume from there if it is cut off. Continue the work. |
+| 95% | Warn: "Limit is very low (95%)." Quietly update `docs/workflow/progress.md` → **Where we left off**, so work can resume from there if it is cut off. Continue the work. |
 | 99% | Warn: "The limit may not be enough for this work; it may be left unfinished." Keep steps small and leave no half-written files; suggest a WIP commit at a suitable point. Continue unless the user says "stop". |
 
 **If the user says "stop",** stop safely:
@@ -71,7 +71,7 @@ Work does not stop; a one-line warning is given once at each threshold:
 1. Leave no half-written file; finish the current step or undo it.
 2. Run the tests. If they are red, note it.
 3. Suggest a WIP commit (`wip: <task> - stopped because of the limit`).
-4. Fill in the `docs/workflow/progress.md` → **Kaldığı yer** section: task, completed steps, next step, open files, pending decisions, reset time.
+4. Fill in the `docs/workflow/progress.md` → **Where we left off** section: task, completed steps, next step, open files, pending decisions, reset time.
 5. Report with the status block.
 
 ## 5. Cost log (to calibrate the estimate)

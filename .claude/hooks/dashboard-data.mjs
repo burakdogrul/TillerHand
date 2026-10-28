@@ -174,7 +174,7 @@ export function accounts(text, now = Date.now()) {
 // Dev/prod split and the RLS attacker test: the prod ref must not be in the AI's MCP config; with Supabase an RLS test must exist
 export function envWarnings(root) {
   const u = [];
-  const prodRef = tableRows(sections(readText(path.join(root, 'docs/operations/accounts.md')))['Ortamlar (dev / prod)'], 4)
+  const prodRef = tableRows(sections(readText(path.join(root, 'docs/operations/accounts.md')))['Environments (dev / prod)'], 4)
     // A real ref (Supabase: 20 characters); "-", "yok", "n/a" would match anywhere in .mcp.json
     .find(([environment, , ref]) => environment === 'prod' && /^[a-z0-9][a-z0-9._:/-]{7,}$/i.test(ref ?? ''))?.[2];
   if (prodRef && readText(path.join(root, '.mcp.json')).includes(prodRef)) {

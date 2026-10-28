@@ -1,6 +1,6 @@
 ---
 description: Sets up, changes, convenes or shows the status of the expert board.
-argument-hint: [empty | setup | convene <plan|task|phase-end|release|konu> | council <soru>]
+argument-hint: [empty | setup | convene <plan|task|phase-end|release|topic> | council <question>]
 ---
 
 Request: $ARGUMENTS

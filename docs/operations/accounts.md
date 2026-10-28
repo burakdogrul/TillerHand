@@ -5,23 +5,23 @@
 > a key nobody remembers owning. The `/dashboard` dashboard shows **dates expiring within 30 days** in the "Needs attention" area.
 >
 > **Never write a password, key or token here.** Write only which account, who holds it, when it ends.
-> Dates must use the `YYYY-AA-GG` format (the dashboard reads them).
+> Dates must use the `YYYY-MM-DD` format (the dashboard reads them).
 
-## Hesaplar
+## Accounts
 
 | Service | Purpose | Account owner | 2FA | Plan / monthly cost | Expiry / renewal | Key rotation | Note |
 |---|---|---|---|---|---|---|---|
 | [GitHub] | Code repository | [email] | [yes/no] | [Free] | - | - | |
-| [Domain registrar] | Domain name | | | | [YYYY-AA-GG] | - | Is auto-renewal on? |
+| [Domain registrar] | Domain name | | | | [YYYY-MM-DD] | - | Is auto-renewal on? |
 | [Hosting] | | | | | | | |
-| [Database] | | | | | | [YYYY-AA-GG] | |
+| [Database] | | | | | | [YYYY-MM-DD] | |
 | [Email service] | | | | | | | |
 | [Payment provider] | | | | | | | |
 | [Error tracking] | | | | | | | |
-| [AI provider] | | | | | | [YYYY-AA-GG] | Spend limit: |
-| [Apple / Google developer] | Store | | | | [YYYY-AA-GG] | | Annual membership |
+| [AI provider] | | | | | | [YYYY-MM-DD] | Spend limit: |
+| [Apple / Google developer] | Store | | | | [YYYY-MM-DD] | | Annual membership |
 
-## Ortamlar (dev / prod)
+## Environments (dev / prod)
 
 > A project ref and a URL are not secrets; keys are still not written here. `/release` reads this table: it blocks the release
 > if the prod ref appears in `.mcp.json`, in `.claude/` or in code.

@@ -4,34 +4,34 @@
 > It holds only the current state; history lives in `CHANGELOG.md`, `docs/decisions/log.md` and git.
 > The status line and the `/dashboard` read the **bold-labeled** lines below; do not break their format.
 
-**Son güncelleme:** -
-**Aktif faz:** Başlangıç
-**Aktif görev:** /start
-**Başlangıç adımı:** 0/9
-**Soru modu:** açık · kapalı konular: yok
-**Profil:** -
+**Last updated:** -
+**Active phase:** Setup
+**Active task:** /start
+**Setup step:** 0/9
+**Question mode:** on · closed topics: none
+**Profile:** -
 
-## Şu anki durum
+## Current state
 
-The project has not started yet. Start with `/start [fikir]`.
+The project has not started yet. Start with `/start [idea]`.
 
-## Son oturumda yapılanlar
-
-- 
-
-## Sıradaki adım
-
-1. `/start [proje fikrin, 1-3 cümle]`
-
-## Bekleyen kararlar
+## Done last session
 
 - 
 
-## Kaldığı yer (if stopped because of a limit or midway)
+## Next step
+
+1. `/start [your project idea, 1-3 sentences]`
+
+## Pending decisions
 
 - 
 
-## Açık sorunlar / bloklayıcılar
+## Where we left off (if stopped because of a limit or midway)
+
+- 
+
+## Open issues / blockers
 
 - 
 

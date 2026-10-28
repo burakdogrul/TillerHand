@@ -33,7 +33,7 @@
 
 - [ ] Talk one-on-one with the first 10 users: Why did they sign up, where did they get stuck, what did they expect?
 - [ ] Weekly metrics review (table below).
-- [ ] Add the feedback as tasks to `docs/product/roadmap.md` → Faz 4; start with the most repeated one.
+- [ ] Add the feedback as tasks to `docs/product/roadmap.md` → Phase 4; start with the most repeated one.
 - [ ] Compare with the `docs/product/prd.md` §4 success criteria: Is it close to the target, or is a change of direction needed?
 
 ## 4. Metrics tracking

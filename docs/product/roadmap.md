@@ -3,9 +3,9 @@
 > Each task must be small enough to **finish in one session** (about 1-3 hours, 1-5 files).
 > Split a task that looks big. Always give the AI a single task.
 > Format: `- [ ] G-NNN: [what] — done when: [how do I know it is done?]`
-> Phase headings keep the word "Faz" (phase): the dashboard reads it.
+> The dashboard reads the "## Phase N" headings; keep that form (roadmaps from before 3.48 say "## Faz N", and those are read too).
 
-## Faz 0 — Setup (skeleton)
+## Phase 0 — Setup (skeleton)
 
 - [ ] G-001: Repo, git, `.gitignore`, `.env.example` ready — done when: first commit made
 - [ ] G-002: Project skeleton set up, runs locally — done when: the `dev` command starts without errors
@@ -15,27 +15,27 @@
 - [ ] G-006: Error tracking (Sentry etc.) connected — done when: a test error shows up in the dashboard
 - [ ] G-007: Design system moved into code (if there is an interface): `DESIGN.md` tokens in theme/CSS variables — done when: a sample screen uses only tokens
 
-## Faz 1 — Core (the must-haves of the MVP)
+## Phase 1 — Core (the must-haves of the MVP)
 
 - [ ] G-010: [Auth: sign up / sign in / sign out] — done when: [...]
 - [ ] G-011: [Main data model + migration] — done when: [...]
-- [ ] G-012: [Main feature Ö-01] — done when: [criteria in the PRD]
+- [ ] G-012: [Main feature AC-01] — done when: [criteria in the PRD]
 - [ ] G-019: Refactor round (end of phase) — done when: `node .claude/hooks/budget.mjs --check` is clean across the whole repo; duplicate and unused code cleaned up; tests green
 
-## Faz 2 — Finishing the MVP
+## Phase 2 — Finishing the MVP
 
-- [ ] G-020: [Ö-02] — done when: [...]
+- [ ] G-020: [AC-02] — done when: [...]
 - [ ] G-021: Empty / error / loading states on all screens — done when: [...]
 - [ ] G-029: Refactor round (end of phase) — done when: `node .claude/hooks/budget.mjs --check` is clean across the whole repo; duplicate and unused code cleaned up; tests green
 
-## Faz 3 — Preparing for launch
+## Phase 3 — Preparing for launch
 
 - [ ] G-030: `docs/security/checklist.md` checklist complete
 - [ ] G-031: `docs/legal/privacy-kvkk.md` texts published
 - [ ] G-032: `docs/operations/release-checklist.md` checklist complete (`/release`)
 - [ ] G-033: Backup + monitoring + alerts set up
 
-## Faz 4 — After launch
+## Phase 4 — After launch
 
 - [ ] [Work that comes from the first user feedback]
 

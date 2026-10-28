@@ -1,6 +1,6 @@
 # ADR-NNNN: [Short title]
 
-- **Date:** YYYY-AA-GG
+- **Date:** YYYY-MM-DD
 - **Status:** Proposed / Accepted / Superseded by: ADR-NNNN
 - **Door:** one-way / two-way
 - **Decision log:** #N (`docs/decisions/log.md`)

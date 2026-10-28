@@ -1,17 +1,17 @@
 ---
 description: Runs the UI acceptance criteria as Playwright tests in a real browser; writes the report from the test result.
-argument-hint: [criterion ids (Ö-01.1 Ö-02.3), empty = UI criteria in the PRD]
+argument-hint: [criterion ids (AC-01.1 AC-02.3), empty = UI criteria in the PRD]
 ---
 
 Scope: $ARGUMENTS
 
 `/qa` ties the "it works" claim to evidence. Each criterion is a Playwright test that runs in a real browser, and the report is produced from the test result. In a mobile project, run the Maestro flows (`.maestro/`) instead of this command. In a project without a UI, acceptance tests are enough.
 
-1. **Select the criteria.** From the criteria with ids (`Ö-01.1`) in `docs/product/prd.md`, take those that describe behavior the user sees on screen. If an argument was given, take only those. Tell me the list in one line.
-2. **Preparation.** Tests go only to the local app: if `baseURL` and `webServer.url` in `playwright.config.*` are not localhost, 127.0.0.1 or [::1], stop and ask me (tests that write data must not go to another environment). If there is no `webServer`, add it: `command` = `AGENTS.md` → `geliştirme:`, `url` = `önizleme:`, `reuseExistingServer: true`. Show me the command and address you added: `npx playwright test` will run this command.
+1. **Select the criteria.** From the criteria with ids (`AC-01.1`) in `docs/product/prd.md`, take those that describe behavior the user sees on screen. If an argument was given, take only those. Tell me the list in one line.
+2. **Preparation.** Tests go only to the local app: if `baseURL` and `webServer.url` in `playwright.config.*` are not localhost, 127.0.0.1 or [::1], stop and ask me (tests that write data must not go to another environment). If there is no `webServer`, add it: `command` = `AGENTS.md` → `dev:`, `url` = `preview:`, `reuseExistingServer: true`. Show me the command and address you added: `npx playwright test` will run this command.
 3. **Each criterion is one test.**
    - If the criterion has a permanent test in `tests/e2e/` (outside `tests/e2e/qa/`), use it; do not rewrite it.
-   - Otherwise write `tests/e2e/qa/<id>.spec.ts` (this folder does not go into git; if a test is left from a previous `/qa`, update it). The test name starts with the id: `test('Ö-01.2 The record appears in the list', ...)`. Do what the user does (click, fill) and look for the result on screen. Do not touch the app code or the database directly.
+   - Otherwise write `tests/e2e/qa/<id>.spec.ts` (this folder does not go into git; if a test is left from a previous `/qa`, update it). The test name starts with the id: `test('AC-01.2 The record appears in the list', ...)`. Do what the user does (click, fill) and look for the result on screen. Do not touch the app code or the database directly.
    - Put this pattern at the top of each new test file. A screenshot is taken even if the test stays, and a console error turns the test red:
      ```ts
      let errors: string[] = [];

@@ -1,5 +1,5 @@
 ---
-name: anlatici
+name: narrator
 description: Narrator mode. Explains every change and error in plain language in the conversation language, as if to someone who knows no software. Coding behavior does not change.
 keep-coding-instructions: true
 ---
@@ -27,7 +27,7 @@ After the `/build` or `/fix-bug` report (before the status block), ask at most 2
 - Ask with AskUserQuestion. Give 3 options: one correct, two plausible but wrong. Shuffle the position of the correct option and do not write "(Recommended)". Make the last option "Not now".
 - Make the question of the type "Why was this change needed?" or "What would happen without it?". Do not ask about file names or code details.
 - Respond to a correct answer in one sentence. For a wrong answer, explain the correct one in 1-2 sentences and do not make a big deal of the mistake.
-- Add every answered question as one row to the "Kayıtlar" table in `docs/workflow/learning.md`: `| YYYY-AA-GG | <task id> | <concept, 1-3 words> | doğru |` (or `yanlış`). Do not write "Not now" and unanswered questions. If the file does not exist, create it with the same heading and columns.
+- Add every answered question as one row to the "Records" table in `docs/workflow/learning.md`: `| YYYY-MM-DD | <task id> | <concept, 1-3 words> | right |` (or `wrong`). Do not write "Not now" and unanswered questions. If the file does not exist, create it with the same heading and columns.
 
 ## When an error occurs
 

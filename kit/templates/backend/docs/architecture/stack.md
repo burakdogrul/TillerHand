@@ -5,7 +5,7 @@
 
 ## Decision points
 
-`/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that fit this project best. The **recommended** label is the default, but if another option fits the PRD better, recommend that one and say why. A claim that can change (price, free tier, limit) with a `(kaynak: <adres>, YYYY-AA-GG)` note newer than 90 days is not researched again.
+`/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that fit this project best. The **recommended** label is the default, but if another option fits the PRD better, recommend that one and say why. A claim that can change (price, free tier, limit) with a `(source: <url>, YYYY-MM-DD)` note newer than 90 days is not researched again.
 
 | # | Decision | Options (when each is better) |
 |---|---|---|
@@ -15,12 +15,12 @@
 | 4 | Authentication | **An external provider's JWT** (Supabase Auth / Clerk; you do not write user management) · API key (service to service, B2B API) · Your own session/JWT (full control; the security burden is yours) |
 | 5 | Background jobs | **Platform cron** (recommended for simple scheduled jobs) · ARQ / Celery + Redis (queue, retries, heavy work) · Temporal / Inngest (multi-step, long-running workflows) · None |
 | 6 | API style | **REST + OpenAPI** (recommended) · GraphQL (many different clients, flexible queries) · tRPC (TypeScript clients only) |
-| 7 | Hosting | **Railway** (recommended: easiest, Postgres included; no free permanent tier, Hobby is 5 dollars a month and includes 5 dollars of usage (kaynak: https://docs.railway.com/pricing/plans, 2026-10-26)) · Fly.io (region close to users, scaling) · Render · Google Cloud Run (pay per request, scales to zero) · VPS + Coolify (fixed cost, maintenance is yours) |
+| 7 | Hosting | **Railway** (recommended: easiest, Postgres included; no free permanent tier, Hobby is 5 dollars a month and includes 5 dollars of usage (source: https://docs.railway.com/pricing/plans, 2026-10-26)) · Fly.io (region close to users, scaling) · Render · Google Cloud Run (pay per request, scales to zero) · VPS + Coolify (fixed cost, maintenance is yours) |
 | 8 | Package management | **uv** (recommended for Python: very fast, lock file) · Poetry |
 | 9 | Observability | **Sentry + structured logs** (Better Stack / Axiom) · OpenTelemetry (distributed services) |
 | 10 | Testing | **pytest + httpx** (recommended) · If Node is chosen: Vitest + supertest |
 
-## Seçilen teknolojiler
+## Chosen technologies
 
 > Filled in by `/start` Step 4 from the decision points. The table below is the **recommended** stack and counts as a proposal until approved.
 > If the choice differs, rewrite this file's commands, folder, rules, verification and checks sections to match.
@@ -41,7 +41,7 @@
 | Error tracking | Sentry | |
 | Cron monitoring | Healthchecks.io (dead man's switch) | Alarm if a job does not run |
 
-## Komutlar (commands)
+## Commands (commands)
 
 ```bash
 uv sync                                  # install dependencies
@@ -76,7 +76,7 @@ app/
 └── jobs/                       # scheduled and background jobs (idempotent)
 alembic/                        # migration'lar
 tests/
-├── <feature>/                   # tests by feature (test_O_01_1_... kabul testleri dahil)
+├── <feature>/                   # tests by feature (test_AC_01_1_... kabul testleri dahil)
 └── live/                       # live monitoring tests
 Dockerfile  pyproject.toml  uv.lock
 ```
@@ -112,13 +112,13 @@ Dockerfile  pyproject.toml  uv.lock
 
 ## Acceptance tests and feature flags
 
-**Acceptance tests** (`docs/quality/test-plan.md` §1a): The test function name carries the criterion id (`test_O_01_1_...`). The dashboard reads the JUnit report:
+**Acceptance tests** (`docs/quality/test-plan.md` §1a): The test function name carries the criterion id (`test_AC_01_1_...`). The dashboard reads the JUnit report:
 
 ```bash
 uv run pytest --junitxml=test-results/junit.xml
 ```
 
-**Feature flags** (`docs/operations/feature-flags.md`): An emergency shutoff must not need a redeploy. Use a `feature_flags` table in the database (`ad`, `acik`, `yuzde`, `guncellendi`) + a 60 s in-process cache. Reading happens in one place: `app/services/bayrak.py` → `bayrak_acik("ad", kullanici_id)`. Changing a flag is done through an admin endpoint or SQL and is logged.
+**Feature flags** (`docs/operations/feature-flags.md`): An emergency shutoff must not need a redeploy. Use a `feature_flags` table in the database (`name`, `enabled`, `percent`, `updated_at`) + a 60 s in-process cache. Reading happens in one place: `app/services/flags.py` → `is_enabled("name", user_id)`. Changing a flag is done through an admin endpoint or SQL and is logged.
 
 ## Common AI mistakes (watch for these)
 

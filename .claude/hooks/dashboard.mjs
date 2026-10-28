@@ -11,6 +11,7 @@ import { verdict, isValue } from './labels.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
 import { readModels, modelsFile, modelsNote, roleLabel } from './models.mjs';
+import { OLD_SIZES } from './progress.mjs';
 import { readLang, t } from './lang.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
 
@@ -185,7 +186,7 @@ const autoDecisions = d.decisions.filter((k) => isValue(k.decidedBy, 'automatic'
 const rejectCount = d.board.meetings.filter((t) => verdict(t.result) === 'reject').length;
 const mvpCriteria = mvp.reduce((t, o) => ({ done: t.done + o.done, total: t.total + o.total }), { done: 0, total: 0 });
 const avgCost = Object.entries(cost.reduce((m, r) => {
-  if (!Number.isNaN(r.diff)) (m[r.size] ??= []).push(r.diff);
+  if (!Number.isNaN(r.diff)) (m[OLD_SIZES[r.size] ?? r.size] ??= []).push(r.diff);
   return m;
 }, Object.create(null))).map(([size, l]) => ({ size, avg: l.reduce((t, x) => t + x, 0) / l.length, n: l.length }));
 

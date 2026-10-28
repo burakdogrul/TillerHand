@@ -32,7 +32,7 @@ src/
 └── middleware.ts
 public/                         # static files
 tests/
-├── e2e/                        # Playwright acceptance tests (Ö-01.1 ...)
+├── e2e/                        # Playwright acceptance tests (AC-01.1 ...)
 └── live/                       # live monitoring tests (that delete no data)
 supabase/migrations/            # database changes ONLY here
 ```

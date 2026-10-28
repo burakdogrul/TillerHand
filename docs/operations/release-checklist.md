@@ -41,7 +41,7 @@
 - [ ] `docs/product/unit-economics.md`: contribution margin is positive, break-even point is known
 - [ ] Spend alarms: every paid service has a cap or alert set up and tried once (`docs/operations/spend-alarms.md`); an AI/paid API call has a per-user quota and a global daily budget
 - [ ] All acceptance tests are green (MVP criteria)
-- [ ] The last `/qa` report (`docs/quality/qa/`) has no "kaldı" (remaining) item; in a web project the interface criteria were run in the browser
+- [ ] The last `/qa` report (`docs/quality/qa/`) has no `failed` item; in a web project the interface criteria were run in the browser
 
 ### Infrastructure
 > Steps by provider are in `docs/operations/deploy-setup.md` (`/release first` → Deploy setup).
@@ -72,4 +72,4 @@
 
 - [ ] Check error tracking twice a day
 - [ ] Check the cost panel once a day
-- [ ] First user feedback was added to `docs/product/roadmap.md` → "Faz 4" (Phase 4)
+- [ ] First user feedback was added to `docs/product/roadmap.md` → "Phase 4"

@@ -1,4 +1,4 @@
-# [PROJE ADI]
+# [PROJECT NAME]
 
 [One-sentence description]
 

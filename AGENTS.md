@@ -1,4 +1,4 @@
-# [PROJE ADI]
+# [PROJECT NAME]
 
 > [One sentence: who is this project for, and what problem does it solve?]
 
@@ -10,13 +10,13 @@ This file holds the shared rules of the project. Claude Code, Codex and Antigrav
 
 ## Core rules (always apply)
 
-1. **The user decides.** Ask with AskUserQuestion for product, technical, design, content, data, security and cost decisions. Offer 2-4 options; put your recommendation first and label it "(Recommended)". For each option, state when it is better and what it costs. Ask design decisions with a visual preview. In question mode, pick the recommended option on closed topics and record it as `otomatik` in the decision log ("Auto decisions" in the status block). **Read `docs/workflow/decision-protocol.md` before the first decision question.** Earlier decisions are in `docs/decisions/log.md`; do not ask them again. Classify every decision as a one-way or two-way door; for one-way doors (database, auth, payment, data model), get the board's opinion first.
-2. **The expert board reviews** (`docs/workflow/board.md`, rules in `.claude/board/rules.md`). The relevant members meet before plan approval, when a task ends, at every commit (light) and at the end of a phase. The board only advises; if there is a RET (critical finding), the work is not done and the user is asked.
+1. **The user decides.** Ask with AskUserQuestion for product, technical, design, content, data, security and cost decisions. Offer 2-4 options; put your recommendation first and label it "(Recommended)". For each option, state when it is better and what it costs. Ask design decisions with a visual preview. In question mode, pick the recommended option on closed topics and record it as `automatic` in the decision log ("Auto decisions" in the status block). **Read `docs/workflow/decision-protocol.md` before the first decision question.** Earlier decisions are in `docs/decisions/log.md`; do not ask them again. Classify every decision as a one-way or two-way door; for one-way doors (database, auth, payment, data model), get the board's opinion first.
+2. **The expert board reviews** (`docs/workflow/board.md`, rules in `.claude/board/rules.md`). The relevant members meet before plan approval, when a task ends, at every commit (light) and at the end of a phase. The board only advises; if there is a REJECT (critical finding), the work is not done and the user is asked.
 3. **Right source.** Do not use information that can change from memory: versions, prices, quotas, regulation, APIs. Use the `source-research` skill (primary source first, every claim with source and date). When using a library, first fetch the current docs with the **Context7** MCP.
 4. **Spend few tokens.** If the code map (codebase-memory-mcp) is connected, query it first when exploring code (`get_architecture`, `search_graph`, `trace_path`, `get_code_snippet`). Do not read files in bulk. Read docs only when needed (table below).
 5. **Follow the structure (mandatory).** Write each new file to its place in the `.claude/structure.json` map (by feature: `features/<feature>/`); it is explained in `docs/architecture/structure.md`. Writing outside the map is asked about; clutter files (`*.bak`, `*-old.*`, copies) are blocked. Temporary and trial work goes to `sandbox/`, outdated docs to `docs/archive/`. Changing the map is a technical decision.
 6. **Plan first, then code.** Work that touches more than 2 files goes through `/plan-task`. One task at a time. Do not widen the scope. Four principles: (1) state your assumption, ask if unsure; (2) simplest solution, no flexibility nobody asked for; (3) touch only the lines the task needs; (4) write a verifiable success criterion when you start.
-7. **Root cause, evidence, tests.** Acceptance tests (criterion id in the test name, `Ö-01.1`) and adversarial tests are written before the code and are red first. A separate agent (`test-writer`, with the test role's model) writes the tests, not the one who writes the code; the code writer does not touch test files (test protection blocks it). Risky features ship behind a feature flag (`docs/operations/feature-flags.md`). When fixing a bug, reproduce it first. Show that it works before saying "done". If you cannot fix the same error in 2 attempts, stop and ask for direction.
+7. **Root cause, evidence, tests.** Acceptance tests (criterion id in the test name, `AC-01.1`) and adversarial tests are written before the code and are red first. A separate agent (`test-writer`, with the test role's model) writes the tests, not the one who writes the code; the code writer does not touch test files (test protection blocks it). Risky features ship behind a feature flag (`docs/operations/feature-flags.md`). When fixing a bug, reproduce it first. Show that it works before saying "done". If you cannot fix the same error in 2 attempts, stop and ask for direction.
 8. **A status block at the end of every answer** (short). Format:
 
 ```
@@ -26,7 +26,7 @@ Done: … · Board: … · Auto decisions: …
 Next: … · pending decision: …
 ```
 
-9. **Know the user.** Follow the "Personal preferences" that arrive at session start (project rules come first). If the user corrects a behavior or says how they want to work (conversation, question frequency, report format, code style, things to avoid), note it briefly; do not break the flow. At the end of a task (`/build`) and at the end of a session (`/wrap-up`), ask about the notes with AskUserQuestion as a multi-select ("Save as a preference?"). Write the selected ones with `node .claude/hooks/prefs.mjs --add <konusma|sorular|raporlar|kod|kacin> "<preference>"`. Do not write without approval. Do not write secrets, personal data or the project name. A project-specific rule goes to "Öğrenilen kurallar" (learned rules), not to this file.
+9. **Know the user.** Follow the "Personal preferences" that arrive at session start (project rules come first). If the user corrects a behavior or says how they want to work (conversation, question frequency, report format, code style, things to avoid), note it briefly; do not break the flow. At the end of a task (`/build`) and at the end of a session (`/wrap-up`), ask about the notes with AskUserQuestion as a multi-select ("Save as a preference?"). Write the selected ones with `node .claude/hooks/prefs.mjs --add <conversation|questions|reports|code|avoid> "<preference>"`. Do not write without approval. Do not write secrets, personal data or the project name. A project-specific rule goes to "Learned rules", not to this file.
 
 <!-- kit:other-tools -->
 ## In Codex and Antigravity
@@ -58,15 +58,15 @@ The kit was written for Claude Code; these equivalents apply in these two tools:
 | `docs/product/feedback.md`, `docs/quality/metrics.md` | User feedback, retro, maintenance |
 | `docs/findings/<type>/latest.md` | When working in the relevant area: known findings (`/findings-<type>` reports) |
 
-## Komutlar
+## Commands
 
 ```bash
 # /start fills these in for the chosen stack
-geliştirme:  [ ]
-önizleme:    [ ]
+dev:         [ ]
+preview:     [ ]
 test:        [ ]
 lint:        [ ]
-tip kontrol: [ ]
+type check: [ ]
 build:       [ ]
 ```
 
@@ -76,7 +76,7 @@ build:       [ ]
 - [ ] Lint, types and tests are clean; a test was added if critical flow was touched
 - [ ] Error, empty and loading states are handled; evidence that it works was shown (the verification command ran in this turn and its output was shown; "it should work" is not evidence)
 - [ ] If there is an interface: matches `DESIGN.md`, Impeccable critique done, texts passed through humanizer
-- [ ] No RET in the end-of-task board meeting
+- [ ] No REJECT in the end-of-task board meeting
 - [ ] No secrets in code; any new environment variable is in `.env.example`; `docs/product/roadmap.md` is marked
 
 ## Never
@@ -91,6 +91,6 @@ build:       [ ]
 
 Small, frequent commits. Message format: `type: description` (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `wip`). `main` must always work.
 
-## Öğrenilen kurallar
+## Learned rules
 
-> `/fix-bug` suggests when the same error class repeats, `/retro` suggests at the end of a period; added if you approve. Format: `- Rule. (kaynak: … · YYYY-AA-GG)`; the date is when it was added or last reviewed. At most ~10 lines. `/maintain monthly` reviews those older than 90 days.
+> `/fix-bug` suggests when the same error class repeats, `/retro` suggests at the end of a period; added if you approve. Format: `- Rule. (source: … · YYYY-MM-DD)`; the date is when it was added or last reviewed. At most ~10 lines. `/maintain monthly` reviews those older than 90 days.

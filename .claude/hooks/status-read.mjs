@@ -9,6 +9,8 @@ import { t } from './lang.mjs';
 import { normalize, isValue } from './labels.mjs';
 
 // Only a regular file: a folder or a link to a folder named like a test or report file must not throw (EISDIR)
+// The project name placeholder in AGENTS.md (before 3.48 '[PROJE ADI]')
+export const PLACEHOLDER_NAMES = ['[PROJECT NAME]', '[PROJE ADI]'];
 export const readText = (p) => { try { return fs.statSync(p).isFile() ? normalize(fs.readFileSync(p, 'utf8')) : ''; } catch { return ''; } };
 
 export function sections(text, level = '## ') {
@@ -67,7 +69,7 @@ export function readStatus(root) {
     }));
   const taskCount = phases.reduce((a, f) => ({ done: a.done + f.done, total: a.total + f.total }), { done: 0, total: 0 });
 
-  // 8 columns (with Kapı, kit 2.3+) or the old 7 columns
+  // 8 columns (with Door, kit 2.3+) or the old 7 columns
   const decisions = tableRows(sections(readText(d('docs/decisions/log.md')))['Decision log'], 7)
     .map((c) => (c.length >= 8 ? c : [...c.slice(0, 6), '', c[6]]))
     .map(([no, date, stage, topic, question, chosen, door, decidedBy]) => ({ no, date, stage, topic, question, chosen, door, decidedBy }));
@@ -94,7 +96,7 @@ export function readStatus(root) {
   const title = (f) => readText(d(f)).match(/^# (.+)$/m)?.[1].trim();
   return {
     // The project name is in AGENTS.md; in projects before 3.9.0 in CLAUDE.md (the update adds AGENTS.md with a placeholder)
-    project: [title('AGENTS.md'), title('CLAUDE.md')].find((a) => a && a !== '[PROJE ADI]') ?? title('AGENTS.md') ?? t(root, 'statusRead.defaultProject'),
+    project: [title('AGENTS.md'), title('CLAUDE.md')].find((a) => a && !PLACEHOLDER_NAMES.includes(a)) ?? title('AGENTS.md') ?? t(root, 'statusRead.defaultProject'),
     // type: null = set up by init, no type chosen yet (waiting for /start or /adopt)
     installed: !!kit && kit.type !== null,
     kitPending: kit ? kit.type === null : fs.existsSync(d('kit/kit.mjs')),

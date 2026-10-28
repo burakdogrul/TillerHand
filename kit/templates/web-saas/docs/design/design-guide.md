@@ -8,7 +8,7 @@
 > Decisions are made with `/design` using **visual previews** (`docs/workflow/decision-protocol.md` §5). If a new color, size or component
 > is needed, it is asked as a decision first, then added to DESIGN.md. No raw colors or arbitrary sizes in code.
 
-## 1. Seçilen yön (Chosen direction)
+## 1. Chosen direction (Chosen direction)
 
 | Area | Choice | Skill | Preview | Date |
 |---|---|---|---|---|

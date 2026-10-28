@@ -42,7 +42,7 @@ If a critical decision or finding rests on level D, say so openly.
 ## 4. Output
 
 - In the answer, put the source next to every claim: `[title](url) · date · level`.
-- Save lasting research done for a decision or report as `docs/research/YYYY-AA-GG-topic.md`: question, short answer, evidence (with sources), contradictions, open questions. Other docs link to this file.
+- Save lasting research done for a decision or report as `docs/research/YYYY-MM-DD-topic.md`: question, short answer, evidence (with sources), contradictions, open questions. Other docs link to this file.
 
 ## 5. Firecrawl (optional)
 

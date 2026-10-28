@@ -484,7 +484,7 @@ test('3.32.0 one review per change: the task-end approval covers the commit; aft
   sh('git add -A && git commit -qm t2');
   // the commands use it: task-end approval opens the commit; /review-changes and the commit board check first
   const read = (f) => fs.readFileSync(path.join(HOOKS, '..', f), 'utf8');
-  assert.match(read('commands/build.md'), /commit-gate\.mjs --approve "görev sonu: /);
+  assert.match(read('commands/build.md'), /commit-gate\.mjs --approve "task end: /, '3.48.0: build.md is English');
   assert.match(read('commands/review-changes.md'), /commit-gate\.mjs --status/);
   assert.match(read('board/rules.md'), /commit-gate\.mjs --status/);
   assert.ok(JSON.parse(read('settings.json')).permissions.allow.includes('Bash(node .claude/hooks/commit-gate.mjs --status)'));

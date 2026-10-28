@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { findRoot, isMain } from './shared.mjs';
 import { t } from './lang.mjs';
+import { PLACEHOLDER_NAMES } from './status-read.mjs';
 
 export const THRESHOLD_SEC = 90;
 
@@ -30,7 +31,7 @@ function main() {
 
   let project = path.basename(root);
   for (const f of ['AGENTS.md', 'CLAUDE.md']) { // in projects before 3.9.0 the name is in CLAUDE.md
-    try { const name = fs.readFileSync(path.join(root, f), 'utf8').match(/^# (.+)$/m)?.[1]; if (name && name !== '[PROJE ADI]') { project = name; break; } } catch { /* */ }
+    try { const name = fs.readFileSync(path.join(root, f), 'utf8').match(/^# (.+)$/m)?.[1]; if (name && !PLACEHOLDER_NAMES.includes(name)) { project = name; break; } } catch { /* */ }
   }
 
   let message;

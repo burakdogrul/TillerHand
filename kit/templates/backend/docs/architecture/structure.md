@@ -23,7 +23,7 @@ app/
 └── jobs/                       # scheduled and background jobs (idempotent)
 alembic/                        # migrations
 tests/
-├── <feature>/                  # tests by feature (including test_O_01_1_... acceptance tests)
+├── <feature>/                  # tests by feature (including test_AC_01_1_... acceptance tests)
 └── live/                       # live monitoring tests
 Dockerfile  pyproject.toml  uv.lock
 ```

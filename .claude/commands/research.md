@@ -30,7 +30,7 @@ Work by the rules of the `source-research` skill: every claim with source, date 
 - Competitors via WebSearch. For each product, its official page: price (with date), main features, target audience. Recurring complaints in user reviews (sources such as store reviews, G2, Reddit; name the source).
 - **How a feature works (optional, only if the user asks):** the rea CLI (`docs/workflow/mcp-catalog.md` → rea). First ask, with this warning: "We can only analyze software you own or are authorized to analyze. The license agreement or terms of use may forbid reverse engineering; this is not legal advice." If approved, pick the right subcommand with `--help` (web for a site, `analyze-javascript-application <path> --json` for desktop/Electron). The report gets how the feature works and the evidence. The competitor's code, text, images or brand are not taken; the idea is rewritten with our own code.
 
-## 4. Report → `docs/research/YYYY-AA-GG-<konu>.md`
+## 4. Report → `docs/research/YYYY-MM-DD-<topic>.md`
 
 1. **Short result** (3-5 lines): How crowded the field is, the 3 closest competitors, where the gap is.
 2. Category tables (with the fields above, with sources).

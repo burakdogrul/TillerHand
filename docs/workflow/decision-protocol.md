@@ -48,7 +48,7 @@ Classify every decision before asking and state it in the question text:
 
 ## 3. When the answer arrives
 
-1. Add the decision to the **"Karar günlüğü"** (decision log) table in `docs/decisions/log.md` (date, stage, topic, question, chosen, door: `tek`/`çift`, decided by: `kullanıcı`).
+1. Add the decision to the **"Decision log"** table in `docs/decisions/log.md` (date, stage, topic, question, chosen, door: `one-way`/`two-way`, decided by: `user`).
 2. For decisions that affect the architecture or the long term, write an ADR (`docs/decisions/adr-NNNN-*.md`) and add it to the ADR list in `log.md`.
 3. Update the document the decision affects (stack, architecture, design guide, PRD, glossary…).
 4. Then implement.
@@ -71,7 +71,7 @@ The state is kept in the `**Question mode:**` line of `docs/workflow/progress.md
 
 Every `design` decision is asked with visuals. The user chooses an image, not text.
 
-1. Produce one sample per option: `.previews/NN-konu/a.html`, `b.html`, `c.html` (NN is the sequence number). Also an `index.html` that shows them all side by side or one below the other.
+1. Produce one sample per option: `.previews/NN-topic/a.html`, `b.html`, `c.html` (NN is the sequence number). Also an `index.html` that shows them all side by side or one below the other.
 2. Build the samples with **real content** (the product name, real titles and texts from the PRD); no lorem ipsum.
 3. Produce each sample with the skill that `docs/workflow/skills.md` maps to that option. For example, the "Premium" option with the premium design skill, the "Minimal" option with the minimal skill. This makes the difference between options real.
 4. For big decisions (style direction, page layout, home screen), each option is a separate full section. For small decisions (color palette, typeface pair, corner/shadow, button style), side-by-side samples on one comparison page are enough.
@@ -86,7 +86,7 @@ In short, compressed language (caveman), at most 4 lines:
 ```
 ── Status ─────────────────────────────
 Phase: Phase 1 · Task: G-012 (7/23) · Question mode: open · Limit: 5h %34 weekly %5
-Done: signup form + validation, tests green · Board: ONAY (ux, qa)
+Done: signup form + validation, tests green · Board: APPROVE (ux, qa)
 Auto decisions: none
 Next: G-013 password reset · pending decision: email service
 ```

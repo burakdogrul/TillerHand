@@ -1,4 +1,4 @@
-# [Type name] Findings · YYYY-AA-GG
+# [Type name] Findings · YYYY-MM-DD
 
 **Health score:** NN/100 · **Level:** [Healthy | Good | Watch | At risk] · **Previous:** NN/100 (±N) or first report
 **Scope:** [whole project | folder | --since ...] · **Commit:** `abc1234` · **Expert:** [role]

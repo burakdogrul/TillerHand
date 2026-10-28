@@ -96,10 +96,15 @@ test('Ö-17.2 a server that is already running is used and left open', async () 
 
 test('Ö-17.3 missing lines and an unapproved command: clear message, nothing runs', () => {
   reset();
+  // A pre-3.48 Turkish block is still read; the message names the line in English (3.48.0)
   write('AGENTS.md', '# X\n\n## Komutlar\n\n```bash\ngeliştirme:  [ ]\ntest:        [ ]\n```\n');
   const missing = preview();
   assert.equal(missing.status, 1);
-  assert.match(missing.stdout, /önizleme:/);
+  assert.match(missing.stdout, /preview:/);
+  write('AGENTS.md', '# X\n\n## Commands\n\n```bash\ndev:  [ ]\ntest:        [ ]\n```\n');
+  const missingEn = preview();
+  assert.equal(missingEn.status, 1);
+  assert.match(missingEn.stdout, /preview:/);
   agents(`node dev.mjs ${port} --yeni`);
   const unapproved = preview();
   assert.equal(unapproved.status, 1);

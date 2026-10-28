@@ -1,7 +1,7 @@
 # Product Requirements (PRD)
 
 > Stage: **0 - Idea**. Fill it in before writing code. The `/start` command fills this file in together with you.
-> Last updated: [YYYY-AA-GG]
+> Last updated: [YYYY-MM-DD]
 
 ## 1. Problem
 
@@ -14,7 +14,7 @@
 | [Primary] | | | |
 | [Secondary] | | | |
 
-## 3. Değer önerisi (value proposition)
+## 3. Value proposition (value proposition)
 
 [One sentence: "With [product], [user] gets [result], because [difference]."]
 
@@ -27,20 +27,20 @@
 ## 5. MVP scope
 
 Each feature is a user story + acceptance criteria. A feature without acceptance criteria is not ready.
-Each criterion has an id (`Ö-01.1`). Acceptance tests carry this id in the test name; the `/dashboard` reads MVP progress from **test results**, not from checkboxes (`docs/quality/test-plan.md` §1a).
-The label "Öncelik" (priority) stays Turkish: the dashboard reads it.
+Each criterion has an id (`AC-01.1`). Acceptance tests carry this id in the test name; the `/dashboard` reads MVP progress from **test results**, not from checkboxes (`docs/quality/test-plan.md` §1a).
+The label "Priority" (priority) stays Turkish: the dashboard reads it.
 
-### Ö-01: [Feature name]
+### AC-01: [Feature name]
 **Story:** As a [user], I want to [action], so that [benefit].
 **Acceptance criteria:**
-- [ ] Ö-01.1: [Observable behavior: "When an invalid email is entered, the form is not sent and an error message is shown"]
-- [ ] Ö-01.2: [...]
-**Öncelik:** Must have / Nice to have
+- [ ] AC-01.1: [Observable behavior: "When an invalid email is entered, the form is not sent and an error message is shown"]
+- [ ] AC-01.2: [...]
+**Priority:** Must have / Nice to have
 
-### Ö-02: [Feature name]
+### AC-02: [Feature name]
 ...
 
-## 6. Kapsam dışı (out of scope: NOT built in this release)
+## 6. Out of scope (out of scope: NOT built in this release)
 
 This list stops the AI from widening the scope. Write every "later" idea that comes to mind here.
 

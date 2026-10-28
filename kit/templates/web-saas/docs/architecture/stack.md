@@ -5,24 +5,24 @@
 
 ## Decision points
 
-`/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that best fit this project. The **recommended** label is the default, but if another option fits the PRD better, recommend that one and say why. If a claim that can change (price, free tier, limit) carries a `(kaynak: <adres>, YYYY-AA-GG)` note newer than 90 days, do not research it again.
+`/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that best fit this project. The **recommended** label is the default, but if another option fits the PRD better, recommend that one and say why. If a claim that can change (price, free tier, limit) carries a `(source: <url>, YYYY-MM-DD)` note newer than 90 days, do not research it again.
 
 | # | Decision | Options (when each is better) |
 |---|---|---|
 | 1 | Framework | **Next.js** (recommended: SEO + dashboard + API in one project, the ecosystem the AI knows best) · Astro (content/landing-page heavy, fastest pages) · SvelteKit (less code, fast; smaller ecosystem) · React + Vite SPA (app only behind login, no SEO need, simplest hosting) |
 | 2 | Language | **TypeScript** (recommended: catches AI mistakes at compile time) · JavaScript (only for a very small prototype) |
-| 3 | Database + identity | **Supabase** (recommended: Postgres + Auth + Storage + RLS in one place; free tier has 2 active projects, 500 MB database per project, a project idle for 1 week is paused (kaynak: https://supabase.com/pricing, 2026-10-26)) · Neon + Better Auth (more control, less provider lock-in) · Firebase (realtime, NoSQL, shared backend with mobile) · Clerk + Postgres (ready-made, polished identity UI; first 50,000 monthly returning users free, then per-user fee (kaynak: https://clerk.com/billing, 2026-10-26)) |
+| 3 | Database + identity | **Supabase** (recommended: Postgres + Auth + Storage + RLS in one place; free tier has 2 active projects, 500 MB database per project, a project idle for 1 week is paused (source: https://supabase.com/pricing, 2026-10-26)) · Neon + Better Auth (more control, less provider lock-in) · Firebase (realtime, NoSQL, shared backend with mobile) · Clerk + Postgres (ready-made, polished identity UI; first 50,000 monthly returning users free, then per-user fee (source: https://clerk.com/billing, 2026-10-26)) |
 | 4 | Data access | **Supabase client + RLS** (if Supabase is chosen) · Drizzle ORM (type-safe SQL, provider-independent) · Prisma (mature, schema-driven; heavier) |
 | 5 | UI components | **shadcn/ui + Tailwind** (recommended: code lives in the project, fully customizable, works with the design skills) · Tailwind + own components (fully original design) · Mantine (rich ready-made components, dashboard heavy) |
-| 6 | Payment | None (free in the first release) · **iyzico** (Turkish cards, installments, TRY) · Stripe (customers abroad; may be restricted for a Turkish company: Turkey does not appear in the supported-country list (kaynak: https://stripe.com/global, 2026-10-26)) · Paddle / Lemon Squeezy (merchant of record: they handle tax and invoicing; subscriptions sold abroad) |
-| 7 | Hosting | **Vercel** (recommended for Next.js: zero config, preview environments; the free Hobby plan is for personal, non-commercial use only, a product that takes payments or shows ads needs Pro (kaynak: https://vercel.com/docs/limits/fair-use-guidelines, 2026-10-26)) · Cloudflare (cheap and fast; free Workers are limited to 100,000 requests per day and 10 ms CPU per request (kaynak: https://developers.cloudflare.com/workers/platform/limits/, 2026-10-26)) · Netlify · Your own server + Coolify (fixed cost, maintenance is yours) |
-| 8 | Email | **Resend** (recommended: developer friendly, React email templates; free plan gives 3,000 emails per month, 100 per day (kaynak: https://resend.com/pricing, 2026-10-26)) · Postmark (very high deliverability) · Amazon SES (cheapest, hard to set up) |
-| 9 | Analytics | **Plausible** (cookieless, KVKK friendly; no free plan, starts at 9 dollars per month, 30-day trial (kaynak: https://plausible.io/docs/billing, 2026-10-26)) · PostHog (product analytics, funnels, feature flags) · Umami (self-host, free) · None |
+| 6 | Payment | None (free in the first release) · **iyzico** (Turkish cards, installments, TRY) · Stripe (customers abroad; may be restricted for a Turkish company: Turkey does not appear in the supported-country list (source: https://stripe.com/global, 2026-10-26)) · Paddle / Lemon Squeezy (merchant of record: they handle tax and invoicing; subscriptions sold abroad) |
+| 7 | Hosting | **Vercel** (recommended for Next.js: zero config, preview environments; the free Hobby plan is for personal, non-commercial use only, a product that takes payments or shows ads needs Pro (source: https://vercel.com/docs/limits/fair-use-guidelines, 2026-10-26)) · Cloudflare (cheap and fast; free Workers are limited to 100,000 requests per day and 10 ms CPU per request (source: https://developers.cloudflare.com/workers/platform/limits/, 2026-10-26)) · Netlify · Your own server + Coolify (fixed cost, maintenance is yours) |
+| 8 | Email | **Resend** (recommended: developer friendly, React email templates; free plan gives 3,000 emails per month, 100 per day (source: https://resend.com/pricing, 2026-10-26)) · Postmark (very high deliverability) · Amazon SES (cheapest, hard to set up) |
+| 9 | Analytics | **Plausible** (cookieless, KVKK friendly; no free plan, starts at 9 dollars per month, 30-day trial (source: https://plausible.io/docs/billing, 2026-10-26)) · PostHog (product analytics, funnels, feature flags) · Umami (self-host, free) · None |
 | 10 | Error tracking | **Sentry** (recommended) · Highlight / Better Stack |
 | 11 | Language support | **Turkish only** (recommended for the MVP) · Turkish + English (next-intl; setting it up from the start is cheaper than adding it later) |
 | 12 | Test | **Vitest + Playwright** (recommended) · Playwright only (little logic, mostly UI) |
 
-## Seçilen teknolojiler
+## Chosen technologies
 
 > `/start` fills this in at Step 4 from the decision points. The table below is the **recommended** stack and counts as a proposal until approved.
 > If the choice differs, rewrite the commands, folder, rules, verification and checks sections of this file to match the choice.
@@ -41,7 +41,7 @@
 | Analytics | Plausible / PostHog | Watch cookie consent |
 | Test | Vitest (unit), Playwright (e2e) | |
 
-## Komutlar (commands)
+## Commands (commands)
 
 ```bash
 npm run dev            # development
@@ -83,7 +83,7 @@ src/
 └── middleware.ts
 public/                         # static files
 tests/
-├── e2e/                        # Playwright acceptance tests (Ö-01.1 ...)
+├── e2e/                        # Playwright acceptance tests (AC-01.1 ...)
 └── live/                       # live monitoring tests (that delete no data)
 supabase/migrations/            # database changes ONLY here
 ```
@@ -103,7 +103,7 @@ supabase/migrations/            # database changes ONLY here
 
 ## Verification (evidence before a task is done)
 
-- UI: `node .claude/hooks/preview.mjs <task id>` takes a desktop (1440) and mobile (390) screenshot (the `geliştirme:` and `önizleme:` lines in `AGENTS.md`). To try scenarios, with `npm run dev` running, open the page with the Playwright CLI (`npx -y @playwright/cli@0.1.22 open http://localhost:3000`, then `snapshot`, `console`, `screenshot`) or with Claude's browser, and try the main scenario and one error scenario.
+- UI: `node .claude/hooks/preview.mjs <task id>` takes a desktop (1440) and mobile (390) screenshot (the `dev:` and `preview:` lines in `AGENTS.md`). To try scenarios, with `npm run dev` running, open the page with the Playwright CLI (`npx -y @playwright/cli@0.1.22 open http://localhost:3000`, then `snapshot`, `console`, `screenshot`) or with Claude's browser, and try the main scenario and one error scenario.
 - Proving acceptance criteria in the browser: `/qa` (one Playwright test per criterion, report in `docs/quality/qa/`).
 - Authorization: with a second test user, try to reach the first user's record; it must fail.
 - No errors/warnings in the console.
@@ -120,7 +120,7 @@ supabase/migrations/            # database changes ONLY here
 
 ## Acceptance tests and feature flags
 
-**Acceptance tests** (`docs/quality/test-plan.md` §1a): The test name carries the criterion id (`test('Ö-01.1 ...')`). The dashboard reads the JUnit report:
+**Acceptance tests** (`docs/quality/test-plan.md` §1a): The test name carries the criterion id (`test('AC-01.1 ...')`). The dashboard reads the JUnit report:
 
 ```bash
 PLAYWRIGHT_JUNIT_OUTPUT_NAME=test-results/junit.xml npx playwright test --reporter=list,junit
@@ -129,7 +129,7 @@ npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-resul
 
 **Feature flags** (`docs/operations/feature-flags.md`): Emergency shutdown must not need a deploy. So use a source read at runtime, not an environment variable:
 - PostHog feature flags if PostHog is chosen; otherwise
-- A `feature_flags` table in Supabase (`ad`, `acik`, `yuzde`) + a 60 s cache on the server. Reading goes through one helper: `lib/bayrak.ts` → `bayrakAcik('ad', kullanici)`.
+- A `feature_flags` table in Supabase (`name`, `enabled`, `percent`) + a 60 s cache on the server. Reading goes through one helper: `lib/flags.ts` → `isEnabled('name', user)`.
 - The flag check runs on the server; the client only sees the result.
 
 ## Common AI mistakes (watch for these)

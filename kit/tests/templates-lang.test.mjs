@@ -1,0 +1,399 @@
+// Run: node --test "kit/tests/*.test.mjs"
+// 3.48.0 step 4d: the shipped templates, board, council, agent and command text are English. Hooks keep reading the
+// Turkish files of projects set up before 3.48 (those cases live in labels*.test.mjs, council-lang.test.mjs, args-lang.test.mjs).
+//   1. every label a hook reads from a shipped template is an English LABELS entry; no Turkish label is left at a label position
+//   2. no Turkish left in shipped kit text, outside the "3.48 old name still works" notes and a small allow-list
+//   3. the council minutes example is English and council.mjs counts it
+//   4. board member format: VERDICT: APPROVE | CONDITIONAL | REJECT, findings [CRITICAL|IMPORTANT|SUGGESTION]
+//   5. cost-log sizes S / M / L / BOARD / DESIGN / FINDINGS; the old K / O / B are accepted and written as S / M / L
+//   6. the output style is narrator.md; kit update moves an old project's anlatici.md and its settings value
+import { test, after } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { LABELS, normalize, verdict } from '../../.claude/hooks/labels.mjs';
+import { countVotes, writeMinutes } from '../../.claude/hooks/council.mjs';
+import { envWarnings } from '../../.claude/hooks/dashboard-data.mjs';
+import { readStatus } from '../../.claude/hooks/status-read.mjs';
+
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const HOOKS = path.join(REPO, '.claude', 'hooks');
+const read = (rel) => fs.readFileSync(path.join(REPO, rel), 'utf8').replace(/\r\n/g, '\n');
+const exists = (rel) => fs.existsSync(path.join(REPO, rel));
+const made = [];
+after(() => { for (const p of made) fs.rmSync(p, { recursive: true, force: true }); });
+
+function project(files = {}, prefix = 'tpl-lang-') {
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  made.push(p);
+  for (const [f, s] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true });
+    fs.writeFileSync(path.join(p, f), typeof s === 'string' ? s : JSON.stringify(s));
+  }
+  return p;
+}
+
+// Every file under rel (posix paths relative to the repo)
+function walk(rel) {
+  const out = [];
+  const dir = path.join(REPO, rel);
+  if (!fs.existsSync(dir)) return out;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const r = `${rel}/${e.name}`;
+    if (e.isDirectory()) out.push(...walk(r));
+    else out.push(r);
+  }
+  return out;
+}
+const typeDirs = fs.readdirSync(path.join(REPO, 'kit', 'templates')).filter((d) => d !== 'addons');
+const perType = (rel) => typeDirs.map((t) => `kit/templates/${t}/${rel}`).filter(exists);
+
+// ---------- 1. labels hooks read from the shipped templates ----------
+
+// Which LABELS keys each template must carry in English (from the readers: status-read.mjs, dashboard.mjs,
+// dashboard-data.mjs, progress.mjs, gate.mjs). EXACT: read as sections(text)[label], so the heading is the label alone.
+const READ = {
+  'docs/workflow/progress.md': ['lastUpdated', 'activePhase', 'activeTask', 'setupStep', 'questionMode', 'profile',
+    'currentState', 'doneLastSession', 'nextStep', 'pendingDecisions', 'whereWeLeftOff', 'openIssues'],
+  'docs/workflow/board.md': ['status', 'commitReview', 'members', 'meetingLog'],
+  'docs/decisions/log.md': ['decisionLog'],
+  'docs/product/prd.md': ['valueProposition', 'priority', 'outOfScope'],
+  'docs/product/roadmap.md': ['phase'],
+  'docs/product/specs/_template.md': ['type', 'class', 'rule', 'mustNotChange'],
+  'docs/product/unit-economics.md': ['currency', 'price', 'paymentFee', 'fixedCost', 'variableCost', 'targetUsers', 'freeShare'],
+  'docs/product/feedback.md': ['inbox', 'themes'],
+  'docs/quality/test-plan.md': ['criticalFlows'],
+  'docs/quality/metrics.md': ['records'],
+  'docs/workflow/learning.md': ['records'],
+  'docs/operations/accounts.md': ['accounts'],
+  'docs/operations/feature-flags.md': ['flags'],
+  'docs/operations/maintenance.md': ['maintenanceLog'],
+  'docs/operations/spend-alarms.md': ['alarms'],
+  'docs/findings/README.md': ['reports'],
+  'AGENTS.md': ['commands', 'learnedRules'],
+  ...Object.fromEntries(perType('docs/architecture/stack.md').map((f) => [f, ['chosenTech']])),
+  ...Object.fromEntries(perType('docs/design/design-guide.md').map((f) => [f, ['chosenDirection']])),
+};
+const EXACT = new Set(['currentState', 'doneLastSession', 'nextStep', 'pendingDecisions', 'openIssues', 'members', 'meetingLog',
+  'decisionLog', 'mustNotChange', 'inbox', 'themes', 'records', 'accounts', 'flags', 'maintenanceLog', 'alarms', 'reports', 'chosenTech']);
+// Headings read by a fixed numbered prefix (dashboard.mjs findSection)
+const PREFIXES = {
+  'docs/product/prd.md': ['1. Problem', '3. Value proposition', '5. MVP', '6. Out of scope'],
+  'docs/quality/test-plan.md': ['1. Critical flows'],
+  ...Object.fromEntries(perType('docs/design/design-guide.md').map((f) => [f, ['1. Chosen direction']])),
+};
+
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+// Line-start **Label:** names and "## " heading titles outside code blocks
+function labelPositions(text) {
+  const bold = new Set();
+  const headings = [];
+  let fence = false;
+  for (const line of text.split('\n')) {
+    if (FENCE.test(line)) { fence = !fence; continue; }
+    if (fence) continue;
+    const b = line.match(/^\*\*([^*]+):\*\*/);
+    if (b) bold.add(b[1]);
+    if (line.startsWith('## ')) headings.push(line.slice(3).trim());
+  }
+  return { bold, headings };
+}
+const unnumbered = (h) => h.replace(/^\d+[a-z]?\.\s+/, '');
+const startsWithWord = (s, word) => s.startsWith(word) && !/^[\p{L}\p{N}]/u.test(s.slice(word.length));
+function hasLabel(text, key) {
+  const { en } = LABELS[key];
+  const { bold, headings } = labelPositions(text);
+  if (bold.has(en)) return true;
+  return headings.map(unnumbered).some((h) => (EXACT.has(key) ? h === en : startsWithWord(h, en)));
+}
+
+test('Ö-48.67 every label a hook reads from a shipped template is there as its English LABELS entry', () => {
+  assert.equal(Object.keys(READ).length >= 19, true, 'all templates listed, including the type stack and design guides');
+  for (const [file, keys] of Object.entries(READ)) {
+    assert.equal(exists(file), true, `${file} exists`);
+    const text = read(file);
+    for (const key of keys) assert.equal(hasLabel(text, key), true, `${file}: **${LABELS[key].en}:** or "## ${LABELS[key].en}" at a label position`);
+  }
+  for (const [file, prefixes] of Object.entries(PREFIXES)) {
+    const { headings } = labelPositions(read(file));
+    for (const prefix of prefixes) assert.equal(headings.some((h) => startsWithWord(h, prefix)), true, `${file}: "## ${prefix}"`);
+  }
+  // The roadmap reader takes "## Phase N" headings
+  assert.match(read('docs/product/roadmap.md'), /^## Phase \d/m);
+  // AGENTS.md → Commands block keys (gate.mjs, preview.mjs)
+  const commands = read('AGENTS.md').match(/^## Commands[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
+  for (const k of ['dev', 'preview', 'test', 'lint', 'type check', 'build']) assert.match(commands, new RegExp(`^${k}:`, 'm'), `AGENTS.md Commands: ${k}:`);
+});
+
+test('Ö-48.68 no Turkish label from LABELS is left at a label position in the shipped templates', () => {
+  for (const file of Object.keys(READ)) {
+    const text = read(file);
+    const { bold, headings } = labelPositions(text);
+    for (const { tr } of Object.values(LABELS)) {
+      assert.equal(bold.has(tr), false, `${file}: **${tr}:**`);
+      assert.equal(headings.map(unnumbered).some((h) => startsWithWord(h, tr)), false, `${file}: ## ${tr}`);
+    }
+    // normalize() rewrites Turkish labels only: an English template comes out byte-identical
+    assert.equal(normalize(text), text, `${file}: normalize changes nothing`);
+  }
+});
+
+test('Ö-48.69 accounts.md: the environments heading the prod-ref check reads is an English LABELS entry and works as shipped', () => {
+  const text = read('docs/operations/accounts.md');
+  const sections = text.split(/^## /m).slice(1).map((s) => [s.split('\n')[0].trim(), s]);
+  const env = sections.find(([, body]) => /^\|\s*Environment\s*\|/m.test(body));
+  assert.equal(Array.isArray(env), true, 'accounts.md has the "| Environment |" table');
+  const heading = env[0];
+  const entry = Object.values(LABELS).find(({ en }) => startsWithWord(heading, en));
+  assert.equal(entry?.en !== undefined, true, `"## ${heading}" starts with an English LABELS entry`);
+  assert.equal(normalize(`## ${entry.tr} (dev / prod)\n`), `## ${entry.en} (dev / prod)\n`, 'the old Turkish heading maps onto it');
+  // The shipped template, filled in: a prod ref in .mcp.json is critical
+  const filled = text.replace('[dev ref]', 'devref111aaaabbbbcccc').replace('[prod ref]', 'prodref999aaaabbbbcccc');
+  assert.notEqual(filled, text, 'the template has [dev ref] / [prod ref] placeholders');
+  const p = project({ 'docs/operations/accounts.md': filled, '.mcp.json': '{"url":"https://mcp.supabase.com/mcp?project_ref=prodref999aaaabbbbcccc"}' });
+  assert.deepEqual(envWarnings(p).map((u) => u.sev), ['critical']);
+  // /release points at the same heading
+  assert.match(read('.claude/commands/release.md'), new RegExp(`accounts\\.md\` → "${entry.en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+});
+
+test('Ö-48.80 the project name placeholder is [PROJECT NAME]; an old [PROJE ADI] counts as unnamed too', () => {
+  assert.match(read('AGENTS.md'), /^# \[PROJECT NAME\]$/m);
+  assert.match(read('kit/project/README.md'), /^# \[PROJECT NAME\]$/m);
+  const name = (agents, claude) => readStatus(project({ 'AGENTS.md': agents, ...(claude ? { 'CLAUDE.md': claude } : {}) }, 'tpl-name-')).project;
+  // Projects before 3.9.0 keep the name in CLAUDE.md: a placeholder in AGENTS.md falls through to it
+  assert.equal(name('# [PROJECT NAME]\n', '# Fatura App\n'), 'Fatura App');
+  assert.equal(name('# [PROJE ADI]\n', '# Fatura App\n'), 'Fatura App', 'the pre-3.48 placeholder is not taken as the name');
+  assert.equal(name('# Fatura App\n', '# Başka\n'), 'Fatura App', 'a real name in AGENTS.md wins');
+});
+
+// ---------- 2. no Turkish in shipped kit text ----------
+
+const SHIPPED = [
+  ...['.claude/board', '.claude/agents', '.claude/commands', '.claude/output-styles'].flatMap((d) =>
+    fs.readdirSync(path.join(REPO, d)).filter((f) => f.endsWith('.md')).map((f) => `${d}/${f}`)),
+  ...walk('.claude/findings'), ...walk('docs'), ...walk('kit/templates'), 'AGENTS.md', 'CLAUDE.md',
+].filter((f) => f.endsWith('.md') && f !== 'docs/legal/privacy-kvkk.md' && !f.startsWith('kit/templates/addons/tr/'));
+// Turkish on purpose: test data the rules name, the font check, Turkish legal and document names
+const ALLOWED = ['İ/ı', 'ğ, ş, ı, İ', 'İYS', 'GİB', 'e-Arşiv'];
+const TURKISH_LETTER = /[çğıöşüÇĞİÖŞÜ]/u;
+const VERDICT_WORDS = /(?<![\p{L}\p{N}_])(KRİTİK|ÖNEMLİ|KOŞULLU|ONAY|RET)(?![\p{L}\p{N}_])/u;
+const offending = (test) => SHIPPED.flatMap((f) => read(f).split('\n').map((line, i) => ({ f, n: i + 1, line })))
+  .filter(({ line }) => !line.includes('3.48') && test(line));
+const show = (list) => list.slice(0, 15).map(({ f, n, line }) => `${f}:${n}: ${line.slice(0, 140)}`).join('\n');
+
+test('Ö-48.70 no line with a Turkish letter in shipped kit text, outside 3.48 notes and the allow-list', () => {
+  assert.equal(SHIPPED.length > 60, true, `the scan covers the shipped text (${SHIPPED.length} files)`);
+  for (const f of ['.claude/board/council.md', '.claude/commands/build.md', '.claude/output-styles/narrator.md', 'docs/workflow/progress.md', 'AGENTS.md']) {
+    assert.equal(SHIPPED.includes(f), true, `scanned: ${f}`);
+  }
+  assert.equal(SHIPPED.some((f) => f.startsWith('kit/templates/addons/tr/') || f === 'docs/legal/privacy-kvkk.md'), false, 'the Turkish add-on and the KVKK doc are skipped');
+  const left = offending((line) => TURKISH_LETTER.test(ALLOWED.reduce((s, a) => s.split(a).join(''), line)));
+  assert.deepEqual(left.map(({ f, n }) => `${f}:${n}`), [], show(left));
+});
+
+test('Ö-48.71 no Turkish verdict or severity word (KRİTİK, ÖNEMLİ, KOŞULLU, ONAY, RET) in shipped kit text outside 3.48 notes', () => {
+  const left = offending((line) => VERDICT_WORDS.test(line));
+  assert.deepEqual(left.map(({ f, n }) => `${f}:${n}`), [], show(left));
+});
+
+test('Ö-48.72 a 3.48 note names a Turkish label only next to its English one; no Turkish heading or date placeholder without Turkish letters', () => {
+  const lines = SHIPPED.flatMap((f) => read(f).split('\n').map((line, i) => ({ f, n: i + 1, line })));
+  // "**Sınıf:** (before 3.48)" is fine next to **Class:**; a Turkish label alone tells the reader to write Turkish
+  const alone = lines.filter(({ line }) => line.includes('3.48') && Object.values(LABELS).some(({ tr, en }) =>
+    (line.includes(`**${tr}:**`) || line.includes(`"${tr}"`)) && !line.includes(en)));
+  assert.deepEqual(alone.map(({ f, n }) => `${f}:${n}`), [], show(alone));
+  // Turkish words the letter scan cannot see
+  const plain = offending((line) => /Ortamlar|YYYY-AA-GG/.test(line));
+  assert.deepEqual(plain.map(({ f, n }) => `${f}:${n}`), [], show(plain));
+});
+
+// ---------- 3. council protocol ↔ council.mjs ----------
+
+const councilExample = () => read('.claude/board/council.md').match(/^## Minutes\n[\s\S]*?^```markdown\n([\s\S]*?)^```$/m)?.[1] ?? '';
+
+test('Ö-48.73 council.md: the minutes example is English', () => {
+  const ex = councilExample();
+  assert.notEqual(ex, '', 'council.md → Minutes has a ```markdown example');
+  for (const re of [/^# Council: /m, /^## 1\. First opinions$/m, /^### Opinion A$/m, /^RECOMMENDATION: /m, /^## 2\. Cross review$/m,
+    /^### Reviewer: A$/m, /^VOTES:$/m, /^RANKING:$/m, /^1\. Opinion [A-Z]$/m, /^## 3\. Overall ranking$/m, /^## IDs$/m]) assert.match(ex, re);
+  assert.match(ex, /\[CRITICAL\]/);
+  assert.match(ex, /AGREE \| DISAGREE \| OVERSTATED/);
+  assert.doesNotMatch(ex, /Konsey|Görüş|İnceleyen|OYLAR|SIRALAMA|ÖNERİ|DOĞRU|YANLIŞ|ABARTILI|Kimlikler|Toplu sıralama|KRİTİK|ÖNEMLİ/u);
+});
+
+test('Ö-48.74 council.mjs counts the protocol example (filled minimally) and writes the English section', () => {
+  const ex = councilExample();
+  // The example leaves Opinion B as "..." and ranks an Opinion C it does not show: give both one finding
+  const filled = ex.replace(/^### Opinion B\n\.\.\.\n/m, '### Opinion B\n- B1 [IMPORTANT] b.mjs:1 — problem — suggestion\n### Opinion C\n- C1 [SUGGESTION] c.mjs:1 — problem — suggestion\n');
+  assert.notEqual(filled, ex, 'the example has "### Opinion B" followed by "..."');
+  const s = countVotes(filled);
+  assert.equal(s.reviewerCount, 1, 'the "### Reviewer: A" section is found');
+  assert.deepEqual(s.invalid, [], 'its RANKING is complete');
+  assert.equal(s.lang, 'en');
+  assert.deepEqual(s.ranking, [{ opinion: 'C', average: 1, votes: 1 }, { opinion: 'B', average: 2, votes: 1 }]);
+  assert.deepEqual(s.findings.map((f) => [f.id, f.severity, f.DOĞRU, f.YANLIŞ, f.ABARTILI]),
+    [['A1', 'CRITICAL', 0, 0, 0], ['A2', 'IMPORTANT', 0, 0, 0], ['B1', 'IMPORTANT', 1, 0, 0], ['C1', 'SUGGESTION', 0, 0, 0]]);
+  const out = writeMinutes(filled, s);
+  assert.match(out, /^## 3\. Overall ranking\n\n\*\*Consensus:\*\* /m);
+  assert.doesNotMatch(out, /<written by council\.mjs>/, 'the placeholder section is replaced');
+  assert.match(out, /^## 4\. Chair decision$/m, 'the next section stays');
+});
+
+// ---------- 4. board member format ----------
+
+test('Ö-48.75 every board member and security-auditor gives VERDICT: APPROVE | CONDITIONAL | REJECT with [CRITICAL|IMPORTANT|SUGGESTION]; verdict() reads the three', () => {
+  const members = fs.readdirSync(path.join(REPO, '.claude/board')).filter((f) => /^board-.*\.md$/.test(f)).map((f) => `.claude/board/${f}`);
+  assert.equal(members.length >= 10, true, `board members found: ${members.length}`);
+  for (const f of [...members, '.claude/agents/security-auditor.md']) {
+    const text = read(f);
+    assert.match(text, /^MEMBER: .+ · VERDICT: APPROVE \| CONDITIONAL \| REJECT$/m, f);
+    assert.match(text, /^\[CRITICAL\|IMPORTANT\|SUGGESTION\] /m, f);
+  }
+  assert.equal(verdict('APPROVE'), 'approve');
+  assert.equal(verdict('CONDITIONAL'), 'conditional');
+  assert.equal(verdict('REJECT'), 'reject');
+});
+
+// ---------- 5. cost-log sizes ----------
+
+const today = () => new Date().toLocaleDateString('sv-SE');
+function costProject() {
+  const p = project({ 'docs/workflow/cost-log.md': read('docs/workflow/cost-log.md') }, 'tpl-cost-');
+  const run = (...a) => spawnSync(process.execPath, [path.join(HOOKS, 'progress.mjs'), ...a], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p } });
+  const log = () => fs.readFileSync(path.join(p, 'docs/workflow/cost-log.md'), 'utf8');
+  return { p, run, log };
+}
+
+test('Ö-48.76 progress.mjs --cost: S / M / L / BOARD / DESIGN / FINDINGS are written as given, the old K / O / B as S / M / L', () => {
+  const { run, log } = costProject();
+  for (const [given, written] of [['S', 'S'], ['M', 'M'], ['L', 'L'], ['BOARD', 'BOARD'], ['DESIGN', 'DESIGN'], ['FINDINGS', 'FINDINGS'], ['K', 'S'], ['O', 'M'], ['B', 'L']]) {
+    const r = run('--cost', `job ${given}`, given, '10', '13', '7');
+    assert.equal(r.status, 0, `${given}: ${r.stderr}`);
+    assert.ok(log().trimEnd().endsWith(`| ${today()} | job ${given} | ${written} | 10 | 13 | 3 | 7 |  |`), `${given} is written as ${written}`);
+  }
+  // Only job and size: start from --start; an old size is written in the new form here too
+  assert.equal(run('--start', '--limit', '20').status, 0);
+  assert.equal(run('--cost', 'auto', 'B', '--limit', '25').status, 0);
+  assert.match(log().trimEnd().split('\n').pop(), new RegExp(`^\\| ${today()} \\| auto \\| L \\| 20 \\| 25 \\| 5 \\| \\d+ \\|  \\|$`));
+  // What the user reads names the new sizes only
+  const usage = run('--cost', 'x', 'Q', '1', '2', '3').stderr;
+  assert.match(usage, /<S\|M\|L\|BOARD\|DESIGN\|FINDINGS>/);
+  assert.doesNotMatch(usage, /K\|O\|B/);
+  assert.doesNotMatch(read('docs/workflow/cost-log.md'), /\bK \(|\bO \(|\bB \(/, 'the cost log template lists S / M / L');
+  assert.match(read('docs/workflow/cost-log.md'), /S \(small\) \/ M \(medium\) \/ L \(large\)/);
+  assert.match(read('.claude/commands/build.md'), /--cost "[^"]*" <S\|M\|L>/);
+});
+
+test('A-48.21 progress.mjs --cost: an unknown size is refused with a non-zero exit and nothing is written', () => {
+  const { run, log } = costProject();
+  const before = log();
+  for (const size of ['Q', 'XL', 'SM', 'Küçük', 'BÜYÜK', 'KO']) {
+    const r = run('--cost', 'job', size, '10', '13', '7');
+    assert.notEqual(r.status, 0, `${size}: refused`);
+    assert.match(r.stderr, /Usage/, size);
+    assert.equal(log(), before, `${size}: the cost log is unchanged`);
+  }
+  assert.equal(run('--start', '--limit', '20').status, 0);
+  const auto = run('--cost', 'job', 'Q', '--limit', '25');
+  assert.notEqual(auto.status, 0, 'refused in the --start form too');
+  assert.equal(log(), before, 'nothing written');
+});
+
+test('Ö-48.77 dashboard cost card: old K rows and new S rows average together under S (O with M, B with L)', () => {
+  const header = read('docs/workflow/cost-log.md').trimEnd();
+  const row = (size, diff) => `| 2026-10-0${diff % 9 + 1} | job | ${size} | 10 | ${10 + diff} | ${diff} | 5 |  |`;
+  const kit = { version: '3.48.0', type: 'web-saas', addons: [], tool: null, lang: 'en', created: '2026-10-01', updated: '2026-10-01', files: {} };
+  const p = project({
+    '.kit.json': kit, '.claude/state/github-cache.json': { time: Date.now(), data: { runs: [], prs: [], liveMonitoring: [] } }, 'AGENTS.md': '# Cost\n',
+    'docs/workflow/cost-log.md': [header, row('K', 2), row('S', 4), row('O', 6), row('M', 8), row('B', 10), row('L', 20), row('BOARD', 3), ''].join('\n'),
+  }, 'tpl-cost-dash-');
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'dashboard.mjs'), p, '--quiet'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const html = fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8');
+  const card = (size, avg, n) => new RegExp(`<div class="kpi-l">Average · ${size}</div><div class="kpi-v">%${avg}</div><div class="kpi-s">${n} records</div>`);
+  assert.match(html, card('S', '3\\.0', 2));
+  assert.match(html, card('M', '7\\.0', 2));
+  assert.match(html, card('L', '15\\.0', 2));
+  assert.match(html, card('BOARD', '3\\.0', 1));
+  for (const old of ['K', 'O', 'B']) assert.doesNotMatch(html, new RegExp(`Average · ${old}<`), `no ${old} card`);
+});
+
+// ---------- 6. output style narrator ----------
+
+test('Ö-48.78 the output style is .claude/output-styles/narrator.md and every reference names narrator', () => {
+  assert.equal(exists('.claude/output-styles/narrator.md'), true);
+  assert.equal(exists('.claude/output-styles/anlatici.md'), false);
+  assert.match(read('.claude/output-styles/narrator.md'), /^---\nname: narrator\n/, 'the style name field');
+  assert.match(read('.claude/commands/start.md'), /"outputStyle": "narrator"/);
+  const files = [...walk('.claude'), ...walk('docs'), ...walk('kit')].filter((f) => /\.(md|mjs|js|json|html)$/.test(f)
+    && !f.startsWith('kit/tests/') && !/(^|\/)CHANGELOG[^/]*$/.test(f) && !f.startsWith('.claude/state/') && f !== '.claude/settings.local.json');
+  assert.equal(files.includes('kit/kit.mjs') && files.includes('kit/guide.html'), true, 'kit code and guide are scanned');
+  // The file / style name "anlatici" (ASCII) may appear only as the old name of narrator (the update's rename map).
+  // The Turkish word "anlatıcı" in the Turkish guide's prose is not a reference.
+  const left = files.flatMap((f) => read(f).split('\n').map((line, i) => ({ f, n: i + 1, line })))
+    .filter(({ line }) => /anlatici/i.test(line) && !/narrator/.test(line));
+  assert.deepEqual(left.map(({ f, n }) => `${f}:${n}`), [], show(left));
+});
+
+// An installed project made to look like one set up before 3.48: anlatici.md recorded by the kit, no narrator.md
+const KIT_MJS = path.join(REPO, 'kit', 'kit.mjs');
+const sha = (s) => crypto.createHash('sha256').update(s.replace(/\r\n/g, '\n')).digest('hex');
+const OLD_STYLE = read('.claude/output-styles/narrator.md').replace(/^name: narrator$/m, 'name: anlatici');
+function oldProject(name, { styleText = OLD_STYLE, recordedText = OLD_STYLE } = {}) {
+  const p = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tpl-style-')), name);
+  made.push(path.dirname(p));
+  fs.cpSync(REPO, p, { recursive: true, filter: (src) => !/[\\/](\.git|node_modules|\.calisma)$/.test(src) && !src.endsWith('.kit.json') && !src.endsWith('settings.local.json') });
+  const r = spawnSync(process.execPath, [path.join(p, 'kit', 'kit.mjs'), 'install', '--type', 'backend'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const rec = JSON.parse(fs.readFileSync(path.join(p, '.kit.json'), 'utf8'));
+  fs.rmSync(path.join(p, '.claude/output-styles/narrator.md'), { force: true });
+  delete rec.files['.claude/output-styles/narrator.md'];
+  fs.writeFileSync(path.join(p, '.claude/output-styles/anlatici.md'), styleText);
+  rec.files['.claude/output-styles/anlatici.md'] = sha(recordedText);
+  fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify(rec));
+  return p;
+}
+const update = (p) => spawnSync(process.execPath, [KIT_MJS, 'update', '--project', p], { encoding: 'utf8' });
+const json = (p, rel) => JSON.parse(fs.readFileSync(path.join(p, rel), 'utf8'));
+
+test('Ö-48.79 kit update moves an old project\'s anlatici.md to narrator.md and "outputStyle": "anlatici" to "narrator"', () => {
+  const p = oldProject('old');
+  fs.writeFileSync(path.join(p, '.claude/settings.local.json'), JSON.stringify({ outputStyle: 'anlatici', env: { A: '1' } }, null, 2));
+  const shared = json(p, '.claude/settings.json');
+  fs.writeFileSync(path.join(p, '.claude/settings.json'), JSON.stringify({ ...shared, outputStyle: 'anlatici' }, null, 2));
+  const r = update(p);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(fs.existsSync(path.join(p, '.claude/output-styles/anlatici.md')), false, 'the old file is gone');
+  assert.equal(fs.readFileSync(path.join(p, '.claude/output-styles/narrator.md'), 'utf8').replace(/\r\n/g, '\n'), read('.claude/output-styles/narrator.md'), 'narrator.md is the kit\'s');
+  const files = json(p, '.kit.json').files;
+  assert.equal(Object.hasOwn(files, '.claude/output-styles/anlatici.md'), false, 'the record forgets the old name');
+  assert.equal(files['.claude/output-styles/narrator.md'], sha(read('.claude/output-styles/narrator.md')), 'and records the new one');
+  assert.deepEqual(json(p, '.claude/settings.local.json'), { outputStyle: 'narrator', env: { A: '1' } }, 'personal settings: only the style name changes');
+  const after = json(p, '.claude/settings.json');
+  assert.equal(after.outputStyle, 'narrator', 'project settings.json too');
+  assert.deepEqual(after.hooks, shared.hooks, 'the rest of settings.json stays');
+  // A second update has nothing left to move
+  const again = update(p);
+  assert.equal(again.status, 0, again.stderr);
+  assert.equal(fs.existsSync(path.join(p, '.claude/output-styles/anlatici.md')), false);
+  assert.equal(json(p, '.claude/settings.local.json').outputStyle, 'narrator');
+});
+
+test('A-48.22 kit update: a user-changed anlatici.md is not lost; another output style setting is left alone', () => {
+  const mine = `${OLD_STYLE}\nMy own rule: explain every step twice.\n`;
+  const p = oldProject('changed', { styleText: mine });
+  fs.writeFileSync(path.join(p, '.claude/settings.local.json'), JSON.stringify({ outputStyle: 'Explanatory' }, null, 2));
+  const shared = json(p, '.claude/settings.json');
+  fs.writeFileSync(path.join(p, '.claude/settings.json'), JSON.stringify({ ...shared, outputStyle: 'Learning' }, null, 2));
+  const r = update(p);
+  assert.equal(r.status, 0, r.stderr);
+  const kept = ['anlatici.md', 'narrator.md'].map((f) => path.join(p, '.claude/output-styles', f))
+    .filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8'));
+  assert.equal(kept.some((t) => t.includes('My own rule: explain every step twice.')), true, 'the user\'s text is still in anlatici.md or narrator.md');
+  assert.equal(json(p, '.claude/settings.local.json').outputStyle, 'Explanatory');
+  assert.equal(json(p, '.claude/settings.json').outputStyle, 'Learning');
+});
