@@ -72,7 +72,7 @@ try {
   // not a git repo, or before the first commit
 }
 
-// The user's preferences from every project (~/.vibe-kit/tercihler.md), short; a broken file must not stop the session
+// The user's preferences from every project (~/.vibe-kit/preferences.md), short; a broken file must not stop the session
 try { const p = prefsNote(); if (p) notes.push(p.length > 1500 ? `${p.slice(0, 1500)}…` : p); } catch { /* no preferences */ }
 
 if (notes.length) console.log(sessionNote(tool, '[Kit] ' + notes.join('\n[Kit] '), next && `[Kit] ${next}`));

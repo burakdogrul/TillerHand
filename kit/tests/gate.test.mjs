@@ -476,7 +476,7 @@ test('3.32.0 one review per change: the task-end approval covers the commit; aft
   write('e.js', '1');
   write('f.js', '1');
   assert.equal(skip('kullanıcı isteği').status, 0);
-  assert.match(status().stdout, /Review skipped \(atlandı: .*these changes were not reviewed/s);
+  assert.match(status().stdout, /Review skipped \(skipped: .*these changes were not reviewed/s);
   assert.doesNotMatch(status().stdout, /Approval valid/);
   write('f.js', '2');
   assert.match(status().stdout, /No approval.*2 files/s, 'the skipped e.js is still to be reviewed');
@@ -687,4 +687,73 @@ test('test-writer K9i commit gate: non-code files the test runner makes in the t
   assert.match(code.stderr, /tests\/helpers\.js/);
   assert.doesNotMatch(code.stderr, /data\.json/, 'the fixture is not named');
   k9End('k9i-son');
+});
+
+// 3.48.0: --skip writes an English note; an old Turkish "atlandı" record keeps working; --approve can write neither.
+const approvalFile = () => path.join(p, '.claude/state/commit-approval.json');
+const gateStatus = () => spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs'), '--status'], { encoding: 'utf8', env: env() });
+// A red gate: only a skip can open the commit
+const redStart = (name) => { agents('node -e "process.exit(1)"'); sh(`git add -A && git commit -qm ${name} --allow-empty`); dropRecord(); fs.rmSync(approvalFile(), { force: true }); };
+const redEnd = (name) => { agents('node -e "process.exit(0)"'); k9End(name); };
+
+test('AC-48.3 commit gate: --skip writes a note starting "skipped: " and opens the commit past a red gate', () => {
+  redStart('ac483-a');
+  write('s1.js', '1');
+  assert.equal(runGate().status, 1, 'red gate');
+  assert.equal(approve('board-qa').status, 0);
+  assert.equal(commit().status, 2, 'a board approval does not pass a red gate');
+  const r = skip('user request');
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(JSON.parse(fs.readFileSync(approvalFile(), 'utf8')).note, 'skipped: user request');
+  assert.equal(commit().status, 0, 'skipped at the user\'s request');
+  assert.match(gateStatus().stdout, /Review skipped \(skipped: user request/);
+  write('s1.js', '2');
+  assert.equal(skip('kullanıcı isteği: İ ı').status, 0);
+  assert.equal(JSON.parse(fs.readFileSync(approvalFile(), 'utf8')).note, 'skipped: kullanıcı isteği: İ ı', 'the reason is kept as typed');
+  assert.equal(commit().status, 0);
+  redEnd('ac483-a-son');
+});
+
+test('AC-48.3 commit gate: an old commit-approval.json whose note starts with "atlandı" still counts as a skip', () => {
+  redStart('ac483-b');
+  write('s2.js', '1');
+  runGate();
+  assert.equal(skip('x').status, 0);
+  const rec = JSON.parse(fs.readFileSync(approvalFile(), 'utf8'));
+  for (const note of ['atlandı: kullanıcı isteği', 'Atlandı', 'Skipped: user request', 'SKIPPED']) {
+    fs.writeFileSync(approvalFile(), JSON.stringify({ ...rec, note }));
+    assert.equal(commit().status, 0, note);
+    const s = gateStatus().stdout;
+    assert.ok(s.startsWith(`Review skipped (${note}, `), `${note}: ${s}`);
+  }
+  // an old skip covers no file: after a change it opens nothing
+  write('s2.js', '2');
+  fs.writeFileSync(approvalFile(), JSON.stringify({ ...rec, note: 'atlandı: kullanıcı isteği' }));
+  assert.equal(commit().status, 2, 'a stale old skip');
+  assert.match(gateStatus().stdout, /No approval/);
+  redEnd('ac483-b-son');
+});
+
+test('A-48.7 commit gate: --approve refuses a "skipped" or "atlandı" note in any case, so the board cannot be bypassed', () => {
+  redStart('a487');
+  write('s3.js', '1');
+  runGate();
+  assert.equal(approve('board-qa').status, 0);
+  const before = fs.readFileSync(approvalFile());
+  // the last one is what $'atland\xc4\xb1' becomes after the shell decodes it
+  const decoded = Buffer.from('atland\xc4\xb1', 'latin1').toString('utf8');
+  assert.equal(decoded, 'atlandı');
+  for (const note of ['skipped: x', 'skipped', 'Skipped', 'SKIPPED: user request', 'atlandı: x', 'Atlandı: kullanıcı isteği', decoded]) {
+    const r = approve(note);
+    assert.equal(r.status, 1, note);
+    assert.match(r.stderr, /--skip/, `${note}: the hint names --skip`);
+    assert.deepEqual(fs.readFileSync(approvalFile()), before, `${note}: the approval record is unchanged`);
+    assert.equal(commit().status, 2, `${note}: the red gate still stops the commit`);
+  }
+  // whatever --approve does with these, none of them opens a red gate
+  for (const note of [' skipped: x', '​skipped: x', '"skipped: x"', 'board-qa: nothing skipped']) {
+    approve(note);
+    assert.equal(commit().status, 2, JSON.stringify(note));
+  }
+  redEnd('a487-son');
 });

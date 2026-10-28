@@ -201,6 +201,25 @@ test('3.14.1 re-audit: cd resolution, shell wrappers, combined flags, guard fold
   assert.equal(shell('echo SIR=1 > .env')?.permissionDecision, 'deny', '.env is not written from the shell either');
 });
 
+test('AC-48.8 guards: ~/.vibe-kit/preferences.md and the old tercihler.md both get the personal-preferences message', () => {
+  // the hooks only decide here; nothing is written to the home folder
+  for (const f of ['preferences.md', 'tercihler.md']) {
+    for (const k of [`echo x > ~/.vibe-kit/${f}`, `rm ~/.vibe-kit/${f}`, `cp x.md ~/.vibe-kit/${f}`]) {
+      const s = shell(k);
+      assert.equal(s?.permissionDecision, 'ask', k);
+      assert.match(s.permissionDecisionReason, /prefs\.mjs --add \/ --remove/, k);
+      assert.doesNotMatch(s.permissionDecisionReason, /gate\.mjs --approve/, k);
+    }
+    const e = edit(path.join(os.homedir(), '.vibe-kit', f));
+    assert.equal(e?.decision, 'ask', `file tool: ${f}`);
+    assert.match(e.reason, /prefs\.mjs --add \/ --remove/, `file tool: ${f}`);
+    assert.doesNotMatch(e.reason, /gate\.mjs --approve/, `file tool: ${f}`);
+  }
+  // the gate approval record keeps its own message
+  assert.match(shell('echo {} > ~/.vibe-kit/gate-approval/x.json').permissionDecisionReason, /gate\.mjs --approve/);
+  assert.match(edit(approvalPath(p)).reason, /gate\.mjs --approve/);
+});
+
 test('3.14.3 an unresolvable target that names a rule file is asked even without a lock/plan; local UNC is converted', () => {
   write('AGENTS.md', '# x');
   const asked = ['echo x > $D/AGENTS.md', 'sed -i s/a/b/ {AGENTS,X}.md', 'cp x `pwd`/.claude/settings.json',

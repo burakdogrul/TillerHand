@@ -398,7 +398,7 @@ export const MESSAGES = {
   'guard.destructive.perm.planSave': { tr: 'Kapsam kalkanının dosya listesi yazılıyor', en: 'The scope shield\'s file list is being written' },
   'guard.destructive.perm.planEnd': { tr: 'Kapsam kalkanı kapatılıyor', en: 'The scope shield is being closed' },
   'guard.destructive.perm.commitSkip': { tr: 'Commit kapısı ve kurul denetimi atlanıyor', en: 'The commit gate and the board review are being skipped' },
-  'guard.destructive.perm.prefsEdit': { tr: 'Kişisel tercih dosyası (~/.vibe-kit/tercihler.md) değişiyor', en: 'The personal preferences file (~/.vibe-kit/tercihler.md) is changing' },
+  'guard.destructive.perm.prefsEdit': { tr: 'Kişisel tercih dosyası (~/.vibe-kit/preferences.md) değişiyor', en: 'The personal preferences file (~/.vibe-kit/preferences.md) is changing' },
   'guard.destructive.perm.gateApprove': { tr: 'Deterministik kapının çalıştıracağı komutlar onaylanıyor', en: 'The commands the deterministic gate will run are being approved' },
   'guard.destructive.perm.protectedShell': { tr: 'Kural veya koruma dosyası kabuk komutuyla değiştiriliyor', en: 'A rule or guard file is being changed with a shell command' },
   'guard.destructive.unclearNetPath': { tr: 'hedef ağ yolu ({path})', en: 'target is a network path ({path})' },

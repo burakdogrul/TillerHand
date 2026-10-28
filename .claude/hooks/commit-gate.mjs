@@ -111,13 +111,13 @@ function reviewOff() {
   }
 }
 
-// A note starting with "atlandı" skips the board and the gate. --approve refuses it whatever the spelling
-// ($'atland\xc4\xb1', $(printf ...)); only --skip writes it, and --skip is always asked.
-const SKIPPED = /^atlandı/i;
+// A note starting with "skipped" ("atlandı" before 3.48) skips the board and the gate. --approve refuses both whatever
+// the spelling ($'atland\xc4\xb1', $(printf ...)); only --skip writes it, and --skip is always asked.
+const SKIPPED = /^(skipped|atlandı)/i;
 
 function approve(note) {
   if (SKIPPED.test(note)) {
-    console.error('A note starting with "atlandı" is not written with --approve. If the user explicitly asks: node .claude/hooks/commit-gate.mjs --skip "<reason>"');
+    console.error('A note starting with "skipped" or "atlandı" is not written with --approve. If the user explicitly asks: node .claude/hooks/commit-gate.mjs --skip "<reason>"');
     process.exit(1);
   }
   save(note);
@@ -229,7 +229,7 @@ async function hook() {
   if (!d.files.length || docsOnly(d.files)) process.exit(0);
 
   const approval = readApproval();
-  // The deterministic gate (gate.mjs) must be green for the same changes; not required if the user said "atlandı"
+  // The deterministic gate (gate.mjs) must be green for the same changes; not required if the user said "skipped"
   const gate = readGate();
   const skipped = SKIPPED.test(String(approval?.note ?? ''));
   // Test files only test-writer writes (AGENTS.md rule 7): one changed past the PreToolUse guards stops the commit.
@@ -277,7 +277,7 @@ async function hook() {
 if (isMain(import.meta.url)) {
   const i = process.argv.indexOf('--approve'), j = process.argv.indexOf('--skip');
   if (i > -1) approve(process.argv[i + 1] || 'unspecified');
-  else if (j > -1) save(`atlandı: ${process.argv[j + 1] || 'user request'}`);
+  else if (j > -1) save(`skipped: ${process.argv[j + 1] || 'user request'}`);
   else if (process.argv.includes('--status')) status();
   else hook();
 }

@@ -50,7 +50,7 @@ test('3.35.0 progress.mjs: marks the roadmap, adds a cost row, updates progress 
   fs.writeFileSync(path.join(p, 'docs/workflow/progress.md'), prog.replace('**Aktif faz:**', 'Aktif faz:'));
   const bad = run('--check');
   assert.equal(bad.status, 1);
-  assert.match(bad.stdout, /Aktif faz/);
+  assert.match(bad.stdout, /broken bold labels: Active phase\./, '3.48.0: a broken Turkish label is reported by its English name');
   fs.rmSync(p, { recursive: true, force: true });
 
   assert.match(read('.claude/commands/build.md'), /progress\.mjs --done/);

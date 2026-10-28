@@ -86,6 +86,23 @@ export function normalize(text) {
   return bom + parts.join('');
 }
 
+// The label a writer uses for key in this file: the language the file already has for it (English if both, or neither).
+// Same positions as normalize: a line-start **Label:** or a "## Label" heading outside code blocks.
+export function labelIn(text, key) {
+  const { en, tr } = LABELS[key] ?? {};
+  if (!Object.hasOwn(LABELS, key)) throw new Error(`unknown label: ${key}`);
+  const at = (word) => new RegExp(`^(\\*\\*${esc(word)}:\\*\\*|## (\\d+\\. )?\\[?${esc(word)}(?![\\p{L}\\p{N}]))`, 'u');
+  const [isEn, isTr] = [at(en), at(tr)];
+  let fence = false, found = en;
+  for (const line of text.replace(/^﻿/, '').split(/\r?\n/)) {
+    if (FENCE.test(line)) { fence = !fence; continue; }
+    if (fence) continue;
+    if (isEn.test(line)) return en;
+    if (isTr.test(line)) found = tr;
+  }
+  return found;
+}
+
 const VERDICTS = [['KOŞULLU ONAY', 'conditional'], ['CONDITIONAL', 'conditional'], ['KOŞULLU', 'conditional'],
   ['APPROVE', 'approve'], ['ONAY', 'approve'], ['REJECT', 'reject'], ['RET', 'reject']];
 

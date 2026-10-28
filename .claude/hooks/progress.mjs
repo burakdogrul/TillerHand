@@ -6,22 +6,27 @@
 //   node .claude/hooks/progress.mjs --cost "<job>" <size> ["<note>"] [--limit N]  start from --start, end now (once)
 //   node .claude/hooks/progress.mjs --task "<active task>" --did "<done>" --next "<next step>"
 //   node .claude/hooks/progress.mjs --check                          progress.md labels the status line and dashboard read
-// Every progress write also sets **Son güncelleme:** to today. Flags can be combined in one call.
+// Every progress write also sets **Last updated:** (**Son güncelleme:** in a Turkish file) to today. Flags can be combined in one call.
 import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot, isMain } from './shared.mjs';
 import { clean, labels } from './status-read.mjs';
+import { label, labelIn, normalize } from './labels.mjs';
 import { readLimits } from './usage.mjs';
 
-const LABELS = ['Son güncelleme', 'Aktif faz', 'Aktif görev', 'Başlangıç adımı', 'Soru modu', 'Profil'];
+const REQUIRED = ['lastUpdated', 'activePhase', 'activeTask', 'setupStep', 'questionMode', 'profile'];
 const SIZES = ['K', 'O', 'B', 'BOARD', 'DESIGN', 'FINDINGS'];
 const USAGE = 'Usage: node .claude/hooks/progress.mjs [--done G-NNN] [--start] [--cost "<job>" <K|O|B|BOARD|DESIGN|FINDINGS> [<start %> <end %> <min>] ["<note>"]] [--limit N] [--task "<text>"] [--did "<text>"] [--next "<text>"] [--check]';
 // One line per value: a newline would break a label, a list item or a table row
 const line = (s) => clean(String(s).replace(/\s*\r?\n\s*/g, ' ')).trim();
 const today = () => new Date().toLocaleDateString('sv-SE');
-const setLabel = (text, k, v) => text.replace(new RegExp(`^(\\*\\*${k}:\\*\\*).*$`, 'm'), `$1 ${v}`);
-const setSection = (text, title, body) => text.replace(new RegExp(`^(## ${title}[^\\n]*\\n)[\\s\\S]*?(?=^## |(?![\\s\\S]))`, 'm'), `$1\n${body}\n\n`);
-const section = (text, title) => text.match(new RegExp(`^## ${title}[^\\n]*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm'))?.[1] ?? '';
+// Labels and headings are written in the language the file already uses (labelIn). Function replacements: a value
+// with $& or $' is text, not a replacement pattern.
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const setLabel = (text, key, v) => text.replace(new RegExp(`^(\\*\\*${esc(labelIn(text, key))}:\\*\\*).*$`, 'm'), (_, l) => `${l} ${v}`);
+const sectionRe = (text, key) => new RegExp(`^(## ${esc(labelIn(text, key))}[^\\n]*\\n)([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm');
+const setSection = (text, key, body) => text.replace(sectionRe(text, key), (_, h) => `${h}\n${body}\n\n`);
+const section = (text, key) => text.match(sectionRe(text, key))?.[2] ?? '';
 
 export function markDone(text, id) {
   const re = new RegExp(`^(\\s*- )\\[( |x)\\](\\s*${id}:)`, 'mi');
@@ -42,17 +47,21 @@ export function costRow(args, date = today()) {
 }
 
 export function updateProgress(text, { task, did, next }) {
-  let t = setLabel(text, 'Son güncelleme', today());
-  if (task != null) t = setLabel(t, 'Aktif görev', line(task));
+  let t = setLabel(text, 'lastUpdated', today());
+  if (task != null) t = setLabel(t, 'activeTask', line(task));
   if (did != null) {
-    const items = section(t, 'Son oturumda yapılanlar').split('\n').map((s) => s.trim()).filter((s) => /^- \S/.test(s));
-    t = setSection(t, 'Son oturumda yapılanlar', [...items, `- ${line(did)}`].join('\n'));
+    const items = section(t, 'doneLastSession').split('\n').map((s) => s.trim()).filter((s) => /^- \S/.test(s));
+    t = setSection(t, 'doneLastSession', [...items, `- ${line(did)}`].join('\n'));
   }
-  if (next != null) t = setSection(t, 'Sıradaki adım', `1. ${line(next)}`);
+  if (next != null) t = setSection(t, 'nextStep', `1. ${line(next)}`);
   return t;
 }
 
-export const missingLabels = (text) => LABELS.filter((k) => !(k in labels(text)));
+// By their English names, whichever language the file uses; an example inside a code block does not count
+export const missingLabels = (text) => {
+  const found = labels(normalize(text).replace(/^```[\s\S]*?^```.*$/gm, ''));
+  return REQUIRED.map((k) => label(k)).filter((k) => !(k in found));
+};
 
 if (isMain(import.meta.url)) {
   const root = findRoot();
