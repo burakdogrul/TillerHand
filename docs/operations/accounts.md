@@ -2,7 +2,7 @@
 
 > Every external account the project depends on is listed here. In one-person projects the most common disasters are not code:
 > an expired domain, an invalid card that stops a service, a hijacked account without 2FA,
-> a key nobody remembers owning. The `/dashboard` dashboard shows **dates expiring within 30 days** in the "Dikkat" (attention) area.
+> a key nobody remembers owning. The `/dashboard` dashboard shows **dates expiring within 30 days** in the "Needs attention" area.
 >
 > **Never write a password, key or token here.** Write only which account, who holds it, when it ends.
 > Dates must use the `YYYY-AA-GG` format (the dashboard reads them).

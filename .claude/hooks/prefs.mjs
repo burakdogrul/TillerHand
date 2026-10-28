@@ -47,8 +47,8 @@ export function parsePrefs(file = prefsFile()) {
 export const readPrefs = (file = prefsFile()) => parsePrefs(file).items;
 
 function writePrefs(items, file) {
-  const lines = ['# Kişisel tercihler (TillerHand)', '',
-    '> Her oturumda AI\'ya yüklenir, tüm projelerinde geçerlidir. `node .claude/hooks/prefs.mjs --add` ve `--remove` ile değiştir; elle düzenlersen başlıkları ve "- " satırlarını koru.', ''];
+  const lines = ['# Personal preferences (TillerHand)', '',
+    '> Loaded into the AI every session, applies to all your projects. Change it with `node .claude/hooks/prefs.mjs --add` and `--remove`; if you edit by hand, keep the headings and the "- " lines.', ''];
   for (const [key, title] of Object.entries(CATEGORIES)) {
     const list = items.filter((p) => p.category === key);
     if (list.length) lines.push(`## ${title}`, '', ...list.map((p) => `- ${p.text}`), '');

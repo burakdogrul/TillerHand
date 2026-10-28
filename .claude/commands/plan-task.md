@@ -16,29 +16,29 @@ In this step **do not write code**, only produce the plan.
 4. Write the plan in this format:
 
 ```
-## Plan: [görev]
-**Kabul kriterleri:** [maddeler]
-**Alınan kararlar:** [soru → seçilen]
-**Kullanılacak skill'ler:** [docs/workflow/skills.md'den; örn. ponytail, tdd, impeccable]
-**Dokunulacak dosyalar:** [yol — ne değişecek] (yeni dosyaları ayrıca belirt)
-**Adımlar:** [numaralı, her biri doğrulanabilir]
-**Veri modeli / API değişikliği:** [varsa; migration gerekiyor mu?]
-**Yeni bağımlılık:** [varsa paket adı + neden + yerleşik alternatif neden yetmiyor]
-**Kabul testleri:** [hangi kriter kimlikleri (Ö-01.1...), test dosyası; koddan ÖNCE yazılır ve kırmızı olur]
-**Saldırgan testleri:** [veri döndüren/yazan uç varsa: IDOR, oturumsuz, rol, XSS, girdi sınırı]
-**Bayrak:** [gerekmiyor / bayrak adı + acil kapatma yolu]
-**Testler:** [diğer testler; kritik akış mı? → docs/quality/test-plan.md]
-**Güvenlik/yasal etkisi:** [yetki, kişisel veri, sır, ödeme etkisi var mı?]
-**Riskler ve açık sorular:** [...]
-**Kapsam dışı bıraktıklarım:** [...]
+## Plan: [task]
+**Acceptance criteria:** [items]
+**Decisions made:** [question → chosen]
+**Skills to use:** [from docs/workflow/skills.md; e.g. ponytail, tdd, impeccable]
+**Files to touch:** [path — what changes] (list new files separately)
+**Steps:** [numbered, each verifiable]
+**Data model / API change:** [if any; is a migration needed?]
+**New dependency:** [if any: package name + why + why the built-in alternative is not enough]
+**Acceptance tests:** [which criterion ids (Ö-01.1...), test file; written BEFORE the code and red first]
+**Adversarial tests:** [if there is an endpoint that returns or writes data: IDOR, unauthenticated, role, XSS, input limit]
+**Flag:** [not needed / flag name + emergency shutoff path]
+**Tests:** [other tests; critical flow? → docs/quality/test-plan.md]
+**Security/legal impact:** [authorization, personal data, secret, payment impact?]
+**Risks and open questions:** [...]
+**Left out of scope:** [...]
 ```
 
 4b. **Feature spec (only for work touching 3 or more files):** Write `docs/product/specs/<task id>.md` from `_template.md`: current, expected and must-not-change behavior. Each must-not-change line starts with an acceptance criterion id that has a test (`- Ö-01.1: ...`); the gate stops if these tests are missing or red. Do not write a spec for smaller work.
 5. If the task does not fit one session, split it into subtasks and propose them for `docs/product/roadmap.md`.
 6. Write the decisions to the `docs/decisions/log.md` log; write an ADR for architectural and one-way decisions (`docs/decisions/adr-NNNN-*.md`).
 
-7. **Board plan meeting** (`.claude/board/rules.md` §2-4; if the board is set up): `board-product`, `board-architect` and the members relevant to the plan review the plan. Add the synthesis to the plan as "Kurul görüşü" (board opinion). If there is a RET, do not present the plan for approval before fixing it. Ask the decisions the members want asked.
+7. **Board plan meeting** (`.claude/board/rules.md` §2-4; if the board is set up): `board-product`, `board-architect` and the members relevant to the plan review the plan. Add the synthesis to the plan as "Board opinion". If there is a RET, do not present the plan for approval before fixing it. Ask the decisions the members want asked.
 
 To get the plan approved, use AskUserQuestion: "Approve / Change this / Split the task". Wait for my approval. After approval it will be implemented with `/build`.
 
-8. **After approval, open the scope shield:** `node .claude/hooks/freeze-guard.mjs --plan-save <görev kodu> <dosya...>` (the paths in "Dokunulacak dosyalar"; add `/` at the end for a whole folder). The command asks the user: they see the list and approve. While the plan is active, writing to an existing file not in the list (with a file tool, or with shell commands such as `sed -i`, `mv`, `>`) asks the user; new files and `docs/` are free. If a file not in the list is needed during implementation, ask the user; if they approve, `--plan-add <yol>`.
+8. **After approval, open the scope shield:** `node .claude/hooks/freeze-guard.mjs --plan-save <task id> <files...>` (the paths in "Files to touch"; add `/` at the end for a whole folder). The command asks the user: they see the list and approve. While the plan is active, writing to an existing file not in the list (with a file tool, or with shell commands such as `sed -i`, `mv`, `>`) asks the user; new files and `docs/` are free. If a file not in the list is needed during implementation, ask the user; if they approve, `--plan-add <path>`.

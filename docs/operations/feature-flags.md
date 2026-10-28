@@ -2,7 +2,7 @@
 
 > Risky features ship behind a flag. If something goes wrong, the flag is turned off **without a redeploy** (kill switch).
 > A forgotten flag is technical debt: every flag gets a removal date. The `/dashboard` dashboard shows the overdue ones.
-> The implementation method is in `docs/architecture/stack.md` → "Özellik bayrakları" (feature flags).
+> The implementation method is in `docs/architecture/stack.md` → "Acceptance tests and feature flags".
 
 ## When is a flag mandatory?
 
@@ -14,7 +14,7 @@
 
 ## Bayraklar
 
-The `/dashboard` dashboard reads this table. Date format `YYYY-AA-GG`, status `açık` / `kapalı` / `kademeli %N`.
+The `/dashboard` dashboard reads this table. Date format `YYYY-AA-GG`, status `on` / `off` / `gradual %N`.
 
 | Flag | Purpose | Status | Owner | Added | Removal date | Kill switch tested |
 |---|---|---|---|---|---|---|

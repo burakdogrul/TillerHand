@@ -1,1 +1,1 @@
-Hata: `GET /notes` en yeni notu önce döndürmeli, ama birkaç not eklenince sıra karışık geliyor. Hatayı düzelt. (İstemci `POST /notes`'ta `createdAt` alanını ISO tarih olarak gönderebilir; göndermezse sunucu o anı yazar.)
+Bug: `GET /notes` should return the newest note first, but after a few notes are added the order comes back mixed up. Fix the bug. (The client may send `createdAt` in `POST /notes` as an ISO date; if it does not, the server writes the current time.)

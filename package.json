@@ -1,7 +1,7 @@
 {
   "name": "tillerhand",
-  "version": "3.46.0",
-  "description": "Claude Code, Codex ve Antigravity için Türkçe vibe coding kiti: kurallar, komutlar, korumalar ve proje şablonları.",
+  "version": "3.47.0",
+  "description": "Vibe coding kit for Claude Code, Codex and Antigravity: rules, commands, guards and project templates.",
   "license": "MIT",
   "type": "module",
   "bin": {

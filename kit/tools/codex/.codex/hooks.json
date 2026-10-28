@@ -1,5 +1,5 @@
 {
-  "description": "Vibe Coding Kit korumaları (Codex). Betikler .claude/hooks/ altında; Claude Code ile ortak. Codex proje hook'larını ancak .codex/ klasörüne güvenip /hooks ile onayladıktan sonra çalıştırır.",
+  "description": "Vibe Coding Kit guards (Codex). The scripts live under .claude/hooks/ and are shared with Claude Code. Codex runs project hooks only after you trust the .codex/ folder and approve them with /hooks.",
   "hooks": {
     "SessionStart": [
       {

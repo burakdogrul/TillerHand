@@ -3,7 +3,7 @@
 > This file is loaded into the AI every session. If you made a different choice in the project, update it here
 > and write the reason in `docs/decisions/log.md`.
 
-## Karar noktaları (decision points)
+## Decision points
 
 `/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that best fit this project. The **recommended** label is the default, but if another option fits the PRD better, recommend that one and say why. If a claim that can change (price, free tier, limit) carries a `(kaynak: <adres>, YYYY-AA-GG)` note newer than 90 days, do not research it again.
 
@@ -53,7 +53,7 @@ npx playwright test    # e2e
 npx supabase migration new [ad]   # new migration
 ```
 
-## Klasör yapısı (folder structure)
+## Folder structure
 
 Feature-based structure and rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is asked about, CI checks it).
 ```
@@ -88,7 +88,7 @@ tests/
 supabase/migrations/            # database changes ONLY here
 ```
 
-## Kodlama kuralları (coding rules)
+## Coding rules
 
 - Default to **Server Component**. `"use client"` only when interaction is needed, and in the lowest component.
 - Writing data: Server Action or route handler. In each: Zod validation → session check → permission check → operation.
@@ -101,9 +101,9 @@ supabase/migrations/            # database changes ONLY here
 - Texts are in Turkish; format date/money with `Intl` and `tr-TR`.
 - Before UI work, read `DESIGN.md` and `docs/design/design-guide.md`; do not go outside the tokens and rules. If a new design decision is needed, use `/design`.
 
-## Doğrulama (verification: evidence before a task is done)
+## Verification (evidence before a task is done)
 
-- UI: `node .claude/hooks/preview.mjs <görev kodu>` takes a desktop (1440) and mobile (390) screenshot (the `geliştirme:` and `önizleme:` lines in `AGENTS.md`). To try scenarios, with `npm run dev` running, open the page with the Playwright CLI (`npx -y @playwright/cli@0.1.22 open http://localhost:3000`, then `snapshot`, `console`, `screenshot`) or with Claude's browser, and try the main scenario and one error scenario.
+- UI: `node .claude/hooks/preview.mjs <task id>` takes a desktop (1440) and mobile (390) screenshot (the `geliştirme:` and `önizleme:` lines in `AGENTS.md`). To try scenarios, with `npm run dev` running, open the page with the Playwright CLI (`npx -y @playwright/cli@0.1.22 open http://localhost:3000`, then `snapshot`, `console`, `screenshot`) or with Claude's browser, and try the main scenario and one error scenario.
 - Proving acceptance criteria in the browser: `/qa` (one Playwright test per criterion, report in `docs/quality/qa/`).
 - Authorization: with a second test user, try to reach the first user's record; it must fail.
 - No errors/warnings in the console.
@@ -132,7 +132,7 @@ npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-resul
 - A `feature_flags` table in Supabase (`ad`, `acik`, `yuzde`) + a 60 s cache on the server. Reading goes through one helper: `lib/bayrak.ts` → `bayrakAcik('ad', kullanici)`.
 - The flag check runs on the server; the client only sees the result.
 
-## Sık yapılan AI hataları (common AI mistakes; watch for these)
+## Common AI mistakes (watch for these)
 
 - Writing an absolute path specific to this machine into code, a test or a setting (`C:\Users\<ad>\…`, `/home/<ad>/…`, the full path of the project folder): it does not work on another machine. Derive the path with `import.meta.url` / `__dirname`, `path.join(process.cwd(), …)` or `os.tmpdir()`. The deterministic gate catches this.
 - Using the Supabase admin client or a secret inside a client component.
@@ -141,14 +141,14 @@ npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-resul
 - Mixing old Pages Router patterns (`getServerSideProps`) into the App Router.
 - Not verifying the signature on a webhook; processing a webhook twice when it arrives twice (idempotency).
 
-## Güvenlik (security; extra)
+## Security (extra)
 
 - [ ] RLS is on in all tables and every table is in the adversarial test: `tests/security/rls.mjs` (CI `rls` job green). Locally: `npx -y supabase@2.120.0 start`, then the commands at the top of the file.
 - [ ] Another user and an anonymous user cannot read, change or delete the user's row (same test).
 - [ ] Security headers (CSP, X-Frame-Options etc.) in `next.config` or middleware.
 - [ ] Rate limit on auth endpoints (Supabase settings + Upstash if needed).
 
-## Canlıya alma (go live; extra)
+## Go live (extra)
 
 - [ ] Vercel prod environment variables entered (Preview and Production separate)
 - [ ] Supabase prod project is separate; prod domain and redirect URLs in Auth → URL Configuration
@@ -161,7 +161,7 @@ npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-resul
 - [ ] Domain + `www` redirect + SSL (Vercel automatic)
 - [ ] Sentry source maps are uploaded
 
-## Bakım (maintenance; extra)
+## Maintenance (extra)
 
 - Weekly: Vercel usage (bandwidth, function duration), Supabase usage (DB size, MAU).
 - Monthly: `npm outdated`, `npm audit`, rerun Lighthouse.

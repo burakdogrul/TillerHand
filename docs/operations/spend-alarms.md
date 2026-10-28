@@ -6,7 +6,7 @@
 
 ## Alarmlar
 
-One row per paid service. **Type:** `tavan` (cap: the service stops or requests are rejected) or `uyarı` (alert: only warns). **Amount:** monthly, with currency (e.g. `50 USD`). **Last check:** `YYYY-AA-GG`.
+One row per paid service. **Type:** `cap` (cap: the service stops or requests are rejected) or `alert` (alert: only warns). **Amount:** monthly, with currency (e.g. `50 USD`). **Last check:** `YYYY-AA-GG`.
 
 | Service | Type | Amount | Alert thresholds | Set up at | Last check |
 |---|---|---|---|---|---|
@@ -36,7 +36,7 @@ The provider limit is the last defense. Before it, the product itself limits spe
 3. **Log every call:** feature, model, input and output token counts, estimated cost, user id. Do not log the content (KVKK).
 4. **Abuse:** No AI call without signing up. There is a rate limit and bot protection.
 
-How these rules are implemented is written in `docs/architecture/stack.md` and, in the AI add-on, in `docs/ai/guide.md` → "Maliyet kontrolü" (cost control).
+How these rules are implemented is written in `docs/architecture/stack.md` and, in the AI add-on, in `docs/ai/guide.md` → "Cost control".
 
 ## When it is checked
 

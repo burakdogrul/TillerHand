@@ -1,52 +1,52 @@
 # [PROJE ADI]
 
-[Tek cümle açıklama]
+[One-sentence description]
 
-**Canlı:** [URL] · **Durum:** [geliştirme / beta / canlı]
+**Live:** [URL] · **Status:** [development / beta / live]
 
-## Gereksinimler
+## Requirements
 
-- [Çalışma ortamı ve sürümü: Node.js 22 (`.nvmrc`) / Python 3.12 (`.python-version`) / Expo CLI]
-- [Sistem bağımlılıkları: PostgreSQL 16, ffmpeg, ... (paket yöneticisinin kurmadıkları)]
-- [Hesaplar: Supabase, Vercel, ...]
+- [Runtime and its version: Node.js 22 (`.nvmrc`) / Python 3.12 (`.python-version`) / Expo CLI]
+- [System dependencies: PostgreSQL 16, ffmpeg, ... (the ones the package manager does not install)]
+- [Accounts: Supabase, Vercel, ...]
 
-Paket sürümleri kilit dosyasında sabittir (`package-lock.json` / `uv.lock`); kurulumu bu dosyadan yap.
+Package versions are pinned in the lock file (`package-lock.json` / `uv.lock`); install from that file.
 
-## Kurulum
+## Installation
 
 ```bash
 git clone [repo-url]
-cd [proje]
-[bağımlılık kurulum komutu]
-cp .env.example .env    # değerleri doldur
-[migration komutu]
-[geliştirme komutu]
+cd [project]
+[dependency install command]
+cp .env.example .env    # fill in the values
+[migration command]
+[dev command]
 ```
 
-## Ortam değişkenleri
+## Environment variables
 
-Tam liste ve açıklamalar: `.env.example`.
+Full list and descriptions: `.env.example`.
 
-## Komutlar
+## Commands
 
-| Komut | Ne yapar |
+| Command | What it does |
 |---|---|
-| `[dev]` | Geliştirme sunucusu |
-| `[test]` | Testler |
+| `[dev]` | Development server |
+| `[test]` | Tests |
 | `[lint]` | Lint |
-| `[build]` | Prod derlemesi |
+| `[build]` | Production build |
 
 ## Deploy
 
-[Nasıl deploy edilir, nereye, kim yetkili. Rollback nasıl yapılır.]
+[How to deploy, where to, who is authorized. How to roll back.]
 
-## Dokümanlar
+## Docs
 
-| Dosya | İçerik |
+| File | Contents |
 |---|---|
-| `docs/product/prd.md` | Ne yapıyoruz, kimin için |
-| `docs/architecture/overview.md` · `docs/architecture/structure.md` | Nasıl kurulu, klasörler nerede |
-| `docs/product/roadmap.md` | Görevler |
-| `docs/decisions/log.md` | Neden böyle yaptık |
-| `docs/operations/release-checklist.md` · `docs/operations/deploy-setup.md` · `docs/operations/maintenance.md` | Operasyon |
-| `docs/findings/` | Teknik, iş, güvenlik, UX, performans ve hukuk bulgu raporları |
+| `docs/product/prd.md` | What we are building, for whom |
+| `docs/architecture/overview.md` · `docs/architecture/structure.md` | How it is built, where the folders are |
+| `docs/product/roadmap.md` | Tasks |
+| `docs/decisions/log.md` | Why we did it this way |
+| `docs/operations/release-checklist.md` · `docs/operations/deploy-setup.md` · `docs/operations/maintenance.md` | Operations |
+| `docs/findings/` | Technical, business, security, UX, performance and legal findings reports |

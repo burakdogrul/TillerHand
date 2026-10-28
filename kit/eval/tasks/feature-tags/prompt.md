@@ -1,6 +1,6 @@
-Özellik: notlara etiket.
+Feature: tags on notes.
 
-- `POST /notes` ve `PATCH /notes/:id` isteğe bağlı `tags` alanını kabul eder: metin dizisi, en fazla 5 etiket, her biri boşlukları kırpıldıktan sonra 1-20 karakter. Etiketler Türkçe kurallarıyla küçük harfe çevrilir (`İŞ` → `iş`), tekrarlar atılır, ilk görülme sırası korunur. Kurala uymayan istek 400 döner.
-- Etiketsiz not `tags: []` ile döner. `PATCH` ile gelen `tags` eskisinin yerine geçer.
-- `GET /notes?tag=<etiket>` sadece o etiketi taşıyan notları döndürür (büyük/küçük harf duyarsız).
-- `GET /tags`, `x-user` başlığındaki kullanıcının notlarındaki etiketleri kullanım sayısıyla döndürür: `[{ "tag": "iş", "count": 2 }]`, sayıya göre azalan, eşitlikte alfabetik.
+- `POST /notes` and `PATCH /notes/:id` accept an optional `tags` field: an array of strings, at most 5 tags, each 1-20 characters after trimming whitespace. Tags are lowercased with Turkish rules (`İŞ` → `iş`), duplicates are dropped, and first-seen order is kept. A request that breaks the rules returns 400.
+- A note without tags is returned with `tags: []`. `tags` sent with `PATCH` replaces the old ones.
+- `GET /notes?tag=<tag>` returns only the notes that carry that tag (case-insensitive).
+- `GET /tags` returns the tags in the notes of the user in the `x-user` header, with usage counts: `[{ "tag": "iş", "count": 2 }]`, descending by count, alphabetical on ties.

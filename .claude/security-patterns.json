@@ -4,17 +4,17 @@
       "rule_name": "supabase_service_role_client",
       "regex": "(service_role|SUPABASE_SERVICE_ROLE|SUPABASE_SECRET_KEY|sb_secret_)",
       "paths": ["**/src/app/**/*.tsx", "**/src/components/**", "**/src/features/**/components/**", "**/app/**/*.tsx"],
-      "reminder": "Supabase gizli anahtarı (sb_secret_…, eski service_role) istemci koduna girmez; RLS'yi atlar. Sunucu tarafına (server action, route handler, edge function) taşı."
+      "reminder": "The Supabase secret key (sb_secret_…, the old service_role) must not go into client code; it bypasses RLS. Move it to the server side (server action, route handler, edge function)."
     },
     {
       "rule_name": "public_env_secret",
       "regex": "(NEXT_PUBLIC|EXPO_PUBLIC)_[A-Z_]*(SECRET|SERVICE_ROLE|PRIVATE)",
-      "reminder": "NEXT_PUBLIC_ / EXPO_PUBLIC_ değişkenleri tarayıcıya ve uygulama paketine gömülür. Gizli değer bu önekle tanımlanmaz."
+      "reminder": "NEXT_PUBLIC_ / EXPO_PUBLIC_ variables are embedded in the browser and the app bundle. Never define a secret value with this prefix."
     },
     {
       "rule_name": "personal_data_log",
       "regex": "console\\.(log|info)\\([^)]*(email|phone|tckn|tc_kimlik|password|token)",
-      "reminder": "Kişisel veri veya kimlik bilgisi loglanmaz (KVKK). Kimliği maskele veya sadece kayıt id'sini yaz."
+      "reminder": "Do not log personal data or credentials (KVKK, the Turkish data protection law). Mask the identity or log only the record id."
     }
   ]
 }

@@ -7,7 +7,7 @@
 >
 > Counting is done by code (`node .claude/hooks/council.mjs`). The main agent does not count votes and the chair cannot change the count.
 
-## Ne zaman (when)
+## When
 
 The project profile decides which meetings and decisions go to the council (`docs/workflow/progress.md` → `**Profil:**`; chosen in `/start` Step 0):
 
@@ -25,7 +25,7 @@ Measurement (2026-10-12): One council used about 12% of the 5-hour limit on Pro.
 |---|---|---|---|
 | Plan, phase-end, go-live meeting | **Meeting council** | Board members chosen by rules.md §3 (with the review role's model) | `board-chair` |
 | RET in a task-end meeting | Meeting council (stages 2 and 3 only) | The member who gave RET + the other members of that meeting | `board-chair` |
-| One-way door decision (Hafif/Standart: database and auth only; Tam: all; `docs/workflow/decision-protocol.md` §2a) or `/board council <soru>` in any profile | **Decision council** | 3 × `council-advisor`: `haiku`, `sonnet`, `opus` (same question, different model) | `board-chair` |
+| One-way door decision (Hafif/Standart: database and auth only; Tam: all; `docs/workflow/decision-protocol.md` §2a) or `/board council <question>` in any profile | **Decision council** | 3 × `council-advisor`: `haiku`, `sonnet`, `opus` (same question, different model) | `board-chair` |
 
 - Task-end and commit meetings stay single-stage (rules.md §4).
 - If the limit is yellow: the decision council runs with 2 advisors (`sonnet`, `opus`), and at most 3 members join stage 2 in a meeting council.
@@ -33,39 +33,39 @@ Measurement (2026-10-12): One council used about 12% of the 5-hour limit on Pro.
 
 ## Minutes
 
-Each council is a single file: `docs/workflow/council/YYYY-AA-GG-<tür>-<kısa-konu>.md`. The main agent writes the raw output of the stages here. To keep context small, later steps carry the file path, not the minutes.
+Each council is a single file: `docs/workflow/council/YYYY-AA-GG-<type>-<short-topic>.md`. The main agent writes the raw output of the stages here. To keep context small, later steps carry the file path, not the minutes.
 
 ```markdown
-# Konsey: <tür> · <konu>
-**Tarih:** 2026-10-12 · **Tür:** plan | faz-sonu | canliya-alma | ret | karar
-**Görev:** G-012 (varsa)
+# Konsey: <type> · <topic>
+**Tarih:** 2026-10-12 · **Tür:** plan | phase-end | go-live | reject | decision
+**Task:** G-012 (if any)
 
-## Soru
-<karar konseyinde: soru, seçenekler (her biri tek satır), bağlam dosyaları. Toplantıda: kapsam ve kabul kriterleri>
+## Question
+<decision council: the question, the options (one line each), context files. Meeting: scope and acceptance criteria>
 
 ## 1. İlk görüşler
 ### Görüş A
-- A1 [KRİTİK] dosya:satır — sorun — öneri
+- A1 [KRİTİK] file:line — problem — suggestion
 - A2 [ÖNEMLİ] ...
-ÖNERİ: <seçenek adı>          ← sadece karar konseyinde
+ÖNERİ: <option name>          ← decision council only
 ### Görüş B
 ...
 
 ## 2. Çapraz inceleme
 ### İnceleyen: A
-<her görüşün güçlü ve zayıf yanı, kısa>
+<strengths and weaknesses of each opinion, short>
 OYLAR:
 B1: DOĞRU | YANLIŞ | ABARTILI
-EKSİK: <kimsenin görmediği önemli bir şey varsa, tek satır>
+MISSING: <something important nobody saw, if any, one line>
 SIRALAMA:
 1. Görüş C
 2. Görüş B
 
 ## 3. Toplu sıralama
-<council.mjs yazar>
+<written by council.mjs>
 
 ## 4. Başkan kararı
-<board-chair yazar>
+<written by board-chair>
 
 ## Kimlikler
 A = board-architect (sonnet) · B = security-auditor (sonnet) · C = board-product (haiku)
@@ -75,14 +75,14 @@ A = board-architect (sonnet) · B = security-auditor (sonnet) · C = board-produ
 
 1. **First opinions (parallel).** Give each member the task in its own format (in a meeting, the board format in the member file; in a decision council, the `council-advisor` format). The replies are labeled A, B, C… in random order. Findings get ids: A1, A2, B1… Write the label-to-id mapping only in the "Kimlikler" section at the end of the minutes.
 2. **Cross-review (parallel).** Give each reviewer the following and pass the instruction below verbatim:
-   - The "Soru" section of the minutes.
+   - The "Question" section of the minutes.
    - The other opinions, **excluding** their own. Do not say who wrote them or which model wrote them.
    - Give each reviewer the opinions in a different order (reduces order effects).
 
-   > You do not know who wrote the opinions below. For each one, write what is good and what is missing, in no more than two sentences. Then vote on each finding: DOĞRU (evidenced and severity is right), ABARTILI (real but low importance), YANLIŞ (no match in the code or context). When voting, check the claim in the code or docs. Do not vote on a guess. If nobody saw something important, write it on the EKSİK line. At the end, rank in exactly this format: first the "SIRALAMA:" line, then "1. Görüş X" lines from best to worst, no other text.
+   > You do not know who wrote the opinions below. For each one, write what is good and what is missing, in no more than two sentences. Then vote on each finding: DOĞRU (evidenced and severity is right), ABARTILI (real but low importance), YANLIŞ (no match in the code or context). When voting, check the claim in the code or docs. Do not vote on a guess. If nobody saw something important, write it on the MISSING line. At the end, rank in exactly this format: first the "SIRALAMA:" line, then "1. Görüş X" lines from best to worst, no other text.
 
    In a meeting council, the reviewers are the same members. In a decision council, they are the same advisors.
-3. **Counting.** The command `node .claude/hooks/council.mjs <tutanak>` computes the following and writes it to the minutes:
+3. **Counting.** The command `node .claude/hooks/council.mjs <minutes>` computes the following and writes it to the minutes:
    - Average rank.
    - Vote distribution for each finding.
    - `Tartışmalı` (contested) findings: when the number of objections (YANLIŞ + ABARTILI) is equal to or greater than the number of DOĞRU votes.
@@ -98,11 +98,11 @@ A = board-architect (sonnet) · B = security-auditor (sonnet) · C = board-produ
 5. **User.** The main agent shows the chair's decision in the synthesis format of rules.md §4.
    - In a decision council, the AskUserQuestion options come from the council:
      - The option the chair recommends comes first and is labeled "(Recommended)".
-     - Add "Konsey: n/N ilk görüş · ort. sıra x" to each option's description.
+     - Add "Council: n/N first opinions · avg. rank x" to each option's description.
      - The minority view is written in one sentence in the description of its own option.
 6. **Record.**
    - Add one line to `docs/workflow/board.md` → "Toplantı günlüğü" (meeting log). Write the link to the minutes in the scope column.
-   - For a decision council, add the reference "Konsey: <tutanak>" to `docs/decisions/log.md` and to the ADR.
+   - For a decision council, add the reference "Council: <minutes>" to `docs/decisions/log.md` and to the ADR.
 
 ## Why
 

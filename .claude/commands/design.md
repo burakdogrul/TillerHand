@@ -5,7 +5,7 @@ argument-hint: [general | page/screen name | component name]
 
 Scope: $ARGUMENTS (`general` if empty)
 
-Every design decision is asked with a **visual preview** (`docs/workflow/decision-protocol.md` §5). The direction and skill mapping is in `docs/workflow/skills.md` → "Tasarım" (design). If `tasarim` is closed in question mode, go with the recommended option, still produce the previews and report them.
+Every design decision is asked with a **visual preview** (`docs/workflow/decision-protocol.md` §5). The direction and skill mapping is in `docs/workflow/skills.md` → "Design". If `tasarim` is closed in question mode, go with the recommended option, still produce the previews and report them.
 
 ## Preparation
 

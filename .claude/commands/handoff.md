@@ -13,30 +13,30 @@ The project's state lives in files and git, not in the chat. A handoff means lea
 2. Write `docs/workflow/handoff.md` (overwrite if it exists):
 
 ```markdown
-# Devir notu
+# Handoff note
 
 **Durum:** bekliyor
-**Tarih:** YYYY-AA-GG
-**Devreden:** [ad veya rol]
+**Date:** YYYY-AA-GG
+**Handed over by:** [name or role]
 
-## Nerede kaldık
-- Aktif faz ve görev, son biten görevler, yarım kalan iş (dosya ve adım)
+## Where we left off
+- Active phase and task, last finished tasks, unfinished work (file and step)
 
-## Bekleyen kararlar
+## Pending decisions
 - ...
 
-## Devralanın ihtiyacı
-- Hesaplar ve erişimler: `docs/operations/accounts.md`'deki servisler; kimin davet etmesi gerekiyor
-- Ortam değişkenleri: `.env.example`'daki adlar ve her birinin nereden alınacağı (değer yok)
-- Sistem bağımlılıkları ve kurulum: `README.md` → Gereksinimler / Kurulum
-- Yerel ayarlar (git'e girmeyenler): anlatıcı mod, kod haritası, MCP bağlantıları
+## What the receiver needs
+- Accounts and access: the services in `docs/operations/accounts.md`; who needs to invite
+- Environment variables: the names in `.env.example` and where to get each one (no values)
+- System dependencies and setup: `README.md` → Requirements / Installation
+- Local settings (not in git): narrator mode, code map, MCP connections
 
-## Dikkat
-- Bilinen sorunlar, riskli bölgeler, yapılmaması gerekenler
+## Watch out
+- Known issues, risky areas, things not to do
 ```
 
-2b. **Optional, if the receiver will see the code for the first time:** an onboarding guide with Understand-Anything (`yayin` package: `node .claude/hooks/tools.mjs --required yayin`). `/understand --language en` reads all the code on the first run and is expensive on a large project: state the cost and ask. Then `/understand-onboard`; write the output path into the "Devralanın ihtiyacı" (what the receiver needs) section of the handoff note.
-3. If there are uncommitted changes, suggest a commit: `docs: devir notu`. If a remote repo exists, suggest a push (get approval). If there is no push, tell the receiver how to get the project (repo invite or folder copy; the `.env` file is not copied).
+2b. **Optional, if the receiver will see the code for the first time:** an onboarding guide with Understand-Anything (`yayin` package: `node .claude/hooks/tools.mjs --required yayin`). `/understand --language en` reads all the code on the first run and is expensive on a large project: state the cost and ask. Then `/understand-onboard`; write the output path into the "What the receiver needs" section of the handoff note.
+3. If there are uncommitted changes, suggest a commit: `docs: handoff note`. If a remote repo exists, suggest a push (get approval). If there is no push, tell the receiver how to get the project (repo invite or folder copy; the `.env` file is not copied).
 4. Give the user the single line to pass to the receiver: "Clone the repo, open it in Claude Code, type `/handoff devral`."
 
 ## Take over (`/handoff devral`)
@@ -45,11 +45,11 @@ The project's state lives in files and git, not in the chat. A handoff means lea
 2. Set up the environment, reporting each step in one line:
    - `node --version`, `git --version`; do they match the runtime version in the README (`.nvmrc` / `.python-version`)?
    - Plugins: list the missing ones with `node .claude/hooks/plugins-sync.mjs`, install with approval via `--install`, then `/reload-plugins`. Package preferences are personal and do not come with the handoff: show the ones needed with `/tools`.
-   - Dependencies: the install command in README → "Kurulum" (install) (from the lock file).
+   - Dependencies: the install command in README → "Installation" (from the lock file).
    - Environment variables: list the names in `.env.example`. Do not create or read the `.env` file yourself; the user enters the values (where to get them is in the handoff note).
    - Accounts: show the accesses in the handoff note as a list; mark those waiting for an invite.
    - Personal settings: narrator mode (`/start` Step 0b) and the code map (Step 5) are asked separately for this user.
-3. Run the tests and show the result. If red, compare with "Dikkat" (watch out) in the handoff note.
+3. Run the tests and show the result. If red, compare with "Watch out" in the handoff note.
 4. If there are pending decisions, ask them now.
-5. In `docs/workflow/handoff.md`, set `**Durum:** devralındı` and add the `**Devralan:**` line. Suggest a commit: `docs: devir alındı`.
+5. In `docs/workflow/handoff.md`, set `**Durum:** devralındı` and add a `**Received by:**` line. Suggest a commit: `docs: handoff received`.
 6. Last line: the next command (`/build G-NNN`, or continue from "Kaldığı yer" if it is filled in).

@@ -1,5 +1,5 @@
-# Kitin kendi testleri. Sadece kit reposunda çalışır; `kit.mjs install` bu dosyayı projeye taşımaz.
-name: Kit testleri
+# The kit's own tests. Runs only in the kit repo; `kit.mjs install` does not copy this file into a project.
+name: Kit tests
 
 on:
   push:
@@ -8,18 +8,18 @@ on:
 
 jobs:
   test:
-    # İş seviyesinde if: hashFiles() kullanılamaz (GitHub "No jobs were run" verir); koşula gerek yok,
-    # kit.mjs install bu dosyayı projeye taşımaz.
+    # A job-level if: cannot use hashFiles() (GitHub reports "No jobs were run"); no condition is needed,
+    # kit.mjs install does not copy this file into a project.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Testler
+      - name: Tests
         run: node --test "kit/tests/*.test.mjs"
-      - name: YAML doğrulama
+      - name: YAML validation
         run: |
           for f in kit/templates/*/.github/workflows/*.yml kit/templates/addons/*/types/*/.github/workflows/*.yml kit/templates/*/.github/dependabot.yml .github/workflows/*.yml; do
-            npx --yes yaml@2.5.1 valid < "$f" || { echo "Geçersiz YAML: $f"; exit 1; }
+            npx --yes yaml@2.5.1 valid < "$f" || { echo "Invalid YAML: $f"; exit 1; }
           done

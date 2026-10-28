@@ -23,13 +23,13 @@ This is a **9-step alignment wizard** (0-9). It is the counterpart of `/start` f
 3. **Scan depth:** Read the limit and ask. Show the estimated costs:
    - **Quick scan (Recommended, on Pro):** Structure, stack, tests, git history, docs. About 10-20% of the 5-hour limit.
    - **Deep scan:** In addition to the quick scan, the selected findings reports (`/findings-tech`, `-security`, `-ux` etc.). About 8-15% more per report. Ask which reports to run with multi-select.
-   Append the choice to the `**Profil:**` line (e.g. `Hafif · tarama: Hızlı`).
+   Append the choice to the `**Profil:**` line (e.g. `Hafif · scan: Hızlı`).
 
 ## Step 1: Scan (read-only)
 
 Do not read files in bulk: if the code map is connected, use it first; otherwise start from the package files, the folder tree and the entry points. Extract:
 1. **Stack:** Language, framework, database, auth, hosting, package manager. Is there a lock file? Is the runtime version pinned (`.nvmrc`, `.python-version`, `engines`)?
-2. **Structure:** Folder tree (2-3 levels), entry points, layers. How far is it from the kit's feature-based structure (`features/<özellik>/`)?
+2. **Structure:** Folder tree (2-3 levels), entry points, layers. How far is it from the kit's feature-based structure (`features/<feature>/`)?
 3. **Features:** The user-visible feature list from routes, screens, API endpoints and models.
 4. **Tests:** Is there a test setup? Run the tests and show the result: how many tests, how many red, which areas are covered. Also flag tests that have no verification line or that pass everything with mocks.
 5. **Installability:** Setup steps in the README, `.env.example`, system dependencies.
@@ -52,7 +52,7 @@ Write what the code says as a draft, ask what cannot be understood from the code
 2. **`docs/architecture/stack.md`:** Fill the "Seçilen teknolojiler" (chosen technologies) table with the current stack. Choices different from the kit's catalog are not errors; proposing a change is a separate decision and is asked only if there is a serious reason (security, an end-of-life version, cost).
 3. **`docs/architecture/overview.md`, `docs/product/glossary.md`:** Data model, services, main concepts.
 3b. **Research (expensive step, optional):** Suggest `/research` for comparison with similar projects and competitors (quick: about 10-15% of the limit). Do it / Leave for later. Selected features go into Phase 3 in Step 8.
-4. **README:** The "Gereksinimler" (requirements) and "Kurulum" (installation) sections (`/start` Step 4 item 3a). A missing lock file or version file becomes one of the first tasks in Step 8.
+4. **README:** The "Requirements" and "Installation" sections (`/start` Step 4 item 3a). A missing lock file or version file becomes one of the first tasks in Step 8.
 
 ## Step 4: Rewrite AGENTS.md and CLAUDE.md
 
@@ -61,7 +61,7 @@ The shared rules are in `AGENTS.md` (read by Claude Code, Codex, Antigravity); `
 1. Take the kit's `AGENTS.md` (or `AGENTS.md.kit-new`) as the base; fill the project name, the one-sentence description and the "Komutlar" (commands) section. `CLAUDE.md` becomes the kit's `CLAUDE.md.kit-new` version. If `init` wrote `@AGENTS.md.kit-new` into `CLAUDE.md` because of the project's `AGENTS.md`, change this line to `@AGENTS.md`.
 2. Read the old `CLAUDE.md` (and the old `AGENTS.md` if any) and list the project-specific rules in them (code style, forbidden commands, package manager, environment notes, places to be careful). Filter out those that are the same as the kit's rules.
 3. Ask the rest with **multi-select**: "Which of the old rules should go into the new AGENTS.md?" If any conflicts with a kit rule, point it out separately.
-4. Add the selected ones to `AGENTS.md` as a `## Proje kuralları` section (after "Core rules"; only the Claude Code-specific ones go to `CLAUDE.md`). Keep the old ones as `docs/archive/claude-md-eski.md` (and `agents-md-eski.md`), delete the `.kit-new` files.
+4. Add the selected ones to `AGENTS.md` as a `## Project rules` section (after "Core rules"; only the Claude Code-specific ones go to `CLAUDE.md`). Keep the old ones as `docs/archive/claude-md-eski.md` (and `agents-md-eski.md`), delete the `.kit-new` files.
 
 ## Step 5: Tests and critical flows
 
@@ -80,7 +80,7 @@ Run the findings reports chosen in Step 0 (`/findings-all <types>` or one by one
 
 Expensive steps: state the cost first (`docs/workflow/usage-limits.md`), then ask: Do it / Do it light / Leave for later.
 1. **Board:** `/start` Step 6.
-2. **Design** (if there is a UI): First extract `DESIGN.md` from the existing UI (`impeccable:impeccable` → extract); then ask: keep the current design / improve / new direction (`/design genel`).
+2. **Design** (if there is a UI): First extract `DESIGN.md` from the existing UI (`impeccable:impeccable` → extract); then ask: keep the current design / improve / new direction (`/design general`).
 
 ## Step 8: Alignment roadmap → `docs/product/roadmap.md`
 

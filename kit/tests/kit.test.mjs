@@ -80,7 +80,7 @@ test('install: stops before deleting kit/ when the clone has uncommitted work', 
   fs.appendFileSync(path.join(p, 'kit', 'kit.mjs'), '\n// yerel değişiklik\n');
   const r = installType(p, '--type', 'backend');
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /Commit edilmemiş/);
+  assert.match(r.stderr, /Uncommitted changes found/);
   assert.ok(fs.existsSync(path.join(p, 'kit', 'kit.mjs')) && !fs.existsSync(path.join(p, '.kit.json')), 'nothing changed');
   git('commit', '-qam', 'iki');
   assert.equal(installType(p, '--type', 'backend').status, 0, 'committed work can be restored from git: install runs');
@@ -116,7 +116,7 @@ test('guncelle: senaryolar', () => {
   assert.equal(installType(p, '--type', 'backend').status, 0);
   let r = update(p);
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /Değişiklik yok/);
+  assert.match(r.stdout, /No changes\./);
 
   const k = record(p);
   const f1 = '.claude/commands/plan-task.md'; write(path.join(p, f1), 'eski kit'); k.files[f1] = hashOf('eski kit');
@@ -189,7 +189,7 @@ test('init: the kit stays in its own folder, the project is set up in its folder
   assert.equal(read(path.join(game, 'docs/architecture/stack.md')), read(path.join(REPO, 'kit/templates/web-saas/docs/architecture/stack.md')), 'the type\'s stack.md overwrote the common placeholder');
   assert.deepEqual(fs.readdirSync(game, { recursive: true }).filter((f) => f.endsWith('.kit-new')), [], 'no conflicts in an empty project');
   assert.ok(fs.existsSync(kitMjs), 'install did not delete the kit folder');
-  assert.match(update(game).stdout, /Değişiklik yok/);
+  assert.match(update(game).stdout, /No changes\./);
 });
 
 test('init: in a non-empty folder it does not touch the project\'s files', () => {
@@ -236,7 +236,7 @@ test('update: an old .kit.json with an absolute kit path is moved to .kit.local.
     fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify({ ...old, kit: elsewhere }));
     const u = update(p);
     assert.equal(u.status, 0, u.stderr);
-    assert.match(u.stdout, /bu makinede yok/, elsewhere);
+    assert.match(u.stdout, /does not exist on this machine/, elsewhere);
     assert.equal(record(p).kit, 'local');
     assert.ok(!fs.existsSync(path.join(p, '.kit.local.json')));
   }

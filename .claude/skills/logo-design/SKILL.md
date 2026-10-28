@@ -20,7 +20,7 @@ First read `docs/product/prd.md`, `docs/product/glossary.md` and `DESIGN.md` (co
 3. **Symbol idea:** 2-3 concept suggestions derived from what the product does (e.g. invoice → paper fold, check mark, up arrow).
 4. **Constraints:** Existing colors, things to avoid (competitors' logos, cliché symbols), places of use (app icon, favicon, social media).
 
-Write the answers to `docs/design/brand.md` → "Marka özeti" (brand summary) section.
+Write the answers to `docs/design/brand.md` → "Brand summary" section.
 
 ## 2. Concepts
 
@@ -62,5 +62,5 @@ Output folder: `public/brand/` for web, `assets/brand/` for mobile (allowed in t
 - `docs/design/brand.md`:
   - Brand summary and the reason for the chosen concept
   - Usage rules: clear space (half the symbol height), minimum size, color codes, what not to do (stretch, shadow, rotate, change color)
-- Write the choices to `docs/decisions/log.md` (topic: `tasarim`) and to `docs/design/design-guide.md` → decision log ("karar günlüğü").
+- Write the choices to `docs/decisions/log.md` (topic: `tasarim`) and to `docs/design/design-guide.md` → decision log.
 - If there is a slogan or brand text, run it through `humanizer:humanizer`.

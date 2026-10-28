@@ -47,7 +47,7 @@ Vercel, Supabase, AWS, OpenAI, Sentry gibi yurt dışı sunuculu servisler = yur
 
 ## 6. Mobil mağaza ek gereksinimleri
 
-`docs/architecture/stack.md` (mobil) → "Canlıya alma" bölümüne bak: App Store gizlilik etiketleri, Google Play Veri Güvenliği formu, uygulama içi hesap silme.
+`docs/architecture/stack.md` (mobil) → "Go live (extra)" bölümüne bak: App Store gizlilik etiketleri, Google Play Veri Güvenliği formu, uygulama içi hesap silme.
 
 ## 7. Gözden geçirme
 

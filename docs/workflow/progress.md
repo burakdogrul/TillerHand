@@ -35,6 +35,6 @@ The project has not started yet. Start with `/start [fikir]`.
 
 - 
 
-## Dikkat (notes for the AI)
+## Watch out (notes for the AI)
 
 - 

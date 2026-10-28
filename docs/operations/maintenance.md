@@ -3,7 +3,7 @@
 > A live project decays on its own: dependencies age, certificates and cards expire,
 > bills swell, backups stop silently. This file catches those.
 > The commands `/maintain weekly` · `/maintain monthly` · `/maintain quarterly` run the matching list and add to the log.
-> Project-type-specific extra items: `docs/architecture/stack.md` → "Bakım" (maintenance).
+> Project-type-specific extra items: `docs/architecture/stack.md` → "Maintenance (extra)".
 
 ## Weekly (~15 min)
 

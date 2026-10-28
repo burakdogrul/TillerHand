@@ -9,7 +9,7 @@
 
 Types: `hata` / `istek` / `şikayet` / `övgü` / `soru`. Statuses: `yeni` / `planlandı` / `yapıldı` / `reddedildi` / `birleşti`.
 
-| # | Date | Source | User | Summary | Type | Theme | Priority | Status | Görev (task) |
+| # | Date | Source | User | Summary | Type | Theme | Priority | Status | Task |
 |---|---|---|---|---|---|---|---|---|---|
 
 ## Temalar

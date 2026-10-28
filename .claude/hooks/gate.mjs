@@ -154,7 +154,7 @@ export function absPathCheck(root, files) {
   return { name, status: 'passed', ...(notes.length && { note: `${notes.length} lines have a path that looks like a user folder; fix it if it is machine-specific (does not block)`, output: list(notes) }) };
 }
 
-export const approvalNeeded = (list) => `komut onayı gerekli (command approval needed)\nAGENTS.md → Komutlar is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
+export const approvalNeeded = (list) => `command approval needed\nAGENTS.md → Komutlar is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
   'Show the commands to the user and ask. If they approve: node .claude/hooks/gate.mjs --approve, then run the command again.';
 
 // Spec drift (F-23): a "must not change" behavior whose test is missing or red stops the gate; no result is only a note

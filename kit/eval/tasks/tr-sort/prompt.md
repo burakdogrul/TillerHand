@@ -1,1 +1,1 @@
-Özellik: `GET /notes?sort=title` notları başlığa göre alfabetik sıralasın, `?q=` başlıkta büyük/küçük harf duyarsız arasın. İkisi birlikte de kullanılabilir. Kullanıcılar Türkçe yazıyor.
+Feature: `GET /notes?sort=title` sorts notes alphabetically by title, and `?q=` searches titles case-insensitively. Both can be used together. The users write in Turkish.

@@ -1,7 +1,7 @@
-# Kitin npm paketini (tillerhand) yayınlar: v* tag'i push edilince. Projelere kopyalanmaz (kit/kit.mjs → KIT_ONLY).
-# Token yok: npm Trusted Publishing (OIDC). npmjs.com → tillerhand → Settings → Trusted Publisher: GitHub Actions,
-# burakdogrul / TillerHand / npm-publish.yml / environment: npm. Kaynak: docs.npmjs.com/trusted-publishers (2026-10-06).
-# Action'lar commit SHA'sına sabit (checkout v7.0.1, setup-node v7.1.0); yeni sürüme geçerken SHA'yı github.com/actions/<ad>/releases'tan al.
+# Publishes the kit's npm package (tillerhand) when a v* tag is pushed. Not copied into projects (kit/kit.mjs → KIT_ONLY).
+# No token: npm Trusted Publishing (OIDC). npmjs.com → tillerhand → Settings → Trusted Publisher: GitHub Actions,
+# burakdogrul / TillerHand / npm-publish.yml / environment: npm. Source: docs.npmjs.com/trusted-publishers (2026-10-06).
+# Actions are pinned to a commit SHA (checkout v7.0.1, setup-node v7.1.0); when moving to a new version, take the SHA from github.com/actions/<name>/releases.
 name: npm-publish
 
 on:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  # Repo kodu (testler) yayın yetkisi olmadan koşar
+  # Repo code (tests) runs without publish permission
   test:
     runs-on: ubuntu-latest
     steps:
@@ -23,18 +23,18 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false # no cache in a release workflow (cache poisoning)
-      - name: Tag main'deki bir commit'i mi gösteriyor
-        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "Tag main dalında değil, yayın durdu."; exit 1; }
-      - name: Sürümler aynı mı (tag, package.json, kit/VERSION)
+      - name: Does the tag point to a commit on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "The tag is not on main, publish stopped."; exit 1; }
+      - name: Are the versions the same (tag, package.json, kit/VERSION)
         run: |
           tag="${GITHUB_REF_NAME#v}"
           pkg=$(node -p "require('./package.json').version")
           kit=$(cat kit/VERSION)
           echo "tag=$tag package.json=$pkg kit/VERSION=$kit"
-          [ "$tag" = "$pkg" ] && [ "$tag" = "$kit" ] || { echo "Sürümler farklı, yayın durdu."; exit 1; }
+          [ "$tag" = "$pkg" ] && [ "$tag" = "$kit" ] || { echo "The versions differ, publish stopped."; exit 1; }
       - run: node --test "kit/tests/*.test.mjs"
 
-  # Sadece yayın: repo kodu çalıştırmaz, OIDC yetkisi yalnız burada
+  # Publish only: runs no repo code, the OIDC permission exists only here
   publish:
     needs: test
     runs-on: ubuntu-latest
@@ -49,19 +49,19 @@ jobs:
           node-version: 24
           package-manager-cache: false # no cache in a release workflow (cache poisoning)
           registry-url: https://registry.npmjs.org
-      - name: npm sürümü (Trusted Publishing 11.5.1+ ister)
+      - name: npm version (Trusted Publishing needs 11.5.1+)
         run: node -e "const [a,b,c]=process.argv[1].split('.').map(Number); process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)" "$(npm --version)"
-      # İlk yayını hesap sahibi elle yapar (2FA ile); bu sürüm zaten yayındaysa (elle yayınlandıysa) tekrar denenmez.
-      # Sadece 404 "yok" sayılır; ağ veya sunucu hatası koşuyu durdurur.
-      - name: Yayınlanacak mı
+      # The account owner does the first publish by hand (with 2FA); if this version is already published (by hand), it is not tried again.
+      # Only a 404 counts as "does not exist"; a network or server error stops the run.
+      - name: Should it be published
         id: check
         run: |
           v=$(node -p "require('./package.json').version")
           if out=$(npm view "tillerhand@$v" version 2>&1); then
-            echo "::notice::tillerhand@$v zaten yayında; atlandı."
+            echo "::notice::tillerhand@$v is already published; skipped."
           elif echo "$out" | grep -q E404; then
             if npm view tillerhand name >/dev/null 2>&1; then echo "go=1" >> "$GITHUB_OUTPUT"
-            else echo "::warning::tillerhand npm'de yok; ilk yayın elle yapılır, bu koşu atlandı."; fi
+            else echo "::warning::tillerhand does not exist on npm; the first publish is done by hand, this run was skipped."; fi
           else
             echo "$out"; exit 1
           fi

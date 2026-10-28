@@ -95,7 +95,7 @@ test('own module', () => helper());
 
 test('eval: summary groups repeated runs by task and condition', () => {
   const row = (task, cond, pass, fail, cost) => ({ task, cond, hidden: { pass, fail }, mutants: { killed: pass, total: 2 }, costUsd: cost, durationS: 10 });
-  const broken = { task: 'a', cond: 'plain', error: 'düzenek hatası: x' }; // no hidden, no mutants
+  const broken = { task: 'a', cond: 'plain', error: 'harness error: x' }; // no hidden, no mutants
   const s = summary([row('a', 'kit', 2, 0, 0.2), row('a', 'kit', 1, 1, 0.4), broken, row('a', 'plain', 2, 0, 0.1)]);
   assert.deepEqual(s.map((x) => [x.task, x.cond, x.runs]), [['a', 'kit', 2], ['a', 'plain', 2]]);
   assert.deepEqual([s[0].hiddenAvg, s[0].hiddenMin, s[0].hiddenMax], [0.75, 0.5, 1]);
@@ -107,7 +107,7 @@ test('eval: summary groups repeated runs by task and condition', () => {
 test('eval: limitHit recognizes the plan limit message, not other errors', () => {
   assert.equal(limitHit({ error: "You've hit your session limit · resets 3:10am (Europe/Istanbul)" }), true);
   assert.equal(limitHit({ error: "You've hit your weekly limit · resets Oct 31" }), true);
-  for (const error of [null, undefined, 'error_max_budget_usd', 'düzenek hatası: rate limit in test']) assert.equal(limitHit({ error }), false, String(error));
+  for (const error of [null, undefined, 'error_max_budget_usd', 'harness error: rate limit in test']) assert.equal(limitHit({ error }), false, String(error));
 });
 
 test('eval: tally reads the node --test summary', () => {

@@ -2,7 +2,7 @@
 
 > Before the first launch, **all of it**; for every later release, the **"Every release"** section.
 > The `/release` command runs the items that can be checked automatically and asks you about the rest.
-> Project-type-specific extra items: `docs/architecture/stack.md` → "Canlıya alma" (go live).
+> Project-type-specific extra items: `docs/architecture/stack.md` → "Go live (extra)".
 > Marks: ✅ done · ❌ missing · ➖ not applicable to this project
 
 ## A. Every release (before each deploy)
@@ -27,7 +27,7 @@
 - [ ] All items in `docs/security/checklist.md` are done; the `security-auditor` agent gave no blocking finding
 - [ ] Prod keys are separate from local/test keys
 - [ ] GitHub: `main` branch is protected (CI required), Dependabot security updates on, secret scanning on
-- [ ] If there is an AI feature: `docs/ai/guide.md` → "Canlıya alma" (go live) is done
+- [ ] If there is an AI feature: `docs/ai/guide.md` → "Go live (add-on)" is done
 - [ ] Admin accounts have a strong password + 2FA (hosting, DB, domain, email, payment, code repository)
 
 ### Legal
@@ -56,17 +56,17 @@
 ### Cost
 - [ ] A spend limit/alarm is set on all paid services (hosting, DB, AI API, email)
 - [ ] Free tier limits are known; what happens when they are exceeded (stop or billing?) is known
-- [ ] The estimated monthly cost is in `docs/architecture/overview.md` → the external services table ("dış servisler")
+- [ ] The estimated monthly cost is in `docs/architecture/overview.md` → the "External services" section
 
 ### Performance and visibility
 - [ ] Project-type-specific performance targets (`docs/architecture/stack.md`) are met
 - [ ] Analytics (privacy-friendly) is set up, basic events (sign-up, main action) are tracked
 
 ### Preparation
-- [ ] `docs/product/launch.md` → "Lansman öncesi" (before launch) is done
+- [ ] `docs/product/launch.md` → "Before launch" is done
 - [ ] A support channel (email/form) exists and someone watches it
 - [ ] `README.md`: setup, environment variables, deploy steps are current
-- [ ] Project-type-specific items (`docs/architecture/stack.md` → "Canlıya alma") are done
+- [ ] Project-type-specific items (`docs/architecture/stack.md` → "Go live (extra)") are done
 
 ## C. First 72 hours after launch
 

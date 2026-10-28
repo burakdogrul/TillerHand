@@ -2,13 +2,13 @@
 // Vibe Coding Kit: install and update.
 //   node kit/kit.mjs install --type web-saas [--addons ai,tr] [--keep-kit]
 //       In a project opened from the template, places the type and addons, then deletes the kit/ folder. Run by /start.
-//   node <kit-klonu>/kit/kit.mjs init [--project <yol>] [--tool claude,codex,antigravity]
+//   node <kit-clone>/kit/kit.mjs init [--project <path>] [--tool claude,codex,antigravity]
 //       Installs the kit from a separate folder into a project (default: the current folder). Does not touch the kit folder.
 //       Without --tool it asks in the terminal (default claude).
 //       In a non-empty folder it does not overwrite existing files: the kit's version goes beside them as .kit-new (/adopt merges).
-//   node <kit-klonu>/kit/kit.mjs install --type web-saas --project <yol>
+//   node <kit-clone>/kit/kit.mjs install --type web-saas --project <path>
 //       Places the type into a project set up by init. Run by /start and /adopt.
-//   node <kit-klonu>/kit/kit.mjs update --project <yol> [--addons ai,tr]
+//   node <kit-clone>/kit/kit.mjs update --project <path> [--addons ai,tr]
 //       Brings the project to this kit version. Run by /kit-update.
 //
 // Layers: repo root (common) -> kit/templates/<type> -> kit/templates/addons/<addon>; a later one overrides an earlier one.
@@ -32,7 +32,7 @@ const ADDONS = fs.readdirSync(path.join(TEMPLATES, 'addons'));
 const TOOLS = ['claude', 'codex', 'antigravity'];
 // Root entries that are not part of the common layer (the kit itself, generated and temporary files)
 // CLAUDE.local.md is personal (in .gitignore); it must not be carried into a project installed from a local folder
-const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', '.kit.local.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md', 'LICENSE', 'README.en.md', 'package.json', '.claude-plugin']);
+const COMMON_EXCLUDE = new Set(['.git', 'kit', 'node_modules', '.kit.json', '.kit.local.json', 'README.md', 'dashboard.html', '.previews', 'sandbox', '.calisma', '.impeccable', 'CLAUDE.local.md', 'LICENSE', 'README.tr.md', 'package.json', '.claude-plugin']);
 // Files that only make sense in the kit repo and are not carried into projects
 const KIT_ONLY = ['.github/workflows/kit-tests.yml', '.github/workflows/npm-publish.yml'];
 // Run from the npm package (npx tillerhand): the kit lives in the npx cache, which can be cleared, so the record names
@@ -80,7 +80,7 @@ function layers(commonRoot, names) {
   if (commonRoot && !copies.has('.gitignore')) copies.set('.gitignore', path.join(KIT, 'project', 'gitignore'));
   for (const name of names) {
     const root = path.join(TEMPLATES, name);
-    if (!fs.existsSync(root)) throw new Error(`Şablon katmanı yok: ${name}`);
+    if (!fs.existsSync(root)) throw new Error(`Template layer not found: ${name}`);
     const isAddon = /^addons\/[^/]+$/.test(name);
     for (const rel of listFiles(root, isAddon ? new Set(['types']) : undefined)) {
       const source = path.join(root, rel);
@@ -132,13 +132,13 @@ const OLD_RULES = {
 // Returns { settings, added: ['ask: Bash(...)', ...], removed: [...] }; throws on a shape it cannot merge safely (the caller reports it).
 export function migrateSettings(projectSettings, kitSettings) {
   const isObject = (x) => x && typeof x === 'object' && !Array.isArray(x);
-  if (!isObject(projectSettings)) throw new Error('kök bir nesne değil');
+  if (!isObject(projectSettings)) throw new Error('root is not an object');
   const s = structuredClone(projectSettings);
-  if (s.permissions !== undefined && !isObject(s.permissions)) throw new Error('permissions bir nesne değil');
+  if (s.permissions !== undefined && !isObject(s.permissions)) throw new Error('permissions is not an object');
   const added = [], removed = [];
   for (const k of ['allow', 'ask', 'deny']) {
     let list = s.permissions?.[k];
-    if (list !== undefined && !Array.isArray(list)) throw new Error(`permissions.${k} bir dizi değil`);
+    if (list !== undefined && !Array.isArray(list)) throw new Error(`permissions.${k} is not an array`);
     const old = (list ?? []).filter((r) => OLD_RULES[k]?.includes(r));
     if (old.length) list = s.permissions[k] = list.filter((r) => !old.includes(r));
     removed.push(...old.map((r) => `${k}: ${r}`));
@@ -147,11 +147,11 @@ export function migrateSettings(projectSettings, kitSettings) {
     if (add.length) (s.permissions ??= {})[k] = [...(list ?? []), ...add];
     added.push(...add.map((r) => `${k}: ${r}`));
   }
-  // 3.16.0: the light command list reaches projects that have none; a present key (Tam profile: {}) is the project's choice
-  if (s.skillOverrides !== undefined && !isObject(s.skillOverrides)) throw new Error('skillOverrides bir nesne değil');
+  // 3.16.0: the light command list reaches projects that have none; a present key (Full profile: {}) is the project's choice
+  if (s.skillOverrides !== undefined && !isObject(s.skillOverrides)) throw new Error('skillOverrides is not an object');
   if (s.skillOverrides === undefined && isObject(kitSettings.skillOverrides)) {
     s.skillOverrides = { ...kitSettings.skillOverrides };
-    added.push(`skillOverrides: ${Object.keys(s.skillOverrides).length} komut sadece adıyla listelenir (Tam profilde: node .claude/hooks/tools.mjs --commands full)`);
+    added.push(`skillOverrides: ${Object.keys(s.skillOverrides).length} commands are listed by name only (in the Full profile: node .claude/hooks/tools.mjs --commands full)`);
   }
   for (const groups of Object.values(isObject(s.hooks) ? s.hooks : {})) {
     for (const h of (Array.isArray(groups) ? groups : []).flatMap((g) => (Array.isArray(g?.hooks) ? g.hooks : []))) {
@@ -217,7 +217,7 @@ export function portableKit(projectDir, kit) {
 }
 
 function validateTools(tools) {
-  for (const a of tools) if (!TOOLS.includes(a)) throw new Error(`Geçersiz araç: ${a}. Seçenekler: ${TOOLS.join(', ')}`);
+  for (const a of tools) if (!TOOLS.includes(a)) throw new Error(`Invalid tool: ${a}. Options: ${TOOLS.join(', ')}`);
   return tools.length ? tools : ['claude'];
 }
 
@@ -227,14 +227,14 @@ export function commandToSkill(name, md) {
   const field = (k) => m?.[1].match(new RegExp(`^${k}:\\s*(.*)$`, 'm'))?.[1].trim() ?? '';
   const hint = field('argument-hint');
   return `---\nname: ${name}\ndescription: ${JSON.stringify(field('description') || name)}\n---\n\n` +
-    `<!-- Kit üretir (kit.mjs): düzenleme .claude/commands/${name}.md dosyasında yapılır, bu kopya güncellemede yenilenir. -->\n` +
-    `$ARGUMENTS = kullanıcının bu skill'i çağırırken yazdığı metin (yoksa boş)${hint ? `. Beklenen: ${hint}` : ''}.\n\n` +
+    `<!-- Generated by the kit (kit.mjs): edit .claude/commands/${name}.md; this copy is refreshed on update. -->\n` +
+    `$ARGUMENTS = the text the user typed when calling this skill (empty if none)${hint ? `. Expected: ${hint}` : ''}.\n\n` +
     (m ? m[2] : md);
 }
 
 // Files for the chosen tools. Skill copies and hooks.json follow the same rule as isKitOwned on update: refreshed if the
 // user has not changed them, .kit-new if changed (or the project's own file); a hook config the user deleted does not come back.
-// AGENTS.md "Codex ve Antigravity'de" section: filled only for projects that use those tools (F-13: ~450 tokens a session).
+// AGENTS.md "In Codex and Antigravity" section: filled only for projects that use those tools (F-13: ~450 tokens a session).
 // An empty block is filled from the kit; only an unchanged kit block is emptied; a file without markers is left alone.
 const TOOL_BLOCK = /(<!-- kit:other-tools -->\r?\n)([\s\S]*?)(<!-- \/kit:other-tools -->)/;
 export function syncToolSection(text, kitText, needed) {
@@ -296,18 +296,18 @@ function installTools(projectDir, tools, files, conflicts) {
 }
 
 function validateType(typeName, addonNames) {
-  if (!TYPES.includes(typeName)) throw new Error(`Geçersiz tip: ${typeName}. Seçenekler: ${TYPES.join(', ')}`);
-  for (const e of addonNames) if (!ADDONS.includes(e)) throw new Error(`Geçersiz ek: ${e}. Seçenekler: ${ADDONS.join(', ')}`);
+  if (!TYPES.includes(typeName)) throw new Error(`Invalid type: ${typeName}. Options: ${TYPES.join(', ')}`);
+  for (const e of addonNames) if (!ADDONS.includes(e)) throw new Error(`Invalid add-on: ${e}. Options: ${ADDONS.join(', ')}`);
 }
 
 const conflictReport = (conflicts) => conflicts.length && console.log(
-  `Mevcut dosyaya dokunulmadı, kitin hali yanına .kit-new olarak kondu (${conflicts.length}):\n  ${conflicts.join('\n  ')}`);
+  `Existing files were not touched; the kit's version was placed beside them as .kit-new (${conflicts.length}):\n  ${conflicts.join('\n  ')}`);
 
 function init({ project, tool }) {
   const tools = validateTools(tool); // if none chosen, files are set up for Claude Code and tool stays empty (/start asks)
   const projectDir = path.resolve(project ?? process.cwd());
-  if (projectDir === ROOT) throw new Error('Hedef kitin kendi klasörü. Proje klasöründen çalıştır: node <kit>/kit/kit.mjs init');
-  if (fs.existsSync(path.join(projectDir, '.kit.json'))) throw new Error('Kit bu projede zaten kurulu (.kit.json var).');
+  if (projectDir === ROOT) throw new Error('The target is the kit\'s own folder. Run from the project folder: node <kit>/kit/kit.mjs init');
+  if (fs.existsSync(path.join(projectDir, '.kit.json'))) throw new Error('The kit is already installed in this project (.kit.json exists).');
   fs.mkdirSync(projectDir, { recursive: true });
   const conflicts = [];
   const { copies } = layers(ROOT, []);
@@ -318,9 +318,9 @@ function init({ project, tool }) {
   const kitRel = path.relative(projectDir, ROOT).replace(/\\/g, '/');
   const inside = !kitRel.startsWith('..') && !path.isAbsolute(kitRel);
   if (inside) appendLine(path.join(projectDir, '.gitignore'), `${kitRel}/`);
-  let git = 'vardı';
+  let git = 'existed';
   if (!fs.existsSync(path.join(projectDir, '.git'))) {
-    git = spawnSync('git', ['init', '-q'], { cwd: projectDir }).status === 0 ? 'açıldı' : 'açılamadı (git kurulu mu?)';
+    git = spawnSync('git', ['init', '-q'], { cwd: projectDir }).status === 0 ? 'created' : 'could not create (is git installed?)';
   }
 
   // If the project has its own AGENTS.md, the kit rules are imported from .kit-new until /adopt step 4
@@ -335,10 +335,10 @@ function init({ project, tool }) {
   // type: null = kit installed, no type chosen yet (/start step 3 or /adopt)
   writeRecord(projectDir, { version: VERSION, source: SOURCE, kit: VIA_NPX ? `npx:tillerhand@${VERSION}` : inside ? kitRel : portableKit(projectDir, ROOT), type: null, addons: [], tool: tool.length ? tools : null, created: today, updated: today, files });
 
-  console.log(`Kit ${VERSION} kuruldu: ${projectDir} · araç: ${tool.length ? tools.join(', ') : 'seçilmedi (Claude Code dosyaları kuruldu; /start ve /adopt sorar, Codex/Antigravity için --tool)'}`);
-  console.log(`Kit klasörü: ${VIA_NPX ? `npm paketi tillerhand@${VERSION}` : inside ? `${kitRel} (.gitignore'a eklendi)` : ROOT} · git deposu: ${git}`);
+  console.log(`Kit ${VERSION} installed: ${projectDir} · tool: ${tool.length ? tools.join(', ') : 'none chosen (Claude Code files installed; /start and /adopt ask, use --tool for Codex/Antigravity)'}`);
+  console.log(`Kit folder: ${VIA_NPX ? `npm package tillerhand@${VERSION}` : inside ? `${kitRel} (added to .gitignore)` : ROOT} · git repository: ${git}`);
   conflictReport(conflicts);
-  console.log('Sonraki adım: Bu klasörü aracında yeni oturumla aç (komutlar ve hook\'lar yüklensin). Yeni projede /start [fikir], var olan projede /adopt.');
+  console.log('Next step: Open this folder in a new session of your tool (so commands and hooks load). New project: /start [idea]; existing project: /adopt.');
   nextSteps(tools);
 }
 
@@ -346,9 +346,9 @@ function init({ project, tool }) {
 // the project's own files are not (.kit-new).
 function installIntoProject(projectDir, type, addons, tool) {
   const recordPath = path.join(projectDir, '.kit.json');
-  if (!fs.existsSync(recordPath)) throw new Error(`.kit.json yok: önce init çalıştır (node ${path.join(KIT, 'kit.mjs')} init).`);
+  if (!fs.existsSync(recordPath)) throw new Error(`.kit.json not found: run init first (node ${path.join(KIT, 'kit.mjs')} init).`);
   const j = JSON.parse(read(recordPath));
-  if (j.type) throw new Error(`Kit bu projede zaten kurulu (tip: ${j.type}).`);
+  if (j.type) throw new Error(`The kit is already installed in this project (type: ${j.type}).`);
   const files = { ...j.files };
   const conflicts = [];
   const { copies, patches } = layers(null, layerNames(type, addons));
@@ -362,7 +362,7 @@ function installIntoProject(projectDir, type, addons, tool) {
   const tools = tool.length ? validateTools(tool) : (j.tool ?? ['claude']);
   installTools(projectDir, tools, files, conflicts);
   writeRecord(projectDir, { ...j, kit: portableKit(projectDir, j.kit), version: VERSION, type, addons, tool: tool.length ? tools : (j.tool ?? null), updated: new Date().toISOString().slice(0, 10), files });
-  console.log(`Kuruldu: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${VERSION}) · ${projectDir}`);
+  console.log(`Installed: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${VERSION}) · ${projectDir}`);
   conflictReport(conflicts);
 }
 
@@ -370,11 +370,11 @@ function install({ type, addons, keepKit, project, tool }) {
   validateType(type, addons);
   if (project && path.resolve(project) !== ROOT) return installIntoProject(path.resolve(project), type, addons, tool);
   const tools = validateTools(tool);
-  if (fs.existsSync(path.join(ROOT, '.kit.json'))) throw new Error('Kit bu projede zaten kurulu (.kit.json var).');
+  if (fs.existsSync(path.join(ROOT, '.kit.json'))) throw new Error('The kit is already installed in this project (.kit.json exists).');
   // This folder is about to lose kit/, README.md and the kit-only files: uncommitted work there could not be brought back
   const st = spawnSync('git', ['status', '--porcelain', '--', '.'], { cwd: ROOT, encoding: 'utf8' });
   if (st.status === 0 && st.stdout.trim()) {
-    throw new Error(`Commit edilmemiş değişiklik var; kurulum kit/ klasörünü siler ve README.md'yi değiştirir. Önce commit et ya da git stash ile kaydet:\n${st.stdout.trimEnd().split('\n').slice(0, 10).join('\n')}`);
+    throw new Error(`Uncommitted changes found; install deletes the kit/ folder and replaces README.md. Commit first or save with git stash:\n${st.stdout.trimEnd().split('\n').slice(0, 10).join('\n')}`);
   }
 
   const { copies, patches } = layers(null, layerNames(type, addons));
@@ -391,21 +391,21 @@ function install({ type, addons, keepKit, project, tool }) {
   const lang = readLang(ROOT); // chosen by /start before install (.claude/state/lang.json); null if not
   writeRecord(ROOT, { version: VERSION, source: SOURCE, type, addons, tool: tool.length ? tools : null, ...(lang && { lang }), created: today, updated: today, files });
 
-  console.log(`Kuruldu: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${VERSION}) · araç: ${tools.join(', ')}`);
-  console.log(`Eklenen/değişen dosya: ${copies.size + patches.length + 1}`);
+  console.log(`Installed: ${type}${addons.length ? ' + ' + addons.join(', ') : ''} (kit ${VERSION}) · tool: ${tools.join(', ')}`);
+  console.log(`Files added/changed: ${copies.size + patches.length + 1}`);
   nextSteps(tools);
   if (!keepKit) {
     fs.rmSync(KIT, { recursive: true, force: true });
-    console.log('kit/ klasörü kaldırıldı. Güncellemeler için: /kit-update');
+    console.log('kit/ folder removed. For updates: /kit-update');
   }
 }
 
 function update({ project, addons: newAddons, tool }) {
   project = path.resolve(project);
   const recordPath = path.join(project, '.kit.json');
-  if (!fs.existsSync(recordPath)) throw new Error(`.kit.json yok: ${project} kit ile kurulmamış.`);
+  if (!fs.existsSync(recordPath)) throw new Error(`.kit.json not found: ${project} was not set up with the kit.`);
   const j = JSON.parse(read(recordPath));
-  if (!j.type) throw new Error('.kit.json eski biçimde (kit 2.x). Bu sürüme otomatik güncellenemez; kit/CHANGELOG.md → 3.0.0 notlarına bak.');
+  if (!j.type) throw new Error('.kit.json is in the old format (kit 2.x). It cannot be updated to this version automatically; see the 3.0.0 notes in kit/CHANGELOG.md.');
   const oldAddons = j.addons ?? [];
   const allAddons = [...new Set([...oldAddons, ...newAddons])];
   validateType(j.type, allAddons);
@@ -432,8 +432,8 @@ function update({ project, addons: newAddons, tool }) {
       } catch (e) { report.conflicts.push(`${rel} (izinler eklenmedi: ${e.message})`); continue; }
       if (JSON.stringify(migrated.settings) !== JSON.stringify(local)) {
         fs.writeFileSync(target, JSON.stringify(migrated.settings, null, 2) + '\n');
-        const notes = [migrated.added.length && `eklenenler: ${migrated.added.join(' · ')}`, migrated.removed.length && `kaldırılan eski satırlar: ${migrated.removed.join(' · ')}`].filter(Boolean);
-        report.updated.push(`${rel} (${notes.join('; ') || 'hook bayrağı'})`);
+        const notes = [migrated.added.length && `added: ${migrated.added.join(' · ')}`, migrated.removed.length && `removed old lines: ${migrated.removed.join(' · ')}`].filter(Boolean);
+        report.updated.push(`${rel} (${notes.join('; ') || 'hook flag'})`);
       }
       continue;
     }
@@ -459,18 +459,18 @@ function update({ project, addons: newAddons, tool }) {
 
   const kit = portableKit(project, j.kit);
   if (kit !== j.kit) console.log(fs.existsSync(path.join(project, '.kit.local.json'))
-    ? 'Kit klasörünün bu makinedeki yolu .kit.json\'dan .kit.local.json\'a taşındı (git dışı).'
-    : '.kit.json\'daki kit klasörü yolu bu makinede yok (başka makinede yazılmış); kaldırıldı. /start ve /adopt kit klasörünü sorar.');
+    ? 'The kit folder path for this machine was moved from .kit.json to .kit.local.json (not in git).'
+    : 'The kit folder path in .kit.json does not exist on this machine (written on another machine); removed. /start and /adopt ask for the kit folder.');
   writeRecord(project, { ...j, kit, version: VERSION, addons: allAddons, tool: tool.length ? tools : (j.tool ?? null), updated: new Date().toISOString().slice(0, 10), files: record });
 
   console.log(`Kit ${j.version} -> ${VERSION}`);
   const printList = (title, list) => list.length && console.log(`${title} (${list.length}):\n  ${list.join('\n  ')}`);
-  printList('Eklenen', report.added);
-  printList('Güncellenen', report.updated);
-  printList('Çakışma: senin değişikliğin korundu, yeni hali yanına .kit-new olarak kondu. Karşılaştır, birleştir, .kit-new dosyasını sil', report.conflicts);
-  printList('Kitten kaldırılmış (projede duruyor, istersen sil)', report.removed);
-  if (!Object.values(report).some((l) => l.length)) console.log('Değişiklik yok.');
-  console.log(`Sürüm notları: ${SOURCE.replace(/\.git$/, '')}/blob/main/kit/CHANGELOG.md ("Elle uyarla" maddelerine bak)`);
+  printList('Added', report.added);
+  printList('Updated', report.updated);
+  printList('Conflict: your change was kept, the new version was placed beside it as .kit-new. Compare, merge, delete the .kit-new file', report.conflicts);
+  printList('Removed from the kit (still in the project, delete if you want)', report.removed);
+  if (!Object.values(report).some((l) => l.length)) console.log('No changes.');
+  console.log(`Release notes: ${SOURCE.replace(/\.git$/, '')}/blob/main/kit/CHANGELOG.md (see the "Adapt by hand" items)`);
 }
 
 function parseArgs(argv) {
@@ -482,14 +482,14 @@ function parseArgs(argv) {
     else if (k === '--addons') a.addons = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
     else if (k === '--tool') a.tool = argv[++i].split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
     else if (k === '--keep-kit') a.keepKit = true;
-    else throw new Error(`Bilinmeyen argüman: ${k}`);
+    else throw new Error(`Unknown argument: ${k}`);
   }
   return a;
 }
 
 function nextSteps(tools) {
-  if (tools.includes('codex')) console.log('Codex: komutlar skill olarak çağrılır ($start, $build ya da /skills). Hook\'lar için proje klasörüne güven ve /hooks ile kitin hook\'larını onayla.');
-  if (tools.includes('antigravity')) console.log('Antigravity: komutlar skill olarak /start, /build... ile çağrılır. Hook\'lar .agents/hooks.json\'dan yüklenir.');
+  if (tools.includes('codex')) console.log('Codex: commands are called as skills ($start, $build or /skills). For hooks, trust the project folder and approve the kit\'s hooks with /hooks.');
+  if (tools.includes('antigravity')) console.log('Antigravity: commands are called as skills with /start, /build... Hooks load from .agents/hooks.json.');
 }
 
 // Asks in the terminal when --tool is not given; non-interactive runs (tests, CI) assume Claude Code.
@@ -497,7 +497,7 @@ async function askTools() {
   if (!process.stdin.isTTY) return [];
   const { createInterface } = await import('node:readline/promises');
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const c = await rl.question('Hangi araçla çalışacaksın? 1) Claude Code  2) Codex  3) Antigravity (birden fazlaysa virgülle, örn. 1,2) [1]: ');
+  const c = await rl.question('Which tool will you use? 1) Claude Code  2) Codex  3) Antigravity (comma-separated for several, e.g. 1,2) [1]: ');
   rl.close();
   return c.split(',').map((s) => TOOLS[Number(s.trim()) - 1] ?? s.trim().toLowerCase()).filter(Boolean);
 }
@@ -510,17 +510,17 @@ if (process.argv[1] && realArg() === fs.realpathSync(fileURLToPath(import.meta.u
     const a = parseArgs(rest);
     if (command === 'init') init({ ...a, tool: a.tool.length ? a.tool : await askTools() });
     else if (command === 'install') {
-      if (!a.type) throw new Error(`--type gerekli: ${TYPES.join(' | ')}`);
+      if (!a.type) throw new Error(`--type required: ${TYPES.join(' | ')}`);
       install(a);
     } else if (command === 'update') {
-      if (!a.project) throw new Error('--project gerekli');
+      if (!a.project) throw new Error('--project required');
       update(a);
     } else {
-      console.log('Kullanım:\n  node kit/kit.mjs install --type <type> [--addons ai,tr] [--keep-kit] [--project <yol>] [--tool claude,codex,antigravity]\n  node <kit>/kit/kit.mjs init [--project <yol>] [--tool claude,codex,antigravity]\n  node kit/kit.mjs update --project <yol> [--addons ai,tr] [--tool ...]');
+      console.log('Usage:\n  node kit/kit.mjs install --type <type> [--addons ai,tr] [--keep-kit] [--project <path>] [--tool claude,codex,antigravity]\n  node <kit>/kit/kit.mjs init [--project <path>] [--tool claude,codex,antigravity]\n  node kit/kit.mjs update --project <path> [--addons ai,tr] [--tool ...]');
       process.exit(command ? 1 : 0);
     }
   } catch (e) {
-    console.error('HATA: ' + e.message);
+    console.error('ERROR: ' + e.message);
     process.exit(1);
   }
 }

@@ -31,19 +31,19 @@ const ALLOWED = ['Read(./**)', 'Edit(./**)', 'Write(./**)', 'Agent', 'Skill', 'T
 // Deny wins over allow. .git/ and .claude/ are the kit's ask rules (refused headless): the same for both conditions.
 const DENIED = ['Bash(node *..*)', 'Bash(git * --output*)', 'Bash(git * --no-index*)', 'Bash(npm * --prefix*)', 'Bash(npm * --script-shell*)',
   'Edit(./.git/**)', 'Edit(./.claude/**)'];
-const HEADLESS = 'Bu otomatik bir değerlendirme koşusu: kullanıcı yok, soru soramazsın ve onay bekleyemezsin. ' +
-  'Karar gereken yerde en iyi seçeneği seç ve devam et. İş bitince dur. Commit atma.';
-const KIT_HEADLESS = ' Soru modu kapalı (hepsi): plan onayı ve karar soruları için önerileni seç ve "otomatik" diye kaydet.';
+const HEADLESS = 'This is an automated evaluation run: there is no user, you cannot ask questions and you cannot wait for approval. ' +
+  'Where a decision is needed, pick the best option and go on. Stop when the work is done. Do not commit.';
+const KIT_HEADLESS = ' Question mode is closed (all topics): for plan approval and decision questions, pick the recommended option and record it as "otomatik".';
 const STACK = `# Stack
 
-- Node.js 24, ES modülleri, bağımlılık yok: \`node:http\` sunucu, \`node:test\` testler.
-- Kod: \`src/app/server.js\` (sunucu), \`src/features/<özellik>/server/\` (iş mantığı ve rotalar), \`src/lib/\` (ortak).
-- Kimlik: önündeki katman \`x-user\` başlığını koyar; servis ona güvenir.
-- Veri: bellek içi depo (\`createStore\`), sunucu başına bir örnek.
+- Node.js 24, ES modules, no dependencies: \`node:http\` server, \`node:test\` tests.
+- Code: \`src/app/server.js\` (server), \`src/features/<feature>/server/\` (business logic and routes), \`src/lib/\` (shared).
+- Identity: the layer in front sets the \`x-user\` header; the service trusts it.
+- Data: in-memory store (\`createStore\`), one instance per server.
 
-## Doğrulama
+## Verification
 
-- \`npm test\`; API değişikliğinde testte gerçek istek atılır (\`createApp().listen(0)\` + \`fetch\`).
+- \`npm test\`; on an API change the test sends a real request (\`createApp().listen(0)\` + \`fetch\`).
 `;
 
 const args = process.argv.slice(2);
@@ -55,9 +55,9 @@ const model = opt('--model', 'sonnet');
 const dry = args.includes('--dry');
 const keep = args.includes('--keep') || dry;
 const repeat = Number(opt('--repeat', '1'));
-if (!Number.isInteger(repeat) || repeat < 1 || repeat > 10) throw new Error('--repeat 1-10 arası bir tam sayı olmalı');
-for (const t of tasks) if (!allTasks.includes(t)) throw new Error(`Bilinmeyen görev: ${t}. Seçenekler: ${allTasks.join(', ')}`);
-for (const c of conds) if (c !== 'kit' && c !== 'plain') throw new Error(`Bilinmeyen koşul: ${c} (kit, plain)`);
+if (!Number.isInteger(repeat) || repeat < 1 || repeat > 10) throw new Error('--repeat must be an integer from 1 to 10');
+for (const t of tasks) if (!allTasks.includes(t)) throw new Error(`Unknown task: ${t}. Options: ${allTasks.join(', ')}`);
+for (const c of conds) if (c !== 'kit' && c !== 'plain') throw new Error(`Unknown condition: ${c} (kit, plain)`);
 
 // A child of node --test inherits NODE_TEST_CONTEXT and would report to the parent instead of printing its summary
 const childEnv = (extra = {}) => { const e = { ...process.env, ...extra }; delete e.NODE_TEST_CONTEXT; return e; };
@@ -80,7 +80,7 @@ function setupKit(dir) {
     .replace(/^\*\*Başlangıç adımı:\*\* .*$/m, '**Başlangıç adımı:** 9/9')
     .replace(/^\*\*Soru modu:\*\* .*$/m, '**Soru modu:** kapalı · kapalı konular: hepsi')
     .replace(/^\*\*Profil:\*\* .*$/m, '**Profil:** Hafif · derinlik: Hızlı · araç: claude')
-    .replace(/Proje henüz başlamadı\.[^\n]*/, 'Kurulum bitti; not API\'si çalışıyor (npm test yeşil).'));
+    .replace(/The project has not started yet\.[^\n]*/, 'Setup is done; the notes API works (npm test is green).'));
   run(process.execPath, [path.join(dir, '.claude', 'hooks', 'gate.mjs'), '--approve'], dir, { CLAUDE_PROJECT_DIR: dir });
 }
 
@@ -145,7 +145,7 @@ const portFree = (port) => new Promise((resolve) => {
 });
 async function freePort(start) {
   for (let p = start; p < start + 10; p++) if (await portFree(p)) return p;
-  throw new Error(`${start}-${start + 9} arası portların hepsi dolu`);
+  throw new Error(`All ports from ${start} to ${start + 9} are busy`);
 }
 
 // shortcut: only a server on the run's PORT is stopped; one the agent started on a hard-coded port stays up
@@ -273,7 +273,7 @@ async function pair(task) {
     // approvalPath is resolved while the folder exists
     return { cond, dir, portStart: PORT_BASE + i * 10, approval: approvalPath(dir), row: { task, cond, model, dir: keep ? dir : null } };
   });
-  const fail = (r, e) => { r.row.error = scrub(`düzenek hatası: ${e.message}`, r.dir).slice(0, 500); };
+  const fail = (r, e) => { r.row.error = scrub(`harness error: ${e.message}`, r.dir).slice(0, 500); };
   for (const r of runs) try { r.base = prepare(r.dir, r.cond); } catch (e) { fail(r, e); }
   await Promise.all(runs.map(async (r) => {
     if (dry || r.row.error) return;
@@ -295,7 +295,7 @@ function scored(task, cond, dir, base, res) {
     ...s,
     patch: scrub(s.patch, dir),
     error: failed ? scrub(j?.result || (j?.subtype !== 'success' && j?.subtype) || res.err || `exit ${res.code}`, dir).slice(0, 500)
-      : s.hidden.pass + s.hidden.fail === 0 ? 'gizli testler çalışmadı (0/0)' : null,
+      : s.hidden.pass + s.hidden.fail === 0 ? 'hidden tests did not run (0/0)' : null,
     costUsd: j?.total_cost_usd ?? null, durationS: j ? Math.round(j.duration_ms / 1000) : res ? Math.round(res.wallMs / 1000) : null,
     turns: j?.num_turns ?? null,
     tokens: j ? (u.input_tokens ?? 0) + (u.output_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) : null,
@@ -311,7 +311,7 @@ function finish(task, { cond, dir, approval, base, port, res = null, row }) {
   try {
     if (!row.error) Object.assign(row, scored(task, cond, dir, base, res));
   } catch (e) {
-    row.error = scrub(`düzenek hatası: ${e.message}`, dir).slice(0, 500);
+    row.error = scrub(`harness error: ${e.message}`, dir).slice(0, 500);
   } finally {
     // Cleanup must not reject: a locked folder (a server still running in it on Windows) would stop the other tasks
     try {
@@ -319,12 +319,12 @@ function finish(task, { cond, dir, approval, base, port, res = null, row }) {
       fs.rmSync(approval, { force: true });
       if (!keep) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
     } catch (e) {
-      row.cleanup = scrub(`temizlenemedi: ${e.message}`, dir).slice(0, 300);
+      row.cleanup = scrub(`cleanup failed: ${e.message}`, dir).slice(0, 300);
     }
   }
   const t = (x) => (x ? `${x.pass}/${x.pass + x.fail}` : '-');
-  const m = row.mutants ? ` · mutant ${row.mutants.killed}/${row.mutants.total}` : '';
-  console.log(`${task} · ${cond}${keep ? ` (${dir})` : ''}: gizli ${t(row.hidden)} · görünür ${t(row.visible)}${m} · $${row.costUsd ?? '-'} · ${row.durationS ?? '-'} sn${row.error ? ` · HATA: ${row.error.slice(0, 120)}` : ''}`);
+  const m = row.mutants ? ` · mutants ${row.mutants.killed}/${row.mutants.total}` : '';
+  console.log(`${task} · ${cond}${keep ? ` (${dir})` : ''}: hidden ${t(row.hidden)} · visible ${t(row.visible)}${m} · $${row.costUsd ?? '-'} · ${row.durationS ?? '-'} s${row.error ? ` · ERROR: ${row.error.slice(0, 120)}` : ''}`);
   return row;
 }
 
@@ -354,19 +354,19 @@ export function summary(rows) {
 
 function report(rows, meta) {
   const pct = (t) => (t && t.pass + t.fail ? `${t.pass}/${t.pass + t.fail}` : '-');
-  const yn = (v) => (v === true ? 'evet' : v === false ? 'hayır' : '-');
-  const share = (x) => `%${Math.round(x * 100)}`;
-  const lines = [`# Kit değerlendirmesi · ${VERSION} · ${model} · ${new Date().toISOString().slice(0, 10)}`, '',
-    `Claude Code ${meta.claude} · Node ${meta.node} · tekrar: ${repeat}`, '', ...meta.plugins.map(([cond, list]) => `- Eklentiler (${cond}): ${list}`), '',
-    '## Özet', '',
-    '| Görev | Koşul | Koşu | Gizli test (ort.) | En düşük / en yüksek | Öldürülen mutant (ort.) | Maliyet ($, ort.) | Süre (sn, ort.) |',
+  const yn = (v) => (v === true ? 'yes' : v === false ? 'no' : '-');
+  const share = (x) => `${Math.round(x * 100)}%`;
+  const lines = [`# Kit evaluation · ${VERSION} · ${model} · ${new Date().toISOString().slice(0, 10)}`, '',
+    `Claude Code ${meta.claude} · Node ${meta.node} · repeats: ${repeat}`, '', ...meta.plugins.map(([cond, list]) => `- Plugins (${cond}): ${list}`), '',
+    '## Summary', '',
+    '| Task | Condition | Runs | Hidden tests (avg) | Lowest / highest | Killed mutants (avg) | Cost ($, avg) | Time (s, avg) |',
     '|---|---|---:|---:|---|---:|---:|---:|',
     ...summary(rows).map((s) => `| ${s.task} | ${s.cond} | ${s.runs} | ${share(s.hiddenAvg)} | ${share(s.hiddenMin)} / ${share(s.hiddenMax)} | ${s.killedAvg.toFixed(1)}/${s.mutantTotal} | ${s.costAvg?.toFixed(2) ?? '-'} | ${s.durationAvg?.toFixed(0) ?? '-'} |`),
-    '', '## Koşular', '',
-    '| Görev | Koşul | Tekrar | Gizli test | Görünür test | Kendi testleri | Eklenen test | Hatayı yakalayan | Öldürülen mutant | Önce test | Kapı | Kod dosyası / satır | Diğer dosya | Maliyet ($) | Süre (sn) | Tur | Token |',
+    '', '## Runs', '',
+    '| Task | Condition | Repeat | Hidden tests | Visible tests | Own tests | Added tests | Bug-catching | Killed mutants | Test first | Gate | Code files / lines | Other files | Cost ($) | Time (s) | Turns | Tokens |',
     '|---|---|---:|---|---|---|---|---|---|---|---|---|---|---:|---:|---:|---:|',
     ...rows.map((r) => `| ${r.task} | ${r.cond} | ${r.rep ?? 1} | ${pct(r.hidden)} | ${pct(r.visible)} | ${pct(r.own)} | ${r.testsAdded ?? '-'} | ${r.testsCaught ?? '-'} | ${r.mutants ? `${r.mutants.killed}/${r.mutants.total}` : '-'} | ${yn(r.testFirst)} | ${yn(r.gateRan)} | ${r.codeFiles ?? '-'} / ${r.codeLines ?? '-'} | ${r.otherFiles ?? '-'} | ${r.costUsd?.toFixed(2) ?? '-'} | ${r.durationS ?? '-'} | ${r.turns ?? '-'} | ${r.tokens ?? '-'} |`),
-    '', ...rows.filter((r) => r.error).map((r) => `- ${r.task} · ${r.cond} · ${r.rep ?? 1} hata: ${r.error}`)];
+    '', ...rows.filter((r) => r.error).map((r) => `- ${r.task} · ${r.cond} · ${r.rep ?? 1} error: ${r.error}`)];
   return lines.join('\n') + '\n';
 }
 
@@ -379,7 +379,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(proces
   const json = (rows) => JSON.stringify(rows.map(({ dir: _, ...r }) => r), null, 2) + '\n';
   // Outside the repo, so a crash does not leave a file to commit by mistake
   const partial = path.join(os.tmpdir(), `kit-eval-${name}.partial.json`);
-  if (!dry) console.log(`Ara sonuç: ${partial}`);
+  if (!dry) console.log(`Partial results: ${partial}`);
   const rows = [];
   let stopped = null;
   run: for (const task of tasks) {
@@ -388,7 +388,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(proces
       // The plan limit ends every later run within a second: stop, keep what finished, say what is left
       if (done.some(limitHit)) {
         rows.push(...done.filter((r) => !limitHit(r)));
-        stopped = `${task} (tekrar ${rep}'den itibaren)${tasks.slice(tasks.indexOf(task) + 1).map((t) => `, ${t}`).join('')}`;
+        stopped = `${task} (from repeat ${rep})${tasks.slice(tasks.indexOf(task) + 1).map((t) => `, ${t}`).join('')}`;
         break run;
       }
       rows.push(...done);
@@ -396,7 +396,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(proces
     }
   }
   if (stopped) {
-    console.error(`Limit doldu, koşu durdu. Kalan: ${stopped}. Limit sıfırlanınca kalan görevleri yeniden koş.`);
+    console.error(`Limit reached, run stopped. Left: ${stopped}. Run the remaining tasks again after the limit resets.`);
     if (!rows.length) process.exit(2);
   }
   const versionOut = spawnSync('claude', ['--version'], { encoding: 'utf8' }).stdout?.trim();
@@ -408,6 +408,6 @@ if (process.argv[1] && import.meta.url === new URL(`file://${path.resolve(proces
   fs.writeFileSync(path.join(dir, `${name}.md`), md);
   fs.rmSync(partial, { force: true });
   console.log(md);
-  console.log(`Sonuç: kit/eval/results/${name}.md`);
+  console.log(`Result: kit/eval/results/${name}.md`);
   if (stopped) process.exit(2);
 }

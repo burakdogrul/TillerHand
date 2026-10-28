@@ -3,7 +3,7 @@
 > A reference during development, and the full checklist before go-live.
 > The security mistakes AI makes most often: putting a secret in the client, checking authorization only in the interface,
 > not validating input, leaving DB rules off. This file exists to catch these.
-> Extra items specific to the project type: `docs/architecture/stack.md` → "Güvenlik" (security).
+> Extra items specific to the project type: `docs/architecture/stack.md` → "Security (extra)".
 
 ## 1. Secret management
 

@@ -47,7 +47,7 @@ Checked: 2026-10-25. Sources: [Environment variables](https://vercel.com/docs/en
 
 Checked: 2026-10-25. Sources: [Backups](https://supabase.com/docs/guides/platform/backups) · [Backup and restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) · [API keys](https://supabase.com/docs/guides/api/api-keys) (no dates on the pages)
 
-**Project.** Open a separate project for prod. Write its ref in `accounts.md` → Ortamlar → prod row. Auth and email settings: `docs/architecture/stack.md` → "Canlıya alma (ek)" (go live, add-on).
+**Project.** Open a separate project for prod. Write its ref in `accounts.md` → Ortamlar → prod row. Auth and email settings: `docs/architecture/stack.md` → "Go live (extra)".
 
 **Keys.** The new keys are `sb_publishable_…` (can go to the client) and `sb_secret_…` (server only; as Secret in the hosting panel). A long key starting with `eyJ` is the old type. Supabase is deprecating the old `anon` and `service_role` keys by the end of 2026: use the new keys in a new project. If `.env.example` still has the old names (`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`), enter the new key under the same name.
 

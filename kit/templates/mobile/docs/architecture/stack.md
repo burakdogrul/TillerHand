@@ -3,7 +3,7 @@
 > This file is loaded into the AI every session. If you made a different choice in the project, update this file
 > and write the reason in `docs/decisions/log.md`.
 
-## Karar noktaları (decision points)
+## Decision points
 
 `/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that fit this project best; the **recommended** label is the default, but if another option fits the PRD better, recommend it and say why. If a claim that can change (price, free tier, limit) has a `(kaynak: <adres>, YYYY-AA-GG)` note next to it and the note is newer than 90 days, it is not researched again.
 
@@ -52,7 +52,7 @@ eas update --branch production          # OTA update (JS changes only)
 maestro test .maestro/                  # e2e
 ```
 
-## Klasör yapısı (folder structure)
+## Folder structure
 
 Structure by feature and its rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is asked about, CI checks it).
 ```
@@ -83,7 +83,7 @@ tests/                          # shared test helpers
 app.config.ts  eas.json
 ```
 
-## Kodlama kuralları (coding rules)
+## Coding rules
 
 - **Everything in the app bundle is public.** Do not put a secret, service key or admin key into the app; secret operations run on the server.
 - Variables with the `EXPO_PUBLIC_` prefix are embedded in the bundle; only public values.
@@ -97,7 +97,7 @@ app.config.ts  eas.json
 - Try every feature **on both iOS and Android, on a real device**.
 - Before UI work, read `DESIGN.md` and `docs/design/design-guide.md`; do not go outside the tokens and rules. If a new design decision is needed, use `/design`.
 
-## Doğrulama (verification: evidence before a task is done)
+## Verification (evidence before a task is done)
 
 - Logic: run the Jest tests and show the output.
 - Flow: if there is a relevant flow under `.maestro/`, run `maestro test`; if not, write one for critical flows.
@@ -126,7 +126,7 @@ maestro test .maestro/ --format junit --output test-results/junit-e2e.xml
 - PostHog feature flags or Firebase Remote Config; or a Supabase `feature_flags` table.
 - Reading goes through a single hook: `hooks/useBayrak.ts`. Features that take payments, use AI or send notifications are not released without a flag.
 
-## Sık yapılan AI hataları (common AI mistakes; watch for these)
+## Common AI mistakes (watch for these)
 
 - Writing an absolute path specific to this machine into code, a test or a setting (`C:\Users\<ad>\…`, `/home/<ad>/…`, the full path of the project folder): it does not work on another machine. Derive the path with `import.meta.url` / `__dirname`, `path.join(process.cwd(), …)` or `os.tmpdir()`. The deterministic gate catches this.
 - Using web-only APIs or packages (DOM, `window`, libraries that work only on the web).
@@ -135,14 +135,14 @@ maestro test .maestro/ --format junit --output test-results/junit-e2e.xml
 - Assuming a package that needs a native module works in Expo Go (it needs a development build).
 - Trying to ship a native change (a new permission, a native package) through an OTA update.
 
-## Güvenlik (security; extra)
+## Security (extra)
 
 - [ ] No secrets in the bundle (review the `EXPO_PUBLIC_` variables after the build).
 - [ ] Tokens are in SecureStore.
 - [ ] Deep link parameters are validated.
 - [ ] API calls use HTTPS only.
 
-## Canlıya alma (go live; extra)
+## Go live (extra)
 
 - [ ] `app.config.ts`: bundle id / package name is permanent and correct; `version`, iOS `buildNumber`, Android `versionCode` incremented
 - [ ] App icon, splash, app name
@@ -158,7 +158,7 @@ maestro test .maestro/ --format junit --output test-results/junit-e2e.xml
 - [ ] Sentry symbol/source maps are uploaded
 - [ ] Performance: cold start < 3 s (on a mid-range Android), list scrolling does not stutter
 
-## Bakım (maintenance; extra)
+## Maintenance (extra)
 
 - Weekly: **crash rate** in Sentry (target: crash-free users ≥ 99.5%), store reviews and rating.
 - Monthly: `npx expo-doctor`, `npm outdated`, `npm audit`.

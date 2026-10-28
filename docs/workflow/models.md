@@ -32,7 +32,7 @@ Opus is the most expensive model and Haiku the cheapest. When the limit turns ye
 
 ## How it applies in Claude Code
 
-- **The main session** runs the planning role. The kit cannot change the main session's model: if the chosen plan model or effort differs from the session's, the AI suggests `/model <ad>` and `/effort <düzey>` in one line.
+- **The main session** runs the planning role. The kit cannot change the main session's model: if the chosen plan model or effort differs from the session's, the AI suggests `/model <name>` and `/effort <level>` in one line.
 - **Subagents:** Code writing, review and docs work goes to a subagent with the Agent tool. The call passes the role's `model` and `effort` value; the value in the call overrides the `model:` line in the agent file.
 - **Aliases:** `opus`, `sonnet`, `haiku` (also `fable`) always go to the newest model of that family. To pin to a specific version, use the full model ID or the `ANTHROPIC_DEFAULT_OPUS_MODEL` (SONNET, HAIKU) environment variable.
 - **Effort:** In a subagent call, effort can be passed in Claude Code v2.1.292 and later. If the `CLAUDE_CODE_EFFORT_LEVEL` environment variable is set, it overrides all effort choices. A model may not support every level.

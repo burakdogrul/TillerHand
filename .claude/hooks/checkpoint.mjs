@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Working points and safe rollback (/rollback). For a user who does not know git:
-//   node .claude/hooks/checkpoint.mjs --save "G-012 bitti, testler yeşil"   tag the current commit as a "working point"
+//   node .claude/hooks/checkpoint.mjs --save "G-012 done, tests green"   tag the current commit as a "working point"
 //   node .claude/hooks/checkpoint.mjs --list [--json]                        working points + recent commits
 //   node .claude/hooks/checkpoint.mjs --restore <tag|commit> --yes           go back to that state
 // Rollback does not delete history: unsaved work is stashed first, files are set to the target state and

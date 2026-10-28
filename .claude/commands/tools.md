@@ -5,7 +5,7 @@ argument-hint: [empty = status | ac <paket> | kapat <paket> | olc | komutlar haf
 
 Request: $ARGUMENTS
 
-Why it exists: The skill list is limited to 1% of context. When it overflows, descriptions of rarely used skills drop and Claude does not know them. So plugins outside the core come off by default and are turned on as packages when needed. Packages and their contents: `docs/workflow/skills.md` → "Bağlam paketleri" (context packages).
+Why it exists: The skill list is limited to 1% of context. When it overflows, descriptions of rarely used skills drop and Claude does not know them. So plugins outside the core come off by default and are turned on as packages when needed. Packages and their contents: `docs/workflow/skills.md` → "Context packages".
 
 - **Empty:** Run `node .claude/hooks/tools.mjs` and show the output as a short table (package, status, approximate tokens, which command turns it on).
 - **`ac <paket>`:** First tell the user the package's approximate token cost and this note: "Turning on mid-session breaks the prompt cache; the cheapest is at a phase boundary together with `/clear`." If approved, run `node .claude/hooks/tools.mjs --enable <paket>`. If the script reports a plugin that is not installed, ask separately about installing it (`node .claude/hooks/plugins-sync.mjs --install`). Then ask the user to run `/reload-plugins`.

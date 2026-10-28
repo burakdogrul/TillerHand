@@ -70,10 +70,10 @@ Work does not stop; a one-line warning is given once at each threshold:
 
 1. Leave no half-written file; finish the current step or undo it.
 2. Run the tests. If they are red, note it.
-3. Suggest a WIP commit (`wip: <görev> - limit nedeniyle durdu`).
+3. Suggest a WIP commit (`wip: <task> - stopped because of the limit`).
 4. Fill in the `docs/workflow/progress.md` → **Kaldığı yer** section: task, completed steps, next step, open files, pending decisions, reset time.
 5. Report with the status block.
 
 ## 5. Cost log (to calibrate the estimate)
 
-`/build` and full board meetings read the 5-hour percentage at the start and at the end and add one row to `docs/workflow/cost-log.md`: `node .claude/hooks/progress.mjs --start` at the start, `--cost "<iş>" <boyut>` at the end (percentages, difference and duration are computed; if the window reset in between, the difference is `?`; on the desktop pass `--limit <%>` to both calls). The percentages can also be given by hand: `--cost "<iş>" <boyut> <başlangıç %> <bitiş %> <dk>`. If the limit cannot be read, no row is added.
+`/build` and full board meetings read the 5-hour percentage at the start and at the end and add one row to `docs/workflow/cost-log.md`: `node .claude/hooks/progress.mjs --start` at the start, `--cost "<job>" <size>` at the end (percentages, difference and duration are computed; if the window reset in between, the difference is `?`; on the desktop pass `--limit <%>` to both calls). The percentages can also be given by hand: `--cost "<job>" <size> <start %> <end %> <min>`. If the limit cannot be read, no row is added.

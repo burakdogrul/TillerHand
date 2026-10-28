@@ -171,7 +171,7 @@ test('3.14.1 command approval: a new or changed command does not run unapproved;
   agents(`node -e "require('fs').writeFileSync('calisti', '1')"`);
   const r = gate('--run');
   assert.equal(r.status, 1);
-  assert.match(r.stdout, /onay/i);
+  assert.match(r.stdout, /command approval needed/);
   assert.match(r.stdout, /writeFileSync/, 'the user sees what they approve');
   assert.ok(!fs.existsSync(marker), 'an unapproved command does not run');
   assert.equal(gate('--approve').status, 0);
@@ -210,7 +210,7 @@ test('3.14.1 audit: an approval record elsewhere via GIT_DIR cannot be used', ()
   agents('node -e "process.exit(3)"');
   const r = spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, encoding: 'utf8', env: { ...env(), GIT_DIR: bare, GIT_COMMON_DIR: bare } });
   assert.equal(r.status, 1);
-  assert.match(r.stdout, /komut onayı gerekli/);
+  assert.match(r.stdout, /command approval needed/);
   fs.rmSync(bare, { recursive: true, force: true });
   agents('node -e "process.exit(0)"');
 });

@@ -12,9 +12,9 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 
-// { name: 'notes', owner: 'user_id', sample: () => ({ title: 'gizli not' }) }  (if the key column is not "id": key: 'note_id')
+// { name: 'notes', owner: 'user_id', sample: () => ({ title: 'secret note' }) }  (if the key column is not "id": key: 'note_id')
 const TABLES = [];
-// { name: 'plans', sample: () => ({ name: 'deneme' }) }
+// { name: 'plans', sample: () => ({ name: 'trial' }) }
 const PUBLIC_TABLES = [];
 
 const API = process.env.API_URL;
@@ -23,10 +23,10 @@ const SERVICE = process.env.SERVICE_ROLE_KEY ?? process.env.SECRET_KEY;
 const DB = process.env.DB_URL;
 
 const isLocal = (u) => { try { return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(u).hostname); } catch { return false; } };
-if (!API || !ANON || !SERVICE) throw new Error('API_URL, ANON_KEY ve SERVICE_ROLE_KEY yok: önce yerel Supabase\'i başlat ve "supabase status -o env" çıktısını ortama aktar.');
+if (!API || !ANON || !SERVICE) throw new Error('API_URL, ANON_KEY and SERVICE_ROLE_KEY are missing: start the local Supabase first and export the output of "supabase status -o env" to the environment.');
 // If CI skips the table list, a table with RLS off passes unnoticed
-if (!DB && process.env.CI) throw new Error(`DB_URL yok: CI'da tablo listesi atlanamaz. "supabase status -o env" çıktısındaki DB_URL'yi ortama aktar.`);
-if (!isLocal(API) || (DB && !isLocal(DB))) throw new Error(`RLS testi sadece yerel Supabase'e karşı çalışır; ${new URL(API).hostname} yerel değil. Dev veya prod projesine karşı çalıştırma.`);
+if (!DB && process.env.CI) throw new Error(`DB_URL is missing: CI cannot skip the table list. Export DB_URL from the output of "supabase status -o env" to the environment.`);
+if (!isLocal(API) || (DB && !isLocal(DB))) throw new Error(`The RLS test only runs against a local Supabase; ${new URL(API).hostname} is not local. Do not run it against a dev or prod project.`);
 
 let client, admin, users;
 const newUser = async () => {
@@ -49,51 +49,51 @@ before(async () => {
 after(async () => { for (const k of users ?? []) await admin.auth.admin.deleteUser(k.id); });
 
 function publicTables(t) {
-  if (!DB) return t.skip('DB_URL yok; tablo listesi atlandı') ?? null;
+  if (!DB) return t.skip('DB_URL is missing; table list skipped') ?? null;
   try {
     return execFileSync('psql', [DB, '-At', '-F', ':', '-c', "select tablename, rowsecurity from pg_tables where schemaname = 'public'"], { encoding: 'utf8' })
       .split('\n').filter(Boolean).map((s) => { const [name, rls] = s.split(':'); return { name, rls: rls === 't' }; });
   } catch (e) {
-    if (e.code === 'ENOENT' && !process.env.CI) return t.skip('psql kurulu değil; CI\'da çalışır') ?? null;
+    if (e.code === 'ENOENT' && !process.env.CI) return t.skip('psql is not installed; it runs in CI') ?? null;
     throw e;
   }
 }
 
-test('SALDIRI: RLS bütün public tablolarda RLS açık', (t) => {
+test('SALDIRI: RLS is on for every public table', (t) => {
   const tables = publicTables(t);
   if (!tables) return;
-  assert.deepEqual(tables.filter((x) => !x.rls).map((x) => x.name), [], 'RLS kapalı tablo: "alter table ... enable row level security" ve politika yaz');
+  assert.deepEqual(tables.filter((x) => !x.rls).map((x) => x.name), [], 'table with RLS off: write "alter table ... enable row level security" and a policy');
 });
 
-test('SALDIRI: RLS bütün public tablolar bu teste kayıtlı', (t) => {
+test('SALDIRI: RLS every public table is registered in this test', (t) => {
   const tables = publicTables(t);
   if (!tables) return;
   const registered = new Set([...TABLES, ...PUBLIC_TABLES].map((x) => x.name));
-  assert.deepEqual(tables.map((x) => x.name).filter((name) => !registered.has(name)), [], 'Yeni tabloyu tests/security/rls.mjs → TABLES (veya PUBLIC_TABLES) listesine ekle');
+  assert.deepEqual(tables.map((x) => x.name).filter((name) => !registered.has(name)), [], 'Add the new table to the TABLES (or PUBLIC_TABLES) list in tests/security/rls.mjs');
 });
 
 for (const { name, owner, sample, key = 'id' } of TABLES) {
-  test(`SALDIRI: RLS ${name} başka kullanıcıya ve anonime kapalı`, async () => {
+  test(`SALDIRI: RLS ${name} is closed to other users and to anonymous`, async () => {
     const [a, b] = users;
     const anon = client(ANON);
     const { data: row, error } = await a.c.from(name).insert({ ...sample(), [owner]: a.id }).select().single();
     assert.ifError(error); // the owner must be able to write their own row; if not, sample() or the policy is missing
     const id = row[key];
 
-    assert.equal((await anon.from(name).select().eq(key, id)).data?.length ?? 0, 0, 'anonim okuyabiliyor');
-    assert.equal((await b.c.from(name).select().eq(key, id)).data?.length ?? 0, 0, 'başka kullanıcı okuyabiliyor');
-    assert.equal((await b.c.from(name).update({ ...sample(), [owner]: b.id }).eq(key, id).select()).data?.length ?? 0, 0, 'başka kullanıcı güncelleyebiliyor');
-    assert.equal((await b.c.from(name).delete().eq(key, id).select()).data?.length ?? 0, 0, 'başka kullanıcı silebiliyor');
+    assert.equal((await anon.from(name).select().eq(key, id)).data?.length ?? 0, 0, 'anonymous can read');
+    assert.equal((await b.c.from(name).select().eq(key, id)).data?.length ?? 0, 0, 'another user can read');
+    assert.equal((await b.c.from(name).update({ ...sample(), [owner]: b.id }).eq(key, id).select()).data?.length ?? 0, 0, 'another user can update');
+    assert.equal((await b.c.from(name).delete().eq(key, id).select()).data?.length ?? 0, 0, 'another user can delete');
     // Even with 0 rows returned the change may have applied (with no select policy): the row is read again
-    assert.deepEqual((await admin.from(name).select().eq(key, id).single()).data, row, 'başka kullanıcı satırı değiştirmiş veya silmiş');
-    assert.ok((await b.c.from(name).insert({ ...sample(), [owner]: a.id })).error, 'başka kullanıcı onun adına yazabiliyor');
-    assert.ok((await anon.from(name).insert({ ...sample(), [owner]: a.id })).error, 'anonim yazabiliyor');
+    assert.deepEqual((await admin.from(name).select().eq(key, id).single()).data, row, 'another user changed or deleted the row');
+    assert.ok((await b.c.from(name).insert({ ...sample(), [owner]: a.id })).error, 'another user can write on their behalf');
+    assert.ok((await anon.from(name).insert({ ...sample(), [owner]: a.id })).error, 'anonymous can write');
   });
 }
 
 for (const { name, sample } of PUBLIC_TABLES) {
-  test(`SALDIRI: RLS ${name} herkese açık ama yazmaya kapalı`, async () => {
-    assert.ok((await client(ANON).from(name).insert(sample())).error, 'anonim yazabiliyor');
-    assert.ok((await users[1].c.from(name).insert(sample())).error, 'giriş yapmış kullanıcı yazabiliyor');
+  test(`SALDIRI: RLS ${name} is public to read but closed to writes`, async () => {
+    assert.ok((await client(ANON).from(name).insert(sample())).error, 'anonymous can write');
+    assert.ok((await users[1].c.from(name).insert(sample())).error, 'a signed-in user can write');
   });
 }

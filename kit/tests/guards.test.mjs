@@ -303,7 +303,7 @@ test('test-writer K3 shield hook: a Claude shell command on a test file is denie
 
 test('test-writer K6 shield: quoted text with spaces is an argument, a quoted single-word path is still a test write', () => {
   const ctx = { tool: 'claude', agent: '' };
-  for (const s of ['grep -n "<tr><td>Test koruması</td>" kit/guide.html', `node -e "const s='rm tests/a.test.ts'"`]) {
+  for (const s of ['grep -n "<tr><td>Test protection</td>" kit/guide.html', `node -e "const s='rm tests/a.test.ts'"`]) {
     assert.notEqual(evaluate(s, ctx)?.decision, 'deny', s);
   }
   for (const s of ['echo x > "src/a.test.ts"', 'rm "tests/a.test.ts"', "rm 'kit/tests/x.test.mjs'"]) {

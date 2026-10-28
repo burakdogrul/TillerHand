@@ -1,290 +1,292 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="kit/assets/banner-dark.svg">
-    <img src="kit/assets/banner-light.svg" alt="TillerHand: Kodu AI yazar, dümen sende." width="100%">
+    <img src="kit/assets/banner-light.svg" alt="TillerHand: AI builds. You steer." width="100%">
   </picture>
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.46.0-2a78d6?style=flat-square"></a>
-  <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
-  <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
-  <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.47.0-2a78d6?style=flat-square"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
+  <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
+  <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
   <img alt="Node.js 18+" src="https://img.shields.io/badge/Node.js-18%2B-3c873a?style=flat-square">
 </p>
 
 <p align="center">
-  <b>Türkçe</b> · <a href="README.en.md">English</a> · <a href="https://burakdogrul.github.io/TillerHand/kit/guide.html"><b>Rehberi oku →</b></a>
+  <b>English</b> · <a href="README.tr.md">Türkçe</a> · <a href="https://burakdogrul.github.io/TillerHand/kit/guide.html"><b>Read the guide →</b></a>
 </p>
 
 <p align="center">
-  <a href="#hiç-bilmiyorsan-adım-adım">Adım adım</a> ·
-  <a href="#hızlı-başlangıç">Hızlı başlangıç</a> ·
-  <a href="#var-olan-proje-adopt">/adopt</a> ·
-  <a href="#nasıl-çalışır">Nasıl çalışır</a> ·
-  <a href="#uzman-kurulu">Kurul</a> ·
-  <a href="#koruma-katmanları">Korumalar</a> ·
-  <a href="#komutlar">Komutlar</a> ·
-  <a href="#lisans">Lisans</a>
+  <a href="#step-by-step-for-beginners">Step by step</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#existing-project-adopt">/adopt</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#expert-board">Board</a> ·
+  <a href="#guardrails">Guardrails</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="#license">License</a>
 </p>
 
 ---
 
-**TillerHand**, [Claude Code](https://claude.com/claude-code) ile bir ürünü fikirden canlıya ve bakıma kadar götüren bir başlangıç kitidir. Kodu AI yazar, **kararları sen verirsin**: her önemli adımda seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar. Bir **uzman kurulu** işi denetler, **koruma katmanları** tehlikeli işlemleri daha olmadan durdurur, proje her an **düzenli bir klasör yapısında** kalır.
+**TillerHand** is a starter kit that takes a product from idea to production and maintenance with [Claude Code](https://claude.com/claude-code). The AI writes the code; **you make the decisions**. At every important step it lays out the options, when each one is the better choice, and what it recommends. An **expert board** reviews the work, **guardrails** stop dangerous actions before they happen, and the project always stays in a **clean folder structure**.
+
+> **Language first.** `/start` and `/adopt` open with one question: which language should the AI talk to you in? Turkish, English or any other. From then on questions, answers, reports, the dashboard and the status line come in that language; `/language` changes it later. Everything the kit ships (commands, rules, agents, hooks, document templates) is written in English; only the optional Turkey add-on stays Turkish.
 
 | | |
 |---|---|
-| **Soru odaklı** | Ürün, teknik, tasarım, veri, güvenlik ve maliyet kararları gerekçeli seçeneklerle sorulur. Tasarım soruları görsel önizlemeyle gelir. |
-| **Senin dilinde** | `/start` ve `/adopt` önce hangi dilde konuşulacağını sorar: Türkçe, İngilizce ya da başka bir dil. Sorular, cevaplar ve belgeler o dilde olur (pano metinleri sonraki sürümde); `/language` ile değişir. |
-| **Uzman kurulu** | Ürün, Mimar, Güvenlik, UX, KVKK, QA ve diğer üyeler planı, görevi, commit'i ve fazı denetler. |
-| **Testi ayrı ajan yazar** | Kabul ve saldırgan testlerini kodu yazan değil, ayrı bir ajan koddan önce yazar ve önce kırmızı olur. Kodu yazan test dosyasına dokunamaz; dolaylı yoldan değişen test commit'e giremez. "Bitti" demeden çalıştığı gösterilir. |
-| **Spec ve sapma kontrolü** | Büyük işte ve her hatada mevcut, beklenen ve değişmemesi gereken davranış yazılır; değişmemesi gerekenin testi yoksa kapı kırmızıdır. |
-| **Bulgu raporları** | Teknik, iş, güvenlik, UX, performans ve hukuk için en önemli 20 bulgu; puanlı, düzeltme yöntemiyle. |
-| **Koruma katmanları** | Sır, yıkıcı komut, onaysız prod deploy, zayıflatılan test ve harita dışı dosya daha olmadan durdurulur. |
-| **Canlı önizleme** | Arayüz görevinde dev sunucu açılır, masaüstü ve mobil ekran görüntüsü alınır; `/qa` kabul kriterlerini gerçek tarayıcıda dener. |
-| **Canlıya ve sonrasına** | `/release first` hosting, alan adı, yedek ve geri almayı sağlayıcı sağlayıcı kurdurur. Web ve backend projelerinde canlı site 3 saatte bir duman testiyle izlenir. |
-| **Türkiye eki** | İsteğe bağlı. iyzico ve PayTR bildirimlerinin imza doğrulaması saldırgan testiyle gelir; KVKK yurt dışı aktarım, e-Fatura/e-Arşiv ve Türkçe İ/ı maddeleri birincil kaynağa bağlıdır. |
-| **Kontrol paneli** | `dashboard.html`: durum, dikkat gerektirenler, kararlar, kurul, bulgular, kalite, operasyon, limit; komutlar tek tıkla kopyalanır. |
-| **Limit farkındalığı** | 5 saatlik ve haftalık limit okunur, iş buna göre planlanır. Uyarı verir, işi durdurmaz. |
-| **Doğru kaynak** | Değişebilen bilgi (sürüm, fiyat, mevzuat) birincil kaynaktan, kaynak ve tarihle doğrulanır. |
-| **Geri alma** | `/rollback` son çalışan hale döner; geçmiş silinmez, yarım iş saklanır. |
-| **Anlatıcı mod** | İstersen her değişikliği yazılım bilmeyen birine anlatır gibi sade bir dille açıklar. |
-| **Seni tanır** | Nasıl çalışmak istediğini (konuşma, soru, rapor, kod tarzı) öğrenir. Onayladığın tercihler tüm projelerinde geçerli olur ve bilgisayarında kalır. |
-| **Rol bazlı model** | Planlama, kod, test, inceleme ve doküman için modeli ve effort'u her görevin başında sen seçersin. Test rolüne koddan farklı bir model önerilir: aynı model aynı kör noktayı paylaşır. |
-| **Hatadan öğrenir** | Aynı türden hata tekrar edince onu önleyecek tek bir kural önerir; sen onaylarsan eklenir. |
+| **Question-driven** | Product, technical, design, data, security and cost decisions come as reasoned options. Design questions come with visual previews. |
+| **In your language** | The first question is the language. Questions, answers, documents, the dashboard and the status line then come in that language; `/language` changes it. |
+| **Expert board** | Product, Architect, Security, UX, Privacy, QA and other members review the plan, each task, each commit and each phase. |
+| **A separate agent writes the tests** | Acceptance and adversarial tests are written before the code by a separate agent, not the one writing the code, and they start red. The coder can't touch test files, and a test changed by indirect means can't get into a commit. Nothing is called done without proof that it works. |
+| **Specs and drift checks** | Larger tasks and every bug get a spec of current, expected and must-not-change behavior; if a must-not-change behavior has no test, the gate is red. |
+| **Findings reports** | The top 20 findings for tech, business, security, UX, performance and legal; scored, with how to fix them. |
+| **Guardrails** | Secrets, destructive commands, unapproved prod deploys, weakened tests and stray files are stopped before they happen. |
+| **Live preview** | For UI tasks the dev server is started and desktop and mobile screenshots are taken; `/qa` runs the acceptance criteria in a real browser. |
+| **Launch and after** | `/release first` walks you through hosting, domain, backups and rollback, provider by provider. Web and backend projects get a smoke test against the live site every 3 hours. |
+| **Turkey add-on** | Optional. Signature checks for iyzico and PayTR notifications come with an adversarial test; the KVKK cross-border transfer, e-Invoice/e-Archive and Turkish İ/ı items each link to a primary source. |
+| **Dashboard** | `dashboard.html`: status, what needs attention, decisions, board, findings, quality, operations, usage; commands copy with one click. |
+| **Usage-aware** | Reads the 5-hour and weekly limits and plans work around them. It warns; it never stops the work. |
+| **Sourced facts** | Anything that changes (versions, prices, regulations) is checked against a primary source, with link and date. |
+| **Rollback** | `/rollback` returns to the last working state; history is kept, unfinished work is saved. |
+| **Narrator mode** | Optionally explains every change in plain language, as if to someone who doesn't code. |
+| **Learns how you work** | Picks up how you like to work (tone, questions, reports, code style). Preferences you approve apply to all your projects and stay on your computer. |
+| **Model per role** | You pick the model and effort for planning, coding, testing, review and docs at the start of each task. The test role is offered a different model from the coding role: the same model shares the same blind spots. |
+| **Learns from bugs** | When the same kind of bug comes back, it proposes one rule to prevent it; the rule is added only if you approve. |
 
-## Hiç bilmiyorsan: adım adım
+## Step by step for beginners
 
-Kod yazmayı bilmen gerekmez. Git, terminal ve kurulum işlerini Claude yapar; sen ne istediğini anlatır ve seçim yaparsın.
+You don't need to know how to code. Claude handles git, the terminal and installs; you describe what you want and make the choices.
 
-**1. Hazırlık (bir kez)**
-- Hesaplar: [GitHub](https://github.com) (ücretsiz) ve Claude **Pro** veya **Max** aboneliği.
-- Programlar: [Claude masaüstü uygulaması](https://claude.com/download), [Node.js](https://nodejs.org) (LTS), [Git](https://git-scm.com/downloads).
+**1. Setup (once)**
+- Accounts: [GitHub](https://github.com) (free) and a Claude **Pro** or **Max** subscription.
+- Apps: the [Claude desktop app](https://claude.com/download), [Node.js](https://nodejs.org) (LTS), [Git](https://git-scm.com/downloads).
 
-**2. Projeni oluştur**
-1. Projen için bir klasör aç ve Claude masaüstü uygulamasında **Code** sekmesinde seç.
-2. Kiti kur. İki yoldan birini seç:
-   - Claude'a yaz: `bu klasörde npx tillerhand init komutunu çalıştır`.
-   - TillerHand plugin'ini [bir kez kurduysan](#hızlı-başlangıç) Claude'a `/tillerhand:init` yaz.
-3. Aynı klasörde **yeni oturum aç**. Kitin komutları ve korumaları yeni oturumda yüklenir.
+**2. Create your project**
+1. Make a folder for your project and select it in the **Code** tab of the Claude desktop app.
+2. Install the kit. Pick one:
+   - Tell Claude: `run npx tillerhand init in this folder`.
+   - If you've [installed the TillerHand plugin once](#quick-start), type `/tillerhand:init` to Claude.
+3. **Start a new session** in the same folder. The kit's commands and guardrails load in the new session.
 
-**3. Başlat**
+**3. Start**
 
 ```
-/start Serbest çalışanlar için fatura ve tahsilat takip uygulaması
+/start An invoicing and payment tracker for freelancers
 ```
 
-Claude sırayla soru sorar. **Her sorunun ilk seçeneği önerilendir**; emin değilsen onu seç. Var olan bir projen varsa `/start` yerine `/adopt` yaz: Claude kodu tarar, belgeleri koddan çıkarır ve projeyi adım adım kitin düzenine getirir.
+The first question is the language: Turkish, English or another one. Claude then talks to you in that language and asks its questions one by one. **The first option is always the recommended one**; pick it if you're unsure. Already have a project? Type `/adopt` instead of `/start`: Claude scans the code, derives the docs from it and brings the project into the kit's structure step by step.
 
-**4. Her gün**
+**4. Every day**
 
-| Ne zaman | Ne yazarsın |
+| When | What to type |
 |---|---|
-| Çalışmaya başlarken | `/build` (sıradaki görevi kendisi alır, test eder) |
-| Durumu merak edersen | `ne durumdayız?` veya `/dashboard` |
-| Bir şey bozulursa | `/rollback` |
-| Bırakırken | `/wrap-up`, sonra `/clear` |
+| Starting work | `/build` (picks up the next task and tests it) |
+| Checking status | `where are we?` or `/dashboard` |
+| Something breaks | `/rollback` |
+| Stopping | `/wrap-up`, then `/clear` |
 
-**Bilmen gerekenler**
-- **Limit:** Pro'da 5 saatlik ve haftalık limit var. Claude %90, %95 ve %99'da uyarır; limit dolarsa yenilenince `/build` ile kaldığın yerden devam edersin.
-- **Onay:** Veritabanı, tasarım, maliyet kararları sorulmadan verilmez. Veri silme, ödeme ve canlıya alma her zaman onay ister.
-- **Devir:** Projeyi başkasına bırakacaksan `/handoff`; devralan `/handoff devral` ile aynı yerden devam eder.
+**Good to know**
+- **Limits:** Pro has 5-hour and weekly limits. Claude warns at 90%, 95% and 99%; if a limit runs out, continue with `/build` once it resets.
+- **Approval:** Database, design and cost decisions are never made without asking. Deleting data, payments and going live always need your approval.
+- **Handoff:** Leaving the project to someone else? Use `/handoff`; they continue from the same point with `/handoff devral`.
 
-## Hızlı başlangıç
+## Quick start
 
-**Gereksinimler:** [Claude Code](https://claude.com/claude-code), Git, Node.js 18+
+**Requirements:** [Claude Code](https://claude.com/claude-code), Git, Node.js 18+
 
-Üç kurulum yolu var. Üçü de kiti projeye aynı şekilde kurar; birini seç.
+There are three ways to install. All three set the kit up in the project the same way; pick one.
 
-**1. npm (önerilen):** terminalde en kısa yol.
+**1. npm (recommended):** the shortest path from a terminal.
 
 ```bash
-mkdir yeni-proje && cd yeni-proje
+mkdir my-app && cd my-app
 npx tillerhand init
 claude
 ```
 
-**2. Claude Code plugin:** bilgisayara bir kez kurulur, sonra her yeni projede tek komut. Plugin yalnız kurulumu yapar; kit yine projeye dosya olarak kopyalanır ve her seferinde son sürüm gelir.
+**2. Claude Code plugin:** install it on your computer once, then one command in every new project. The plugin only runs the install; the kit is still copied into the project as files, and each run fetches the latest version.
 
-Bir kez, Claude Code'da (masaüstü uygulamasında `/plugin` açılmazsa terminalde `claude plugin marketplace add …` ve `claude plugin install …` olarak):
+Once, in Claude Code (if `/plugin` doesn't open in the desktop app, run `claude plugin marketplace add …` and `claude plugin install …` in a terminal instead):
 
 ```text
 /plugin marketplace add burakdogrul/TillerHand
 /plugin install tillerhand@tillerhand
 ```
 
-Her yeni projede, proje klasöründe açılan oturumda:
+In every new project, in a session opened in the project folder:
 
 ```text
 /tillerhand:init
 ```
 
-**3. git:** kitin kaynağını görmek, değiştirmek ya da katkı vermek için. Kit proje içinde `vibe-kit/` klasöründe durur ve `.gitignore`'a girer.
+**3. git:** to read, change or contribute to the kit source. The kit stays in a `vibe-kit/` folder inside the project and goes into `.gitignore`.
 
 ```bash
 git clone https://github.com/burakdogrul/TillerHand.git vibe-kit
 node vibe-kit/kit/kit.mjs init
 ```
 
-- Açılışta Claude Code, kitin skill eklentilerini kurmayı önerir; kabul et.
-- Kit başka bir klasördeyse: `node <kit>/kit/kit.mjs init --project <proje>`.
-- Codex veya Antigravity için: `npx tillerhand init --tool codex` (birden fazlası: `--tool claude,codex`).
-- Önerilen: kod haritası ([codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp)). AI kodu dosya dosya okumak yerine sorgular, token tasarrufu sağlar. `/start` kurmayı sorar.
+- On first launch Claude Code offers to install the kit's skill plugins; accept.
+- Kit in another folder: `node <kit>/kit/kit.mjs init --project <project>`.
+- For Codex or Antigravity: `npx tillerhand init --tool codex` (several: `--tool claude,codex`).
+- Recommended: a code map ([codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp)). The AI queries the code instead of reading it file by file, which saves tokens. `/start` offers to install it.
 
-## Var olan proje: /adopt
+## Existing project: /adopt
 
-Kodun zaten varsa kurulum aynı, başlangıç komutu farklı. Projenin kökünde `npx tillerhand init` çalıştır (dosyaların ezilmez; çakışan kit dosyası `.kit-new` olarak yanına konur), yeni oturum aç ve `/adopt` yaz.
+If you already have code, the install is the same and only the first command changes. Run `npx tillerhand init` in the project root (your files are not overwritten; a conflicting kit file is placed next to yours as `.kit-new`), start a new session and type `/adopt`.
 
-1. **Tarar:** stack, klasör yapısı, testlerin durumu ve git geçmişi çıkarılır. Bu oturumda koda dokunulmaz.
-2. **Belgeleri koddan çıkarır:** PRD, stack ve mimari taslak olarak yazılır; neyi beğenmediğin sorulur, eski `CLAUDE.md` kuralları tek tek sorulup `AGENTS.md`'ye taşınır.
-3. **Kritik akışlara test:** giriş, ödeme gibi akışların doğru davranışı sana sorulur; test kodun bugünkü haline değil, senin cevabına göre yazılır.
-4. **Uyum yol haritası:** güvenli zemin, yapıyı ayrı dalda özellik özellik taşıma, bulgular. Sonra her gün `/build`.
+1. **Scans:** stack, folder layout, test status and git history. The code is not touched in this session.
+2. **Derives docs from the code:** PRD, stack and architecture are drafted; you're asked what you don't like, and rules from your old `CLAUDE.md` are moved to `AGENTS.md` one by one with your approval.
+3. **Tests for critical flows:** you're asked how flows like sign-in or payment should behave; the tests follow your answer, not what the code does today.
+4. **Alignment roadmap:** a safe foundation, then the structure is moved feature by feature on a separate branch, then the findings. After that, `/build` every day.
 
-## Nasıl çalışır
+## How it works
 
 ```mermaid
 flowchart LR
-    A["/start<br/>fikir → plan"] --> B["Faz 0<br/>kurulum, CI, ilk deploy"]
-    B --> C{"Her görev"}
-    C --> D["/plan-task<br/>kararlar + kurul"]
-    D --> E["/build<br/>önce kabul testleri"]
-    E --> F["/review-changes<br/>+ commit kapısı"]
+    A["/start<br/>idea → plan"] --> B["Phase 0<br/>setup, CI, first deploy"]
+    B --> C{"Each task"}
+    C --> D["/plan-task<br/>decisions + board"]
+    D --> E["/build<br/>acceptance tests first"]
+    E --> F["/review-changes<br/>+ commit gate"]
     F --> G["/wrap-up"]
     G --> C
-    C -->|"faz sonu"| H["/findings-*<br/>/board convene<br/>/retro"]
+    C -->|"end of phase"| H["/findings-*<br/>/board convene<br/>/retro"]
     H --> I["/release first"]
     I --> J["/maintain"]
 ```
 
-**`/start` sihirbazı** fikri dokuz adımda plana çevirir:
+**The `/start` wizard** turns an idea into a plan in nine steps:
 
-| Adım | Ne olur |
+| Step | What happens |
 |---|---|
-| 0 Hazırlık | Profil, planlama derinliği, pano, limit |
-| 1 Fikir | Fikir sorgulanır, PRD yazılır |
-| 2 Tip | Web/SaaS, mobil veya backend; AI özelliği var mı |
-| 3 Kurulum | Seçilen tip ve klasör haritası yerleşir |
-| 4 Teknoloji | Tipin karar kataloğu: veritabanı, kimlik, barındırma… |
-| 5 Mimari | Veri modeli, roller, servisler, birim ekonomisi |
-| 6 Kurul | Uzman kurulu kurulur (önce maliyeti söylenir) |
-| 7 Tasarım | Görsel önizlemelerle stil, renk, yazı tipi |
-| 8 Yol haritası | Kabul testi önce gelen, öncelikli görevler |
-| 9 Kapanış | Özet ve ilk görev |
+| 0 Setup | Profile, planning depth, dashboard, limits |
+| 1 Idea | The idea is challenged and a PRD is written |
+| 2 Type | Web/SaaS, mobile or backend; any AI features |
+| 3 Install | The chosen type and folder map are put in place |
+| 4 Stack | The type's decision catalog: database, auth, hosting… |
+| 5 Architecture | Data model, roles, services, unit economics |
+| 6 Board | The expert board is set up (cost is shown first) |
+| 7 Design | Style, color and type chosen from visual previews |
+| 8 Roadmap | Prioritized tasks, each led by its acceptance tests |
+| 9 Wrap-up | Summary and the first task |
 
-**Karar protokolü:** Her karar noktasında 2-4 seçenek gelir; önerilen ilk sıradadır ve her seçeneğin ne zaman daha iyi olduğu ve bedeli yazar. Geri dönüşü zor kararlarda (veritabanı, auth, ödeme, veri modeli) önce kurulun görüşü alınır. Kararlar `docs/decisions/log.md`'ye yazılır ve bir daha sorulmaz.
+**Decision protocol:** Each decision point offers 2-4 options; the recommended one comes first, and each option says when it's the better choice and what it costs. For decisions that are hard to reverse (database, auth, payments, data model) the board weighs in first. Decisions are logged in `docs/decisions/log.md` and never asked twice.
 
-## Uzman kurulu
+## Expert board
 
-Ürün tipine göre projene özel kurul ajanları oluşturulur. Kurul danışmandır; kritik bulgu (RET) varsa iş bitmez, sana sorulur.
+Board agents are generated for your project based on its type. The board advises; if it raises a critical finding (a veto), the work isn't done until you decide.
 
-| Tip | Önerilen kurul |
+| Type | Suggested board |
 |---|---|
-| Web / SaaS | Ürün · Mimar · Güvenlik · UX · Performans · KVKK · QA |
-| Mobil | Ürün · Mimar · Güvenlik · UX · Mobil Platform · KVKK · QA |
-| Backend | Ürün · Mimar · Güvenlik · API · DevOps · QA |
+| Web / SaaS | Product · Architect · Security · UX · Performance · Privacy · QA |
+| Mobile | Product · Architect · Security · UX · Mobile Platform · Privacy · QA |
+| Backend | Product · Architect · Security · API · DevOps · QA |
 
-| Toplantı | Ne zaman |
+| Meeting | When |
 |---|---|
-| Plan | `/plan-task` sonunda |
-| Görev sonu | `/build` sonunda |
-| Commit | Her commit'te (hafif, sadece değişiklik) |
-| Faz sonu, canlıya alma | `/board convene`, `/release first` |
+| Plan | End of `/plan-task` |
+| Task review | End of `/build` |
+| Commit | Every commit (light, diff only) |
+| Phase end, launch | `/board convene`, `/release first` |
 
-Önemli kararlarda **konsey** çalışır: farklı modeller aynı soruyu birbirinden habersiz cevaplar, birbirini anonim sıralar, başkan sonucu yazar. Sayımı kod yapar; son karar yine senindir.
+For important decisions a **council** runs: different models answer the same question independently, rank each other anonymously, and a chair writes the outcome. Code does the counting; the final call is still yours.
 
-## Bulgu raporları
+## Findings reports
 
-Projeyi bir uzman gözüyle tarar, en önemli **20 bulguyu** kanıt, puan (0-100) ve düzeltme yöntemiyle `docs/findings/` altına yazar. Her rapor bir öncekiyle karşılaştırılır ve panoda eğilim olarak görünür.
+Scans the project through an expert's eyes and writes the **top 20 findings** with evidence, a 0-100 score and a fix to `docs/findings/`. Each report is compared with the previous one and shown as a trend on the dashboard.
 
-| Komut | Bakış açısı | Örnek bulgu |
+| Command | Perspective | Example finding |
 |---|---|---|
-| `/findings-tech` | Kıdemli mimar | N+1 sorgu, tekrar eden yetki kontrolü |
-| `/findings-business` | Sektörün uzmanı | Eksik iade kuralı, rakiplerin standart özelliği |
-| `/findings-security` | Saldırgan | IDOR, istemciye sızan anahtar |
-| `/findings-ux` | UX araştırmacısı | Boş durum yok, yetersiz kontrast |
-| `/findings-perf` | Performans ve FinOps | Büyük paket, sınırsız AI maliyeti |
-| `/findings-legal` | Uyum uzmanı | Eksik rıza, envanterde olmayan kişisel veri |
-| `/findings-all` | Hepsi, paralel | Birleşik özet ve ortak düzeltme planı |
+| `/findings-tech` | Senior architect | N+1 queries, duplicated authorization checks |
+| `/findings-business` | Industry expert | Missing refund rule, a feature competitors treat as standard |
+| `/findings-security` | Attacker | IDOR, a key leaked to the client |
+| `/findings-ux` | UX researcher | No empty state, low contrast |
+| `/findings-perf` | Performance and FinOps | Large bundle, unbounded AI cost |
+| `/findings-legal` | Compliance expert | Missing consent, personal data not in the inventory |
+| `/findings-all` | All of them, in parallel | One summary and a shared fix plan |
 
-## Proje yapısı
+## Project structure
 
-Her proje bu düzende başlar ve bu düzende kalır. Kod özellik bazlıdır: bir özelliğe ait her şey `features/<özellik>/` altında durur.
+Every project starts in this layout and stays in it. Code is organized by feature: everything for a feature lives under `features/<feature>/`.
 
 ```
 .
-├── .claude/          # komutlar, ajanlar, hook'lar, kurul, klasör haritası
+├── .claude/          # commands, agents, hooks, board, folder map
 ├── .github/          # CI, Dependabot
 ├── docs/
-│   ├── product/      # PRD, yol haritası, sözlük, lansman
-│   ├── architecture/ # genel bakış, stack, yapı
-│   ├── decisions/    # karar günlüğü ve ADR'ler
-│   ├── quality/      # test planı, metrikler, retro
-│   ├── security/     # güvenlik kontrol listesi
-│   ├── operations/   # canlıya alma, dağıtım, bakım, hesaplar
-│   └── findings/     # bulgu raporları
-├── src/ veya app/    # özellik bazlı kod
+│   ├── product/      # PRD, roadmap, glossary, launch
+│   ├── architecture/ # overview, stack, structure
+│   ├── decisions/    # decision log and ADRs
+│   ├── quality/      # test plan, metrics, retros
+│   ├── security/     # security checklist
+│   ├── operations/   # release, deploy setup, maintenance, accounts
+│   └── findings/     # findings reports
+├── src/ or app/      # feature-based code
 ├── tests/
 └── AGENTS.md · CLAUDE.md · README.md · CHANGELOG.md
 ```
 
-Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosyaları engellenir; CI her PR'da yapıyı denetler.
+A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is blocked, and CI checks the structure on every PR.
 
-## Koruma katmanları
+## Guardrails
 
-| Katman | Ne yapar |
+| Guardrail | What it does |
 |---|---|
-| Sır engeli | Koda veya dokümana yazılan API anahtarını engeller |
-| Yıkıcı komut kalkanı | `DROP`, koşulsuz `DELETE`, `db reset` engellenir; prod deploy ve geri alma sorulur |
-| Paket kapısı | Var olmayan paketi engeller (kurulumda ve `npx`, `uvx` ile çalıştırmada); çok yeni veya popüler bir pakete benzeyeni sorar |
-| Yapı koruyucu | Harita dışı dosyayı sorar, dağınıklık dosyalarını engeller |
-| Test ayrımı | Test dosyasına yalnız `test-writer` ajanı yazar; ana oturum ve kod ajanı denerse engellenir |
-| Test koruması | Silinen, atlanan veya gevşetilen testi sorar |
-| Deterministik kapı | Lint, tip, test ve Semgrep çalışmadan commit açılmaz; koda yazılmış makineye özel yolu yakalar |
-| Commit kapısı | Kurul denetimi ve yeşil kapı olmadan commit atılmaz; patch veya betikle değişen test dosyası da durur |
-| Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazar |
-| Kapsam kalkanı | Onaylı planın dışındaki dosyaya yazım sorulur |
-| Yapılandırma onayı | Kural ve koruma dosyaları onayın olmadan değişmez |
-| Dev/prod ayrımı | AI ve yerel ortam sadece dev veritabanına bağlanır |
+| Secret guard | Blocks API keys written into code or docs |
+| Destructive-command shield | Blocks `DROP`, unconditional `DELETE`, `db reset`; asks before prod deploys and rollbacks |
+| Package gate | Blocks packages that don't exist (on install and on `npx`, `uvx` runs); asks about very new ones or lookalikes of popular ones |
+| Structure guard | Asks about files outside the map, blocks clutter files |
+| Test separation | Only the `test-writer` agent writes test files; the main session and the coding agent are blocked |
+| Test guard | Asks before a test is deleted, skipped or weakened |
+| Deterministic gate | No commit until lint, type check, tests and Semgrep have run; catches machine-specific paths written into code |
+| Commit gate | No commit without a board review and a green gate; a test file changed by a patch or a script stops it too |
+| Edit lock | With `/freeze <folder>` on, the AI writes only inside that folder |
+| Scope shield | Asks before writing to a file outside the approved plan |
+| Config approval | Rule and guard files never change without your approval |
+| Dev/prod split | The AI and the local setup connect to the dev database only |
 
-## Komutlar
+## Commands
 
-| Komut | Ne yapar |
+| Command | What it does |
 |---|---|
-| `/start [fikir]` | Dokuz adımlı başlangıç sihirbazı |
-| `/adopt` | Var olan projeyi kite alır, uyum yol haritası çıkarır |
-| `/plan-task [görev]` | Kararları sorar, kurul görüşüyle plan çıkarır |
-| `/build [görev]` | Önce kabul testleri, sonra kod, kanıt ve kurul denetimi |
-| `/design` | Görsel önizlemeli tasarım kararları |
-| `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |
-| `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme |
-| `/qa` | Arayüz kriterlerini gerçek tarayıcıda test eder |
-| `/findings-<tür>` | Bulgu raporları |
-| `/board` | Kurulu kurar, toplar; `council <soru>` ile konsey |
-| `/dashboard` | Kontrol paneli |
-| `/rollback` | Son çalışan hale döner |
-| `/freeze <klasör>` | Düzenlemeyi tek klasöre kilitler |
-| `/wrap-up` | Oturumu kapatır, ilerlemeyi kaydeder |
-| `/release [first]` | Canlıya alma kontrolleri; `first` hosting, alan adı, yedek ve geri almayı adım adım kurdurur |
-| `/maintain` | Haftalık, aylık, çeyreklik bakım |
-| `/retro` | Dersleri projeye ve kite geri yazar |
-| `/handoff` | Projeyi başkasına devreder veya devralır |
-| `/kit-update` | Projeyi kitin son sürümüne günceller |
-| `/language` | Konuşma dilini değiştirir |
+| `/start [idea]` | Nine-step kickoff wizard |
+| `/adopt` | Brings an existing project into the kit with an alignment roadmap |
+| `/plan-task [task]` | Asks the decisions, plans with the board |
+| `/build [task]` | Acceptance tests first, then code, proof and board review |
+| `/design` | Design decisions with visual previews |
+| `/review-changes` | Independent review and security agents |
+| `/fix-bug [symptom]` | Root cause, red test, fix |
+| `/qa` | Runs the UI criteria in a real browser |
+| `/findings-<type>` | Findings reports |
+| `/board` | Sets up and convenes the board; `council <question>` runs the council |
+| `/dashboard` | Dashboard |
+| `/rollback` | Returns to the last working state |
+| `/freeze <folder>` | Locks edits to one folder |
+| `/wrap-up` | Closes the session and saves progress |
+| `/release [first]` | Launch checks; `first` also walks you through hosting, domain, backups and rollback |
+| `/maintain` | Weekly, monthly and quarterly maintenance |
+| `/retro` | Writes lessons back to the project and the kit |
+| `/handoff` | Hands the project over or takes it over |
+| `/kit-update` | Updates the project to the latest kit |
+| `/language` | Changes the conversation language |
 
-Tüm komutlar, ayarlar, araçlar ve skill'ler **[rehberde](https://burakdogrul.github.io/TillerHand/kit/guide.html)**.
+Every command, setting, tool and skill is in the **[guide](https://burakdogrul.github.io/TillerHand/kit/guide.html)**.
 
-## Codex ve Antigravity
+## Codex and Antigravity
 
-Kit Claude Code için yazıldı; kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü, durum çubuğu ve commit kapısı bu araçlarda yok. Bu araçlar ajan kimliği bildirmediği için test ayrımı orada kural metninde kalır. Kurulum: `node <kit>/kit/kit.mjs init --tool codex` (veya `antigravity`).
+The kit is built for Claude Code; its rules, commands and guardrails also work in OpenAI Codex and Google Antigravity. There the board runs on a single model, and the question UI, status bar and commit gate are not available. These tools don't report which agent is running, so test separation stays a written rule there. Install with `node <kit>/kit/kit.mjs init --tool codex` (or `antigravity`).
 
-## Ölçüm
+## Measured
 
-Aynı görevler kitli ve kitsiz `claude -p` ile koşuldu, gizli testlerle puanlandı (3.18.2, Sonnet, 6 görev, koşul başına 24 koşu):
+The same tasks were run with and without the kit through `claude -p` and scored with hidden tests (3.18.2, Sonnet, 6 tasks, 24 runs per condition):
 
-- İki koşul da gizli testlerin hepsini geçti.
-- Kitin yazdığı testler, koda bilerek eklenen hataların **%63**'ünü yakaladı; kitsiz koşunun testleri **%31**'ini.
-- Kit her koşuda testi koddan önce yazdı; kitsiz koşu hiçbirinde yazmadı.
+- Both conditions passed every hidden test.
+- The kit's tests caught **63%** of bugs deliberately injected into the code; the tests written without the kit caught **31%**.
+- With the kit, tests came before the code in every run; without it, in none.
 
-## Lisans
+## License
 
 [MIT](LICENSE) © 2026 Burak Doğrul

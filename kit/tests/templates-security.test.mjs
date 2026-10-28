@@ -28,10 +28,10 @@ test('F-01 the RLS test is the same in the web and mobile templates, a required 
 test('F-01 the RLS test refuses to run against a non-local Supabase', () => {
   const remote = runRls({ API_URL: 'https://abcd.supabase.co', ANON_KEY: 'a', SERVICE_ROLE_KEY: 's' });
   assert.notEqual(remote.status, 0);
-  assert.match(remote.stdout + remote.stderr, /abcd\.supabase\.co yerel değil/);
+  assert.match(remote.stdout + remote.stderr, /abcd\.supabase\.co is not local/);
   const remoteDb = runRls({ API_URL: 'http://127.0.0.1:54321', ANON_KEY: 'a', SERVICE_ROLE_KEY: 's', DB_URL: 'postgresql://u:p@db.prod.com:5432/x' });
-  assert.match(remoteDb.stdout + remoteDb.stderr, /yerel değil/);
-  assert.match(runRls({}).stdout + runRls({}).stderr, /API_URL, ANON_KEY ve SERVICE_ROLE_KEY yok/);
+  assert.match(remoteDb.stdout + remoteDb.stderr, /is not local\. Do not run it against a dev or prod project/);
+  assert.match(runRls({}).stdout + runRls({}).stderr, /API_URL, ANON_KEY and SERVICE_ROLE_KEY are missing/);
 });
 
 test('F-04 no prod identity in templates: MCP points to the dev project, .env.example has a dev/prod note', () => {
@@ -53,7 +53,7 @@ test('F-07 the complexity budget is in all three templates\' CI, the refactor ro
 test('F-01 3.13.1 RLS test: does not skip without DB_URL in CI, verifies a change by rereading the row, states what is out of scope', () => {
   const ci = runRls({ API_URL: 'http://127.0.0.1:54321', ANON_KEY: 'a', SERVICE_ROLE_KEY: 's', CI: 'true' });
   assert.notEqual(ci.status, 0);
-  assert.match(ci.stdout + ci.stderr, /DB_URL yok/);
+  assert.match(ci.stdout + ci.stderr, /DB_URL is missing: CI cannot skip the table list/);
   const rls = read(`kit/templates/web-saas/${RLS}`);
   assert.match(rls, /assert\.deepEqual\(\(await admin\.from\(name\)\.select\(\)\.eq\(key, id\)\.single\(\)\)\.data, row/);
   assert.match(rls, /SECURITY DEFINER/);

@@ -5,7 +5,7 @@ argument-hint: <folder> | off | (empty = status)
 
 Lock: $ARGUMENTS
 
-- **If a folder is given:** Run `node .claude/hooks/freeze-guard.mjs --set <klasör>`. From then on, writing outside that folder with a file tool is blocked by the hook (except `docs/workflow/progress.md`); changing an existing file with a shell command (`sed -i`, `mv`, `>`) asks the user.
+- **If a folder is given:** Run `node .claude/hooks/freeze-guard.mjs --set <folder>`. From then on, writing outside that folder with a file tool is blocked by the hook (except `docs/workflow/progress.md`); changing an existing file with a shell command (`sed -i`, `mv`, `>`) asks the user.
 - **If `off`:** `node .claude/hooks/freeze-guard.mjs --off`.
 - **If empty:** `node .claude/hooks/freeze-guard.mjs --status` and report the result in one line.
 

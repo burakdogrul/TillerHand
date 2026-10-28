@@ -89,7 +89,7 @@ test('Ö-17.2 a server that is already running is used and left open', async () 
     fs.rmSync(log(), { force: true });
     const changed = preview();
     assert.equal(changed.status, 1, 'audit: an address changed after approval is not opened, even with a server up');
-    assert.match(changed.stdout, /komut onayı gerekli/);
+    assert.match(changed.stdout, /Preview · command approval needed/);
     assert.equal(calls(), '');
   } finally { own.kill(); }
 });
@@ -103,7 +103,7 @@ test('Ö-17.3 missing lines and an unapproved command: clear message, nothing ru
   agents(`node dev.mjs ${port} --yeni`);
   const unapproved = preview();
   assert.equal(unapproved.status, 1);
-  assert.match(unapproved.stdout, /komut onayı gerekli/);
+  assert.match(unapproved.stdout, /Preview · command approval needed/);
   assert.match(unapproved.stdout, /--yeni/, 'the user sees what they approve');
   assert.ok(!fs.existsSync(path.join(p, 'dev.pid')), 'an unapproved dev command does not run');
   const prompt = spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], { input: JSON.stringify({ tool_input: { command: 'node .claude/hooks/gate.mjs --approve' } }), encoding: 'utf8', env: env() });

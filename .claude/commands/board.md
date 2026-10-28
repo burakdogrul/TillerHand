@@ -8,8 +8,8 @@ Request: $ARGUMENTS
 First read `.claude/board/rules.md` and `docs/workflow/board.md`.
 
 - **Empty:** Show the board's status: members, the review role's model (`node .claude/hooks/models.mjs --show`), the last 5 meetings and their results, open critical findings, commit review on/off. If the board is not set up, propose `/board setup`.
-- **`setup`:** Apply rules.md §5. If the board already exists, ask what to do: add a member / remove a member / refresh the "Bu proje" (this project) sections for the current stack. The model does not change here: members work with the review role (`docs/workflow/models.md`).
-- **`convene <tür>`:** Apply rules.md §4.
+- **`setup`:** Apply rules.md §5. If the board already exists, ask what to do: add a member / remove a member / refresh the "This project" sections for the current stack. The model does not change here: members work with the review role (`docs/workflow/models.md`).
+- **`convene <type>`:** Apply rules.md §4.
   - `plan`: the last unapproved plan
   - `task`: the active task's changes (`git diff`)
   - `phase-end`: all changes of the active phase (`git log` and diff summary since the phase start)

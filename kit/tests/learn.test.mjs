@@ -79,5 +79,6 @@ test('Ö-21.3 /start asks about auto memory; off is recommended and lands in pro
   const start = read('.claude/commands/start.md');
   assert.match(start, /\*\*Auto memory\*\*/);
   assert.match(start, /\*\*Off \(Recommended\):\*\*[^\n]*`"autoMemoryEnabled": false`/);
-  assert.match(read('kit/guide.html'), /<h3>Öğrenen kurallar<\/h3>[^\n]*\/fix-bug/);
+  assert.match(read('kit/guide.html'), /<h3>Rules that learn<\/h3>[^\n]*\/fix-bug/);
+  assert.match(read('kit/guide.tr.html'), /<h3>Öğrenen kurallar<\/h3>[^\n]*\/fix-bug/);
 });

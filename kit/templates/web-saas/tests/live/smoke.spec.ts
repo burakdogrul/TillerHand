@@ -6,14 +6,14 @@ import { test, expect } from '@playwright/test';
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000';
 const MAX_MS = Number(process.env.LIVE_MAX_MS ?? 3000);
 
-test('canlı: ana sayfa açılıyor, yanıt süresi sınırda, konsolda hata yok', async ({ page }) => {
+test('live: home page opens, response time within the limit, no console errors',async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
   const start = Date.now();
   const response = await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   const ms = Date.now() - start;
-  expect(response?.ok(), `durum kodu ${response?.status()}`).toBe(true);
-  expect(ms, `ana sayfa ${ms} ms (sınır ${MAX_MS} ms)`).toBeLessThan(MAX_MS);
-  expect(errors, `konsol hatası: ${errors[0] ?? ''}`).toEqual([]);
+  expect(response?.ok(), `status code ${response?.status()}`).toBe(true);
+  expect(ms, `home page ${ms} ms (limit ${MAX_MS} ms)`).toBeLessThan(MAX_MS);
+  expect(errors, `console error: ${errors[0] ?? ''}`).toEqual([]);
 });

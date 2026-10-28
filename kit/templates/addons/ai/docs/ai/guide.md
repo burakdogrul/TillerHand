@@ -36,11 +36,11 @@ When a prompt or model changes, "I think it got better" is not enough.
 - [ ] Every call has a `max_tokens` limit.
 - [ ] There is a daily/monthly request or token limit per user; when it is exceeded, a clear message is shown.
 - [ ] A monthly spend limit and 50%/80% alarms are set in the provider's dashboard; recorded in the `docs/operations/spend-alarms.md` table.
-- [ ] Overall daily budget: warning at 80%, at 100% the AI feature's flag closes automatically (`docs/operations/spend-alarms.md` → "Uygulama içi koruma" (in-app protection)).
+- [ ] Overall daily budget: warning at 80%, at 100% the AI feature's flag closes automatically (`docs/operations/spend-alarms.md` → "In-app protection").
 - [ ] Prompt caching is used for repeated long context (system prompt, documents).
 - [ ] Every call is logged: feature, model, input/output tokens, duration, estimated cost, user id (not the content).
 
-## 5. Güvenlik (Security)
+## 5. Security
 
 - [ ] The API key is on the server only; the client does not call the provider directly.
 - [ ] **Assume prompt injection:** User input and content from outside (web page, email, file) is data, not instructions. The system prompt says this clearly; but this is not the only defense.
@@ -63,7 +63,7 @@ When a prompt or model changes, "I think it got better" is not enough.
 - [ ] An "AI can make mistakes" notice in the interface, and the user can edit/approve the output.
 - [ ] User feedback (👍/👎 or a "wrong" button) is logged; it is a source for the eval set.
 
-## Canlıya alma (go live; add-on)
+## Go live (add-on)
 
 - [ ] The eval set is above the acceptance threshold (note the result in the CHANGELOG)
 - [ ] The prod key is separate; the spend limit and alarm are set in the prod account
@@ -71,7 +71,7 @@ When a prompt or model changes, "I think it got better" is not enough.
 - [ ] Malicious cases (prompt injection, data exfiltration attempts) passed in the eval
 - [ ] Token and cost logs can be seen in the dashboard
 
-## Bakım (maintenance; add-on)
+## Maintenance (add-on)
 
 - Weekly: AI cost (total and the top 10 per user), error/timeout rate, 👎 feedback.
 - Monthly: Run the eval set again (even if the provider did not change behavior under the same model name), add new hard cases.

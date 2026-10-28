@@ -59,7 +59,7 @@ Files go under `marketing/motion/<ad>/`: `index.html`, `beats.json`, `render.mjs
 **Springs** are computed in closed form. If the target changes mid-flight, the new spring starts from the current position and velocity. `y` is the distance to the target, `ω` the natural frequency, `ζ` the damping ratio:
 
 ```js
-// y0: başlangıçtaki uzaklık, v0: başlangıç hızı, t: geçen süre (s)
+// y0: initial distance, v0: initial velocity, t: elapsed time (s)
 function yay(y0, v0, omega, zeta, t) {
   const e = Math.exp(-zeta * omega * t);
   if (zeta < 1) {
@@ -67,10 +67,10 @@ function yay(y0, v0, omega, zeta, t) {
     return { y: e * (y0 * c + ((v0 + zeta * omega * y0) / wd) * s),
              v: e * (v0 * c - ((omega * omega * y0 + zeta * omega * v0) / wd) * s) };
   }
-  return { y: (y0 + (v0 + omega * y0) * t) * e, v: (v0 - omega * (v0 + omega * y0) * t) * e }; // kritik sönüm
+  return { y: (y0 + (v0 + omega * y0) * t) * e, v: (v0 - omega * (v0 + omega * y0) * t) * e }; // critical damping
 }
-// Oturma süresi Ts (%2) ≈ 4 / (ζ·ω)  →  ω = 4 / (ζ·Ts)
-// Arayüz: ζ 0.7-0.8, Ts 0.3-0.45 s · Kamera: ζ ≈ 1.0
+// Settling time Ts (2%) ≈ 4 / (ζ·ω)  →  ω = 4 / (ζ·Ts)
+// UI: ζ 0.7-0.8, Ts 0.3-0.45 s · Camera: ζ ≈ 1.0
 ```
 
 **`render.mjs`** (Playwright)
@@ -96,6 +96,6 @@ With no audio, remove `-i track.wav` and `-shortest`. If a click track is needed
 
 1. Ask the inputs (§1).
 2. Show the **beat map** as a table and produce **4 still frames**: the opening state, two middle states, the loop seam (last frame and first frame side by side).
-3. Show the frames under `.previews/NN-motion/` and ask for approval with AskUserQuestion: Start / Change this. **Do not do a full render until the user says "başla" (start).**
+3. Show the frames under `.previews/NN-motion/` and ask for approval with AskUserQuestion: Start / Change this. **Do not do a full render until the user says "Start".**
 4. Render, run the determinism and loop seam tests, and show screenshots of 3 frames of the video.
 5. Write the decisions to `docs/decisions/log.md`. Write the video's path and how to reproduce it to `marketing/motion/<ad>/README.md`.

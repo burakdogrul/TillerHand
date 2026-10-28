@@ -127,7 +127,7 @@ test('session start: Codex additionalContext, Antigravity injectSteps', () => {
 test('command -> skill: name, description and body', () => {
   const s = commandToSkill('build', '---\ndescription: Görevi uygular: test eder.\nargument-hint: [görev kodu]\n---\n\nGörev: $ARGUMENTS\n');
   assert.match(s, /^---\nname: build\ndescription: "Görevi uygular: test eder."\n---\n/);
-  assert.match(s, /Beklenen: \[görev kodu\]/);
+  assert.match(s, /Expected: \[görev kodu\]/);
   assert.match(s, /Görev: \$ARGUMENTS\n$/);
 });
 
@@ -164,7 +164,7 @@ test('init --tool: files are generated per tool, no copies kept in the repo', ()
 
   const bad = spawnSync(process.execPath, [path.join(kit, 'kit', 'kit.mjs'), 'init', '--project', path.join(tmp, 'x'), '--tool', 'cursor'], { encoding: 'utf8' });
   assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /Geçersiz araç: cursor/);
+  assert.match(bad.stderr, /Invalid tool: cursor/);
 
   // Every script in the hook configs exists, and Antigravity tool names match what the layer knows
   for (const f of ['.codex/hooks.json', '.agents/hooks.json']) {

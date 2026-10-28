@@ -26,7 +26,7 @@ Done: … · Board: … · Auto decisions: …
 Next: … · pending decision: …
 ```
 
-9. **Know the user.** Follow the "Kişisel tercihler" (personal preferences) that arrive at session start (project rules come first). If the user corrects a behavior or says how they want to work (conversation, question frequency, report format, code style, things to avoid), note it briefly; do not break the flow. At the end of a task (`/build`) and at the end of a session (`/wrap-up`), ask about the notes with AskUserQuestion as a multi-select ("Save as a preference?"). Write the selected ones with `node .claude/hooks/prefs.mjs --add <konusma|sorular|raporlar|kod|kacin> "<preference>"`. Do not write without approval. Do not write secrets, personal data or the project name. A project-specific rule goes to "Öğrenilen kurallar" (learned rules), not to this file.
+9. **Know the user.** Follow the "Personal preferences" that arrive at session start (project rules come first). If the user corrects a behavior or says how they want to work (conversation, question frequency, report format, code style, things to avoid), note it briefly; do not break the flow. At the end of a task (`/build`) and at the end of a session (`/wrap-up`), ask about the notes with AskUserQuestion as a multi-select ("Save as a preference?"). Write the selected ones with `node .claude/hooks/prefs.mjs --add <konusma|sorular|raporlar|kod|kacin> "<preference>"`. Do not write without approval. Do not write secrets, personal data or the project name. A project-specific rule goes to "Öğrenilen kurallar" (learned rules), not to this file.
 
 <!-- kit:other-tools -->
 ## In Codex and Antigravity
@@ -56,7 +56,7 @@ The kit was written for Claude Code; these equivalents apply in these two tools:
 | `docs/operations/accounts.md`, `docs/product/unit-economics.md` | New external service, price or cost decision |
 | `docs/operations/feature-flags.md` | Payment, AI, bulk notification, data-deleting or large interface change |
 | `docs/product/feedback.md`, `docs/quality/metrics.md` | User feedback, retro, maintenance |
-| `docs/findings/<tür>/latest.md` | When working in the relevant area: known findings (`/findings-<tür>` reports) |
+| `docs/findings/<type>/latest.md` | When working in the relevant area: known findings (`/findings-<type>` reports) |
 
 ## Komutlar
 
@@ -93,4 +93,4 @@ Small, frequent commits. Message format: `type: description` (`feat`, `fix`, `re
 
 ## Öğrenilen kurallar
 
-> `/fix-bug` suggests when the same error class repeats, `/retro` suggests at the end of a period; added if you approve. Format: `- Kural. (kaynak: … · YYYY-AA-GG)`; the date is when it was added or last reviewed. At most ~10 lines. `/maintain monthly` reviews those older than 90 days.
+> `/fix-bug` suggests when the same error class repeats, `/retro` suggests at the end of a period; added if you approve. Format: `- Rule. (kaynak: … · YYYY-AA-GG)`; the date is when it was added or last reviewed. At most ~10 lines. `/maintain monthly` reviews those older than 90 days.

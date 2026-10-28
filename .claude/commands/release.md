@@ -5,7 +5,7 @@ argument-hint: [first] (empty = every-release check)
 
 Mode: $ARGUMENTS (empty = section A only, every release; `first` = sections A + B, first launch)
 
-Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.md` → "Canlıya alma" (go live), `docs/security/checklist.md` (all of it on first launch), and if present `docs/ai/guide.md` → "Canlıya alma" and `docs/product/launch.md`.
+Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.md` → "Go live (extra)", `docs/security/checklist.md` (all of it on first launch), and if present `docs/ai/guide.md` → "Go live (add-on)" and `docs/product/launch.md`.
 
 0. **Model and effort** (`docs/workflow/models.md`): ask the two screens from `/build` step 0b and record them. Audit agents (board, `security-auditor`) run with the review role.
 1. **Run what can be checked automatically:**
@@ -24,7 +24,7 @@ Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.m
    - Secret scan (`docs/security/checklist.md` §9)
    - Leftover `console.log` / `print` / `debugger` / `TODO` / test data in the code
    - Do `.env.example` and the environment variable uses in the code match?
-   - **Clean install test:** `git clone . "<temp folder>/temiz"` (committed files only). There, run in order the dependency install from `README.md` → "Kurulum" (install), the build and the tests (do not create `.env`; count steps that need environment variables as 👤). ❌ if the lock file, the version file (`.nvmrc` / `.python-version`) or a README step is missing. Delete the temp folder.
+   - **Clean install test:** `git clone . "<temp folder>/clean"` (committed files only). There, run in order the dependency install from `README.md` → "Installation", the build and the tests (do not create `.env`; count steps that need environment variables as 👤). ❌ if the lock file, the version file (`.nvmrc` / `.python-version`) or a README step is missing. Delete the temp folder.
    - Are there uncommitted changes?
    - Is `CHANGELOG.md` current?
    - Is there a pending DB migration?

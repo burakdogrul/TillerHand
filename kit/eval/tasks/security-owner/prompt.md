@@ -1,1 +1,1 @@
-Güvenlik: Şu an her kullanıcı başkasının notunu okuyabiliyor, değiştirebiliyor ve silebiliyor. Kullanıcı (`x-user` başlığı) sadece kendi notlarını listeleyebilmeli, okuyabilmeli, değiştirebilmeli ve silebilmeli. `x-user` başlığı olmayan veya boş olan istek 401 ile reddedilmeli. Düzelt.
+Security: right now every user can read, change and delete other people's notes. A user (the `x-user` header) must be able to list, read, change and delete only their own notes. A request with no `x-user` header, or an empty one, must be rejected with 401. Fix it.

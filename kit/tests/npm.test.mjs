@@ -52,7 +52,7 @@ test('Ö-09.1 the CLI runs when started through a symlink (npx on Linux/macOS: n
     const link = path.join(tmp, 'kit');
     try { fs.symlinkSync(path.join(REPO, 'kit'), link, 'junction'); } catch (e) { return t.skip(`no link: ${e.code}`); }
     const r = spawnSync(process.execPath, [path.join(link, 'kit.mjs'), '--help'], { encoding: 'utf8' });
-    assert.match(r.stdout + r.stderr, /Kullanım:/, 'a silent exit means the main-module check missed the symlink');
+    assert.match(r.stdout + r.stderr, /Usage:/, 'a silent exit means the main-module check missed the symlink');
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -81,10 +81,13 @@ test('Ö-09.1 npx tillerhand init sets up a project from the package: .gitignore
 
 test('the kit version is the same in the guide (top pill and footer) and both README badges', () => {
   const v = read('kit/VERSION').trim();
-  const guide = read('kit/guide.html');
-  assert.match(guide, new RegExp(`<b>v${v.replace(/\./g, '\\.')}</b>`), 'guide pill');
-  assert.match(guide, new RegExp(`<span>Sürüm ${v.replace(/\./g, '\\.')} ·`), 'guide footer');
-  for (const f of ['README.md', 'README.en.md']) assert.ok(read(f).includes(`-${v}-2a78d6`), `${f} badge`);
+  const ev = v.replace(/\./g, '\\.');
+  for (const [f, footer] of [['kit/guide.html', 'Version'], ['kit/guide.tr.html', 'Sürüm']]) {
+    const guide = read(f);
+    assert.match(guide, new RegExp(`<b>v${ev}</b>`), `${f} pill`);
+    assert.match(guide, new RegExp(`<span>${footer} ${ev} ·`), `${f} footer`);
+  }
+  for (const f of ['README.md', 'README.tr.md']) assert.ok(read(f).includes(`-${v}-2a78d6`), `${f} badge`);
 });
 
 test('3.29.0 no tracked file of the kit carries a path of the machine it was written on', async () => {

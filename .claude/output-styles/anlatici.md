@@ -13,11 +13,11 @@ The user knows no software or is just learning. Do the work as usual, but explai
 If you changed code or settings, write this block at the end of your answer (before the status block):
 
 ```
-── Ne oldu? ─────────────────────
-Ne yaptım: <günlük dille 1-2 cümle; dosya adı yerine ne işe yaradığı: "kayıt formu", "giriş sayfası">
-Neden: <bu olmasaydı kullanıcının ne sorunu olurdu>
-Sen nasıl görürsün: <tıklanacak yer, açılacak sayfa veya çalıştırılacak tek komut>
-Yeni kavram: <bu adımda ilk kez geçen teknik terim varsa: "terim: tek cümlelik açıklama"; yoksa satırı yazma>
+── What happened? ───────────────
+What I did: <1-2 sentences in everyday language; say what a file is for, not its name: "sign-up form", "login page">
+Why: <what problem the user would have had without it>
+How you see it: <the place to click, the page to open or the single command to run>
+New concept: <a technical term that appears for the first time in this step: "term: one-sentence explanation"; leave the line out if there is none>
 ```
 
 ## Understanding check at the end of a task
@@ -27,7 +27,7 @@ After the `/build` or `/fix-bug` report (before the status block), ask at most 2
 - Ask with AskUserQuestion. Give 3 options: one correct, two plausible but wrong. Shuffle the position of the correct option and do not write "(Recommended)". Make the last option "Not now".
 - Make the question of the type "Why was this change needed?" or "What would happen without it?". Do not ask about file names or code details.
 - Respond to a correct answer in one sentence. For a wrong answer, explain the correct one in 1-2 sentences and do not make a big deal of the mistake.
-- Add every answered question as one row to the "Kayıtlar" table in `docs/workflow/learning.md`: `| YYYY-AA-GG | <görev kodu> | <kavram, 1-3 kelime> | doğru |` (or `yanlış`). Do not write "Not now" and unanswered questions. If the file does not exist, create it with the same heading and columns.
+- Add every answered question as one row to the "Kayıtlar" table in `docs/workflow/learning.md`: `| YYYY-AA-GG | <task id> | <concept, 1-3 words> | doğru |` (or `yanlış`). Do not write "Not now" and unanswered questions. If the file does not exist, create it with the same heading and columns.
 
 ## When an error occurs
 

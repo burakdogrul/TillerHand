@@ -31,4 +31,4 @@
 
 ## Scoring note
 
-In business findings, "Etki" is scored on revenue, customer loss, reputation and operational cost. Write the "Nasıl düzeltilir" section in product language (which flow, which rule, which text) and add the technical effect in one sentence if needed.
+In business findings, "Impact" is scored on revenue, customer loss, reputation and operational cost. Write the "How to fix" section in product language (which flow, which rule, which text) and add the technical effect in one sentence if needed.

@@ -1,17 +1,17 @@
 ---
 name: init
-description: TillerHand kitini açık klasöre kurar (npx tillerhand init). Kullanıcı "TillerHand'i kur", "kiti bu projeye kur" dediğinde veya /tillerhand:init yazdığında kullan.
+description: Installs the TillerHand kit into the open folder (npx tillerhand init). Use when the user says "install TillerHand" ("TillerHand'i kur"), "install the kit in this project" ("kiti bu projeye kur") or types /tillerhand:init.
 ---
 
-# TillerHand kurulumu
+# TillerHand installation
 
-Bu plugin yalnızca kurulum yapar. Kitin kuralları, komutları ve korumaları projeye dosya olarak kopyalanır; plugin'in kendisi hook veya izin taşımaz.
+This plugin only installs. The kit's rules, commands and protections are copied into the project as files; the plugin itself carries no hooks or permissions.
 
-1. Açık klasörde `.kit.json` varsa kit zaten kurulu: kurulum yapma, güncelleme için `/kit-update` öner ve dur.
-2. Gereksinimleri kontrol et: `node --version` 18 veya üstü, `git --version` çalışıyor. Eksikse kullanıcıya neyi kurması gerektiğini söyle (nodejs.org LTS, git-scm.com) ve dur.
-3. Klasör boş değilse ve içinde kod varsa bunu söyle: kit mevcut dosyaların üzerine yazmaz, çakışanların yanına `.kit-new` koyar; kurulumdan sonra `/start` yerine `/adopt` kullanılır.
-4. Klasörün tam yolunu göster (ev klasörü veya masaüstü gibi bir yerse uyar) ve onay al: "<yol> klasörüne `.claude/`, `CLAUDE.md`, `AGENTS.md` ve `docs/` kopyalanacak, `.gitignore`'a satır eklenecek, git deposu yoksa açılacak."
-5. Onay gelirse çalıştır: `npx --yes tillerhand@latest init`. Hangi araçla (Claude Code, Codex, Antigravity) çalışılacağı `/start` sırasında sorulur.
-6. Çıktıyı özetle ve son adımı söyle: kitin komutları ve korumaları yeni oturumda yüklenir. Aynı klasörde yeni bir oturum aç, sonra boş projede `/start <fikrin>`, kodu olan projede `/adopt` yaz.
+1. If the open folder has `.kit.json`, the kit is already installed: do not install, suggest `/kit-update` for updating, and stop.
+2. Check the requirements: `node --version` is 18 or higher and `git --version` works. If one is missing, tell the user what to install (nodejs.org LTS, git-scm.com) and stop.
+3. If the folder is not empty and has code in it, say so: the kit does not overwrite existing files, it puts `.kit-new` next to conflicting ones; after the install, use `/adopt` instead of `/start`.
+4. Show the full path of the folder (warn if it is a place like the home folder or the desktop) and get approval: "`.claude/`, `CLAUDE.md`, `AGENTS.md` and `docs/` will be copied into <path>, a line will be added to `.gitignore`, and a git repository will be created if there is none."
+5. If approved, run: `npx --yes tillerhand@latest init`. Which tool (Claude Code, Codex, Antigravity) will be used is asked during `/start`.
+6. Summarize the output and give the last step: the kit's commands and protections load in a new session. Open a new session in the same folder, then type `/start <your idea>` in an empty project or `/adopt` in a project with code.
 
-Kurulumdan sonra bu plugin'e ihtiyaç kalmaz; istenirse `/plugin` menüsünden kapatılabilir.
+After the install, this plugin is no longer needed; it can be turned off from the `/plugin` menu if you like.

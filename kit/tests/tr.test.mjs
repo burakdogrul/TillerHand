@@ -54,7 +54,7 @@ test('Ö-26.1 an existing project gets the addon with update --addons tr; a seco
     for (const f of ['docs/legal/turkiye.md', 'src/lib/payments/webhook-signature.ts', 'tests/security/payment-webhook.mjs']) assert.ok(exists(p, f), f);
     const env = () => fs.readFileSync(path.join(p, '.env.example'), 'utf8');
     assert.equal(env().match(/^IYZICO_SECRET_KEY=$/gm)?.length, 1, 'the per-type .append is applied on update too');
-    assert.match(run(process.execPath, [KIT, 'update', '--project', p, '--addons', 'tr']).stdout, /Değişiklik yok/);
+    assert.match(run(process.execPath, [KIT, 'update', '--project', p, '--addons', 'tr']).stdout, /No changes\./);
     assert.equal(env().match(/^IYZICO_SECRET_KEY=$/gm)?.length, 1, 'not appended twice');
   } finally {
     fs.rmSync(p, { recursive: true, force: true });

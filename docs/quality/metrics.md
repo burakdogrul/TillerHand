@@ -7,7 +7,7 @@
 ## Definitions
 
 - **Completed tasks:** The number of roadmap tasks checked off in the period.
-- **Avg. task duration (min):** The average of "Süre (dk)" (duration, min) in `docs/workflow/cost-log.md`.
+- **Avg. task duration (min):** The average of "Time (min)" in `docs/workflow/cost-log.md`.
 - **Avg. limit cost (%):** The average 5-hour usage difference in the same log.
 - **Fix rate (%):** `fix` commits in the period ÷ (`feat` + `fix`). If high, new features break often.
 - **Rollbacks:** The number of `revert` commits in the period.

@@ -3,7 +3,7 @@
 > This file is loaded into the AI every session. If the project makes a different choice, update this file
 > and write the reason to `docs/decisions/log.md`.
 
-## Karar noktaları (decision points)
+## Decision points
 
 `/start` asks these decisions in order (`docs/workflow/decision-protocol.md`). For each decision, offer the 2-4 options that fit this project best. The **recommended** label is the default, but if another option fits the PRD better, recommend that one and say why. A claim that can change (price, free tier, limit) with a `(kaynak: <adres>, YYYY-AA-GG)` note newer than 90 days is not researched again.
 
@@ -55,7 +55,7 @@ uv run --with pip-audit pip-audit                            # dependency vulner
 docker build -t [ad] . && docker run --env-file .env -p 8000:8000 [ad]
 ```
 
-## Klasör yapısı (folder structure)
+## Folder structure
 
 Feature-based structure and rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is asked about, CI checks it).
 ```
@@ -81,7 +81,7 @@ tests/
 Dockerfile  pyproject.toml  uv.lock
 ```
 
-## Kodlama kuralları (coding rules)
+## Coding rules
 
 - Keep the router thin; business logic goes in `services/`.
 - Every endpoint has a Pydantic input schema; the response has a schema too (internal fields must not leak).
@@ -94,7 +94,7 @@ Dockerfile  pyproject.toml  uv.lock
 - Review migrations by hand; `autogenerate` does not catch everything correctly.
 - Do not use a synchronous, blocking library in an async endpoint.
 
-## Doğrulama (verification: evidence before a task is done)
+## Verification (evidence before a task is done)
 
 - Endpoint: run the server, then use `curl -i` (or httpx) for the main scenario + an unauthorized request + invalid input. Show the request and the response.
 - Job/cron: trigger the job by hand once, show the log and its effect in the DB; run it twice and show it is idempotent.
@@ -120,7 +120,7 @@ uv run pytest --junitxml=test-results/junit.xml
 
 **Feature flags** (`docs/operations/feature-flags.md`): An emergency shutoff must not need a redeploy. Use a `feature_flags` table in the database (`ad`, `acik`, `yuzde`, `guncellendi`) + a 60 s in-process cache. Reading happens in one place: `app/services/bayrak.py` → `bayrak_acik("ad", kullanici_id)`. Changing a flag is done through an admin endpoint or SQL and is logged.
 
-## Sık yapılan AI hataları (common AI mistakes; watch for these)
+## Common AI mistakes (watch for these)
 
 - Writing a machine-specific absolute path into code, a test or a setting (`C:\Users\<ad>\…`, `/home/<ad>/…`, the full path of the project folder): it does not work on another machine. Derive the path with `Path(__file__).parent`, a root from settings, or `tmp_path` in a test. The deterministic gate catches this.
 - Mixing Pydantic v1 syntax (`class Config`, `.dict()`) with v2.
@@ -129,7 +129,7 @@ uv run pytest --junitxml=test-results/junit.xml
 - Writing a cron job inside the server as `while True: sleep` (lost on restart, cannot be monitored).
 - Not closing the DB session, exhausting the connection pool.
 
-## Güvenlik (security; extra)
+## Security (extra)
 
 - [ ] Authentication: JWT verification (signature + expiry + issuer) or an API key (stored hashed).
 - [ ] Rate limit (slowapi or reverse proxy).
@@ -137,7 +137,7 @@ uv run pytest --junitxml=test-results/junit.xml
 - [ ] CORS allowlist.
 - [ ] The Docker image runs as a non-root user, and the image has no `.env`.
 
-## Canlıya alma (go live; extra)
+## Go live (extra)
 
 - [ ] Dockerfile: multi-stage, non-root user, `HEALTHCHECK`
 - [ ] The platform health check points to `/health`
@@ -149,7 +149,7 @@ uv run pytest --junitxml=test-results/junit.xml
 - [ ] A simple load trial (`hey`, `k6`): no errors at 3 times the expected traffic
 - [ ] Response time target: p95 < 500 ms (main endpoints)
 
-## Bakım (maintenance; extra)
+## Maintenance (extra)
 
 - Weekly: did the cron jobs succeed, is the queue backing up, the 5xx rate.
 - Monthly: `uv lock --upgrade` + tests, `uv run --with pip-audit pip-audit`, slow queries (`pg_stat_statements`).

@@ -1,7 +1,7 @@
 # Skill Routing
 
 > Which skill to use for which job? Load the skill with the Skill tool and apply its instructions.
-> This project defines the plugins below in `.claude/settings.json`; Claude Code suggests installing them when it opens the project. Those outside the core come switched off as packages (see "Bağlam paketleri" below).
+> This project defines the plugins below in `.claude/settings.json`; Claude Code suggests installing them when it opens the project. Those outside the core come switched off as packages (see "Context packages" below).
 > If a skill is not installed, do the job without it, write "skill missing: X" in the status block and give the user the install command:
 > `/plugin install <plugin>@<marketplace>` (e.g. `/plugin install impeccable@impeccable`).
 
@@ -49,7 +49,7 @@
 | **Maestro**, **Expo** | Mobile E2E tests, EAS build, crash logs | In mobile |
 | GitHub, Stripe, Vercel, PostHog, Figma… | When the service is chosen | Catalog: `docs/workflow/mcp-catalog.md` |
 
-## Bağlam paketleri
+## Context packages
 
 The skill descriptions of every plugin that is on are loaded into the context in each session. The skill list is limited to 1% of the context; when it overflows, the descriptions of rarely used skills drop and Claude does not recognize them. Skills inside a plugin cannot be switched off one by one. So plugins are split into **core** and **packages**. Packages come switched off in `.claude/settings.json`; in its first step the related command checks with `node .claude/hooks/tools.mjs --required <paket>` and, if the package is off, asks to switch it on together with its cost. Switching on affects only this machine (`.claude/settings.local.json`). Management: `/tools`. Definitions: `.claude/hooks/tools.mjs` → `PACKAGES`.
 
@@ -91,7 +91,7 @@ The skill descriptions of every plugin that is on are loaded into the context in
 | Trying out a state model or flow (throwaway prototype) | `mattpocock-skills:prototype` |
 | Setup the user must do by hand (panel, DNS, key, store account) | `mattpocock-skills:wizard` |
 
-## Tasarım (web and mobile UI)
+## Design (web and mobile UI)
 
 First the style direction is chosen (`/design`). Each direction maps to a skill; previews and implementation are done with that skill. Product context and the design system are always kept in Impeccable (`PRODUCT.md`, `DESIGN.md`).
 
@@ -127,7 +127,7 @@ First the style direction is chosen (`/design`). Each direction maps to a skill;
 
 | Situation | Skill / file |
 |---|---|
-| `/findings-<tür>` (tech, business, security, ux, perf, legal, all) | Method `.claude/findings/protocol.md`, lens `.claude/findings/lenses/<tür>.md` |
+| `/findings-<type>` (tech, business, security, ux, perf, legal, all) | Method `.claude/findings/protocol.md`, lens `.claude/findings/lenses/<type>.md` |
 | Deep security scan (`/findings-security`) | `/claude-security` (Anthropic, multi-agent, findings verified) |
 | Security depth | Trail of Bits: `differential-review`, `insecure-defaults`, `sharp-edges`, `static-analysis`, `supply-chain-risk-auditor`, `agentic-actions-auditor`, `fp-check` |
 | Business and legal research | `source-research` + web search |
@@ -142,7 +142,7 @@ First the style direction is chosen (`/design`). Each direction maps to a skill;
 | Critical flow (auth, payment, data writes; `docs/quality/test-plan.md` K1-K5) | `mattpocock-skills:tdd` (the `test-writer` agent writes the red test, the code side turns it green) |
 | Return a broken project to the last working state | `/rollback` (`checkpoint.mjs`) |
 | Explain every step to a new user | Narrator mode: `.claude/output-styles/anlatici.md` (`outputStyle: anlatici`) |
-| Debugging (`/fix-bug`) | `mattpocock-skills:diagnosing-bugs` + `/freeze <klasör>` |
+| Debugging (`/fix-bug`) | `mattpocock-skills:diagnosing-bugs` + `/freeze <folder>` |
 | Change review (`/review-changes`) | `ponytail:ponytail-review` + `code-reviewer` agent (+ `security-auditor`) |
 | Conformance review against task/spec (branch or PR) | `mattpocock-skills:code-review` |
 | Quality audit of the whole codebase (`/release first`, `/maintain quarterly`) | `ponytail:ponytail-audit` |
