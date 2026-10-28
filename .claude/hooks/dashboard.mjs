@@ -201,6 +201,8 @@ const feedLabel = (k) => (Object.hasOwn(FEED_KEYS, k) ? L(FEED_KEYS[k]) : k);
 const onOff = (v) => (isValue(v, 'on') ? L('dashboard.on') : isValue(v, 'off') ? L('dashboard.off') : v);
 // A text for the page's own script: a single-quoted JS string, no tag can end the script block
 const jsStr = (key) => `'${L(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\u003c')}'`;
+// A board verdict in either language; an option name (decision council) or anything else is shown as good
+const verdictBadge = (k) => badge({ conditional: 'warn', reject: 'critical' }[verdict(k)] ?? 'good', k);
 const badge = (sev, caption) => `<span class="badge ${sev}"><span class="ic" aria-hidden="true">${SEV[sev][0]}</span> ${e(caption ?? L(SEV[sev][1]))}</span>`;
 const fmtDate = (t) => { const z = toDate(t); return Number.isNaN(z.getTime()) ? e(t) : z.toLocaleString(loc, { day: '2-digit', month: 'short', hour: t.length > 10 ? '2-digit' : undefined, minute: t.length > 10 ? '2-digit' : undefined }); };
 const limitSeverity = (p, k) => (p == null ? 'info' : p >= THRESHOLDS[k].red ? 'critical' : p >= THRESHOLDS[k].yellow ? 'warn' : 'good');
@@ -252,13 +254,13 @@ const boardSection = `
 </div>
 <section class="card"><h3>${L('dashboard.councilHeading')}</h3>${councils.length ? (() => {
   const latest = councils[0];
-  const decisionBadge = (k) => (!k ? badge('info', L('dashboard.noDecision')) : /KOŞULLU/i.test(k) ? badge('warn', k) : /RET/i.test(k) ? badge('critical', k) : badge('good', k));
+  const decisionBadge = (k) => (!k ? badge('info', L('dashboard.noDecision')) : verdictBadge(k));
   return `<h4>${L('dashboard.latestCouncil', { topic: md(latest.topic) })}</h4><div class="kpis mini">${kpi(L('dashboard.th.decision'), decisionBadge(latest.decision))}${kpi(L('dashboard.th.consensus'), latest.consensus == null ? '-' : `%${latest.consensus}`, latest.consensus != null && latest.consensus < 60 ? badge('warn', L('dashboard.low')) : '')}${kpi(L('dashboard.kpiDisputed'), latest.disputed)}${kpi(L('dashboard.kpiEliminated'), latest.eliminated, L('dashboard.byCrossVote'))}</div>
   ${latest.ranking.length ? `<h4>${L('dashboard.overallRanking')}</h4><div class="rows">${latest.ranking.map((r, i) => `<div class="row"><span><b>${i + 1}.</b> ${L('dashboard.opinion', { letter: e(r.opinion) })}${r.who ? ` <span class="muted small">${e(r.who)}</span>` : ''}</span><span class="num muted">${L('dashboard.avg', { average: e(r.average) })}</span></div>`).join('')}</div>` : ''}
   <div class="tw"><table><thead><tr><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.kind')}</th><th>${L('dashboard.th.topic')}</th><th>${L('dashboard.th.decision')}</th><th>${L('dashboard.th.consensus')}</th><th>${L('dashboard.th.minutes')}</th></tr></thead><tbody>${councils.slice(0, 10).map((k) => `<tr><td class="num nw">${e(k.date)}</td><td>${e(k.kind)}</td><td>${md(k.topic)}</td><td>${decisionBadge(k.decision)}</td><td class="num">${k.consensus == null ? '-' : `%${k.consensus}`}</td><td><a href="${k.file.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">${L('dashboard.open')}</a></td></tr>`).join('')}</tbody></table></div>`;
-})() : empty(L('dashboard.noCouncil'), '/board council <soru>')}</section>
+})() : empty(L('dashboard.noCouncil'), '/board council <question>')}</section>
 <section class="card"><h3>${L('dashboard.meetingLog')}</h3>${d.board.meetings.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.kind')}</th><th>${L('dashboard.th.scope')}</th><th>${L('dashboard.th.attendees')}</th><th>${L('dashboard.th.result')}</th><th>${L('dashboard.th.critical')}</th><th>${L('dashboard.th.userDecision')}</th></tr></thead><tbody>
-${[...d.board.meetings].reverse().map((t) => `<tr><td class="num">${e(t.no)}</td><td class="num nw">${e(t.date)}</td><td>${e(t.kind)}</td><td>${md(t.scope)}</td><td>${e(t.attendees)}</td><td>${/KOŞULLU/i.test(t.result) ? badge('warn', t.result) : /RET/i.test(t.result) ? badge('critical', t.result) : badge('good', t.result)}</td><td>${md(t.critical)}</td><td>${md(t.decision)}</td></tr>`).join('')}
+${[...d.board.meetings].reverse().map((t) => `<tr><td class="num">${e(t.no)}</td><td class="num nw">${e(t.date)}</td><td>${e(t.kind)}</td><td>${md(t.scope)}</td><td>${e(t.attendees)}</td><td>${verdictBadge(t.result)}</td><td>${md(t.critical)}</td><td>${md(t.decision)}</td></tr>`).join('')}
 </tbody></table></div>` : empty(L('dashboard.noMeetings'))}</section>`;
 
 const quality = `

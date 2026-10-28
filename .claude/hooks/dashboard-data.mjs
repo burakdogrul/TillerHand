@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readText, sections, tableRows, labels } from './status-read.mjs';
+import { readText, sections, findSection, tableRows, labels } from './status-read.mjs';
 import { normalize, isValue, VALUES } from './labels.mjs';
 import { t } from './lang.mjs';
 
@@ -316,17 +316,21 @@ export function councilMinutes(root) {
     const text = readText(path.join(folder, f));
     const a = {};
     for (const [, k, v] of text.matchAll(/\*\*([^*:]+):\*\*\s*([^·\n]*)/g)) a[k.trim()] ??= v.trim();
-    const ranking = tableRows(sections(text)['3. Toplu sıralama'], 3).filter(([g]) => /^[A-Z]$/.test(g));
-    const idsByLetter = Object.fromEntries([...(sections(text)['Kimlikler'] ?? '').matchAll(/([A-Z])\s*=\s*([^·\n]+)/g)].map((m) => [m[1], m[2].trim()]));
+    // English minutes, or Turkish ones written before 3.48 (they stay as they are: a council record is history)
+    const pick = (en, tr) => a[en] ?? a[tr];
+    const b = sections(text);
+    const ranking = tableRows(findSection(b, '3.'), 3).filter(([g]) => /^[A-Z]$/.test(g));
+    const idsByLetter = Object.fromEntries([...(b['IDs'] ?? b['Kimlikler'] ?? '').matchAll(/([A-Z])\s*=\s*([^·\n]+)/g)].map((m) => [m[1], m[2].trim()]));
+    const consensus = pick('Consensus', 'Uzlaşma')?.match(/\d+/)?.[0];
     return {
       file: `docs/workflow/council/${f}`,
-      topic: text.match(/^#\s+Konsey:\s*(.+)$/m)?.[1] ?? f.replace(/\.md$/, ''),
-      date: a['Tarih'] ?? f.slice(0, 10),
-      kind: a['Tür'] ?? a['Type'] ?? '-',
-      decision: a['Karar'] || a['Öneri'] || null,
-      consensus: a['Uzlaşma']?.match(/\d+/) ? Number(a['Uzlaşma'].match(/\d+/)[0]) : null,
-      disputed: Number(a['Tartışmalı'] ?? 0) || 0,
-      eliminated: Number(a['Elenen'] ?? 0) || 0,
+      topic: text.match(/^#\s+(?:Council|Konsey):\s*(.+)$/m)?.[1] ?? f.replace(/\.md$/, ''),
+      date: pick('Date', 'Tarih') ?? f.slice(0, 10),
+      kind: pick('Type', 'Tür') ?? '-',
+      decision: pick('Decision', 'Karar') || pick('Recommendation', 'Öneri') || null,
+      consensus: consensus ? Number(consensus) : null,
+      disputed: Number(pick('Disputed', 'Tartışmalı') ?? 0) || 0,
+      eliminated: Number(pick('Eliminated', 'Elenen') ?? 0) || 0,
       ranking: ranking.map(([g, avg]) => ({ opinion: g, who: idsByLetter[g] ?? null, average: avg })),
     };
   }).sort((x, y) => y.date.localeCompare(x.date) || y.file.localeCompare(x.file));
