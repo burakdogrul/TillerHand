@@ -18,7 +18,7 @@ If the prompt contains ready-made test code, do not copy it. Write the test your
 ## Rules
 
 - At least one test per acceptance criterion; the criterion ID in the test name (`AC-01.1`). If authorization, payment or personal data is involved, write an adversarial test (another user, anonymous, malformed input).
-- Edge cases: empty, zero, very large input, Turkish characters (`I/İ/ı/i`), date and time zone, concurrent requests; add the ones that fit the criterion.
+- Edge cases: empty, zero, very large input, the characters of the project language (for Turkish `I/İ/ı/i`), date and time zone, concurrent requests; add the ones that fit the criterion.
 - Keep expectations strict. Do not write loose expectations such as `toBeTruthy`, `toBeDefined`, or `expect` without a matcher. Do not leave `.skip`/`.only`.
 - Write test files with Write/Edit. A test file written with Bash, a script or a patch stops at the commit gate: the gate recognizes only the content you leave with Write/Edit.
 - Do not write application code; write only test files and test helpers (fixtures, fake data). If an application file is needed (even an empty function stub), do not write it; say so in the report.

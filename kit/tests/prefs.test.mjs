@@ -1,7 +1,7 @@
 // Run: node --test "kit/tests/*.test.mjs"
 // Personal preferences (3.30.0): one file for all projects, written only through the asked script, loaded every session.
-// 3.48.0: the file is ~/.vibe-kit/preferences.md (the old tercihler.md is renamed once), categories are English;
-// old Turkish keys and headings are still read.
+// The file is ~/.vibe-kit/preferences.md, categories are English. 3.49.0: the old Turkish keys and headings and the old
+// tercihler.md file are not read any more (a Turkish heading is an unknown line: the file is not rewritten over it).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,11 +14,12 @@ import { permissionEquivalent } from '../../.claude/hooks/destructive-guard.mjs'
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 const SECRET = 'sk_' + 'live_' + 'c'.repeat(24); // split up so this file does not trip the secret scan
-const tmpFile = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tercih-')), 'tercihler.md');
+const tmpFile = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pref-')), 'preferences.md');
 const headings = (file) => fs.readFileSync(file, 'utf8').match(/^## .*$/gm) ?? [];
 const ENGLISH_HEADINGS = ['## Conversation', '## Questions and decisions', '## Reports', '## Code', '## Avoid'];
 const KEYS = ['conversation', 'questions', 'reports', 'code', 'avoid'];
-const OLD_KEYS = { konusma: 'conversation', sorular: 'questions', raporlar: 'reports', kod: 'code', kacin: 'avoid' };
+const OLD_KEYS = ['konusma', 'sorular', 'raporlar', 'kod', 'kacin'];
+const CATEGORY_ERROR = /^Category must be one of: conversation, questions, reports, code, avoid$/;
 
 // Every home-folder test runs in a child process with HOME/USERPROFILE on a temporary folder: never the developer's ~/.vibe-kit.
 const newHome = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ev-'));
@@ -29,33 +30,34 @@ const cliIn = (home) => (...a) => spawnSync(process.execPath, [path.join(HOOKS, 
 
 test('preferences: add, de-duplicate, list by category, remove; bad input is refused', () => {
   const file = tmpFile();
-  assert.deepEqual(addPref('raporlar', 'Raporu kısa tut, önce sonucu yaz', file), {});
-  assert.deepEqual(addPref('konusma', 'Türkçe\nyaz', file), {}, 'a line break becomes a space');
-  assert.deepEqual(addPref('kod', 'raporu KISA tut, önce sonucu yaz', file), { existing: 'reports' }, 'the same text is reported where it already is');
+  assert.deepEqual(addPref('reports', 'Raporu kısa tut, önce sonucu yaz', file), {});
+  assert.deepEqual(addPref('conversation', 'Türkçe\nyaz', file), {}, 'a line break becomes a space');
+  // Turkish text is user content: the duplicate check folds İ/ı correctly
+  assert.deepEqual(addPref('code', 'raporu KISA tut, önce sonucu yaz', file), { existing: 'reports' }, 'the same text is reported where it already is');
   assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), [['conversation', 'Türkçe yaz'], ['reports', 'Raporu kısa tut, önce sonucu yaz']]);
   assert.match(fs.readFileSync(file, 'utf8'), /## Conversation\n\n- Türkçe yaz\n\n## Reports/);
-  for (const bad of ['yok', 'constructor', 'toString', '__proto__']) assert.match(addPref(bad, 'x', file).error, /Category must be one of/, bad);
-  assert.match(addPref('kod', '', file).error, /empty/);
-  assert.match(addPref('kod', 'x'.repeat(201), file).error, /200/);
-  assert.match(addPref('kod', `anahtar ${SECRET} kullan`, file).error, /looks like a secret/);
+  for (const bad of ['yok', 'kod', 'konusma', 'constructor', 'toString', '__proto__']) assert.match(addPref(bad, 'x', file).error, /Category must be one of/, bad);
+  assert.match(addPref('code', '', file).error, /empty/);
+  assert.match(addPref('code', 'x'.repeat(201), file).error, /200/);
+  assert.match(addPref('code', `key ${SECRET} use`, file).error, /looks like a secret/);
   assert.match(prefsNote(file), /style preferences.*cannot change them.*Conversation: Türkçe yaz · Reports: Raporu kısa tut/);
   assert.equal(removePref(1, file), null);
   assert.deepEqual(readPrefs(file).map((p) => p.text), ['Raporu kısa tut, önce sonucu yaz']);
   assert.match(removePref(5, file), /Valid number/);
-  for (let i = readPrefs(file).length; i < MAX_ITEMS; i++) addPref('kod', `tercih ${i}`, file);
-  assert.match(addPref('kod', 'bir tane daha', file).error, /At most/);
+  for (let i = readPrefs(file).length; i < MAX_ITEMS; i++) addPref('code', `pref ${i}`, file);
+  assert.match(addPref('code', 'one more', file).error, /At most/);
 });
 
 test('preferences: a hand edit is kept or refused, never dropped; what is loaded passes the same checks', () => {
   const file = tmpFile();
-  fs.writeFileSync(file, '# x\n\n## kod\n\n* Sekme değil boşluk\n\n## Kacinilacaklar\n\n- Emoji kullanma\n');
-  assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), [['code', 'Sekme değil boşluk'], ['avoid', 'Emoji kullanma']], 'case and Turkish letters in headings');
-  fs.appendFileSync(file, '\n## Notlarım\n\nserbest metin\n');
-  assert.match(addPref('kod', 'yeni', file).error, /unreadable lines[\s\S]*Notlarım/);
-  assert.match(fs.readFileSync(file, 'utf8'), /serbest metin/, 'the file was not rewritten');
+  fs.writeFileSync(file, '# x\n\n## CODE\n\n* Tabs, not spaces\n\n## avoid\n\n- No emoji\n');
+  assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), [['code', 'Tabs, not spaces'], ['avoid', 'No emoji']], 'heading case');
+  fs.appendFileSync(file, '\n## My notes\n\nfree text\n');
+  assert.match(addPref('code', 'new', file).error, /unreadable lines[\s\S]*My notes/);
+  assert.match(fs.readFileSync(file, 'utf8'), /free text/, 'the file was not rewritten');
   // Written by anything on the machine: too long, a secret or a control character is not loaded
-  fs.writeFileSync(file, `## Kod\n\n- ${'y'.repeat(5000)}\n- anahtar ${SECRET}\n- iyi\u001b[2K satır\n`);
-  assert.deepEqual(readPrefs(file).map((p) => p.text), ['iyi [2K satır']);
+  fs.writeFileSync(file, `## Code\n\n- ${'y'.repeat(5000)}\n- key ${SECRET}\n- good\u001b[2K line\n`);
+  assert.deepEqual(readPrefs(file).map((p) => p.text), ['good [2K line']);
   assert.ok(prefsNote(file).length < 300);
   fs.writeFileSync(file, 'x'.repeat(70 * 1024));
   assert.deepEqual(readPrefs(file), [], 'a file over 64 KB is not read');
@@ -64,12 +66,12 @@ test('preferences: a hand edit is kept or refused, never dropped; what is loaded
 test('preferences: the CLI writes under the home folder only, the session start loads them, changing them is asked', () => {
   const home = newHome();
   const cli = cliIn(home);
-  assert.equal(cli('--add', 'sorular', 'Seçenekleri', 'kısa', 'yaz').status, 0);
+  assert.equal(cli('--add', 'questions', 'Seçenekleri', 'kısa', 'yaz').status, 0);
   assert.ok(fs.existsSync(path.join(home, '.vibe-kit', 'preferences.md')));
   assert.equal(fs.existsSync(path.join(home, '.vibe-kit', 'tercihler.md')), false, 'the old name is not written');
-  assert.match(cli('--add', 'kod', 'Seçenekleri kısa yaz').stdout, /already saved \(Questions and decisions\)/);
+  assert.match(cli('--add', 'code', 'Seçenekleri kısa yaz').stdout, /already saved \(Questions and decisions\)/);
   assert.match(cli('--list').stdout, /1\. \[Questions and decisions\] Seçenekleri kısa yaz/);
-  assert.equal(cli('--add', 'kod', `${SECRET}`).status, 1);
+  assert.equal(cli('--add', 'code', `${SECRET}`).status, 1);
   const project = fs.mkdtempSync(path.join(os.tmpdir(), 'proje-'));
   const s = spawnSync(process.execPath, [path.join(HOOKS, 'session-start.mjs')], { input: '{}', encoding: 'utf8', env: { ...homeEnv(home), CLAUDE_PROJECT_DIR: project } });
   assert.match(s.stdout, /style preferences[^"]*Seçenekleri kısa yaz/);
@@ -92,18 +94,20 @@ test('AC-48.8 preferences: English keys write English headings in a fixed order'
   assert.match(prefsNote(file), /Conversation: pref conversation · Questions and decisions: pref questions · Reports: pref reports · Code: pref code · Avoid: pref avoid/);
 });
 
-test('AC-48.8 preferences: the old Turkish keys are still accepted and stored under the English category', () => {
+test('AC-49.10 preferences: the old Turkish keys konusma / sorular / raporlar / kod / kacin are refused; nothing is written', () => {
   const file = tmpFile();
-  for (const [old, key] of Object.entries(OLD_KEYS)) assert.deepEqual(addPref(old, `eski ${old}`, file), {}, `${old} → ${key}`);
-  assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), Object.entries(OLD_KEYS).map(([old, key]) => [key, `eski ${old}`]));
-  assert.deepEqual(headings(file), ENGLISH_HEADINGS);
-  assert.deepEqual(addPref('code', 'ESKİ KOD'.toLocaleLowerCase('tr'), file), { existing: 'code' }, 'a duplicate across old and new keys is found');
+  for (const old of OLD_KEYS) assert.match(addPref(old, `old ${old}`, file).error ?? '', CATEGORY_ERROR, old);
+  assert.equal(fs.existsSync(file), false, 'nothing was written');
+  const home = newHome();
+  const r = cliIn(home)('--add', 'sorular', 'Give options');
+  assert.notEqual(r.status, 0, 'the CLI refuses an old key');
+  assert.equal(fs.existsSync(path.join(home, '.vibe-kit', 'preferences.md')), false, 'the CLI wrote nothing');
+  fs.rmSync(home, { recursive: true, force: true });
 });
 
-test('AC-48.8 preferences: a file with the old Turkish headings is read; a rewrite turns them into English headings', () => {
+test('AC-49.5 preferences: the old Turkish headings are not read; the file is never rewritten over them (no item is lost)', () => {
   const file = tmpFile();
-  fs.writeFileSync(file, [
-    '# Kişisel tercihler', '',
+  const text = ['# Kişisel tercihler', '',
     '## Konuşma', '', '- a', '',
     '## Sorular ve kararlar', '', '- b', '',
     '## Raporlar', '', '- c', '',
@@ -111,18 +115,15 @@ test('AC-48.8 preferences: a file with the old Turkish headings is read; a rewri
     '## Kaçınılacaklar', '', '- e', '',
     '## kod', '', '- f', '',
     '## Kacinilacaklar', '', '- g', '',
-  ].join('\n'));
-  const want = [['conversation', 'a'], ['questions', 'b'], ['reports', 'c'], ['code', 'd'], ['avoid', 'e'], ['code', 'f'], ['avoid', 'g']];
-  assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), want);
-  assert.equal(removePref(1, file), null);
-  assert.deepEqual(readPrefs(file).map((p) => p.category).sort(), want.slice(1).map(([c]) => c).sort(), 'nothing lost on rewrite');
-  assert.deepEqual(headings(file), ['## Questions and decisions', '## Reports', '## Code', '## Avoid']);
-  assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /Konuşma|Sorular ve kararlar|Raporlar|## Kod|Kaçınılacaklar|Kacinilacaklar/);
-  // add rewrites the same way
-  const file2 = tmpFile();
-  fs.writeFileSync(file2, '## Kaçınılacaklar\n\n- Emoji kullanma\n');
-  assert.deepEqual(addPref('conversation', 'Kısa yaz', file2), {});
-  assert.match(fs.readFileSync(file2, 'utf8'), /## Conversation\n\n- Kısa yaz\n\n## Avoid\n\n- Emoji kullanma\n/);
+    '## Code', '', '- h', ''].join('\n');
+  fs.writeFileSync(file, text);
+  assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), [['code', 'h']], 'only the English heading is read');
+  assert.match(prefsNote(file), /Code: h/);
+  assert.doesNotMatch(prefsNote(file), /Conversation: a|Avoid: e/, 'Turkish-heading items are not loaded');
+  // Writing would drop the Turkish-heading items: add and remove refuse instead
+  assert.match(addPref('conversation', 'Kısa yaz', file).error ?? '', /unreadable lines[\s\S]*Konuşma/);
+  assert.match(String(removePref(1, file)), /unreadable lines/);
+  assert.equal(fs.readFileSync(file, 'utf8'), text, 'the file is byte-identical');
 });
 
 test('AC-48.8 preferences: English headings are read whatever their case (Turkish I/ı folding)', () => {
@@ -133,86 +134,66 @@ test('AC-48.8 preferences: English headings are read whatever their case (Turkis
 
 test('A-48.4 preferences: an unknown category is an error listing the English keys; nothing is written', () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pref-')), 'preferences.md');
-  for (const bad of ['yok', 'constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf', '', undefined, null]) {
+  for (const bad of ['yok', ...OLD_KEYS, 'Kod', 'KONUSMA', 'constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf', '', undefined, null]) {
     const r = addPref(bad, 'x', file);
-    assert.match(r.error ?? '', /^Category must be one of: conversation, questions, reports, code, avoid$/, String(bad));
+    assert.match(r.error ?? '', CATEGORY_ERROR, String(bad));
   }
   assert.equal(fs.existsSync(file), false, 'nothing was written');
 });
 
 test('AC-48.8 preferences: prefsNote names ~/.vibe-kit/preferences.md', () => {
   const file = tmpFile();
-  addPref('kacin', 'Emoji kullanma', file);
+  addPref('avoid', 'No emoji', file);
   const note = prefsNote(file);
   assert.match(note, /~\/\.vibe-kit\/preferences\.md/);
   assert.doesNotMatch(note, /tercihler/);
-  assert.match(note, /Avoid: Emoji kullanma/);
+  assert.match(note, /Avoid: No emoji/);
 });
 
-test('AC-48.8 preferences: prefsFile() is ~/.vibe-kit/preferences.md; an old tercihler.md is renamed byte-for-byte on first use', () => {
-  const home = newHome();
-  const vk = path.join(home, '.vibe-kit');
-  fs.mkdirSync(path.join(vk, 'gate-approval'), { recursive: true });
-  fs.writeFileSync(path.join(vk, 'gate-approval', 'x.json'), '{"a":1}');
-  const old = Buffer.from('﻿# Kişisel tercihler\r\n\r\n## Konuşma\r\n\r\n- Türkçe yaz; İ, ı, I, i aynen kalır\r\n', 'utf8');
-  fs.writeFileSync(path.join(vk, 'tercihler.md'), old);
-  const r = inHome(home, 'console.log(m.prefsFile());');
-  assert.equal(r.status, 0, r.stderr);
-  assert.equal(r.stdout.trim(), path.join(vk, 'preferences.md'));
-  assert.deepEqual(fs.readFileSync(path.join(vk, 'preferences.md')), old, 'content byte-identical');
-  assert.equal(fs.existsSync(path.join(vk, 'tercihler.md')), false, 'the old name is gone');
-  assert.equal(fs.readFileSync(path.join(vk, 'gate-approval', 'x.json'), 'utf8'), '{"a":1}', 'other files in ~/.vibe-kit untouched');
-  // a second use changes nothing
-  assert.equal(inHome(home, 'console.log(m.prefsFile());').stdout.trim(), path.join(vk, 'preferences.md'));
-  assert.deepEqual(fs.readFileSync(path.join(vk, 'preferences.md')), old);
-  fs.rmSync(home, { recursive: true, force: true });
-});
+// An old file name with English headings: only the name decides whether it is read
+const OLD_FILE_CONTENT = '## Conversation\n\n- Short answers\n\n## Avoid\n\n- No emoji\n';
 
-test('AC-48.8 preferences: an old tercihler.md is read through the default path (readPrefs, --list, session start)', () => {
-  const content = '## Konuşma\n\n- Türkçe yaz\n\n## Kaçınılacaklar\n\n- Emoji kullanma\n';
-  // readPrefs() with no argument
-  let home = newHome();
-  fs.mkdirSync(path.join(home, '.vibe-kit'));
-  fs.writeFileSync(path.join(home, '.vibe-kit', 'tercihler.md'), content);
-  const r = inHome(home, 'console.log(JSON.stringify(m.readPrefs().map((p) => [p.category, p.text])));');
-  assert.equal(r.status, 0, r.stderr);
-  assert.deepEqual(JSON.parse(r.stdout), [['conversation', 'Türkçe yaz'], ['avoid', 'Emoji kullanma']]);
-  assert.equal(fs.readFileSync(path.join(home, '.vibe-kit', 'preferences.md'), 'utf8'), content);
-  fs.rmSync(home, { recursive: true, force: true });
-  // --list
-  home = newHome();
-  fs.mkdirSync(path.join(home, '.vibe-kit'));
-  fs.writeFileSync(path.join(home, '.vibe-kit', 'tercihler.md'), content);
-  const list = cliIn(home)('--list');
-  assert.equal(list.status, 0, list.stderr);
-  assert.equal(list.stdout.trim(), '1. [Conversation] Türkçe yaz\n2. [Avoid] Emoji kullanma');
-  assert.equal(fs.existsSync(path.join(home, '.vibe-kit', 'tercihler.md')), false);
-  fs.rmSync(home, { recursive: true, force: true });
-  // session start (the upgrade path a 3.47 user hits first)
-  home = newHome();
-  fs.mkdirSync(path.join(home, '.vibe-kit'));
-  fs.writeFileSync(path.join(home, '.vibe-kit', 'tercihler.md'), content);
-  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'proje-'));
-  const s = spawnSync(process.execPath, [path.join(HOOKS, 'session-start.mjs')], { input: '{}', encoding: 'utf8', env: { ...homeEnv(home), CLAUDE_PROJECT_DIR: project } });
-  assert.match(s.stdout, /~\/\.vibe-kit\/preferences\.md[^"]*Conversation: Türkçe yaz · Avoid: Emoji kullanma/);
-  assert.ok(fs.existsSync(path.join(home, '.vibe-kit', 'preferences.md')));
-  assert.equal(fs.existsSync(path.join(home, '.vibe-kit', 'tercihler.md')), false);
-  for (const d of [home, project]) fs.rmSync(d, { recursive: true, force: true });
-});
-
-test('AC-48.8 preferences: --add on an old tercihler.md keeps its items and writes preferences.md with English headings', () => {
+test('AC-49.10 preferences: an old ~/.vibe-kit/tercihler.md alone is not read, not renamed and not changed', () => {
   const home = newHome();
   const vk = path.join(home, '.vibe-kit');
   fs.mkdirSync(vk);
-  fs.writeFileSync(path.join(vk, 'tercihler.md'), '## Kaçınılacaklar\n\n- Emoji kullanma\n');
-  const r = cliIn(home)('--add', 'conversation', 'Kısa yaz');
+  const old = Buffer.from(`﻿${OLD_FILE_CONTENT.replace(/\n/g, '\r\n')}`, 'utf8');
+  fs.writeFileSync(path.join(vk, 'tercihler.md'), old);
+  const r = inHome(home, 'console.log(m.prefsFile()); console.log(JSON.stringify(m.readPrefs())); console.log(JSON.stringify(m.prefsNote()));');
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /Preference saved \(Conversation\)/);
-  assert.match(r.stdout, /preferences\.md/);
-  assert.match(fs.readFileSync(path.join(vk, 'preferences.md'), 'utf8'), /## Conversation\n\n- Kısa yaz\n\n## Avoid\n\n- Emoji kullanma\n/);
-  assert.equal(fs.existsSync(path.join(vk, 'tercihler.md')), false);
-  // an old key on the CLI names the English category
-  assert.match(cliIn(home)('--add', 'sorular', 'Seçenek ver').stdout, /Preference saved \(Questions and decisions\)/);
+  assert.deepEqual(r.stdout.trim().split('\n'), [path.join(vk, 'preferences.md'), '[]', '""']);
+  assert.deepEqual(fs.readFileSync(path.join(vk, 'tercihler.md')), old, 'tercihler.md is byte-identical');
+  assert.equal(fs.existsSync(path.join(vk, 'preferences.md')), false, 'it is not renamed to preferences.md');
+  const list = cliIn(home)('--list');
+  assert.equal(list.status, 0, list.stderr);
+  assert.match(list.stdout, /No saved preferences \(.*preferences\.md\)/);
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test('AC-49.10 preferences: the session start does not load an old tercihler.md', () => {
+  const home = newHome();
+  fs.mkdirSync(path.join(home, '.vibe-kit'));
+  fs.writeFileSync(path.join(home, '.vibe-kit', 'tercihler.md'), OLD_FILE_CONTENT);
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'pref-project-'));
+  const s = spawnSync(process.execPath, [path.join(HOOKS, 'session-start.mjs')], { input: '{}', encoding: 'utf8', env: { ...homeEnv(home), CLAUDE_PROJECT_DIR: project } });
+  assert.equal(s.status, 0, s.stderr);
+  assert.doesNotMatch(s.stdout, /Short answers|No emoji|style preferences/);
+  assert.equal(fs.existsSync(path.join(home, '.vibe-kit', 'tercihler.md')), true, 'left where it is');
+  for (const d of [home, project]) fs.rmSync(d, { recursive: true, force: true });
+});
+
+test('AC-49.10 preferences: --add next to an old tercihler.md writes preferences.md with the new item only; tercihler.md is untouched', () => {
+  const home = newHome();
+  const vk = path.join(home, '.vibe-kit');
+  fs.mkdirSync(vk);
+  fs.writeFileSync(path.join(vk, 'tercihler.md'), OLD_FILE_CONTENT);
+  const r = cliIn(home)('--add', 'code', 'Tabs, not spaces');
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /Preference saved \(Code\)/);
+  const written = fs.readFileSync(path.join(vk, 'preferences.md'), 'utf8');
+  assert.match(written, /## Code\n\n- Tabs, not spaces\n/);
+  assert.doesNotMatch(written, /Short answers|No emoji/, 'the old file\'s items are not carried over');
+  assert.equal(fs.readFileSync(path.join(vk, 'tercihler.md'), 'utf8'), OLD_FILE_CONTENT);
   fs.rmSync(home, { recursive: true, force: true });
 });
 

@@ -256,23 +256,27 @@ test('session start: the next command is shown to the user (after /clear)', () =
     assert.match(read(progress), re, `the template has **${label}:**`);
     write(progress, read(progress).replace(re, `**${label}:** ${value}`));
   };
+  // 3.49.0: installed without a language choice, the messages are English
   set('Setup step', '4/9');
-  assert.match(oturum(p).systemMessage, /Devam: \/start \(adım 4\/9\)/);
+  assert.match(oturum(p).systemMessage, /Continue: \/start \(step 4\/9\)/);
   set('Active phase', 'Phase 0');
   const filePath = path.join(p, 'docs/product/roadmap.md');
   write(filePath, read(filePath).replace('- [ ] G-001', '- [x] G-001'));
   const o = oturum(p);
-  assert.match(o.systemMessage, /Sıradaki: \/build G-002 · Project skeleton set up/);
+  assert.match(o.systemMessage, /Next: \/build G-002 · Project skeleton set up/);
   assert.match(o.hookSpecificOutput.additionalContext, /\/build G-002/);
 
   const handoff = path.join(p, 'docs/workflow/handoff.md');
-  write(handoff, '# Devir notu\n\n**Durum:** bekliyor\n**Devreden:** a\n');
-  assert.match(oturum(p).systemMessage, /Devir notu var: \/handoff take/);
+  write(handoff, '# Handoff note\n\n**Status:** waiting\n**From:** a\n');
+  assert.match(oturum(p).systemMessage, /Handoff note waiting: \/handoff take/);
   const r = node(path.join(p, '.claude/hooks/dashboard.mjs'), p);
   assert.equal(r.status, 0, r.stderr);
-  assert.ok(read(path.join(p, 'dashboard.html')).includes('Devir notu bekliyor'), 'the dashboard shows the handoff note in the alert list');
-  write(handoff, read(handoff).replace('bekliyor', 'devralındı'));
-  assert.match(oturum(p).systemMessage, /Sıradaki: \/build G-002/);
+  assert.ok(read(path.join(p, 'dashboard.html')).includes('Handoff note waiting'), 'the dashboard shows the handoff note in the alert list');
+  write(handoff, read(handoff).replace('waiting', 'taken over'));
+  assert.match(oturum(p).systemMessage, /Next: \/build G-002/);
+  // An old Turkish handoff note is not understood: no handoff suggestion
+  write(handoff, '# Devir notu\n\n**Durum:** bekliyor\n');
+  assert.doesNotMatch(oturum(p).systemMessage, /\/handoff take/);
 });
 
 test('status line and dashboard: before and after setup', () => {
@@ -286,17 +290,18 @@ test('status line and dashboard: before and after setup', () => {
   // 3.48.0: the shipped progress.md is English (Turkish labels are covered in labels-readers.test.mjs)
   assert.match(read(progress), /^\*\*Active phase:\*\* .*$/m);
   assert.match(read(progress), /^\*\*Question mode:\*\* .*$/m);
-  write(progress, read(progress).replace(/^\*\*Active phase:\*\* .*$/m, '**Active phase:** Phase 1').replace(/^\*\*Question mode:\*\* .*$/m, '**Question mode:** on · closed topics: tasarim'));
+  write(progress, read(progress).replace(/^\*\*Active phase:\*\* .*$/m, '**Active phase:** Phase 1').replace(/^\*\*Question mode:\*\* .*$/m, '**Question mode:** on · closed topics: design'));
   const decisions = path.join(p, 'docs/decisions/log.md');
   const separator = '|---|---|---|---|---|---|---|---|\n';
   assert.ok(read(decisions).includes(separator), 'decision log has 8 columns');
-  write(decisions, read(decisions).replace(separator, separator + '| 1 | 2026-01-01 | Başlangıç | teknik | Framework? | Next.js | tek | kullanıcı |\n'));
-  assert.match(statusBar(p), /▶ Phase 1 · .* · görev 0\/\d+ · soru: açık \(kapalı: tasarim\)/);
+  write(decisions, read(decisions).replace(separator, separator + '| 1 | 2026-01-01 | Setup | tech | Framework? | Next.js | one-way | user |\n'));
+  // 3.49.0: installed without a language choice, the status line and the dashboard are English
+  assert.match(statusBar(p), /▶ Phase 1 · .* · task 0\/\d+ · questions: open \(closed: design\)/);
   const r = node(path.join(p, '.claude/hooks/dashboard.mjs'), p);
   assert.equal(r.status, 0, r.stderr);
   const html = read(path.join(p, 'dashboard.html'));
   assert.ok(html.includes('Next.js') && html.includes('step now'), 'the dashboard shows the decision and the active phase');
-  assert.ok(html.includes('Dikkat gerektirenler') && (html.match(/role="tab"/g) ?? []).length === 10, 'dashboard: alert area and 10 tabs');
+  assert.ok(html.includes('Needs attention') && (html.match(/role="tab"/g) ?? []).length === 10, 'dashboard: alert area and 10 tabs');
 });
 
 test('3.19.1 update removes the allowed Playwright CLI rules; the user\'s own rule stays', () => {
@@ -312,8 +317,9 @@ test('3.19.1 update removes the allowed Playwright CLI rules; the user\'s own ru
 test('3.15.0 update settings migration: missing kit permission rules are added, project rules stay, the old dashboard flag is rewritten', () => {
   const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
   const stop = (flag) => ({ Stop: [{ hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs" ${flag}` }] }] });
-  const oldAllow = ['Bash(node .claude/hooks/freeze-guard.mjs --plan-kaydet:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-bitir)',
-    'Bash(node .claude/hooks/tools.mjs --gerekli:*)', 'Bash(node .claude/hooks/tools.mjs --olc)', 'Bash(node .claude/hooks/tools.mjs --kapat:*)'];
+  // 3.49.0: the five Turkish-named allow rules (--plan-kaydet, --plan-bitir, --gerekli, --olc, --kapat) left OLD_RULES:
+  // the kit no longer carries Turkish names and there is no migration for them
+  const oldAllow = [];
   const oldAsk = ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)', 'Bash(node .claude/hooks/gate.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac:*)'];
   // The user's own rule that only looks like an old one (another script, another spelling) stays
   const own = ['Bash(npm test)', 'Bash(node scripts/x.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac)'];
@@ -322,7 +328,7 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   assert.ok(added.includes('ask: Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'added rules are listed for the report');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'new ask rule added');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'));
-  assert.deepEqual(removed.sort(), [...oldAllow.map((r) => `allow: ${r}`), ...oldAsk.map((r) => `ask: ${r}`)].sort(), '3.17.0: the 8 old kit rules are removed and listed');
+  assert.deepEqual(removed.sort(), [...oldAllow.map((r) => `allow: ${r}`), ...oldAsk.map((r) => `ask: ${r}`)].sort(), 'the 3 old kit ask rules still in OLD_RULES are removed and listed');
   assert.ok(![...s.permissions.allow, ...s.permissions.ask].some((r) => [...oldAllow, ...oldAsk].includes(r)));
   assert.deepEqual(s.permissions.allow.slice(0, 2), own.slice(0, 2), 'project rules kept, in order');
   assert.ok(s.permissions.ask.includes(own[2]));

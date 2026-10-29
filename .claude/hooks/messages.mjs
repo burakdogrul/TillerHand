@@ -321,6 +321,7 @@ export const MESSAGES = {
   'dashboard.alert.kitPending': { tr: 'Proje henüz kurulmadı. Var olan kodu kite almak için /adopt.', en: 'Project is not set up yet. To bring existing code into the kit, run /adopt.' },
   'dashboard.act.startIdea': { tr: '/start [fikrin]', en: '/start [your idea]' },
   'dashboard.alert.handoffPending': { tr: 'Devir notu bekliyor: proje başka kişiden veya hesaptan devralınıyor (docs/workflow/handoff.md).', en: 'Handoff note waiting: the project is being taken over from another person or account (docs/workflow/handoff.md).' },
+  'dashboard.alert.unknownVerdict': { tr: 'Kurul sonucu okunamadı ({kind}, {scope}): "{result}" — APPROVE, CONDITIONAL veya REJECT yazılmalı', en: 'Board result not readable ({kind}, {scope}): "{result}" — write APPROVE, CONDITIONAL or REJECT' },
   'dashboard.alert.boardReject': { tr: 'Kurul RET verdi ({kind}, {scope}): {critical}', en: 'The board rejected ({kind}, {scope}): {critical}' },
   'dashboard.act.askClaudeFix': { tr: 'Claude\'a sor: düzelt / riski kabul et', en: 'Ask Claude: fix / accept the risk' },
   'dashboard.alert.limitRed': { tr: 'Kullanım limiti kırmızı: {short}', en: 'Usage limit is red: {short}' },

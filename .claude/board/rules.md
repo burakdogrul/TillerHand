@@ -22,7 +22,7 @@
 
 Commits that contain only documentation changes (`.md`, `docs/`) are exempt from review.
 
-**Council (three stages):** The project profile decides which meetings go to the council (`.claude/board/council.md` → "When"). In the Full profile, plan, phase-end and go-live meetings, and task-end meetings that end in REJECT, follow the `.claude/board/council.md` protocol. In Standart, only phase-end and go-live. In Hafif, none. First opinions are collected first. Then members vote on and rank each other's findings anonymously. Last, `board-chair` decides. Task-end and commit meetings are single-stage.
+**Council (three stages):** The project profile decides which meetings go to the council (`.claude/board/council.md` → "When"). In the Full profile, plan, phase-end and go-live meetings, and task-end meetings that end in REJECT, follow the `.claude/board/council.md` protocol. In Standard, only phase-end and go-live. In Light, none. First opinions are collected first. Then members vote on and rank each other's findings anonymously. Last, `board-chair` decides. Task-end and commit meetings are single-stage.
 
 ## 3. Who is relevant? (pick members by change)
 

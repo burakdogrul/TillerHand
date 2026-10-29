@@ -38,10 +38,11 @@ test('Ö-19.2 dashboard: the last live run is shown; skipped means not set up; a
     assert.equal(r.status, 0, r.stderr);
     return fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8');
   };
-  assert.match(render({ conclusion: 'skipped', status: 'completed', createdAt: '2026-10-25T09:17:00Z', url: 'https://x/1' }), /Canlı izleme[\s\S]{0,200}kurulmadı[\s\S]{0,80}LIVE_URL/);
-  assert.match(render({ conclusion: 'success', status: 'completed', createdAt: '2026-10-25T09:17:00Z', url: 'https://x/2' }), /Canlı izleme[\s\S]{0,200}başarılı/);
-  const red = render({ conclusion: 'failure', status: 'completed', createdAt: '2026-10-25T09:17:00Z', url: 'https://x/3' }, [{ number: 7, title: 'Canlı izleme: kritik akış bozuk', url: 'https://x/i/7' }]);
-  assert.match(red, /Canlı izleme[\s\S]{0,200}başarısız/);
+  // 3.49.0: installed without a language choice, the dashboard is English
+  assert.match(render({ conclusion: 'skipped', status: 'completed', createdAt: '2026-10-25T09:17:00Z', url: 'https://x/1' }), /Live monitoring[\s\S]{0,200}not set up[\s\S]{0,80}LIVE_URL/);
+  assert.match(render({ conclusion: 'success', status: 'completed', createdAt: '2026-10-25T09:17:00Z', url: 'https://x/2' }), /Live monitoring[\s\S]{0,200}succeeded/);
+  const red = render({ conclusion: 'failure', status: 'completed', createdAt: '2026-10-25T09:17:00Z', url: 'https://x/3' }, [{ number: 7, title: 'Live monitoring: critical flow broken', url: 'https://x/i/7' }]);
+  assert.match(red, /Live monitoring[\s\S]{0,200}failed/);
   assert.match(red, /\/fix-bug/);
   fs.rmSync(p, { recursive: true, force: true });
 });

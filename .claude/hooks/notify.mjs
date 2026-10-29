@@ -38,7 +38,7 @@ function main() {
   if (process.argv.includes('--stop')) {
     if (input.stop_hook_active) process.exit(0);
     let startedAt = 0;
-    try { const r = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'reminder.json'), 'utf8')); startedAt = r.turnAt ?? r.tur ?? 0; } catch { /* */ } // tur: key before 3.15.0
+    try { const r = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'reminder.json'), 'utf8')); startedAt = r.turnAt ?? 0; } catch { /* */ }
     const duration = (Date.now() - startedAt) / 1000;
     if (!startedAt || duration < THRESHOLD_SEC) process.exit(0);
     message = t(root, 'notify.done', { minutes: Math.round(duration / 60) });

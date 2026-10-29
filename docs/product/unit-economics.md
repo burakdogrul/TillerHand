@@ -4,7 +4,7 @@
 > can pass the price without anyone noticing. `/dashboard` does the calculation from the inputs below **automatically**.
 > Filled in at `/start` Step 5; `/maintain monthly` updates it with real bills.
 > Use a dot as the decimal separator in numbers (e.g. `3.5`). Use a single currency.
-> The dashboard reads the input labels below; keep their wording (files from before 3.48 have Turkish labels, and those are still read).
+> The dashboard reads the input labels below; keep their wording.
 
 ## Inputs
 

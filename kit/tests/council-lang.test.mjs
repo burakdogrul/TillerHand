@@ -1,8 +1,7 @@
 // Run: node --test "kit/tests/*.test.mjs"
-// 3.48.0 step 4b: council minutes in English. Hooks read both languages for the whole 3.x line: an English minutes
-// file and its Turkish twin (same opinions, votes, rankings) give the same count and the same dashboard reading.
-// council.mjs writes the "## 3." section in the language of the minutes the count came from.
-// The dashboard gives English verdicts (APPROVE / CONDITIONAL / REJECT) the same badge as the Turkish ones.
+// Council minutes in English. 3.49.0: Turkish minutes (Görüş, İnceleyen, OYLAR, SIRALAMA, DOĞRU, Karar ...) are no
+// longer understood: they count as minutes without opinions or reviewers. council.mjs writes the "## 3." section in
+// English only. The dashboard gives APPROVE / CONDITIONAL / REJECT their badges; an old Turkish result is unknown.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -225,10 +224,8 @@ const turkishIn = (text) => TURKISH_WORDS.filter((w) => text.toLocaleLowerCase('
 
 // ---------- 1. same count in both languages ----------
 
-test('Ö-48.33 council-lang: an English meeting council and its Turkish twin give the same count', () => {
+test('Ö-48.33 council-lang: an English meeting council gives the count', () => {
   const en = countVotes(EN_MEETING);
-  const tr = countVotes(TR_MEETING);
-  assert.deepEqual(neutral(en), neutral(tr));
   assert.deepEqual(neutral(en), {
     ranking: [['B', 1, 2], ['A', 1.5, 2], ['C', 2, 2]],
     findings: [['A1', true, false], ['A2', false, false], ['A3', false, true], ['B1', false, false], ['B2', false, true], ['B3', true, false]],
@@ -240,10 +237,8 @@ test('Ö-48.33 council-lang: an English meeting council and its Turkish twin giv
   }, '4 of 8 finding votes agree');
 });
 
-test('Ö-48.34 council-lang: an English decision council and its Turkish twin give the same option split and consensus', () => {
+test('Ö-48.34 council-lang: an English decision council gives the option split and consensus', () => {
   const en = countVotes(EN_DECISION);
-  const tr = countVotes(TR_DECISION);
-  assert.deepEqual(neutral(en), neutral(tr));
   assert.deepEqual(neutral(en), {
     ranking: [['A', 1, 2], ['B', 1.5, 2], ['C', 2, 2]],
     findings: [['C1', true, false]],
@@ -263,17 +258,26 @@ test('Ö-48.35 council-lang: parseRanking reads RANKING: with numbered "Opinion 
   assert.deepEqual(parseRanking('Opinion B is better than Opinion A.\n1. Opinion B\n2. Opinion A'), [], 'without RANKING: no order is guessed');
 });
 
-test('Ö-48.36 council-lang: parseBallots reads VOTES: up to RANKING:, English words in any case, both languages in one ballot', () => {
+test('Ö-48.36 council-lang: parseBallots reads VOTES: up to RANKING:, English words in any case', () => {
   const ids = (text) => Object.keys(parseBallots(text)).sort();
   assert.deepEqual(ids('VOTES:\nA1: agree\n- B2 = Overstated\nC1: DISAGREE\nC2: disagree\nRANKING:\n1. Opinion A\nD1: AGREE\n'), ['A1', 'B2', 'C1', 'C2'],
     'votes after RANKING: do not count');
-  assert.deepEqual(ids('VOTES:\nA1: AGREE\nB1: DOĞRU\nC1: YANLIŞ\nD1: overstated\nE1: ABARTILI\nF1: Disagree\n'), ['A1', 'B1', 'C1', 'D1', 'E1', 'F1'],
-    'a mixed ballot: every vote counts');
 });
 
-test('Ö-48.37 council-lang: an AGREE and a DOĞRU on the same finding land on the same outcome; lowercase "disagree" is a disagree vote', () => {
+test('AC-49.5 council-lang: DOĞRU / YANLIŞ / ABARTILI, OYLAR: and SIRALAMA: are not read; only the English votes count', () => {
+  const ids = (text) => Object.keys(parseBallots(text)).sort();
+  assert.deepEqual(ids('VOTES:\nA1: AGREE\nB1: DOĞRU\nC1: YANLIŞ\nD1: overstated\nE1: ABARTILI\nF1: Disagree\nG1: doğru\n'), ['A1', 'D1', 'F1'],
+    'a mixed ballot: the Turkish words are not votes');
+  assert.deepEqual(ids('OYLAR:\nA1: AGREE\nB1: DOĞRU\n'), [], 'OYLAR: is not a VOTES: heading');
+  assert.deepEqual(parseRanking('SIRALAMA:\n1. Opinion C\n2. Opinion A\n'), [], 'SIRALAMA: is not a RANKING: heading');
+  assert.deepEqual(parseRanking('RANKING:\n1. Görüş C\n2. Görüş A\n'), [], '"Görüş X" is not an opinion line');
+  // A Turkish vote on a finding is no vote: only the English ones are counted
   const mixed = EN_MEETING.replace('A2: agree', 'A2: DOĞRU').replace('B1: Agree', 'B1: doğru').replace('- B3: Overstated', '- B3: ABARTILI');
-  assert.deepEqual(neutral(countVotes(mixed)), neutral(countVotes(EN_MEETING)));
+  const counts = findingCounts(countVotes(mixed));
+  assert.deepEqual([counts.A2, counts.B1, counts.B3], [[1, 0, 0], [1, 0, 0], [0, 1, 0]]);
+});
+
+test('Ö-48.37 council-lang: lowercase "disagree" is a disagree vote', () => {
   // "disagree".toLocaleUpperCase('tr') is "DİSAGREE": a Turkish-locale upper-casing must not lose the vote
   const lower = EN_MEETING.replace('B3: DISAGREE', 'B3: disagree');
   assert.deepEqual(findingCounts(countVotes(lower)).B3, [0, 1, 1]);
@@ -314,20 +318,30 @@ test('Ö-48.39 council-lang: a decision council in English gets the English opti
   assert.deepEqual(turkishIn(part), []);
 });
 
-test('Ö-48.40 council-lang: a Turkish minutes file still gets the Turkish section', () => {
-  const part = section3(writeMinutes(TR_MEETING, countVotes(TR_MEETING)));
-  for (const line of ['## 3. Toplu sıralama', '**Uzlaşma:** %50', '**Tartışmalı:** 2', '| Görüş | Ortalama sıra | Sıralayan |',
-    '| Bulgu | Önem | Doğru | Yanlış | Abartılı | Durum |', '| A1 | KRİTİK | 0 | 1 | 1 | tartışmalı · kullanıcıya sor |',
-    '| B2 | KRİTİK | 0 | 0 | 0 | oy yok · kullanıcıya sor |']) assert.ok(part.split('\n').includes(line), `section has the line: ${line}\n---\n${part}`);
+test('AC-49.5 council-lang: Turkish minutes are not understood: no opinion, finding, reviewer or ranking is read from them', () => {
+  for (const text of [TR_MEETING, TR_DECISION]) {
+    const s = countVotes(text);
+    assert.equal(s.reviewerCount, 0, '"### İnceleyen:" is not a reviewer section');
+    assert.deepEqual(s.findings, [], '"### Görüş X" findings are not read');
+    assert.deepEqual(s.ranking, [], 'no ranking');
+    assert.deepEqual(s.options, [], 'ÖNERİ: is not a recommendation');
+  }
 });
 
-test('Ö-48.41 council-lang: the section language comes from the minutes the count was made from', () => {
-  const en = writeMinutes('', countVotes(EN_MEETING));
-  const tr = writeMinutes('', countVotes(TR_MEETING));
-  assert.match(en, /^## 3\. Overall ranking$/m);
-  assert.doesNotMatch(en, /Toplu sıralama/);
-  assert.match(tr, /^## 3\. Toplu sıralama$/m);
-  assert.doesNotMatch(tr, /Overall ranking/);
+test('AC-49.5 council-lang: the "## 3." section is always written in English, whatever the minutes', () => {
+  for (const s of [countVotes(EN_MEETING), countVotes(TR_MEETING)]) {
+    const written = writeMinutes('', s);
+    assert.match(written, /^## 3\. Overall ranking$/m);
+    assert.deepEqual(turkishIn(section3(written)), [], 'no Turkish word in the section');
+  }
+});
+
+test('AC-49.5 council-lang: the CLI treats a Turkish minutes file like one without a "### Reviewer:" section (exit 1, file unchanged)', () => {
+  const p = project({ 'm.md': TR_MEETING });
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'council.mjs'), path.join(p, 'm.md')], { encoding: 'utf8' });
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.notEqual(r.stderr.trim(), '');
+  assert.equal(fs.readFileSync(path.join(p, 'm.md'), 'utf8'), TR_MEETING, 'the file is not changed');
 });
 
 test('Ö-48.42 council-lang: the incomplete-ranking warning in an English file names RANKING and Opinion', () => {
@@ -415,9 +429,8 @@ const readCouncil = (text) => {
   return fields;
 };
 
-test('Ö-48.45 council-lang: councilMinutes reads an English decision council like its Turkish twin', () => {
+test('Ö-48.45 council-lang: councilMinutes reads an English decision council', () => {
   const en = readCouncil(EN_DECISION_FULL);
-  assert.deepEqual(en, readCouncil(TR_DECISION_FULL));
   assert.deepEqual(en, {
     topic: 'decision · Database choice',
     date: '2026-10-14',
@@ -436,14 +449,19 @@ test('Ö-48.45 council-lang: councilMinutes reads an English decision council li
 
 test('Ö-48.46 council-lang: councilMinutes reads the English meeting decision, topic from "# Council:"', () => {
   const en = readCouncil(writeMinutesFixed(EN_MEETING, '## 3. Overall ranking\n\n**Consensus:** 50%\n**Disputed:** 2\n\n| Opinion | Average rank | Rankers |\n|---|---|---|\n| B | 1 | 2 |\n', '\n## IDs\nB = security-auditor (sonnet)\n'));
-  const tr = readCouncil(writeMinutesFixed(TR_MEETING, '## 3. Toplu sıralama\n\n**Uzlaşma:** %50\n**Tartışmalı:** 2\n\n| Görüş | Ortalama sıra | Sıralayan |\n|---|---|---|\n| B | 1 | 2 |\n', '\n## Kimlikler\nB = security-auditor (sonnet)\n'));
   assert.equal(en.topic, 'plan · G-012 sign-up form');
   assert.equal(en.decision, 'CONDITIONAL');
-  assert.equal(tr.decision, 'KOŞULLU ONAY');
-  const { decision: _en, ...enRest } = en;
-  const { decision: _tr, ...trRest } = tr;
-  assert.deepEqual(enRest, trRest);
+  assert.deepEqual([en.date, en.kind, en.consensus, en.disputed], ['2026-10-12', 'plan', 50, 2]);
   assert.deepEqual(en.ranking, [{ opinion: 'B', who: 'security-auditor (sonnet)', average: '1' }]);
+});
+
+test('AC-49.5 council-lang: councilMinutes does not read Turkish labels (Konsey, Tarih, Tür, Öneri, Uzlaşma, Tartışmalı, Elenen, Kimlikler)', () => {
+  const tr = readCouncil(TR_DECISION_FULL);
+  assert.equal(tr.topic, '2026-10-14-decision-db', '"# Konsey:" is not a topic: the file name is used');
+  assert.equal(tr.decision, null, '**Öneri:** is not a recommendation');
+  assert.equal(tr.consensus, null, '**Uzlaşma:** is not read');
+  assert.deepEqual([tr.kind, tr.disputed, tr.eliminated], ['-', 0, 0], '**Tür:**, **Tartışmalı:**, **Elenen:** are not read');
+  assert.equal(tr.ranking.every((r) => r.who === null), true, '## Kimlikler is not read');
 });
 
 // A hand-written "## 3." section before "## 4." and a tail at the end (the dashboard test does not depend on council.mjs writing English)
@@ -485,22 +503,25 @@ function badges({ councils = {}, meetings = {} }) {
   return out;
 }
 
-test('Ö-48.47 council-lang: on the dashboard an English council decision gets the same badge as the Turkish one', () => {
+test('Ö-48.47 council-lang: on the dashboard an English council decision gets its badge; a Turkish **Karar:** line is no decision', () => {
   const b = badges({ councils: {
-    zqkosullu: ['tr', '**Karar:** KOŞULLU ONAY'], zqconditional: ['en', '**Decision:** CONDITIONAL'],
-    zqret: ['tr', '**Karar:** RET'], zqreject: ['en', '**Decision:** REJECT'],
-    zqonay: ['tr', '**Karar:** ONAY'], zqapprove: ['en', '**Decision:** APPROVE'],
+    zqconditional: ['en', '**Decision:** CONDITIONAL'], zqreject: ['en', '**Decision:** REJECT'], zqapprove: ['en', '**Decision:** APPROVE'],
+    zqkosullu: ['tr', '**Karar:** KOŞULLU ONAY'], zqret: ['tr', '**Karar:** RET'], zqonay: ['tr', '**Karar:** ONAY'],
   } });
-  assert.deepEqual([b.zqkosullu, b.zqret, b.zqonay], ['warn', 'critical', 'good'], 'Turkish verdicts keep their badges');
-  assert.deepEqual([b.zqconditional, b.zqreject, b.zqapprove], [b.zqkosullu, b.zqret, b.zqonay]);
+  assert.deepEqual([b.zqconditional, b.zqreject, b.zqapprove], ['warn', 'critical', 'good']);
+  // "**Karar:**" is not a label: the council has no decision (the neutral "no decision" badge), never good or critical
+  assert.deepEqual([b.zqkosullu, b.zqret, b.zqonay], ['info', 'info', 'info']);
 });
 
-test('Ö-48.48 council-lang: on the dashboard an English board meeting result gets the same badge as the Turkish one', () => {
-  const b = badges({ meetings: {
-    zqmkosullu: 'KOŞULLU ONAY', zqmconditional: 'CONDITIONAL', zqmret: 'RET', zqmreject: 'REJECT', zqmonay: 'ONAY', zqmapprove: 'APPROVE',
-  } });
-  assert.deepEqual([b.zqmkosullu, b.zqmret, b.zqmonay], ['warn', 'critical', 'good'], 'Turkish results keep their badges');
-  assert.deepEqual([b.zqmconditional, b.zqmreject, b.zqmapprove], [b.zqmkosullu, b.zqmret, b.zqmonay]);
+test('Ö-48.48 council-lang: on the dashboard an English board meeting result gets its badge', () => {
+  const b = badges({ meetings: { zqmconditional: 'CONDITIONAL', zqmreject: 'REJECT', zqmapprove: 'APPROVE' } });
+  assert.deepEqual([b.zqmconditional, b.zqmreject, b.zqmapprove], ['warn', 'critical', 'good']);
+});
+
+test('AC-49.4 council-lang: an old Turkish board meeting result (RET, ONAY, KOŞULLU ONAY) is unknown and gets the warn badge', () => {
+  // Markers must not be substrings of each other: the row lookup matches the marker text
+  const b = badges({ meetings: { zqmret: 'RET', zqmonay: 'ONAY', zqmkosullu: 'KOŞULLU ONAY', zqmnotes: 'RET — no test' } });
+  assert.deepEqual([b.zqmret, b.zqmonay, b.zqmkosullu, b.zqmnotes], ['warn', 'warn', 'warn', 'warn']);
 });
 
 // ---------- adversarial ----------
@@ -518,16 +539,16 @@ test('A-48.14 council-lang: a decision text with RET only inside a word is not a
   // Markers must not be substrings of each other: the row lookup matches the marker text
   const b = badges({
     councils: {
-      zqcontrol: ['tr', '**Öneri:** Supabase'],
+      zqcontrol: ['en', '**Recommendation:** Supabase'],
       zqinterp: ['en', '**Recommendation:** INTERPRETATION B'],
-      zqtrinterp: ['tr', '**Öneri:** INTERPRETATION B'],
-      zqsecret: ['en', '**Decision:** Secret store'],
+      zqsecret: ['en', '**Recommendation:** Secret store'],
     },
-    meetings: { zqmonay: 'ONAY', zqmsecret: 'ONAY — Secret store rotated', zqminterp: 'APPROVE — INTERPRETATION B noted' },
+    meetings: { zqmapprove: 'APPROVE', zqmsecret: 'APPROVE — Secret store rotated', zqminterp: 'APPROVE — INTERPRETATION B noted' },
   });
   assert.equal(b.zqcontrol, 'info');
-  assert.deepEqual([b.zqinterp, b.zqtrinterp, b.zqsecret], [b.zqcontrol, b.zqcontrol, b.zqcontrol], 'an option name is not a verdict');
-  assert.deepEqual([b.zqmsecret, b.zqminterp], [b.zqmonay, b.zqmonay], 'an approval that mentions a "secret" stays an approval');
+  assert.deepEqual([b.zqinterp, b.zqsecret], [b.zqcontrol, b.zqcontrol], 'an option name is not a verdict');
+  assert.equal(b.zqmapprove, 'good');
+  assert.deepEqual([b.zqmsecret, b.zqminterp], [b.zqmapprove, b.zqmapprove], 'an approval that mentions a "secret" stays an approval');
 });
 
 test('A-48.15 council-lang: vote words outside VOTES: (opinion prose, review prose, after RANKING:) do not count', () => {

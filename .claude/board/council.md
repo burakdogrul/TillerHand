@@ -73,7 +73,7 @@ A = board-architect (sonnet) · B = security-auditor (sonnet) · C = board-produ
 
 ## Stages
 
-1. **First opinions (parallel).** Give each member the task in its own format (in a meeting, the board format in the member file; in a decision council, the `council-advisor` format). The replies are labeled A, B, C… in random order. Findings get ids: A1, A2, B1… Write the label-to-id mapping only in the "IDs" section at the end of the minutes. Minutes written before 3.48 use the Turkish headings and words (Görüş, İnceleyen, OYLAR, SIRALAMA, DOĞRU/YANLIŞ/ABARTILI); council.mjs and the dashboard still read them.
+1. **First opinions (parallel).** Give each member the task in its own format (in a meeting, the board format in the member file; in a decision council, the `council-advisor` format). The replies are labeled A, B, C… in random order. Findings get ids: A1, A2, B1… Write the label-to-id mapping only in the "IDs" section at the end of the minutes.
 2. **Cross-review (parallel).** Give each reviewer the following and pass the instruction below verbatim:
    - The "Question" section of the minutes.
    - The other opinions, **excluding** their own. Do not say who wrote them or which model wrote them.

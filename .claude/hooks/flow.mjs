@@ -23,7 +23,7 @@ const MEMBERS = [
   ['board-product', /^docs\/product\//i],
 ];
 // Auth, payment, webhook, upload, secrets: security-auditor joins on top of the member count (rules.md §3)
-const SENSITIVE = /auth|login|session|passw|payment|ödeme|checkout|billing|webhook|upload|secret|token|crypto|\.env|iyzico|paytr|stripe/i;
+const SENSITIVE = /auth|login|session|passw|payment|checkout|billing|webhook|upload|secret|token|crypto|\.env|iyzico|paytr|stripe/i;
 
 // Same bands as the cost table in docs/workflow/usage-limits.md §3 (1-2, 3-6, more files)
 export function flow({ files = 0, paths, installed = [], context, level: lvl }) {

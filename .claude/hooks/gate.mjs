@@ -18,15 +18,12 @@ import { spawnSync } from 'node:child_process';
 import { changes } from './commit-gate.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
 import { findRoot, isMain } from './shared.mjs';
-import { normalize } from './labels.mjs';
 import { specInvariants } from './dashboard-data.mjs';
 
-// Keys of the AGENTS.md → Commands block (Turkish keys of pre-3.48 projects are read through normalize)
+// Keys of the AGENTS.md → Commands block
 const CHECKS = ['lint', 'type check', 'test'];
 // The approval also covers the dev command and the preview address: preview.mjs runs the one and opens the other
 const APPROVED = [...CHECKS, 'dev', 'preview'];
-// The digest keeps the pre-3.48 names, so an approval given before the English labels stays valid
-const DIGEST_NAME = { 'type check': 'tip kontrol', dev: 'geliştirme', preview: 'önizleme' };
 const TIMEOUT = 10 * 60 * 1000;
 const BUFFER = 64 * 1024 * 1024;
 // A red check shows its last 30 lines; a longer output is kept whole in a file, read only when the tail is not enough
@@ -42,11 +39,18 @@ function failed(root, name, r) {
 
 // Only the "## Commands" section is read: a "test:" line elsewhere must not count as a command
 export function readCommands(md, names = CHECKS) {
-  const section = normalize(md).match(/^## Commands[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
+  const section = md.match(/^## Commands[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
   return names.map((name) => {
     const value = section.match(new RegExp(`^${name}:[ \\t]*(.*?)[ \\t\\r]*$`, 'm'))?.[1];
     return { name, command: value && !/^\[.*\]$/.test(value) ? value : null };
   });
+}
+
+// Keys under "## Commands" the kit does not know (a label written in another language): named, not silently ignored
+const KNOWN_KEYS = ['dev', 'preview', 'test', 'lint', 'type check', 'build'];
+export function unknownCommandKeys(md) {
+  const section = md.match(/^## Commands[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
+  return [...section.matchAll(/^([\p{L}][\p{L}\p{N} _-]*?)[ \t]*:/gmu)].map((m) => m[1]).filter((k) => !KNOWN_KEYS.includes(k));
 }
 
 // The approval record lives outside the project, in the user folder (keyed by a digest of the project's real path): no repo,
@@ -57,7 +61,7 @@ export function approvalPath(root) {
   const key = crypto.createHash('sha256').update(realRoot.toLowerCase()).digest('hex').slice(0, 32);
   return path.join(os.userInfo().homedir, '.vibe-kit', 'gate-approval', `${key}.json`);
 }
-const digest = (list) => crypto.createHash('sha256').update(JSON.stringify(list.map((k) => [DIGEST_NAME[k.name] ?? k.name, k.command]))).digest('hex');
+const digest = (list) => crypto.createHash('sha256').update(JSON.stringify(list.map((k) => [k.name, k.command]))).digest('hex');
 export const commandList = (list) => list.filter((k) => k.command).map((k) => `- ${k.name}: ${k.command}`).join('\n');
 export const readAgents = (root) => { try { return fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'); } catch { return ''; } };
 export const approvedCommands = (root) => readCommands(readAgents(root), APPROVED);
@@ -198,7 +202,9 @@ export function runGate(root) {
   const result = checks.some((k) => k.status === 'failed') ? 'Result: RED. The commit gate stays closed: fix it and run the gate again.'
     : empty ? 'Result: EMPTY, no check ran. Fill in AGENTS.md → Commands; the commit gate stays closed (if the user wants, commit-gate.mjs --skip).'
     : 'Result: GREEN.';
-  return { passed, text: [`## Gate · ${files.length} files changed`, ...checks.map(line), result].join('\n') };
+  const unknown = unknownCommandKeys(readAgents(root));
+  const warning = unknown.length ? [`⚠ AGENTS.md → Commands has keys the gate does not read: ${unknown.join(', ')}. Use dev, preview, test, lint, type check, build.`] : [];
+  return { passed, text: [`## Gate · ${files.length} files changed`, ...checks.map(line), ...warning, result].join('\n') };
 }
 
 if (isMain(import.meta.url)) {

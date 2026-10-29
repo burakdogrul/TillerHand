@@ -40,7 +40,7 @@ test('F-06 silent without a plan; once a plan is saved an existing file off the 
   assert.equal(edit('src/ödeme dosyası.ts'), null, 'Turkish path with spaces');
   const off = edit('src/b.ts');
   assert.equal(off.decision, 'ask');
-  assert.match(off.reason, /Kapsam kalkanı.*src\/b\.ts.*G-1/);
+  assert.match(off.reason, /Scope shield.*src\/b\.ts.*G-1/);
   assert.equal(edit(path.join(p, 'src/b.ts')).decision, 'ask', 'absolute path');
   assert.equal(edit('src/lib/../b.ts').decision, 'ask', 'with ..');
   assert.equal(edit('src/yeni.ts'), null, 'new file: the structure guard looks at it');
@@ -121,7 +121,7 @@ test('3.14.1 shell: while a plan is active a shell write to an existing file off
     'sed -i s/x/y/ "src/ödeme dosyası.ts"', 'cd src && sed -i s/x/y/ b.ts', 'Set-Content -Path src/b.ts -Value y']) {
     const r = shell(k);
     assert.equal(r?.permissionDecision, 'ask', k);
-    assert.match(r.permissionDecisionReason, /Kapsam kalkanı/, k);
+    assert.match(r.permissionDecisionReason, /Scope shield/, k);
   }
   assert.equal(shell('sed -i s/x/y/ b.ts', path.join(p, 'src'))?.permissionDecision, 'ask', 'relative to the session cwd');
   for (const k of ['sed -i s/x/y/ src/a.ts', 'cat src/b.ts', 'grep x src/b.ts > /dev/null', 'echo y > src/yeni.ts', 'echo y > docs/not.md', 'node --test 2>&1'])
@@ -133,7 +133,7 @@ test('3.14.1 shell: a shell write outside the lock is asked', () => {
   cli('--set', 'src/lib');
   const r = shell('rm src/a.ts');
   assert.equal(r?.permissionDecision, 'ask');
-  assert.match(r.permissionDecisionReason, /kilit/i);
+  assert.match(r.permissionDecisionReason, /Edit lock/);
   assert.equal(shell('sed -i s/x/y/ src/lib/c.ts'), null);
   fs.rmSync(path.join(p, '.claude/state/freeze.json'));
 });
@@ -201,9 +201,9 @@ test('3.14.1 re-audit: cd resolution, shell wrappers, combined flags, guard fold
   assert.equal(shell('echo SIR=1 > .env')?.permissionDecision, 'deny', '.env is not written from the shell either');
 });
 
-test('AC-48.8 guards: ~/.vibe-kit/preferences.md and the old tercihler.md both get the personal-preferences message', () => {
+test('AC-48.8 guards: ~/.vibe-kit/preferences.md gets the personal-preferences message', () => {
   // the hooks only decide here; nothing is written to the home folder
-  for (const f of ['preferences.md', 'tercihler.md']) {
+  for (const f of ['preferences.md']) {
     for (const k of [`echo x > ~/.vibe-kit/${f}`, `rm ~/.vibe-kit/${f}`, `cp x.md ~/.vibe-kit/${f}`]) {
       const s = shell(k);
       assert.equal(s?.permissionDecision, 'ask', k);

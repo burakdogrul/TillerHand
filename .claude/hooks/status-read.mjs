@@ -1,17 +1,17 @@
 // Reads the project state from the docs. Used by statusline, session-start and the dashboard.
 // Formats read: **Label:** lines and ## sections in docs/workflow/progress.md, checkboxes under "## Phase" headings
 // in docs/product/roadmap.md, the "Decision log" in docs/decisions/log.md and the docs/workflow/board.md tables.
-// Labels are read in English: readText turns the Turkish ones of pre-3.48 projects into English.
+// Labels are read in English.
 // Must stay fast: the status line calls it on every refresh (git and heavy reads are in dashboard.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import { t } from './lang.mjs';
-import { normalize, isValue } from './labels.mjs';
+import { isValue } from './labels.mjs';
 
 // Only a regular file: a folder or a link to a folder named like a test or report file must not throw (EISDIR)
-// The project name placeholder in AGENTS.md (before 3.48 '[PROJE ADI]')
-export const PLACEHOLDER_NAMES = ['[PROJECT NAME]', '[PROJE ADI]'];
-export const readText = (p) => { try { return fs.statSync(p).isFile() ? normalize(fs.readFileSync(p, 'utf8')) : ''; } catch { return ''; } };
+// The project name placeholder in AGENTS.md
+export const PLACEHOLDER_NAMES = ['[PROJECT NAME]'];
+export const readText = (p) => { try { return fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : ''; } catch { return ''; } };
 
 export function sections(text, level = '## ') {
   const result = {};

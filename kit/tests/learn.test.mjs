@@ -11,43 +11,57 @@ import { repeatedBugClasses, BUG_CLASSES } from '../../.claude/hooks/dashboard-d
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (f) => fs.readFileSync(path.join(REPO, f), 'utf8');
-const spec = (tur, sinif) => `# Spec\n\n**Tür:** ${tur}\n**Sınıf:** ${sinif}\n\n## Mevcut davranış\n\nx\n`;
+const spec = (type, cls) => `# Spec\n\n**Type:** ${type}\n**Class:** ${cls}\n\n## Current behavior\n\nx\n`;
 
-test('Ö-21.1 the second bug of the same class raises a proposal; "diğer", free text, empty fields and features do not count', () => {
+test('Ö-21.1 the second bug of the same class raises a proposal; "other", free text, empty fields and features do not count', () => {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'learn-'));
   const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); fs.writeFileSync(path.join(p, f), s); };
   try {
-    write('docs/product/specs/_template.md', spec('hata', 'tarih-saat'));
-    write('docs/product/specs/saat-dilimi.md', spec('hata', 'tarih-saat'));
+    write('docs/product/specs/_template.md', spec('bug', 'date-time'));
+    write('docs/product/specs/time-zone.md', spec('bug', 'date-time'));
     assert.deepEqual(repeatedBugClasses(p), [], 'one bug is not a repeat');
-    write('docs/product/specs/takvim.md', spec('hata', 'TARİH-SAAT').replace(/\n/g, '\r\n'));
-    write('docs/product/specs/rapor.md', spec('özellik', 'tarih-saat'));
-    for (const [f, cls] of [['a', 'diğer'], ['b', 'DİĞER'], ['c', ''], ['d', ''], ['e', 'saat sorunu'], ['f', 'saat sorunu']]) write(`docs/product/specs/${f}.md`, spec('hata', cls));
-    write('docs/product/specs/g.md', spec('hata', '`YETKI`'));
-    write('docs/product/specs/h.md', spec('hata', 'yetki,'));
-    assert.deepEqual(repeatedBugClasses(p), [{ cls: 'authorization', specs: ['g.md', 'h.md'] }, { cls: 'date-time', specs: ['saat-dilimi.md', 'takvim.md'] }]);
-    write('.kit.json', JSON.stringify({ type: 'web-saas', version: '3.24.0' }));
+    write('docs/product/specs/calendar.md', spec('bug', 'DATE-TIME').replace(/\n/g, '\r\n'));
+    write('docs/product/specs/report.md', spec('feature', 'date-time'));
+    for (const [f, cls] of [['a', 'other'], ['b', 'OTHER'], ['c', ''], ['d', ''], ['e', 'clock issue'], ['f', 'clock issue']]) write(`docs/product/specs/${f}.md`, spec('bug', cls));
+    // An English class with an I: a Turkish-locale lowercasing must not break it ("AUTHORIZATION" -> "authorızatıon")
+    write('docs/product/specs/g.md', spec('bug', '`AUTHORIZATION`'));
+    write('docs/product/specs/h.md', spec('bug', 'authorization,'));
+    assert.deepEqual(repeatedBugClasses(p), [{ cls: 'date-time', specs: ['calendar.md', 'time-zone.md'] }, { cls: 'authorization', specs: ['g.md', 'h.md'] }]);
+    write('.kit.json', JSON.stringify({ type: 'web-saas', version: '3.24.0', lang: 'en' }));
     const html = () => {
       const r = spawnSync(process.execPath, [path.join(REPO, '.claude/hooks/dashboard.mjs'), p, '--quiet'], { encoding: 'utf8' });
       assert.equal(r.status, 0, r.stderr);
       return fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8');
     };
-    assert.match(html(), /Aynı hata sınıfı 2 kez: date-time[\s\S]{0,300}\/retro/);
+    assert.match(html(), /Same bug class 2 times: date-time[\s\S]{0,300}\/retro/);
     // Answered (rule added or not needed): the alert closes and the question is not asked again
-    const decided = (s, answer) => s.replace('\n\n## Mevcut', `\n**Kural:** ${answer} · 2026-10-25\n\n## Mevcut`);
-    write('docs/product/specs/saat-dilimi.md', decided(spec('hata', 'tarih-saat'), 'AGENTS.md'));
-    write('docs/product/specs/takvim.md', decided(spec('hata', 'tarih-saat'), 'gerek yok'));
-    assert.doesNotMatch(html(), /Aynı hata sınıfı \d+ kez: (date-time|tarih-saat)/);
+    const decided = (s, answer) => s.replace('\n\n## Current', `\n**Rule:** ${answer} · 2026-10-25\n\n## Current`);
+    write('docs/product/specs/time-zone.md', decided(spec('bug', 'date-time'), 'AGENTS.md'));
+    write('docs/product/specs/calendar.md', decided(spec('bug', 'date-time'), 'not needed'));
+    assert.doesNotMatch(html(), /Same bug class \d+ times: date-time/);
     // A third bug of the class after the answer: the rule did not prevent it, ask again
-    write('docs/product/specs/ucuncu.md', spec('hata', 'tarih-saat'));
-    assert.match(html(), /Aynı hata sınıfı 3 kez: date-time/);
+    write('docs/product/specs/third.md', spec('bug', 'date-time'));
+    assert.match(html(), /Same bug class 3 times: date-time/);
+  } finally {
+    fs.rmSync(p, { recursive: true, force: true });
+  }
+});
+
+test('AC-49.5 learning rules: a Turkish **Kural:** answer does not close the repeated-bug question', () => {
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'learn-tr-'));
+  const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); fs.writeFileSync(path.join(p, f), s); };
+  try {
+    const answered = (answer) => spec('bug', 'date-time').replace('\n\n## Current', `\n**Kural:** ${answer} · 2026-10-25\n\n## Current`);
+    write('docs/product/specs/a.md', answered('AGENTS.md'));
+    write('docs/product/specs/b.md', answered('gerek yok'));
+    assert.deepEqual(repeatedBugClasses(p), [{ cls: 'date-time', specs: ['a.md', 'b.md'] }], '**Kural:** is not the Rule label');
   } finally {
     fs.rmSync(p, { recursive: true, force: true });
   }
 });
 
 test('Ö-21.1 the class list is the same in the template, /fix-bug and the dashboard', () => {
-  // 3.48.0: the template label is English (**Class:**); old **Sınıf:** specs are read in the test above
+  // The template label is English (**Class:**)
   const template = read('docs/product/specs/_template.md').match(/^\*\*Class:\*\* \[bug only: (.*)\]$/m)[1].split(' / ');
   const fixBug = [...read('.claude/commands/fix-bug.md').match(/write exactly one of this list: (.*?`other`)/)[1].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
   assert.deepEqual(template, [...BUG_CLASSES, 'other']);

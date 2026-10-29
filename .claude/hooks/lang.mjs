@@ -23,14 +23,14 @@ const stateFile = (root) => path.join(root, '.claude', 'state', 'lang.json');
 const i18nFile = (root, lang) => path.join(root, '.claude', 'i18n', `${lang}.json`);
 const placeholders = (s) => [...new Set([...s.matchAll(PLACEHOLDER)].map((m) => m[1]))].sort().join(',');
 
-// null: not set up and not chosen yet (/start asks). Projects set up before languages existed were Turkish.
+// null: not set up and not chosen yet (/start asks). A set-up project without a choice is English.
 export function readLang(root = findRoot()) {
   const kit = readJson(kitFile(root));
   const chosen = validCode(kit?.lang) ?? validCode(readJson(stateFile(root))?.lang);
   if (chosen) return chosen;
   // same rule as status-read kitPending: a broken .kit.json counts as missing
   const notSetUp = kit ? kit.type === null : fs.existsSync(path.join(root, 'kit', 'kit.mjs'));
-  return notSetUp ? null : 'tr';
+  return notSetUp ? null : 'en';
 }
 
 export function setLang(root, code) {
@@ -61,6 +61,9 @@ export function t(root, key, vars = {}) {
   }
   return text.replace(PLACEHOLDER, (m, name) => Object.hasOwn(vars, name) ? String(vars[name]) : m);
 }
+
+// Date and number locale for a language code (English when the runtime does not know the code)
+export const locale = (lang) => { try { return Intl.DateTimeFormat.supportedLocalesOf(lang ?? 'en')[0] ?? 'en'; } catch { return 'en'; } };
 
 const needsTranslation = (lang) => lang !== null && lang !== 'tr' && lang !== 'en';
 

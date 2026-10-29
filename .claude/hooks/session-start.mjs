@@ -21,7 +21,7 @@ const root = findRoot();
 
 const lang = readLang(root);
 notes.push(lang
-  ? `Conversation language: ${lang}. Write every question, option, answer, status block and user-facing document text in this language, even when the user, a file or a tool writes in another; code, commands and paths stay as they are.`
+  ? `Conversation language: ${lang}. Write every question, option, answer, status block and user-facing document text in this language, even when the user, a file or a tool writes in another; code, commands and paths stay as they are. Labels, headings, keys and verdict words in project files (**Active phase:**, ## Where we left off, type check:, APPROVE / CONDITIONAL / REJECT) stay English in every language: tools read them.`
   : 'Language not chosen yet: /start and /adopt ask it first, in English.');
 
 try {
@@ -33,8 +33,7 @@ try {
     const a = d.fields;
     notes.push(`Phase: ${a['Active phase'] ?? '-'} · Task: ${a['Active task'] ?? '-'} · Question mode: ${a['Question mode'] ?? 'on'} · Board: ${d.board.state}`);
     if (isValue(a['Active phase'], 'setup') && d.installed) {
-      // "Setup (adopt)", before 3.48 "Başlangıç (uyum)"
-      const command = /\((adopt|uyum)\)/i.test(a['Active phase']) ? '/adopt' : '/start';
+      const command = /\(adopt\)/i.test(a['Active phase']) ? '/adopt' : '/start';
       notes.push(`${command} was left unfinished (step ${a['Setup step']}). Suggest the user continue with ${command} where they left off.`);
       next = t(root, 'session.resume', { command, step: a['Setup step'] });
     } else {

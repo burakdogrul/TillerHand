@@ -218,7 +218,7 @@ export function scopeIssue(command, dir, root) {
   const vk = path.join(os.userInfo().homedir, '.vibe-kit');
   const touchesApproval = (y) => VIBE_KIT.test(y) || !/^\.\.|^$/.test(path.relative(y, vk)) && !path.isAbsolute(path.relative(y, vk));
   for (const h of targets) {
-    if (touchesApproval(h) || touchesApproval(realPath(h))) return { decision: 'ask', reason: /(preferences|tercihler)\.md$/i.test(h)
+    if (touchesApproval(h) || touchesApproval(realPath(h))) return { decision: 'ask', reason: /preferences[.]md$/i.test(h)
       ? t(root, 'guard.destructive.prefsFile', { path: h })
       : t(root, 'guard.destructive.gateApproval', { path: h }) };
     const rel = relPath(realPath(h), groot);

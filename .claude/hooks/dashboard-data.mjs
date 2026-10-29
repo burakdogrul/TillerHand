@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readText, sections, findSection, tableRows, labels } from './status-read.mjs';
-import { normalize, isValue, VALUES } from './labels.mjs';
+import { isValue, VALUES } from './labels.mjs';
 import { t } from './lang.mjs';
 
 const DAY = 864e5;
@@ -12,13 +12,13 @@ const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s).trim());
 export const daysLeft = (date, now = Date.now()) => Math.ceil((Date.parse(`${date}T00:00:00`) - now) / DAY);
 
 // ---------- acceptance tests ----------
-// A criterion id is "AC-01.1" in the PRD and "AC-01.1" or "AC_01_1" in tests; before 3.48 "Ö-01.1" / "O_01_1".
-// All four normalize to the key "O_01_1". Not after a letter: "ISO-27.1", "DEMO_01_2" or "MAC_01_1" is not a criterion
-const CRITERION_ID = /(?<![A-Za-z])(?:AC|[ÖO])[-_](\d{2})[._](\d+)/g;
-const key = (m1, m2) => `O_${m1}_${m2}`;
+// A criterion id is "AC-01.1" in the PRD and "AC-01.1" or "AC_01_1" in tests.
+// Both normalize to the key "AC_01_1". Not after a letter: "ISO-27.1", "DEMO_01_2" or "MAC_01_1" is not a criterion
+const CRITERION_ID = /(?<![A-Za-z])AC[-_](\d{2})[._](\d+)/g;
+const key = (m1, m2) => `AC_${m1}_${m2}`;
 
 export function prdCriteria(prdText) {
-  return [...prdText.matchAll(/^\s*- \[( |x)\]\s*((?:AC|Ö)-(\d{2})\.(\d+))\s*:?\s*(.*)$/gim)]
+  return [...prdText.matchAll(/^\s*- \[( |x)\]\s*(AC-(\d{2})\.(\d+))\s*:?\s*(.*)$/gim)]
     .filter((m) => !m[5].startsWith('['))
     .map((m) => ({ id: m[2], key: key(m[3], m[4]), text: m[5].trim(), checked: m[1].toLowerCase() === 'x' }));
 }
@@ -124,9 +124,9 @@ export function specInvariants(root, since = 0) {
   for (const f of files) {
     const body = sections(readText(path.join(dir, f)))['Behavior that must not change'] ?? '';
     for (const line of body.split(/\r?\n/)) {
-      const m = line.match(/^\s*-\s*((?:AC|Ö)-(\d{2})\.(\d+))/);
+      const m = line.match(/^\s*-\s*(AC-(\d{2})\.(\d+))/);
       if (m) list.push({ spec: f, id: m[1], key: key(m[2], m[3]) });
-      else if (/(?<![A-Za-z])(?:AC|[ÖO])[-_]\d{2}[._]\d+/.test(line)) unreadable.push({ spec: f, line: line.trim() });
+      else if (/(?<![A-Za-z])AC[-_]\d{2}[._]\d+/.test(line)) unreadable.push({ spec: f, line: line.trim() });
     }
   }
   if (!list.length) return { invariants: [], unreadable };
@@ -136,11 +136,9 @@ export function specInvariants(root, since = 0) {
 }
 
 // Bug classes seen in two or more bug specs (F-21): a repeat is the cue to propose a rule. Only the fixed list counts
-// ("diğer"/"other" and free text never do). A group closes once every spec has a "**Rule:**" answer (rule added or not needed);
+// ("other" and free text never do). A group closes once every spec has a "**Rule:**" answer (rule added or not needed);
 // a new undecided spec in a decided class opens it again (the rule did not prevent the bug).
 export const BUG_CLASSES = ['empty-input', 'validation', 'authorization', 'date-time', 'locale', 'sorting', 'concurrency', 'configuration', 'external-service', 'contract', 'ui-state'];
-// Pre-3.48 specs name the class in Turkish, in the same order; both count as one class under the English name
-const BUG_CLASSES_TR = ['boş-girdi', 'doğrulama', 'yetki', 'tarih-saat', 'yerel-dil', 'sıralama', 'eşzamanlılık', 'yapılandırma', 'dış-servis', 'sözleşme', 'arayüz-durumu'];
 export function repeatedBugClasses(root) {
   const dir = path.join(root, 'docs/product/specs');
   let files = [];
@@ -150,9 +148,7 @@ export function repeatedBugClasses(root) {
     const text = readText(path.join(dir, f));
     if (!isValue(text.match(/^\*\*Type:\*\*[ \t]*(.*)$/im)?.[1], 'bug')) continue;
     const raw = text.match(/^\*\*Class:\*\*[ \t]*`?([^\s`,.[\]]+)/im)?.[1] ?? '';
-    // YETKI and YETKİ both mean yetki: try the Turkish and the plain lowercase
-    const cls = [raw.toLocaleLowerCase('tr'), raw.toLowerCase()]
-      .map((c) => (BUG_CLASSES.includes(c) ? c : BUG_CLASSES[BUG_CLASSES_TR.indexOf(c)])).find(Boolean);
+    const cls = BUG_CLASSES.find((c) => c === raw.toLowerCase());
     if (!cls) continue;
     const decided = /^\*\*Rule:\*\*[ \t]*[^\s[]/im.test(text);
     byClass.set(cls, [...(byClass.get(cls) ?? []), { f, decided }]);
@@ -162,7 +158,7 @@ export function repeatedBugClasses(root) {
 
 // ---------- accounts and flags ----------
 export function accounts(text, now = Date.now()) {
-  return tableRows(sections(normalize(text))['Accounts'], 8)
+  return tableRows(sections(text)['Accounts'], 8)
     .filter(([service]) => service && !service.startsWith('['))
     .map(([service, purpose, owner, twoFactor, plan, expiry, keyRotation]) => {
       const dates = [['expiry', expiry], ['keyRotation', keyRotation]].filter(([, t]) => isDate(t))
@@ -175,7 +171,7 @@ export function accounts(text, now = Date.now()) {
 export function envWarnings(root) {
   const u = [];
   const prodRef = tableRows(sections(readText(path.join(root, 'docs/operations/accounts.md')))['Environments (dev / prod)'], 4)
-    // A real ref (Supabase: 20 characters); "-", "yok", "n/a" would match anywhere in .mcp.json
+    // A real ref (Supabase: 20 characters); "-", "none", "n/a" would match anywhere in .mcp.json
     .find(([environment, , ref]) => environment === 'prod' && /^[a-z0-9][a-z0-9._:/-]{7,}$/i.test(ref ?? ''))?.[2];
   if (prodRef && readText(path.join(root, '.mcp.json')).includes(prodRef)) {
     u.push({ sev: 'critical', text: t(root, 'dashboardData.prodRefInMcp', { ref: prodRef }), action: t(root, 'dashboardData.prodRefAction') });
@@ -187,17 +183,17 @@ export function envWarnings(root) {
 }
 
 export function flags(text, now = Date.now()) {
-  return tableRows(sections(normalize(text))['Flags'], 7).filter(([name]) => name)
+  return tableRows(sections(text)['Flags'], 7).filter(([name]) => name)
     .map(([name, purpose, state, owner, added, removal, killSwitchTested]) => ({
       name, purpose, state, owner, added, removal, killSwitchTested,
       isOverdue: isDate(removal) && daysLeft(removal, now) < 0,
-      untested: !(isValue(killSwitchTested, 'yes') || /^(✅|var\b)/i.test(killSwitchTested ?? '')),
+      untested: !(isValue(killSwitchTested, 'yes') || /^✅/.test(killSwitchTested ?? '')),
     }));
 }
 
 // ---------- unit economics ----------
 export function unitEconomics(text) {
-  const e = labels(normalize(text));
+  const e = labels(text);
   const s = (k) => { const v = parseFloat(String(e[k] ?? '').replace(/[^\d.,-]/g, '').replace(',', '.')); return Number.isFinite(v) ? v : 0; };
   const price = s('Price (per user, monthly)');
   const commission = s('Payment fee (%)');
@@ -226,9 +222,9 @@ export function unitEconomics(text) {
 const FEEDBACK_KINDS = ['bug', 'request', 'complaint', 'praise', 'question'];
 const FEEDBACK_STATES = ['new', 'planned', 'done', 'rejected', 'merged'];
 // A known value in either language becomes the English one; anything else stays as written
-const inEnglish = (v, keys) => VALUES[keys.find((k) => isValue(v, k))]?.en ?? v;
+const inEnglish = (v, keys) => VALUES[keys.find((k) => isValue(v, k))]?? v;
 export function feedback(text) {
-  const b = sections(normalize(text));
+  const b = sections(text);
   const records = tableRows(b['Inbox'], 9).map(([no, date, source, user, summary, kind, theme, priority, state]) =>
     ({ no, date, summary, kind: inEnglish(kind, FEEDBACK_KINDS), theme, priority, state: inEnglish(state, FEEDBACK_STATES) }));
   const themes = tableRows(b['Themes'], 3).map(([theme, count, feature, decision]) => ({ theme, count: parseInt(count, 10) || 0, feature, decision }))
@@ -239,7 +235,7 @@ export function feedback(text) {
 // Comprehension check answers (F-22, narrator mode); null without rows so the card is left out
 export function learning(text) {
   // Only right / wrong rows count; a skipped or malformed answer is not a wrong one
-  const rows = tableRows(sections(normalize(text))['Records'], 4).filter(([, , , result]) => isValue(result, 'right') || isValue(result, 'wrong'))
+  const rows = tableRows(sections(text)['Records'], 4).filter(([, , , result]) => isValue(result, 'right') || isValue(result, 'wrong'))
     .map(([date, task, concept, result]) => ({ concept, right: isValue(result, 'right') }));
   if (!rows.length) return null;
   const missed = new Map();
@@ -249,28 +245,26 @@ export function learning(text) {
 }
 
 export function metrics(text) {
-  return tableRows(sections(normalize(text))['Records'], 9)
+  return tableRows(sections(text)['Records'], 9)
     .map(([period, taskCount, duration, limit, fixes, reverts, duplicates, critical, acceptance]) => ({ period, taskCount, duration, limit, fixes, reverts, duplicates, critical, acceptance }));
 }
 
 // ---------- finding reports ----------
 export const FINDING_KINDS = { tech: 'Tech', business: 'Business', security: 'Security', ux: 'UX', perf: 'Performance', legal: 'Legal' };
-// Pre-3.48 report tables name the area in Turkish
-const FINDING_KINDS_TR = { tech: 'Teknik', business: 'İş', security: 'Güvenlik', ux: 'UX', perf: 'Performans', legal: 'Hukuk' };
 const findingKind = (v) => {
-  const low = [v.toLocaleLowerCase('tr'), v.toLowerCase()];
-  const named = Object.keys(FINDING_KINDS).find((k) => [k, FINDING_KINDS[k], FINDING_KINDS_TR[k]].some((n) => low.includes(n.toLocaleLowerCase('tr')) || low.includes(n.toLowerCase())));
-  return named ?? low[1];
+  const low = v.toLowerCase();
+  return Object.keys(FINDING_KINDS).find((k) => k === low || FINDING_KINDS[k].toLowerCase() === low) ?? low;
 };
 export function findingReports(text) {
   const count = (x) => { const n = parseInt(String(x ?? '').trim().replace(/^[^\d-]+/, ''), 10); return Number.isFinite(n) ? n : null; };
-  const rows = tableRows(sections(normalize(text))['Reports'], 7)
+  const rows = tableRows(sections(text)['Reports'], 7)
     .map(([date, kind, health, previous, findings, critical, report]) => ({
       date, kind: findingKind(kind), health: count(health), previous: count(previous), findings: count(findings), critical: count(critical) ?? 0, report,
     }))
     .filter((r) => r.date && r.health != null);
   const latest = {};
-  for (const r of rows) if (!latest[r.kind] || r.date >= latest[r.kind].date) latest[r.kind] = r;
+  // An area name the kit does not know is listed, but has no card
+  for (const r of rows) if (Object.hasOwn(FINDING_KINDS, r.kind) && (!latest[r.kind] || r.date >= latest[r.kind].date)) latest[r.kind] = r;
   return { rows, latest };
 }
 
@@ -299,7 +293,7 @@ export function producedAssets(root) {
 
 // ---------- Spend alarms (docs/operations/spend-alarms.md) ----------
 export function spendAlarms(text, now = Date.now()) {
-  return tableRows(sections(normalize(text))['Alarms'], 6).filter(([service]) => service)
+  return tableRows(sections(text)['Alarms'], 6).filter(([service]) => service)
     .map(([service, kind, amount, thresholds, where, lastCheck]) => ({
       service, kind, amount, thresholds, where, lastCheck,
       unset: !/\d/.test(amount ?? ''),
@@ -316,21 +310,19 @@ export function councilMinutes(root) {
     const text = readText(path.join(folder, f));
     const a = {};
     for (const [, k, v] of text.matchAll(/\*\*([^*:]+):\*\*\s*([^·\n]*)/g)) a[k.trim()] ??= v.trim();
-    // English minutes, or Turkish ones written before 3.48 (they stay as they are: a council record is history)
-    const pick = (en, tr) => a[en] ?? a[tr];
     const b = sections(text);
     const ranking = tableRows(findSection(b, '3.'), 3).filter(([g]) => /^[A-Z]$/.test(g));
-    const idsByLetter = Object.fromEntries([...(b['IDs'] ?? b['Kimlikler'] ?? '').matchAll(/([A-Z])\s*=\s*([^·\n]+)/g)].map((m) => [m[1], m[2].trim()]));
-    const consensus = pick('Consensus', 'Uzlaşma')?.match(/\d+/)?.[0];
+    const idsByLetter = Object.fromEntries([...(b['IDs'] ?? '').matchAll(/([A-Z])\s*=\s*([^·\n]+)/g)].map((m) => [m[1], m[2].trim()]));
+    const consensus = a['Consensus']?.match(/\d+/)?.[0];
     return {
       file: `docs/workflow/council/${f}`,
-      topic: text.match(/^#\s+(?:Council|Konsey):\s*(.+)$/m)?.[1] ?? f.replace(/\.md$/, ''),
-      date: pick('Date', 'Tarih') ?? f.slice(0, 10),
-      kind: pick('Type', 'Tür') ?? '-',
-      decision: pick('Decision', 'Karar') || pick('Recommendation', 'Öneri') || null,
+      topic: text.match(/^#\s+Council:\s*(.+)$/m)?.[1] ?? f.replace(/\.md$/, ''),
+      date: a['Date'] ?? f.slice(0, 10),
+      kind: a['Type'] ?? '-',
+      decision: a['Decision'] || a['Recommendation'] || null,
       consensus: consensus ? Number(consensus) : null,
-      disputed: Number(pick('Disputed', 'Tartışmalı') ?? 0) || 0,
-      eliminated: Number(pick('Eliminated', 'Elenen') ?? 0) || 0,
+      disputed: Number(a['Disputed'] ?? 0) || 0,
+      eliminated: Number(a['Eliminated'] ?? 0) || 0,
       ranking: ranking.map(([g, avg]) => ({ opinion: g, who: idsByLetter[g] ?? null, average: avg })),
     };
   }).sort((x, y) => y.date.localeCompare(x.date) || y.file.localeCompare(x.file));

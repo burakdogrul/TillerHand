@@ -1,8 +1,7 @@
 // Run: node --test "kit/tests/*.test.mjs"
-// 3.48.0 step 4a: label VALUES move to English as well (açık → on, kurulmadı → not set up, geçti → passed ...).
-// Hooks read both languages for the whole 3.x line: a Turkish file and its English twin (labels AND values translated)
-// must give the same reader result. New headings join normalize(); labels.mjs gets VALUES and isValue();
-// qa-report writes English values; the dashboard's internal ids lose their Turkish words.
+// Label VALUES are English (on, off, not set up, passed ...). 3.49.0: hooks read English only. labels.mjs has VALUES and
+// isValue() for English values; a Turkish value or heading (açık, kurulmadı, ## Hesaplar ...) is not understood any more.
+// qa-report writes English values; the dashboard's internal ids carry no Turkish word.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,7 +9,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-// Namespace import: VALUES / isValue do not exist yet, each test reports its own failure
 import * as labels from '../../.claude/hooks/labels.mjs';
 import { readStatus } from '../../.claude/hooks/status-read.mjs';
 import { accounts, feedback, learning, qaSummary, findingReports, spendAlarms, flags, repeatedBugClasses, FINDING_KINDS } from '../../.claude/hooks/dashboard-data.mjs';
@@ -37,124 +35,36 @@ const NOW = Date.parse('2026-10-28T12:00:00');
 // A date relative to the real clock (dashboard.mjs uses Date.now())
 const day = (offset) => new Date(Date.now() + offset * 864e5).toLocaleDateString('sv-SE');
 const crlfBom = (s) => `\uFEFF${s.replace(/\n/g, '\r\n')}`;
-const TR_LETTERS = /[çğıöşüÇĞİÖŞÜ]/;
 
 const valuesApi = () => {
   assert.equal(typeof labels.isValue, 'function', 'labels.mjs exports isValue(text, key)');
-  assert.equal(Object.prototype.toString.call(labels.VALUES), '[object Object]', 'labels.mjs exports VALUES');
   return labels;
 };
 
-// ---------- the approved value dictionary: key, Turkish, English ----------
+// ---------- the value dictionary: key, English value, and the old Turkish value that no longer counts ----------
 
 const VALUE_PAIRS = [
-  ['on', 'açık', 'on'], ['off', 'kapalı', 'off'], ['none', 'yok', 'none'], ['setup', 'Başlangıç', 'Setup'],
-  ['notSetUp', 'kurulmadı', 'not set up'], ['setUp', 'kuruldu', 'set up'], ['full', 'Tam', 'Full'], ['light', 'Hafif', 'Light'],
-  ['standard', 'Standart', 'Standard'], ['waiting', 'bekliyor', 'waiting'], ['automatic', 'otomatik', 'automatic'], ['user', 'kullanıcı', 'user'],
-  ['oneWay', 'tek', 'one-way'], ['twoWay', 'çift', 'two-way'], ['yes', 'evet', 'yes'], ['no', 'hayır', 'no'], ['right', 'doğru', 'right'],
-  ['wrong', 'yanlış', 'wrong'], ['passed', 'geçti', 'passed'], ['failed', 'kaldı', 'failed'], ['notRun', 'koşulmadı', 'not run'],
-  ['bug', 'hata', 'bug'], ['feature', 'özellik', 'feature'],
+  ['on', 'on', 'açık'], ['off', 'off', 'kapalı'], ['none', 'none', 'yok'], ['setup', 'Setup', 'Başlangıç'],
+  ['notSetUp', 'not set up', 'kurulmadı'], ['setUp', 'set up', 'kuruldu'], ['full', 'Full', 'Tam'], ['light', 'Light', 'Hafif'],
+  ['standard', 'Standard', 'Standart'], ['waiting', 'waiting', 'bekliyor'], ['automatic', 'automatic', 'otomatik'], ['user', 'user', 'kullanıcı'],
+  ['oneWay', 'one-way', 'tek'], ['twoWay', 'two-way', 'çift'], ['yes', 'yes', 'evet'], ['no', 'no', 'hayır'], ['right', 'right', 'doğru'],
+  ['wrong', 'wrong', 'yanlış'], ['passed', 'passed', 'geçti'], ['failed', 'failed', 'kaldı'], ['notRun', 'not run', 'koşulmadı'],
+  ['bug', 'bug', 'hata'], ['feature', 'feature', 'özellik'],
 ];
-const V = {
-  tr: Object.fromEntries(VALUE_PAIRS.map(([k, tr]) => [k, tr])),
-  en: Object.fromEntries(VALUE_PAIRS.map(([k, , en]) => [k, en])),
-};
+const V = Object.fromEntries(VALUE_PAIRS.map(([k, en]) => [k, en]));
 
-// ---------- 1. normalize: the new heading labels ----------
+// ---------- 1. isValue ----------
 
-const HEADINGS = [
-  ['## Hesaplar', '## Accounts'],
-  ['## Gelen kutusu', '## Inbox'],
-  ['## Temalar', '## Themes'],
-  ['## Raporlar', '## Reports'],
-  ['## Alarmlar', '## Alarms'],
-  ['## 1. Seçilen yön', '## 1. Chosen direction'],
-  ['## 3. Değer önerisi', '## 3. Value proposition'],
-  ['## 1. Kritik akışlar', '## 1. Critical flows'],
-  ['## Öğrenilen kurallar', '## Learned rules'],
-];
-
-test('Ö-48.10 normalize: the nine new headings become English, the template suffix after them is kept', () => {
-  for (const [tr, en] of HEADINGS) assert.equal(labels.normalize(tr), en, tr);
-  // The templates write a note after some of them
-  assert.equal(labels.normalize('## 1. Seçilen yön (Chosen direction)'), '## 1. Chosen direction (Chosen direction)');
-  assert.equal(labels.normalize('## 3. Değer önerisi (value proposition)'), '## 3. Value proposition (value proposition)');
-  assert.equal(labels.normalize('## 1. Kritik akışlar (critical flows; automatic test REQUIRED)'), '## 1. Critical flows (critical flows; automatic test REQUIRED)');
-  const doc = (h) => lines('# Feedback', '', '> The headings are read by the dashboard.', '', h[1], '', '| # | Summary |', '|---|---|', '| 1 | Hesaplar yok |', '', h[2], '', '- x', '');
-  assert.equal(labels.normalize(doc(['', '## Gelen kutusu', '## Temalar'])), doc(['', '## Inbox', '## Themes']));
-  assert.equal(labels.normalize(doc(['', '## Gelen kutusu', '## Temalar']).replace(/\n/g, '\r\n')), doc(['', '## Inbox', '## Themes']).replace(/\n/g, '\r\n'), 'CRLF kept');
-  assert.equal(labels.normalize('\uFEFF# Accounts\n\n## Hesaplar\n'), '\uFEFF# Accounts\n\n## Accounts\n', 'BOM kept');
-});
-
-test('Ö-48.10 normalize: the new English headings are unchanged and the Turkish ones are idempotent', () => {
-  for (const [tr, en] of HEADINGS) {
-    assert.equal(labels.normalize(en), en, en);
-    assert.equal(labels.normalize(labels.normalize(tr)), labels.normalize(tr), tr);
-  }
-});
-
-test('A-48.8 normalize: prose, tables, code blocks, deeper headings and longer words with the new labels stay byte-identical', () => {
-  const doc = [
-    'Hesaplar, Gelen kutusu, Temalar, Raporlar ve Alarmlar bölümleri dashboard tarafından okunur.',
-    'Öğrenilen kurallar burada değil; 1. Seçilen yön ve 3. Değer önerisi PRD\'de.',
-    '| Hesaplar | Gelen kutusu |',
-    '| ## Raporlar | ## 1. Kritik akışlar |',
-    '```md',
-    '## Hesaplar',
-    '## Gelen kutusu',
-    '## 1. Seçilen yön',
-    '## Öğrenilen kurallar',
-    '```',
-    '~~~',
-    '## Alarmlar',
-    '~~~',
-    '### Hesaplar',
-    '# Raporlar',
-    '- ## Temalar',
-    '> ## Alarmlar',
-    'See ## Raporlar in the README.',
-    '## Hesaplarım',
-    '## Raporlarda',
-    '## Temalarımız',
-    '## Alarmlara bak',
-    '## Gelen kutusunda',
-    '## 1. Seçilen yönler',
-    '## 3. Değer önerisiz',
-    '## 1. Kritik akışları',
-    '## Öğrenilen kurallara',
-    '## hesaplar',
-    '## HESAPLAR',
-    '##Hesaplar',
-  ].join('\n');
-  assert.equal(labels.normalize(doc), doc);
-});
-
-// ---------- 2. VALUES and isValue ----------
-
-test('Ö-48.11 VALUES: every key maps the approved Turkish value to its English value', () => {
-  const { VALUES } = valuesApi();
-  for (const [key, tr, en] of VALUE_PAIRS) assert.deepEqual([key, VALUES[key]?.tr, VALUES[key]?.en], [key, tr, en]);
-  for (const [key, entry] of Object.entries(VALUES)) {
-    assert.equal(typeof entry.en, 'string', key);
-    assert.equal(typeof entry.tr, 'string', key);
-    assert.notEqual(entry.en.trim(), '', `${key}: empty en`);
-    assert.doesNotMatch(entry.en, TR_LETTERS, `${key}: Turkish letter in en "${entry.en}"`);
-  }
-});
-
-test('Ö-48.12 isValue: the English and the Turkish value match, case-insensitive (Turkish-aware), trimmed', () => {
+test('Ö-48.12 isValue: the English value matches, case-insensitive, trimmed', () => {
   const { isValue } = valuesApi();
-  for (const [key, tr, en] of VALUE_PAIRS) {
-    for (const text of [tr, en, tr.toLocaleUpperCase('tr'), en.toUpperCase(), tr.toLocaleLowerCase('tr'), en.toLowerCase(),
-      en[0].toUpperCase() + en.slice(1), `  ${tr}  `, `\t${en}\n`]) {
+  for (const [key, en] of VALUE_PAIRS) {
+    for (const text of [en, en.toUpperCase(), en.toLowerCase(), en[0].toUpperCase() + en.slice(1), `  ${en}  `, `\t${en}\n`]) {
       assert.equal(isValue(text, key), true, `${JSON.stringify(text)} is ${key}`);
     }
   }
-  // Spot checks: Turkish I/İ and English I both lower correctly
-  for (const [text, key] of [['AÇIK', 'on'], ['Açık', 'on'], ['KAPALI', 'off'], ['KURULMADI', 'notSetUp'], ['BAŞLANGIÇ', 'setup'],
-    ['ÖZELLİK', 'feature'], ['KULLANICI', 'user'], ['OTOMATİK', 'automatic'], ['GEÇTİ', 'passed'], ['HAYIR', 'no'],
-    ['FAILED', 'failed'], ['WAITING', 'waiting'], ['LIGHT', 'light'], ['NOT SET UP', 'notSetUp'], ['Not Set Up', 'notSetUp'], ['NOT RUN', 'notRun'],
-    ['ONE-WAY', 'oneWay'], ['FULL', 'full'], ['YES', 'yes']]) {
+  // English words with I: a Turkish-locale lowercasing would give "faıled", "waıtıng"
+  for (const [text, key] of [['FAILED', 'failed'], ['WAITING', 'waiting'], ['LIGHT', 'light'], ['NOT SET UP', 'notSetUp'], ['Not Set Up', 'notSetUp'],
+    ['NOT RUN', 'notRun'], ['ONE-WAY', 'oneWay'], ['FULL', 'full'], ['YES', 'yes'], ['RIGHT', 'right'], ['ON', 'on']]) {
     assert.equal(isValue(text, key), true, `${text} is ${key}`);
   }
 });
@@ -162,21 +72,35 @@ test('Ö-48.12 isValue: the English and the Turkish value match, case-insensitiv
 test('Ö-48.12 isValue: the value followed by a non-letter matches (the rest of the line is a note)', () => {
   const { isValue } = valuesApi();
   for (const [text, key] of [
-    ['açık · kapalı konular: yok', 'on'], ['on · closed topics: none', 'on'], ['kapalı · kapalı konular: tasarim', 'off'], ['off · closed topics: design', 'off'],
-    ['Setup (adopt)', 'setup'], ['Başlangıç (uyum)', 'setup'], ['yes (2026-10-01)', 'yes'], ['evet, 2026-10-01', 'yes'], ['Tam — every command', 'full'],
-    ['Full (all commands)', 'full'], ['failed: timeout', 'failed'], ['kaldı: zaman aşımı', 'failed'], ['tek yönlü', 'oneWay'], ['one-way door', 'oneWay'],
-    ['not set up yet', 'notSetUp'], ['kurulmadı.', 'notSetUp'], ['set up 2026-10-20', 'setUp'], ['bekliyor — Ali', 'waiting'], ['hata/regresyon', 'bug'],
+    ['on · closed topics: none', 'on'], ['off · closed topics: design', 'off'], ['Setup (adopt)', 'setup'], ['yes (2026-10-01)', 'yes'],
+    ['Full (all commands)', 'full'], ['Full — every command', 'full'], ['failed: timeout', 'failed'], ['one-way door', 'oneWay'],
+    ['not set up yet', 'notSetUp'], ['not set up.', 'notSetUp'], ['set up 2026-10-20', 'setUp'], ['waiting — Ali', 'waiting'], ['bug/regression', 'bug'],
   ]) {
     assert.equal(isValue(text, key), true, `${JSON.stringify(text)} is ${key}`);
+  }
+});
+
+test('AC-49.3 isValue: an old Turkish value never matches its key, in any case or with a note after it', () => {
+  const { isValue } = valuesApi();
+  for (const [key, , tr] of VALUE_PAIRS) {
+    for (const text of [tr, tr.toLocaleUpperCase('tr'), tr.toUpperCase(), tr.toLocaleLowerCase('tr'), `  ${tr}  `, `${tr} · note`, `${tr} (x)`]) {
+      assert.equal(isValue(text, key), false, `${JSON.stringify(text)} is not ${key}`);
+    }
+  }
+  for (const [text, key] of [['açık · kapalı konular: yok', 'on'], ['AÇIK', 'on'], ['KAPALI', 'off'], ['Başlangıç (uyum)', 'setup'],
+    ['evet, 2026-10-01', 'yes'], ['kaldı: zaman aşımı', 'failed'], ['tek yönlü', 'oneWay'], ['hata/regresyon', 'bug'], ['reddedildi', 'rejected'],
+    ['yeni', 'new'], ['planlandı', 'planned'], ['yapıldı', 'done'], ['birleşti', 'merged'], ['istek', 'request'], ['şikayet', 'complaint'],
+    ['övgü', 'praise'], ['soru', 'question']]) {
+    assert.equal(isValue(text, key), false, `${JSON.stringify(text)} is not ${key}`);
   }
 });
 
 test('Ö-48.13 isValue: an unknown key throws like label(); a non-string text is false', () => {
   const { isValue } = valuesApi();
   for (const bad of ['nope', '', 'On', 'açık', 'toString', '__proto__', 'constructor', 'hasOwnProperty']) {
-    assert.throws(() => isValue('açık', bad), undefined, `key ${JSON.stringify(bad)}`);
+    assert.throws(() => isValue('on', bad), undefined, `key ${JSON.stringify(bad)}`);
   }
-  for (const text of [null, undefined, 42, true, {}, ['açık'], { toString: () => 'açık' }]) {
+  for (const text of [null, undefined, 42, true, {}, ['on'], { toString: () => 'on' }]) {
     assert.equal(isValue(text, 'on'), false, `${JSON.stringify(text)} is not on`);
   }
   for (const text of ['', '   ', '\t\n']) {
@@ -187,96 +111,87 @@ test('Ö-48.13 isValue: an unknown key throws like label(); a non-string text is
 test('A-48.9 isValue: a value inside a longer word, the reverse prefix and the "not set up" / "set up" trap do not match', () => {
   const { isValue } = valuesApi();
   for (const [text, key] of [
-    ['not set up', 'setUp'], ['Not set up yet', 'setUp'], ['kurulmadı', 'setUp'], ['kuruldu', 'notSetUp'], ['set up', 'notSetUp'],
-    ['açıklama', 'on'], ['açıkça', 'on'], ['one-way', 'on'], ['once', 'on'], ['online', 'on'], ['kapalıydı', 'off'], ['offline', 'off'],
-    ['yokluk', 'none'], ['nonetheless', 'none'], ['none', 'no'], ['not run', 'no'], ['not set up', 'no'], ['nothing', 'no'], ['hayırlı', 'no'],
-    ['Tamam', 'full'], ['Fullstack', 'full'], ['Hafifçe', 'light'], ['Lightweight', 'light'], ['Standartlar', 'standard'], ['Standardize', 'standard'],
-    ['bekliyordu', 'waiting'], ['waitinglist', 'waiting'], ['otomatikleştirildi', 'automatic'], ['automatically', 'automatic'], ['auto', 'automatic'],
-    ['kullanıcılar', 'user'], ['users', 'user'], ['tekrar', 'oneWay'], ['tekil', 'oneWay'], ['two-way', 'oneWay'], ['çifte', 'twoWay'], ['one-way', 'twoWay'],
-    ['evetler', 'yes'], ['yesterday', 'yes'], ['doğrulama', 'right'], ['rightly', 'right'], ['yanlışlık', 'wrong'], ['wrongly', 'wrong'],
-    ['geçtik', 'passed'], ['passedby', 'passed'], ['failed', 'passed'], ['kaldırıldı', 'failed'], ['failedover', 'failed'], ['passed', 'failed'],
-    ['not running', 'notRun'], ['koşulmadıkça', 'notRun'], ['hatalı', 'bug'], ['bugfix', 'bug'], ['özellikler', 'feature'], ['features', 'feature'],
-    ['Setups', 'setup'], ['Başlangıçta', 'setup'], ['- açık', 'on'], ['(on)', 'on'], ['the value is on', 'on'],
+    ['not set up', 'setUp'], ['Not set up yet', 'setUp'], ['set up', 'notSetUp'],
+    ['one-way', 'on'], ['once', 'on'], ['online', 'on'], ['offline', 'off'],
+    ['nonetheless', 'none'], ['none', 'no'], ['not run', 'no'], ['not set up', 'no'], ['nothing', 'no'],
+    ['Fullstack', 'full'], ['Lightweight', 'light'], ['Standardize', 'standard'],
+    ['waitinglist', 'waiting'], ['automatically', 'automatic'], ['auto', 'automatic'],
+    ['users', 'user'], ['two-way', 'oneWay'], ['one-way', 'twoWay'],
+    ['yesterday', 'yes'], ['rightly', 'right'], ['wrongly', 'wrong'],
+    ['passedby', 'passed'], ['failed', 'passed'], ['failedover', 'failed'], ['passed', 'failed'],
+    ['not running', 'notRun'], ['bugfix', 'bug'], ['features', 'feature'],
+    ['Setups', 'setup'], ['- on', 'on'], ['(on)', 'on'], ['the value is on', 'on'],
   ]) {
     assert.equal(isValue(text, key), false, `${JSON.stringify(text)} is not ${key}`);
   }
 });
 
-// ---------- 3. readers: a Turkish file and its English twin read the same ----------
+// ---------- 2. readers ----------
 
-const accountsDoc = (heading, no, yes) => lines('# Accounts and Deadlines', '', '> Dates use the YYYY-AA-GG format.', '', `## ${heading}`, '',
+const accountsDoc = (heading, no, yes) => lines('# Accounts and Deadlines', '', '> Dates use the YYYY-MM-DD format.', '', `## ${heading}`, '',
   '| Service | Purpose | Account owner | 2FA | Plan / monthly cost | Expiry / renewal | Key rotation | Note |', '|---|---|---|---|---|---|---|---|',
   '| [GitHub] | Code repository | [email] | [yes/no] | [Free] | - | - | |',
   `| Domain | site | me | ${no} | 300 TL/yr | 2026-11-07 | - | auto-renew? |`,
   `| GitHub | code | me | ${yes} | Free | - | 2026-10-25 | |`,
   `| OpenAI | ai | me | ${yes} | usage | 2026-12-31 | 2026-11-20 | Spend limit: 50 USD |`, '',
-  '## Ortamlar (dev / prod)', '', '| Environment | Service | Project ref / URL | Who connects |', '|---|---|---|---|', '| dev | Supabase | devref | local |', '');
-const ACCOUNTS = { tr: accountsDoc('Hesaplar', 'hayır', 'evet'), en: accountsDoc('Accounts', 'no', 'yes'), mixed: accountsDoc('Accounts', 'hayır', 'evet') };
-// The 2FA cell is shown as written; everything the dashboard decides on must be the same
-const noRaw2fa = (rows) => rows.map(({ twoFactor, ...rest }) => rest);
+  '## Environments (dev / prod)', '', '| Environment | Service | Project ref / URL | Who connects |', '|---|---|---|---|', '| dev | Supabase | devref | local |', '');
+const ACCOUNTS = accountsDoc('Accounts', 'no', 'yes');
 
-test('Ö-48.14 accounts: "## Accounts" with no / yes reads like "## Hesaplar" with hayır / evet (2FA, expiry, key rotation)', () => {
-  const tr = accounts(ACCOUNTS.tr, NOW);
-  assert.deepEqual(tr.map((h) => [h.service, h.noTwoFactor, h.dates.map((d) => [d.date, d.left])]), [
+test('Ö-48.14 accounts: "## Accounts" with no / yes reads 2FA, expiry and key rotation', () => {
+  assert.deepEqual(accounts(ACCOUNTS, NOW).map((h) => [h.service, h.noTwoFactor, h.dates.map((d) => [d.date, d.left])]), [
     ['Domain', true, [['2026-11-07', 10]]], ['GitHub', false, [['2026-10-25', -3]]], ['OpenAI', false, [['2026-12-31', 64], ['2026-11-20', 23]]],
   ]);
-  assert.deepEqual(noRaw2fa(accounts(ACCOUNTS.en, NOW)), noRaw2fa(tr), 'English twin');
-  assert.deepEqual(noRaw2fa(accounts(ACCOUNTS.mixed, NOW)), noRaw2fa(tr), 'English heading, Turkish values');
+  // A Turkish 2FA answer is not an answer: "hayır" does not mean "no 2FA", "evet" does not mean "has 2FA"
+  assert.deepEqual(accounts(accountsDoc('Accounts', 'hayır', 'evet'), NOW).map((h) => h.noTwoFactor), [false, false, false]);
 });
 
 const FB_ROWS = [[1, 'bug', 'new', 'speed'], [2, 'request', 'planned', 'PDF'], [3, 'complaint', 'done', 'speed'], [4, 'praise', 'rejected', 'PDF'],
   [5, 'question', 'merged', 'PDF'], [6, 'bug', 'new', 'PDF']];
-const FB_TR = { bug: 'hata', request: 'istek', complaint: 'şikayet', praise: 'övgü', question: 'soru', new: 'yeni', planned: 'planlandı', done: 'yapıldı', rejected: 'reddedildi', merged: 'birleşti' };
+const FB_TR = { new: 'yeni' };
 const feedbackDoc = (inbox, themes, rows) => lines('# User Feedback', '', '> The voice of the users.', '', `## ${inbox}`, '',
   'Types and statuses are listed in the template.', '',
   '| # | Date | Source | User | Summary | Type | Theme | Priority | Status | Task |', '|---|---|---|---|---|---|---|---|---|---|',
   ...rows.map(([no, kind, state, theme]) => `| ${no} | 2026-10-0${no} | email | K-00${no} | summary ${no} | ${kind} | ${theme} | high | ${state} | |`), '',
   `## ${themes}`, '', 'Similar feedback is collected under one theme.', '',
   '| Theme | Feedback count | Affected feature | Decision |', '|---|---|---|---|', '| speed | 2 | list | |', '| PDF | 5 | invoice | G-030 |', '');
-const trRow = ([no, kind, state, theme]) => [no, FB_TR[kind], FB_TR[state], theme];
-const FEEDBACK = {
-  tr: feedbackDoc('Gelen kutusu', 'Temalar', FB_ROWS.map(trRow)),
-  en: feedbackDoc('Inbox', 'Themes', FB_ROWS),
-  mixed: feedbackDoc('Inbox', 'Themes', FB_ROWS.map((r, i) => (i % 2 ? r : trRow(r)))),
-};
+const FEEDBACK = feedbackDoc('Inbox', 'Themes', FB_ROWS);
 
-test('Ö-48.15 feedback: "## Inbox" / "## Themes" with English kinds and statuses read like the Turkish file', () => {
-  const tr = feedback(FEEDBACK.tr);
-  assert.equal(tr.records.length, 6);
-  assert.equal(tr.newCount, 2, 'yeni counts as new');
-  assert.deepEqual(tr.themes.map((x) => [x.theme, x.count]), [['PDF', 5], ['speed', 2]]);
-  const en = feedback(FEEDBACK.en);
+test('Ö-48.15 feedback: "## Inbox" / "## Themes" with English kinds and statuses', () => {
+  const en = feedback(FEEDBACK);
+  assert.equal(en.records.length, 6);
   assert.equal(en.newCount, 2, 'new counts as new');
-  assert.deepEqual(en, tr, 'English twin: the whole reader output');
-  assert.deepEqual(feedback(FEEDBACK.mixed), tr, 'Turkish and English rows in one file');
+  assert.deepEqual(en.themes.map((x) => [x.theme, x.count]), [['PDF', 5], ['speed', 2]]);
+  // The old Turkish status "yeni" is not new
+  const tr = feedback(feedbackDoc('Inbox', 'Themes', FB_ROWS.map(([no, kind, state, theme]) => [no, kind, FB_TR[state] ?? state, theme])));
+  assert.equal(tr.newCount, 0, 'yeni is not new');
 });
 
 const learningDoc = (h, right, wrong, skipped) => lines('# Learning', '', `## ${h}`, '', '| Date | Task | Concept | Result |', '|---|---|---|---|',
   `| 2026-10-25 | G-01 | validation | ${right} |`, `| 2026-10-25 | G-01 | API | ${wrong} |`,
-  `| 2026-10-26 | G-02 | API | ${wrong[0].toLocaleUpperCase('tr')}${wrong.slice(1)} |`, `| 2026-10-26 | G-02 | RLS | ${skipped} |`, '');
-const LEARNING = { tr: learningDoc('Kayıtlar', 'doğru', 'yanlış', 'Şimdi değil'), en: learningDoc('Records', 'right', 'wrong', 'not now') };
+  `| 2026-10-26 | G-02 | API | ${wrong[0].toUpperCase()}${wrong.slice(1)} |`, `| 2026-10-26 | G-02 | RLS | ${skipped} |`, '');
+const LEARNING = learningDoc('Records', 'right', 'wrong', 'not now');
 
-test('Ö-48.16 learning: right / wrong count like doğru / yanlış; a skipped answer is neither', () => {
-  const tr = learning(LEARNING.tr);
-  assert.deepEqual([tr.right, tr.wrong], [1, 2]);
-  assert.deepEqual(tr.missed.map((m) => [m.concept, m.count]), [['API', 2]]);
-  assert.deepEqual(learning(LEARNING.en), tr);
+test('Ö-48.16 learning: right / wrong count; a skipped answer is neither; doğru / yanlış are neither', () => {
+  const en = learning(LEARNING);
+  assert.deepEqual([en.right, en.wrong], [1, 2]);
+  assert.deepEqual(en.missed.map((m) => [m.concept, m.count]), [['API', 2]]);
+  const tr = learning(learningDoc('Records', 'doğru', 'yanlış', 'Şimdi değil'));
+  assert.equal(tr === null || (tr.right === 0 && tr.wrong === 0), true, `Turkish results are not counted: ${JSON.stringify(tr)}`);
 });
 
 const qaDoc = (r) => lines('# QA report 2026-10-20-090000', '', 'Result: see the table.', '', '| Criterion | Result | Evidence | Note |', '|---|---|---|---|',
-  `| Ö-01.1 Required field | ${r.passed} | .previews/qa-x/Ö-01.1.png |  |`,
-  `| Ö-01.2 List shows the record | ${r.failed} | .previews/qa-x/Ö-01.2.png | Error: not visible |`,
-  `| Ö-02.1 PDF downloads | ${r.notRun} |  |  |`,
-  `| Ö-02.2 Export | ${r.failed2 ?? r.failed} |  | Error: timeout |`, '');
-const QA = { tr: qaDoc(V.tr), en: qaDoc(V.en), mixed: qaDoc({ ...V.en, failed2: V.tr.failed, notRun: V.tr.notRun }) };
+  `| AC-01.1 Required field | ${r.passed} | .previews/qa-x/AC-01.1.png |  |`,
+  `| AC-01.2 List shows the record | ${r.failed} | .previews/qa-x/AC-01.2.png | Error: not visible |`,
+  `| AC-02.1 PDF downloads | ${r.notRun} |  |  |`,
+  `| AC-02.2 Export | ${r.failed2 ?? r.failed} |  | Error: timeout |`, '');
+const QA = qaDoc(V);
 const qaView = (s) => s && { passed: s.passed, failed: s.failed, notRun: s.notRun, failures: s.failures.map((f) => [f.criterion, f.evidence, f.note]) };
 
-test('Ö-48.17 qaSummary: passed / failed / not run give the same counts and failures as geçti / kaldı / koşulmadı', () => {
-  const tr = qaView(qaSummary(QA.tr));
-  assert.deepEqual(tr, { passed: 1, failed: 2, notRun: 1, failures: [
-    ['Ö-01.2 List shows the record', '.previews/qa-x/Ö-01.2.png', 'Error: not visible'], ['Ö-02.2 Export', '', 'Error: timeout']] });
-  assert.deepEqual(qaView(qaSummary(QA.en)), tr, 'English twin');
-  assert.deepEqual(qaView(qaSummary(QA.mixed)), tr, 'Turkish and English rows in one report');
+test('Ö-48.17 qaSummary: passed / failed / not run give the counts and failures; geçti / kaldı / koşulmadı are not counted', () => {
+  assert.deepEqual(qaView(qaSummary(QA)), { passed: 1, failed: 2, notRun: 1, failures: [
+    ['AC-01.2 List shows the record', '.previews/qa-x/AC-01.2.png', 'Error: not visible'], ['AC-02.2 Export', '', 'Error: timeout']] });
+  const tr = qaSummary(qaDoc({ passed: 'geçti', failed: 'kaldı', notRun: 'koşulmadı' }));
+  assert.deepEqual([tr.passed, tr.failed, tr.notRun, tr.failures.length], [0, 0, 0, 0]);
 });
 
 const KINDS = {
@@ -294,41 +209,38 @@ const findingsDoc = (h, k) => lines('# Findings', '', 'Reports that scan the pro
   `| 2026-10-13 | ${k.ux} | 80 | - | 4 | 0 | x |`,
   `| 2026-10-14 | ${k.perf} | 90 | - | 2 | 0 | x |`,
   `| 2026-10-15 | ${k.legal} | 75 | - | 3 | 0 | x |`, '');
-const FINDINGS = { tr: findingsDoc('Raporlar', KINDS.tr), en: findingsDoc('Reports', KINDS.en), keys: findingsDoc('Reports', KINDS.keys) };
+const FINDINGS = { en: findingsDoc('Reports', KINDS.en), keys: findingsDoc('Reports', KINDS.keys) };
 const HEALTH = { tech: 61, business: 58, security: 70, ux: 80, perf: 90, legal: 75 };
 
-test('Ö-48.18 findingReports: "## Reports" with Tech / Business / ... reads like "## Raporlar" with Teknik / İş / ...', () => {
-  const tr = findingReports(FINDINGS.tr);
-  assert.equal(tr.rows.length, 7);
-  assert.deepEqual(Object.keys(tr.latest).sort(), Object.keys(FINDING_KINDS).sort(), 'every area name maps to its dashboard key');
-  assert.deepEqual(Object.fromEntries(Object.entries(tr.latest).map(([k, r]) => [k, r.health])), HEALTH);
-  assert.equal(tr.latest.tech.critical, 2);
-  assert.deepEqual(findingReports(FINDINGS.en), tr, 'English twin');
-  assert.deepEqual(findingReports(FINDINGS.keys), tr, 'the key form (tech, business ...) still reads the same');
+test('Ö-48.18 findingReports: "## Reports" with Tech / Business / ... and with the keys read every area; Turkish area names map to none', () => {
+  const en = findingReports(FINDINGS.en);
+  assert.equal(en.rows.length, 7);
+  assert.deepEqual(Object.keys(en.latest).sort(), Object.keys(FINDING_KINDS).sort(), 'every area name maps to its dashboard key');
+  assert.deepEqual(Object.fromEntries(Object.entries(en.latest).map(([k, r]) => [k, r.health])), HEALTH);
+  assert.equal(en.latest.tech.critical, 2);
+  assert.deepEqual(findingReports(FINDINGS.keys), en, 'the key form (tech, business ...) reads the same');
+  // Teknik, İş, Güvenlik, Performans, Hukuk are not area names; UX is the same word in both
+  assert.deepEqual(Object.keys(findingReports(findingsDoc('Reports', KINDS.tr)).latest), ['ux']);
 });
 
 const alarmsDoc = (h) => lines('# Spend Alarms', '', '> The dashboard reads the table below.', '', `## ${h}`, '',
   'One row per paid service.', '', '| Service | Type | Amount | Alert thresholds | Set up at | Last check |', '|---|---|---|---|---|---|',
   '| Anthropic | cap | 50 USD | 50%, 80% | Console | 2026-10-10 |', '| Vercel | alert | - | | | 2026-08-01 |', '',
   '## Settings the providers offer', '', '| Service | What exists | Does it stop? |', '|---|---|---|', '| OpenAI | budget | no |', '');
-const ALARMS = { tr: alarmsDoc('Alarmlar'), en: alarmsDoc('Alarms') };
+const ALARMS = alarmsDoc('Alarms');
 
-test('Ö-48.19 spendAlarms: "## Alarms" reads the same rows as "## Alarmlar"', () => {
-  const tr = spendAlarms(ALARMS.tr, NOW);
-  assert.deepEqual(tr.map((a) => [a.service, a.unset, a.stale]), [['Anthropic', false, false], ['Vercel', true, true]]);
-  assert.deepEqual(spendAlarms(ALARMS.en, NOW), tr);
+test('Ö-48.19 spendAlarms: "## Alarms" reads the rows', () => {
+  assert.deepEqual(spendAlarms(ALARMS, NOW).map((a) => [a.service, a.unset, a.stale]), [['Anthropic', false, false], ['Vercel', true, true]]);
 });
 
 const flagsDoc = (h, state, answers) => lines('# Feature flags', '', `## ${h}`, '',
   '| Flag | Purpose | Status | Owner | Added | Removal date | Kill switch tested |', '|---|---|---|---|---|---|---|',
   ...answers.map((a, i) => `| flag_${i} | purpose | ${state} | me | 2026-09-01 | 2026-12-31 | ${a} |`), '');
 
-test('Ö-48.20 flags: kill switch evet / yes / ✅ / var is tested, hayır / no / yok is not, under either heading', () => {
-  const answers = ['evet', 'yes', '✅', 'var', 'hayır', 'no', 'yok', 'Yes', 'EVET', 'HAYIR'];
-  const want = [false, false, false, false, true, true, true, false, false, true];
-  for (const [h, state] of [['Bayraklar', 'açık'], ['Flags', 'on'], ['Flags', 'açık'], ['Bayraklar', 'on']]) {
-    assert.deepEqual(flags(flagsDoc(h, state, answers), NOW).map((b) => b.untested), want, `${h} / ${state}`);
-  }
+test('Ö-48.20 flags: kill switch yes / ✅ is tested; no / none / evet / hayır / var / yok are not', () => {
+  const answers = ['yes', '✅', 'Yes', 'YES', 'no', 'none', '-', 'evet', 'EVET', 'hayır', 'var', 'yok'];
+  const want = [false, false, false, false, true, true, true, true, true, true, true, true];
+  assert.deepEqual(flags(flagsDoc('Flags', 'on', answers), NOW).map((b) => b.untested), want);
 });
 
 const BUG_CLASS_PAIRS = [['boş-girdi', 'empty-input'], ['doğrulama', 'validation'], ['yetki', 'authorization'], ['tarih-saat', 'date-time'],
@@ -339,63 +251,77 @@ const bugSpec = (lang, type, cls) => (lang === 'tr'
   : lines('# Spec', '', `**Type:** ${type}`, `**Class:** ${cls}`, '', '## Current behavior', '', '- x', ''));
 const specs = (list) => Object.fromEntries(list.map(([f, ...a]) => [`docs/product/specs/${f}`, bugSpec(...a)]));
 
-test('Ö-48.21 repeatedBugClasses: a Turkish class and its English name are ONE class, reported under the English name', () => {
-  const p = project(specs([
-    ['a1.md', 'tr', 'hata', 'yetki'],
-    ['a2.md', 'tr', 'hata', 'YETKİ'],
-    ['a3.md', 'en', 'bug', 'authorization'],
-    ['a4.md', 'en', 'hata', 'yetki'], // English labels, Turkish values (a 3.48 step-2 file)
-    ['f1.md', 'en', 'feature', 'authorization'],
-    ['f2.md', 'tr', 'özellik', 'yetki'],
-  ]));
-  assert.deepEqual(repeatedBugClasses(p), [{ cls: 'authorization', specs: ['a1.md', 'a2.md', 'a3.md', 'a4.md'] }]);
-});
-
-test('Ö-48.21 repeatedBugClasses: all eleven classes pair up in order; type hata and bug both count as a bug', () => {
-  const list = BUG_CLASS_PAIRS.flatMap(([tr, en], i) => {
-    const n = String(i + 1).padStart(2, '0');
-    return [[`${n}-a.md`, 'tr', 'hata', tr], [`${n}-b.md`, 'en', 'bug', en]];
-  });
-  assert.deepEqual(repeatedBugClasses(project(specs(list))),
-    BUG_CLASS_PAIRS.map(([, en], i) => ({ cls: en, specs: [`${String(i + 1).padStart(2, '0')}-a.md`, `${String(i + 1).padStart(2, '0')}-b.md`] })));
-  // Only English files: the same result
+test('Ö-48.21 repeatedBugClasses: all eleven English classes count; type bug in any case counts as a bug', () => {
   const onlyEn = BUG_CLASS_PAIRS.flatMap(([, en], i) => {
     const n = String(i + 1).padStart(2, '0');
     return [[`${n}-a.md`, 'en', 'bug', en], [`${n}-b.md`, 'en', 'Bug', en.toUpperCase()]];
   });
-  assert.deepEqual(repeatedBugClasses(project(specs(onlyEn))).map((r) => r.cls), BUG_CLASS_PAIRS.map(([, en]) => en));
+  assert.deepEqual(repeatedBugClasses(project(specs(onlyEn))),
+    BUG_CLASS_PAIRS.map(([, en], i) => ({ cls: en, specs: [`${String(i + 1).padStart(2, '0')}-a.md`, `${String(i + 1).padStart(2, '0')}-b.md`] })));
 });
 
-const KIT = { version: '3.48.0', type: 'web-saas', addons: [], tool: null, lang: 'en', created: '2026-10-01', updated: '2026-10-01', files: {} };
+test('AC-49.5 repeatedBugClasses: Turkish labels, type "hata" and Turkish class names are not read; they never join an English class', () => {
+  const p = project(specs([
+    ['a1.md', 'tr', 'hata', 'yetki'], // Turkish labels: not found
+    ['a2.md', 'tr', 'bug', 'authorization'], // Turkish labels, English values: still not found
+    ['a3.md', 'en', 'bug', 'authorization'],
+    ['a4.md', 'en', 'hata', 'authorization'], // "hata" is not a bug
+    ['a5.md', 'en', 'bug', 'yetki'], // "yetki" is not authorization
+    ['a6.md', 'en', 'bug', 'YETKİ'],
+    ['f1.md', 'en', 'feature', 'authorization'],
+  ]));
+  assert.deepEqual(repeatedBugClasses(p), [], 'only one real authorization bug: nothing repeats');
+  const all = BUG_CLASS_PAIRS.flatMap(([tr], i) => [[`${String(i + 1).padStart(2, '0')}-a.md`, 'en', 'bug', tr], [`${String(i + 1).padStart(2, '0')}-b.md`, 'en', 'bug', tr]]);
+  assert.deepEqual(repeatedBugClasses(project(specs(all))), [], 'Turkish class names are not classes');
+});
+
+test('AC-49.5 dashboard-data: a Turkish heading is not found; each reader returns what it returns for an empty file', () => {
+  const readers = [
+    ['accounts', (s) => accounts(s, NOW), accountsDoc('Hesaplar', 'no', 'yes'), ACCOUNTS],
+    ['feedback', feedback, feedbackDoc('Gelen kutusu', 'Temalar', FB_ROWS), FEEDBACK],
+    ['learning', learning, learningDoc('Kayıtlar', 'right', 'wrong', 'not now'), LEARNING],
+    ['findingReports', findingReports, findingsDoc('Raporlar', KINDS.en), FINDINGS.en],
+    ['spendAlarms', (s) => spendAlarms(s, NOW), alarmsDoc('Alarmlar'), ALARMS],
+    ['flags', (s) => flags(s, NOW), flagsDoc('Bayraklar', 'on', ['yes', 'no']), flagsDoc('Flags', 'on', ['yes', 'no'])],
+  ];
+  for (const [name, read, tr, en] of readers) {
+    assert.notDeepEqual(read(en), read(''), `${name}: the English file is read (control)`);
+    assert.deepEqual(read(tr), read(''), `${name}: the Turkish heading is not found`);
+  }
+});
+
+const KIT = { version: '3.49.0', type: 'web-saas', addons: [], tool: null, lang: 'en', created: '2026-10-01', updated: '2026-10-01', files: {} };
 const CACHE = () => ({ time: Date.now(), data: { runs: [], prs: [], liveMonitoring: [] } });
 
-test('Ö-48.22 readStatus: no board Status line or no board file is the not-set-up value; set up / kuruldu stay set up', () => {
+test('Ö-48.22 readStatus: no board Status line or no board file is the not-set-up value; "set up" stays set up', () => {
   const { isValue } = valuesApi();
-  const noStatus = {
-    tr: lines('# Expert Board', '', '**Commit denetimi:** açık', '', '## Üyeler', ''),
-    en: lines('# Expert Board', '', '**Commit review:** on', '', '## Members', ''),
-  };
-  for (const v of ['tr', 'en']) {
-    const s = readStatus(project({ '.kit.json': KIT, 'docs/workflow/board.md': noStatus[v] })).board.state;
-    assert.equal(isValue(s, 'notSetUp'), true, `${v} board without a Status line: "${s}"`);
-  }
+  const noStatus = lines('# Expert Board', '', '**Commit review:** on', '', '## Members', '');
+  const s0 = readStatus(project({ '.kit.json': KIT, 'docs/workflow/board.md': noStatus })).board.state;
+  assert.equal(isValue(s0, 'notSetUp'), true, `board without a Status line: "${s0}"`);
   const none = readStatus(project({ '.kit.json': KIT })).board.state;
   assert.equal(isValue(none, 'notSetUp'), true, `no board file: "${none}"`);
-  for (const board of ['**Status:** set up\n', '**Durum:** kuruldu\n', '**Status:** kuruldu\n']) {
-    const s = readStatus(project({ '.kit.json': KIT, 'docs/workflow/board.md': board })).board.state;
-    assert.equal(isValue(s, 'setUp'), true, `${board.trim()}: "${s}"`);
-    assert.equal(isValue(s, 'notSetUp'), false, `${board.trim()}: not "not set up"`);
-  }
+  const s = readStatus(project({ '.kit.json': KIT, 'docs/workflow/board.md': '**Status:** set up\n' })).board.state;
+  assert.equal(isValue(s, 'setUp'), true, `set up: "${s}"`);
+  assert.equal(isValue(s, 'notSetUp'), false, 'set up: not "not set up"');
 });
 
-test('Ö-48.22 readStatus: handoff "**Status:** waiting" is pending like "**Durum:** bekliyor"', () => {
+test('AC-49.5 readStatus: a Turkish board Status line is not found (not set up); "**Status:** kuruldu" is not "set up"', () => {
+  const { isValue } = valuesApi();
+  for (const board of ['**Durum:** kuruldu\n**Commit denetimi:** açık\n', '**Durum:** set up\n']) {
+    const s = readStatus(project({ '.kit.json': KIT, 'docs/workflow/board.md': board })).board.state;
+    assert.equal(isValue(s, 'notSetUp'), true, `${JSON.stringify(board)}: "${s}"`);
+  }
+  const s = readStatus(project({ '.kit.json': KIT, 'docs/workflow/board.md': '**Status:** kuruldu\n' })).board.state;
+  assert.equal(isValue(s, 'setUp'), false, `"kuruldu" is not set up: "${s}"`);
+});
+
+test('Ö-48.22 readStatus: handoff "**Status:** waiting" is pending; Turkish label or value is not', () => {
   const pending = (text) => readStatus(project({ '.kit.json': KIT, 'docs/workflow/handoff.md': text })).handoffPending;
-  for (const text of ['# Handoff note\n\n**Status:** waiting\n', '# Handoff note\n\n**Durum:** bekliyor\n', '# Handoff note\n\n**Status:** bekliyor\n',
-    '# Handoff note\n\n**Status:** Waiting\n', '# Handoff note\r\n\r\n**Status:** waiting\r\n']) {
+  for (const text of ['# Handoff note\n\n**Status:** waiting\n', '# Handoff note\n\n**Status:** Waiting\n', '# Handoff note\r\n\r\n**Status:** waiting\r\n']) {
     assert.equal(pending(text), true, JSON.stringify(text));
   }
-  for (const text of ['# Handoff note\n\n**Status:** taken over\n', '# Handoff note\n\n**Durum:** devralındı\n', '# Handoff note\n\nwaiting for Ali\n',
-    '# Handoff note\n\n**Status:** waitinglist\n']) {
+  for (const text of ['# Handoff note\n\n**Status:** taken over\n', '# Handoff note\n\nwaiting for Ali\n', '# Handoff note\n\n**Status:** waitinglist\n',
+    '# Handoff note\n\n**Durum:** bekliyor\n', '# Handoff note\n\n**Status:** bekliyor\n', '# Handoff note\n\n**Durum:** waiting\n']) {
     assert.equal(pending(text), false, JSON.stringify(text));
   }
 });
@@ -422,23 +348,13 @@ const filtersOf = (p, html) => after_(html, `aria-label="${t(p, 'dashboard.topic
 const chipsOf = (p, html) => [...filtersOf(p, html).matchAll(/<button\b([^>]*)>([^<]*)<\/button>/g)].map((m) => ({ attrs: m[1], text: m[2] }));
 const count = (html, s) => html.split(s).length - 1;
 
-const LBL = {
-  tr: { lastUpdated: 'Son güncelleme', activePhase: 'Aktif faz', activeTask: 'Aktif görev', setupStep: 'Başlangıç adımı', questionMode: 'Soru modu',
-    profile: 'Profil', currentState: 'Şu anki durum', nextStep: 'Sıradaki adım', pending: 'Bekleyen kararlar', leftOff: 'Kaldığı yer',
-    issues: 'Açık sorunlar / bloklayıcılar', status: 'Durum', commitReview: 'Commit denetimi', members: 'Üyeler', meetingLog: 'Toplantı günlüğü',
-    decisionLog: 'Karar günlüğü', phase: 'Faz', flags: 'Bayraklar', records: 'Kayıtlar', maintenanceLog: 'Bakım kaydı', accounts: 'Hesaplar',
-    inbox: 'Gelen kutusu', themes: 'Temalar', reports: 'Raporlar', alarms: 'Alarmlar', direction: '1. Seçilen yön (Chosen direction)',
-    valueProp: '3. Değer önerisi (value proposition)', criticalFlows: '1. Kritik akışlar (critical flows; automatic test REQUIRED)',
-    closedTopics: 'kapalı konular', topic: 'tasarim', phaseValue: 'Faz 1 — Core', meetingResult: 'ONAY' },
-  en: { lastUpdated: 'Last updated', activePhase: 'Active phase', activeTask: 'Active task', setupStep: 'Setup step', questionMode: 'Question mode',
-    profile: 'Profile', currentState: 'Current state', nextStep: 'Next step', pending: 'Pending decisions', leftOff: 'Where we left off',
-    issues: 'Open issues / blockers', status: 'Status', commitReview: 'Commit review', members: 'Members', meetingLog: 'Meeting log',
-    decisionLog: 'Decision log', phase: 'Phase', flags: 'Flags', records: 'Records', maintenanceLog: 'Maintenance log', accounts: 'Accounts',
-    inbox: 'Inbox', themes: 'Themes', reports: 'Reports', alarms: 'Alarms', direction: '1. Chosen direction',
-    valueProp: '3. Value proposition', criticalFlows: '1. Critical flows (automatic test REQUIRED)',
-    // Topic words stay as written in this step (they move to English later): the same word in both twins
-    closedTopics: 'closed topics', topic: 'tasarim', phaseValue: 'Phase 1 — Core', meetingResult: 'APPROVE' },
-};
+const L = { lastUpdated: 'Last updated', activePhase: 'Active phase', activeTask: 'Active task', setupStep: 'Setup step', questionMode: 'Question mode',
+  profile: 'Profile', currentState: 'Current state', nextStep: 'Next step', pending: 'Pending decisions', leftOff: 'Where we left off',
+  issues: 'Open issues / blockers', status: 'Status', commitReview: 'Commit review', members: 'Members', meetingLog: 'Meeting log',
+  decisionLog: 'Decision log', phase: 'Phase', flags: 'Flags', records: 'Records', maintenanceLog: 'Maintenance log', accounts: 'Accounts',
+  inbox: 'Inbox', themes: 'Themes', reports: 'Reports', alarms: 'Alarms', direction: '1. Chosen direction',
+  valueProp: '3. Value proposition', criticalFlows: '1. Critical flows (automatic test REQUIRED)',
+  closedTopics: 'closed topics', topic: 'design', phaseValue: 'Phase 1 — Core', meetingResult: 'APPROVE' };
 
 const progressDoc = (l, { phase, step = '9/9', mode, profile }) => lines('# Progress', '',
   `**${l.lastUpdated}:** 2026-10-27`, `**${l.activePhase}:** ${phase}`, `**${l.activeTask}:** G-011 data model`, `**${l.setupStep}:** ${step}`,
@@ -455,9 +371,9 @@ const boardDoc = (l, state, review, meetings = []) => lines('# Expert Board', ''
   `## ${l.members}`, '', '| Member | Agent | Model | Focus | Meetings |', '|---|---|---|---|---|', '',
   `## ${l.meetingLog}`, '', '| # | Date | Type | Scope | Attendees | Result | Critical | User decision |', '|---|---|---|---|---|---|---|---|', ...meetings, '');
 
-// One project per language: every file the dashboard reads, labels AND values in that language.
-function twin(v, over = {}) {
-  const l = LBL[v], x = V[v];
+// One English project: every file the dashboard reads
+function twin(over = {}) {
+  const l = L, x = V;
   const files = {
     '.kit.json': KIT,
     '.claude/state/github-cache.json': CACHE(),
@@ -467,8 +383,8 @@ function twin(v, over = {}) {
     'docs/workflow/progress.md': progressDoc(l, { phase: l.phaseValue, mode: `${x.off} · ${l.closedTopics}: ${l.topic}`, profile: x.full }),
     'docs/product/roadmap.md': lines('# Roadmap', '', `## ${l.phase} 0 — Setup (skeleton)`, '', '- [x] G-001: Repo ready', '',
       `## ${l.phase} 1 — Core`, '', '- [x] G-010: Auth', '- [ ] G-011: Data model', ''),
-    'docs/decisions/log.md': decisionsDoc(l, [[1, 'teknik', 'Database?', 'Postgres', x.oneWay, x.user], [2, 'tasarim', 'Font?', 'Inter', x.twoWay, x.automatic],
-      [3, 'teknik', 'Queue?', 'none yet', x.oneWay, x.automatic]]),
+    'docs/decisions/log.md': decisionsDoc(l, [[1, 'tech', 'Database?', 'Postgres', x.oneWay, x.user], [2, 'design', 'Font?', 'Inter', x.twoWay, x.automatic],
+      [3, 'tech', 'Queue?', 'none yet', x.oneWay, x.automatic]]),
     'docs/workflow/board.md': boardDoc(l, x.notSetUp, x.on, [`| 1 | 2026-10-20 | task | G-001 | QA | ${l.meetingResult} | - | - |`]),
     'docs/workflow/handoff.md': lines('# Handoff note', '', `**${l.status}:** ${x.waiting}`, '**Date:** 2026-10-27', ''),
     'docs/operations/accounts.md': lines('# Accounts', '', `## ${l.accounts}`, '',
@@ -480,11 +396,11 @@ function twin(v, over = {}) {
       `| new_pdf | pdf export | ${x.on} | me | 2026-09-01 | ${day(-10)} | ${x.yes} |`, `| beta_list | list | ${x.off} | me | 2026-10-01 | ${day(60)} | ${x.no} |`, ''),
     'docs/operations/maintenance.md': lines('# Maintenance', '', `## ${l.maintenanceLog}`, '', '| Date | Type | Findings | Done / task opened |', '|---|---|---|---|',
       '| 2026-10-25 | weekly | 2 outdated packages | updated |', ''),
-    'docs/product/feedback.md': v === 'tr' ? FEEDBACK.tr : FEEDBACK.en,
-    'docs/findings/README.md': v === 'tr' ? FINDINGS.tr : FINDINGS.en,
-    'docs/workflow/learning.md': LEARNING[v],
-    'docs/quality/qa/2026-10-20-090000.md': QA[v],
-    ...specs([['2026-10-01-a.md', v, x.bug, v === 'tr' ? 'yetki' : 'authorization'], ['2026-10-02-b.md', v, x.bug, v === 'tr' ? 'yetki' : 'authorization']]),
+    'docs/product/feedback.md': FEEDBACK,
+    'docs/findings/README.md': FINDINGS.en,
+    'docs/workflow/learning.md': LEARNING,
+    'docs/quality/qa/2026-10-20-090000.md': QA,
+    ...specs([['2026-10-01-a.md', 'en', x.bug, 'authorization'], ['2026-10-02-b.md', 'en', x.bug, 'authorization']]),
     'docs/quality/test-plan.md': lines('# Test plan', '', `## ${l.criticalFlows}`, '', 'Every change that touches one of these flows comes with a test.', '',
       '| # | Flow | Why critical | Test type | Test file | Status |', '|---|---|---|---|---|---|',
       '| K1 | Sign-up / sign-in / sign-out | Everyone uses it | e2e | tests/auth.spec.ts | ✅ |',
@@ -501,13 +417,12 @@ function twin(v, over = {}) {
 
 const msgs = (p, keys) => keys.map(([k, vars]) => unMd(t(p, k, vars)));
 
-test('Ö-48.26 dashboard: an English project and its Turkish twin raise the same alerts and show the same counts', () => {
-  const tr = project(twin('tr'));
-  const en = project(twin('en'));
-  const [htr, hen] = [dashboard(tr), dashboard(en)];
+test('Ö-48.26 dashboard: an English project raises the expected alerts and shows the expected counts', () => {
+  const en = project(twin());
+  const hen = dashboard(en);
   const want = msgs(en, [
     ['dashboard.alert.handoffPending'], ['dashboard.alert.boardNotSetUp'], ['dashboard.alert.cmdListLight'],
-    ['dashboard.alert.closedTopics', { topics: 'tasarim' }], ['dashboard.alert.newFeedback', { count: 2 }],
+    ['dashboard.alert.closedTopics', { topics: 'design' }], ['dashboard.alert.newFeedback', { count: 2 }],
     ['dashboard.alert.noTwoFactor', { service: 'Domain' }], ['dashboard.alert.spendUnset', { service: 'Vercel' }],
     ['dashboard.alert.findingsCritical', { kind: t(en, 'dashboard.findingKind.tech'), critical: 2, health: 61 }],
     ['dashboard.alert.repeatedBug', { count: 2, cls: 'authorization', specs: '2026-10-01-a.md, 2026-10-02-b.md' }],
@@ -517,10 +432,8 @@ test('Ö-48.26 dashboard: an English project and its Turkish twin raise the same
   for (const w of want) assert.equal(aen.some((a) => a.includes(w)), true, `English project alert: ${w}\n${aen.join('\n')}`);
   const heavy = unMd(t(en, 'dashboard.alert.cmdListHeavy', { mode: '' })).split(':')[0];
   assert.equal(aen.some((a) => a.includes(heavy)), false, 'a Full profile is not "heavy list"');
-  assert.deepEqual(aen, alertsOf(tr, htr), 'the same alerts, in the same order');
 
   const ken = kpisOf(hen);
-  assert.deepEqual(ken, kpisOf(htr), 'every KPI label, value and note');
   const kpi = (label) => ken.find(([l]) => l === t(en, label));
   assert.deepEqual(kpi('dashboard.kpiDecisions'), [t(en, 'dashboard.kpiDecisions'), '3', t(en, 'dashboard.usersAuto', { user: 1, auto: 2 })]);
   assert.equal(kpi('dashboard.kpiNew')[1], '2', 'new feedback');
@@ -528,69 +441,72 @@ test('Ö-48.26 dashboard: an English project and its Turkish twin raise the same
   assert.deepEqual([kpi('dashboard.kpiRight')[1], kpi('dashboard.kpiWrong')[1]], ['1', '2'], 'learning');
   assert.deepEqual([kpi('dashboard.passed')[1], kpi('dashboard.failed')[1], kpi('dashboard.notRun')[1]], ['1', '2', '1'], 'last QA');
 
-  const chips = (p, h) => chipsOf(p, h).map((c) => c.text);
-  assert.deepEqual(chips(en, hen), chips(tr, htr), 'decision filter chips');
+  const chips = chipsOf(en, hen).map((c) => c.text);
   for (const c of [`${t(en, 'dashboard.all')} (3)`, `${t(en, 'dashboard.auto')} (2)`, `${t(en, 'dashboard.oneWay')} (2)`]) {
-    assert.equal(chips(en, hen).includes(c), true, `chip ${c}: ${chips(en, hen).join(' | ')}`);
-  }
-  for (const caption of [t(en, 'dashboard.tested'), t(en, 'dashboard.untested'), t(en, 'dashboard.none')]) {
-    assert.equal(count(hen, `</span> ${caption}</span>`), count(htr, `</span> ${caption}</span>`), `badge "${caption}"`);
+    assert.equal(chips.includes(c), true, `chip ${c}: ${chips.join(' | ')}`);
   }
   assert.equal(count(hen, `</span> ${t(en, 'dashboard.untested')}</span>`), 1, 'one flag without a tested kill switch');
 });
 
 test('Ö-48.27 dashboard: critical flows, design direction and value proposition read from the English headings', () => {
-  const tr = project(twin('tr'));
-  const en = project(twin('en'));
-  const [htr, hen] = [dashboard(tr), dashboard(en)];
-  const flows = (p, h) => after_(h, `${t(p, 'dashboard.criticalFlowTests')}</h3>`, '</section>');
-  const design = (p, h) => after_(h, `<h3>${t(p, 'dashboard.design')}</h3>`, '</section>');
-  const value = (p, h) => after_(h, `<h4>${t(p, 'dashboard.valueProp')}</h4>`, '</p>');
-  for (const [p, h, v] of [[tr, htr, 'tr'], [en, hen, 'en']]) {
-    assert.match(plain(flows(p, h)), /K1 Sign-up \/ sign-in \/ sign-out e2e tests\/auth\.spec\.ts/, `${v}: critical flow K1`);
-    assert.match(plain(flows(p, h)), /K2 Authorization: a user cannot see another user's data integration/, `${v}: critical flow K2`);
-    assert.equal(flows(p, h).includes(t(p, 'dashboard.noTestPlan')), false, `${v}: not the empty state`);
-    assert.match(plain(design(p, h)), /Style direction Swiss grid Font pair Inter \+ IBM Plex Mono/, `${v}: design direction`);
-    assert.equal(design(p, h).includes(t(p, 'dashboard.noDesign')), false, `${v}: design not empty`);
-    assert.match(plain(value(p, h)), /With Fatura, freelancers send an invoice in one minute, because the data is already there\./, `${v}: value proposition`);
-  }
-  assert.equal(flows(en, hen), flows(tr, htr));
-  assert.equal(design(en, hen), design(tr, htr));
-  assert.equal(value(en, hen), value(tr, htr));
+  const p = project(twin());
+  const h = dashboard(p);
+  const flows = after_(h, `${t(p, 'dashboard.criticalFlowTests')}</h3>`, '</section>');
+  const design = after_(h, `<h3>${t(p, 'dashboard.design')}</h3>`, '</section>');
+  const value = after_(h, `<h4>${t(p, 'dashboard.valueProp')}</h4>`, '</p>');
+  assert.match(plain(flows), /K1 Sign-up \/ sign-in \/ sign-out e2e tests\/auth\.spec\.ts/, 'critical flow K1');
+  assert.match(plain(flows), /K2 Authorization: a user cannot see another user's data integration/, 'critical flow K2');
+  assert.equal(flows.includes(t(p, 'dashboard.noTestPlan')), false, 'not the empty state');
+  assert.match(plain(design), /Style direction Swiss grid Font pair Inter \+ IBM Plex Mono/, 'design direction');
+  assert.equal(design.includes(t(p, 'dashboard.noDesign')), false, 'design not empty');
+  assert.match(plain(value), /With Fatura, freelancers send an invoice in one minute, because the data is already there\./, 'value proposition');
+});
+
+test('AC-49.5 dashboard: Turkish critical-flow, design-direction and value-proposition headings are not found (empty states)', () => {
+  const p = project(twin({
+    'docs/quality/test-plan.md': lines('# Test plan', '', '## 1. Kritik akışlar', '', '| # | Flow | Why critical | Test type | Test file | Status |',
+      '|---|---|---|---|---|---|', '| K1 | Sign-up | Everyone uses it | e2e | tests/auth.spec.ts | ✅ |', ''),
+    'docs/design/design-guide.md': lines('# Design guide', '', '## 1. Seçilen yön', '', '| Area | Choice | Skill | Preview | Date |', '|---|---|---|---|---|',
+      '| Style direction | Swiss grid | taste-skill | | 2026-10-20 |', ''),
+    'docs/product/prd.md': lines('# PRD', '', '## 3. Değer önerisi', '', 'With Fatura, freelancers send an invoice in one minute.', ''),
+  }));
+  const h = dashboard(p);
+  assert.equal(after_(h, `${t(p, 'dashboard.criticalFlowTests')}</h3>`, '</section>').includes(t(p, 'dashboard.noTestPlan')), true, 'critical flows: empty state');
+  assert.equal(after_(h, `<h3>${t(p, 'dashboard.design')}</h3>`, '</section>').includes(t(p, 'dashboard.noDesign')), true, 'design: empty state');
+  assert.equal(h.includes('freelancers send an invoice in one minute'), false, 'the value proposition is not shown');
 });
 
 test('Ö-48.28 dashboard: board not set up alerts outside Setup only; the handoff alert action is /handoff take', () => {
-  for (const v of ['tr', 'en']) {
-    const x = V[v], l = LBL[v];
-    const notSetUp = t(project({ '.kit.json': KIT }), 'dashboard.alert.boardNotSetUp');
-    const html = (over) => { const p = project(twin(v, over)); return { p, h: dashboard(p) }; };
-    // Not set up in phase 1: alert; the same in Setup: no alert, the setup step is shown; board file missing: alert; set up: no alert
-    let { p, h } = html({});
-    assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), true, `${v}: not set up, phase 1`);
-    ({ p, h } = html({ 'docs/workflow/progress.md': progressDoc(l, { phase: x.setup, step: '4/9', mode: x.on, profile: x.full }) }));
-    assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), false, `${v}: phase "${x.setup}" is setup, no board alert`);
-    assert.equal(h.includes(`${t(p, 'dashboard.startStep')}</div><div class="num">4/9</div>`), true, `${v}: the setup step is shown in phase "${x.setup}"`);
-    ({ p, h } = html({ 'docs/workflow/board.md': null }));
-    assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), true, `${v}: no board file`);
-    ({ p, h } = html({ 'docs/workflow/board.md': boardDoc(l, x.setUp, x.on) }));
-    assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), false, `${v}: set up`);
-    // The handoff alert
-    ({ p, h } = html({}));
-    const handoff = alertsOf(p, h).find((a) => a.includes(unMd(t(p, 'dashboard.alert.handoffPending'))));
-    assert.match(handoff ?? '', /\/handoff take/, `${v}: take-over action`);
-    assert.doesNotMatch(h, /\/handoff devral/, `${v}: the old Turkish command is gone`);
-  }
+  const x = V;
+  const notSetUp = t(project({ '.kit.json': KIT }), 'dashboard.alert.boardNotSetUp');
+  const html = (over) => { const p = project(twin(over)); return { p, h: dashboard(p) }; };
+  // Not set up in phase 1: alert; the same in Setup: no alert, the setup step is shown; board file missing: alert; set up: no alert
+  let { p, h } = html({});
+  assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), true, 'not set up, phase 1');
+  ({ p, h } = html({ 'docs/workflow/progress.md': progressDoc(L, { phase: x.setup, step: '4/9', mode: x.on, profile: x.full }) }));
+  assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), false, `phase "${x.setup}" is setup, no board alert`);
+  assert.equal(h.includes(`${t(p, 'dashboard.startStep')}</div><div class="num">4/9</div>`), true, `the setup step is shown in phase "${x.setup}"`);
+  ({ p, h } = html({ 'docs/workflow/board.md': null }));
+  assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), true, 'no board file');
+  ({ p, h } = html({ 'docs/workflow/board.md': boardDoc(L, x.setUp, x.on) }));
+  assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), false, 'set up');
+  // The old Turkish phase value is not Setup: the board alert is raised
+  ({ p, h } = html({ 'docs/workflow/progress.md': progressDoc(L, { phase: 'Başlangıç', step: '4/9', mode: x.on, profile: x.full }) }));
+  assert.equal(alertsOf(p, h).some((a) => a.includes(notSetUp)), true, '"Başlangıç" is not the Setup phase');
+  // The handoff alert
+  ({ p, h } = html({}));
+  const handoff = alertsOf(p, h).find((a) => a.includes(unMd(t(p, 'dashboard.alert.handoffPending'))));
+  assert.match(handoff ?? '', /\/handoff take/, 'take-over action');
+  assert.doesNotMatch(h, /\/handoff devral/, 'the old Turkish command is gone');
 });
 
-test('Ö-48.23 dashboard (Turkish UI): "set up" / "not set up" and on / off are recognised like kuruldu / kurulmadı and açık / kapalı', () => {
+test('Ö-48.23 dashboard (Turkish UI): English "set up" / "not set up" and on / off are recognised', () => {
   const kit = { ...KIT, lang: 'tr' };
-  for (const [l, x] of [[LBL.tr, V.tr], [LBL.en, V.en]]) {
-    for (const [state, review, wantState, wantReview] of [[x.setUp, x.off, 'dashboard.boardSetUp', 'dashboard.off'], [x.notSetUp, x.on, 'dashboard.notSetUp', 'dashboard.on']]) {
-      const p = project({ '.kit.json': kit, '.claude/state/github-cache.json': CACHE(), 'AGENTS.md': '# P\n', 'docs/workflow/board.md': boardDoc(l, state, review) });
-      const h = dashboard(p);
-      assert.equal(h.includes(`<h3>${t(p, 'dashboard.members')} · ${t(p, wantState)}</h3>`), true, `${state}: board heading`);
-      assert.equal(h.includes(t(p, 'dashboard.commitReview', { value: t(p, wantReview) })), true, `${review}: commit review`);
-    }
+  for (const [state, review, wantState, wantReview] of [[V.setUp, V.off, 'dashboard.boardSetUp', 'dashboard.off'], [V.notSetUp, V.on, 'dashboard.notSetUp', 'dashboard.on']]) {
+    const p = project({ '.kit.json': kit, '.claude/state/github-cache.json': CACHE(), 'AGENTS.md': '# P\n', 'docs/workflow/board.md': boardDoc(L, state, review) });
+    const h = dashboard(p);
+    assert.equal(h.includes(`<h3>${t(p, 'dashboard.members')} · ${t(p, wantState)}</h3>`), true, `${state}: board heading`);
+    assert.equal(h.includes(t(p, 'dashboard.commitReview', { value: t(p, wantReview) })), true, `${review}: commit review`);
   }
 });
 
@@ -602,33 +518,40 @@ function statusline(p) {
   return r.stdout.trim();
 }
 const questionPart = (p, out) => out.split(' · ').find((s) => s.startsWith(t(p, 'statusline.question', { mode: '' }))) ?? `(no question part in: ${out})`;
-const progressOnly = (v, opts) => project({ '.kit.json': KIT, 'AGENTS.md': '# P\n', 'docs/workflow/progress.md': progressDoc(LBL[v], { phase: 'Phase 1 — Core', profile: V[v].standard, ...opts }) });
+const progressOnly = (opts) => project({ '.kit.json': KIT, 'AGENTS.md': '# P\n', 'docs/workflow/progress.md': progressDoc(L, { phase: 'Phase 1 — Core', profile: V.standard, ...opts }) });
 
-test('Ö-48.24 statusline: "off · closed topics: tasarim" renders like "kapalı · kapalı konular: tasarim"; "none" is hidden like "yok"', () => {
-  // The topic word is shown exactly as written (topics move to English in a later step)
-  const en = progressOnly('en', { mode: 'off · closed topics: tasarim' });
-  const tr = progressOnly('tr', { mode: 'kapalı · kapalı konular: tasarim' });
-  const want = t(en, 'statusline.question', { mode: `${t(en, 'statusline.modeOff')} ${t(en, 'statusline.closed', { topics: 'tasarim' })}` });
+test('Ö-48.24 statusline: "off · closed topics: design" renders the closed topics; "none" is hidden', () => {
+  const en = progressOnly({ mode: 'off · closed topics: design' });
+  const want = t(en, 'statusline.question', { mode: `${t(en, 'statusline.modeOff')} ${t(en, 'statusline.closed', { topics: 'design' })}` });
   assert.equal(questionPart(en, statusline(en)), want);
-  assert.equal(questionPart(tr, statusline(tr)), want);
   const open = t(en, 'statusline.question', { mode: t(en, 'statusline.modeOpen') });
-  for (const [v, mode] of [['en', 'on · closed topics: none'], ['tr', 'açık · kapalı konular: yok'], ['en', 'on'], ['tr', 'açık'], ['en', 'On · Closed topics: None'], ['en', undefined], ['tr', undefined]]) {
-    const p = progressOnly(v, { mode });
-    assert.equal(questionPart(p, statusline(p)), open, `${v}: ${mode}`);
+  for (const mode of ['on · closed topics: none', 'on', 'On · Closed topics: None', undefined]) {
+    const p = progressOnly({ mode });
+    assert.equal(questionPart(p, statusline(p)), open, String(mode));
   }
-  for (const [v, mode] of [['en', 'off'], ['tr', 'kapalı'], ['en', 'off · closed topics: none']]) {
-    const p = progressOnly(v, { mode });
-    assert.equal(questionPart(p, statusline(p)), t(p, 'statusline.question', { mode: t(p, 'statusline.modeOff') }), `${v}: ${mode}`);
+  for (const mode of ['off', 'off · closed topics: none']) {
+    const p = progressOnly({ mode });
+    assert.equal(questionPart(p, statusline(p)), t(p, 'statusline.question', { mode: t(p, 'statusline.modeOff') }), mode);
   }
 });
 
-test('Ö-48.25 statusline: phase "Setup" shows the setup step like "Başlangıç"', () => {
-  for (const v of ['tr', 'en']) {
-    const p = progressOnly(v, { phase: V[v].setup, step: '3/9', mode: V[v].on });
-    const out = statusline(p);
-    assert.equal(out.includes(t(p, 'statusline.step', { step: '3/9' })), true, `${v}: ${out}`);
-    assert.equal(out.includes(t(p, 'statusline.task', { done: 0, total: 0 })), false, `${v}: no task count in setup: ${out}`);
+test('AC-49.3 statusline: the Turkish values açık / kapalı are shown as written, never mapped to open / closed', () => {
+  for (const mode of ['açık', 'kapalı', 'kapalı · kapalı konular: design']) {
+    const p = progressOnly({ mode });
+    const part = questionPart(p, statusline(p));
+    assert.notEqual(part, t(p, 'statusline.question', { mode: t(p, 'statusline.modeOpen') }), `${mode}: not open`);
+    assert.notEqual(part, t(p, 'statusline.question', { mode: t(p, 'statusline.modeOff') }), `${mode}: not off`);
+    assert.equal(part.includes(mode.split(' ')[0]), true, `${mode}: shown as written: ${part}`);
   }
+});
+
+test('Ö-48.25 statusline: phase "Setup" shows the setup step; "Başlangıç" does not', () => {
+  const p = progressOnly({ phase: V.setup, step: '3/9', mode: V.on });
+  const out = statusline(p);
+  assert.equal(out.includes(t(p, 'statusline.step', { step: '3/9' })), true, out);
+  assert.equal(out.includes(t(p, 'statusline.task', { done: 0, total: 0 })), false, `no task count in setup: ${out}`);
+  const q = progressOnly({ phase: 'Başlangıç', step: '3/9', mode: V.on });
+  assert.equal(statusline(q).includes(t(q, 'statusline.step', { step: '3/9' })), false, '"Başlangıç" is not the Setup phase');
 });
 
 function sessionStart(p) {
@@ -640,31 +563,31 @@ function sessionStart(p) {
   return { context: o.hookSpecificOutput.additionalContext, screen: o.systemMessage ?? '' };
 }
 
-test('Ö-48.29 session-start: Setup (adopt) / Başlangıç (uyum) suggest /adopt, Setup / Başlangıç suggest /start', () => {
-  for (const [v, phase, command] of [['en', 'Setup (adopt)', '/adopt'], ['tr', 'Başlangıç (uyum)', '/adopt'], ['en', 'Setup', '/start'], ['tr', 'Başlangıç', '/start']]) {
-    const p = progressOnly(v, { phase, step: '3/9', mode: V[v].on });
-    const { context } = sessionStart(p);
-    assert.match(context, new RegExp(`${command} was left unfinished \\(step 3/9\\)`), `${v} "${phase}"`);
+test('Ö-48.29 session-start: Setup (adopt) suggests /adopt, Setup suggests /start; the Turkish phase values suggest neither', () => {
+  for (const [phase, command] of [['Setup (adopt)', '/adopt'], ['Setup', '/start']]) {
+    const { context } = sessionStart(progressOnly({ phase, step: '3/9', mode: V.on }));
+    assert.match(context, new RegExp(`${command} was left unfinished \\(step 3/9\\)`), phase);
     const other = command === '/adopt' ? '/start' : '/adopt';
-    assert.doesNotMatch(context, new RegExp(`${other} was left unfinished`), `${v} "${phase}": not ${other}`);
+    assert.doesNotMatch(context, new RegExp(`${other} was left unfinished`), `${phase}: not ${other}`);
+  }
+  for (const phase of ['Başlangıç (uyum)', 'Başlangıç', 'Setup (uyum)']) {
+    const { context } = sessionStart(progressOnly({ phase, step: '3/9', mode: V.on }));
+    if (phase === 'Setup (uyum)') assert.doesNotMatch(context, /\/adopt was left unfinished/, `${phase}: "uyum" is not adopt`);
+    else assert.doesNotMatch(context, /was left unfinished/, `${phase}: not the Setup phase`);
   }
 });
 
 test('Ö-48.29 session-start: a missing Question mode line is shown as "on"', () => {
-  for (const v of ['tr', 'en']) {
-    const { context } = sessionStart(progressOnly(v, { mode: undefined }));
-    assert.match(context, /Question mode: on · Board:/, v);
-  }
+  const { context } = sessionStart(progressOnly({ mode: undefined }));
+  assert.match(context, /Question mode: on · Board:/);
 });
 
 test('Ö-48.29 session-start: a waiting handoff note suggests /handoff take (English and Turkish UI)', () => {
   for (const lang of ['en', 'tr']) {
-    for (const v of ['tr', 'en']) {
-      const p = project({ ...twin(v), '.kit.json': { ...KIT, lang } });
-      const { context, screen } = sessionStart(p);
-      assert.match(context, /\/handoff take/, `${lang} UI, ${v} file: context`);
-      assert.doesNotMatch(`${context}\n${screen}`, /devral/, `${lang} UI, ${v} file: no Turkish command`);
-    }
+    const p = project({ ...twin(), '.kit.json': { ...KIT, lang } });
+    const { context, screen } = sessionStart(p);
+    assert.match(context, /\/handoff take/, `${lang} UI: context`);
+    assert.doesNotMatch(`${context}\n${screen}`, /devral/, `${lang} UI: no Turkish command`);
   }
 });
 
@@ -672,10 +595,10 @@ test('Ö-48.29 session-start: a waiting handoff note suggests /handoff take (Eng
 
 const suite = (cases) => `<testsuites><testsuite>${cases}</testsuite></testsuites>`;
 // The Result cell of every criterion row (rows start with the criterion id)
-const resultColumn = (text) => text.split(/\r?\n/).filter((l) => /^\| Ö-\d\d\.\d+ /.test(l)).map((l) => l.split('|')[2].trim());
+const resultColumn = (text) => text.split(/\r?\n/).filter((l) => /^\| AC-\d\d\.\d+ /.test(l)).map((l) => l.split('|')[2].trim());
 function qaRun(junit) {
   const p = project({
-    'docs/product/prd.md': '# PRD\n\n- [ ] Ö-01.1: Required field\n- [ ] Ö-01.2: List shows the record\n- [ ] Ö-02.1: PDF downloads\n',
+    'docs/product/prd.md': '# PRD\n\n- [ ] AC-01.1: Required field\n- [ ] AC-01.2: List shows the record\n- [ ] AC-02.1: PDF downloads\n',
     'test-results-qa/junit.xml': suite(junit),
   });
   const r = spawnSync(process.execPath, [path.join(HOOKS, 'qa-report.mjs')], { cwd: p, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p } });
@@ -686,11 +609,11 @@ function qaRun(junit) {
 }
 
 test('Ö-48.30 qa-report: a new report writes passed / failed / not run, never geçti / kaldı / koşulmadı; a failure exits 1', () => {
-  const { r, text } = qaRun('<testcase name="Ö-01.1 required" classname="qa"/><testcase name="Ö-01.2 list" classname="qa"><failure message="x">Error: not visible</failure></testcase>');
+  const { r, text } = qaRun('<testcase name="AC-01.1 required" classname="qa"/><testcase name="AC-01.2 list" classname="qa"><failure message="x">Error: not visible</failure></testcase>');
   assert.equal(r.status, 1, 'a failed criterion makes the exit code red');
-  assert.match(text, /^\| Ö-01\.1 Required field \| passed \| /m);
-  assert.match(text, /^\| Ö-01\.2 List shows the record \| failed \| [^|]* \| Error: not visible \|$/m);
-  assert.match(text, /^\| Ö-02\.1 PDF downloads \| not run \| /m);
+  assert.match(text, /^\| AC-01\.1 Required field \| passed \| /m);
+  assert.match(text, /^\| AC-01\.2 List shows the record \| failed \| [^|]* \| Error: not visible \|$/m);
+  assert.match(text, /^\| AC-02\.1 PDF downloads \| not run \| /m);
   // The title, header and summary line are localized UI text; the Result column is the value the dashboard reads
   assert.deepEqual(resultColumn(text), ['passed', 'failed', 'not run']);
   const s = qaSummary(text);
@@ -698,7 +621,7 @@ test('Ö-48.30 qa-report: a new report writes passed / failed / not run, never g
 });
 
 test('Ö-48.30 qa-report: all green writes only "passed" and exits 0', () => {
-  const { r, text } = qaRun('<testcase name="Ö-01.1 a"/><testcase name="Ö-01.2 b"/><testcase name="Ö-02.1 c"/>');
+  const { r, text } = qaRun('<testcase name="AC-01.1 a"/><testcase name="AC-01.2 b"/><testcase name="AC-02.1 c"/>');
   assert.equal(r.status, 0, r.stdout);
   assert.deepEqual(resultColumn(text), ['passed', 'passed', 'passed']);
 });
@@ -715,7 +638,7 @@ const internalAttrs = (html) => [...markup(html).matchAll(/\s(id|class|data-[\w-
   .map(([, name, value]) => ({ name, value }));
 
 test('Ö-48.31 dashboard: id, class and data-* names and values carry no old Turkish id, and are ASCII', () => {
-  const p = project(twin('en'));
+  const p = project(twin());
   const html = dashboard(p);
   const attrs = internalAttrs(html);
   assert.equal(attrs.some((a) => a.name === 'id'), true, 'ids found');
@@ -739,90 +662,83 @@ test('Ö-48.31 dashboard: id, class and data-* names and values carry no old Tur
   assert.deepEqual([...new Set(bad)], []);
 });
 
-test('Ö-48.32 dashboard: the decision filters still work after the rename (one row per decision, All shows the total)', () => {
-  for (const v of ['tr', 'en']) filtersWork(project(twin(v)), v);
-});
-
-function filtersWork(p, v) {
+test('Ö-48.32 dashboard: the decision filters work (one row per decision, All shows the total)', () => {
+  const p = project(twin());
   const html = dashboard(p);
   const chips = chipsOf(p, html);
   const keyOf = (c) => c.attrs.match(/\sdata-[\w-]+="([^"]*)"/)?.[1] ?? null;
   const all = chips[0];
-  assert.equal(all?.text, `${t(p, 'dashboard.all')} (3)`, `${v}: the first chip is All with the total`);
+  assert.equal(all?.text, `${t(p, 'dashboard.all')} (3)`, 'the first chip is All with the total');
   const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '';
   // The table the script filters exists and holds one row per decision
   const tableId = script.match(/querySelectorAll\('#([\w-]+) tbody tr'\)/)?.[1];
-  assert.equal(typeof tableId, 'string', `${v}: the script filters a table by id`);
+  assert.equal(typeof tableId, 'string', 'the script filters a table by id');
   const table = after_(html, `<table id="${tableId}">`, '</table>');
   const rows = [...after_(table, '<tbody>', '</tbody>').matchAll(/<tr\b([^>]*)>/g)].map((m) => [...m[1].matchAll(/\sdata-[\w-]+="([^"]*)"/g)].map((d) => d[1]));
-  assert.equal(rows.length, 3, `${v}: one row per decision`);
-  assert.equal(script.includes(`'${keyOf(all)}'`), true, `${v}: the script knows the All key "${keyOf(all)}"`);
+  assert.equal(rows.length, 3, 'one row per decision');
+  assert.equal(script.includes(`'${keyOf(all)}'`), true, `the script knows the All key "${keyOf(all)}"`);
   for (const [label, n] of [['dashboard.auto', 2], ['dashboard.oneWay', 2]]) {
     const chip = chips.find((c) => c.text === `${t(p, label)} (${n})`);
-    assert.equal(typeof chip?.attrs, 'string', `${v}: ${label} chip`);
+    assert.equal(typeof chip?.attrs, 'string', `${label} chip`);
     const key = keyOf(chip);
-    assert.equal(rows.filter((r) => r.includes(key)).length, n, `${v} ${label}: rows carrying "${key}"`);
-    assert.equal(script.includes(`'${key}'`), true, `${v} ${label}: the script knows "${key}"`);
+    assert.equal(rows.filter((r) => r.includes(key)).length, n, `${label}: rows carrying "${key}"`);
+    assert.equal(script.includes(`'${key}'`), true, `${label}: the script knows "${key}"`);
   }
-}
+});
 
 // ---------- adversarial ----------
 
 test('A-48.10 a value word in free text or another column does not change the result', () => {
-  for (const v of ['tr', 'en']) {
-    const x = V[v];
-    // Decisions: only the Decided by column makes an auto decision, only the Door column a one-way door
-    const p = project(twin(v, { 'docs/decisions/log.md': decisionsDoc(LBL[v], [
-      [1, 'teknik', 'otomatik mi? automatic? tek mi? one-way?', 'otomatik / automatic', x.twoWay, x.user],
-      [2, 'teknik', 'Is the board on (açık)?', 'tek / one-way', x.twoWay, x.user]]) }));
-    const html = dashboard(p);
-    const chips = chipsOf(p, html).map((c) => c.text);
-    assert.equal(chips.includes(`${t(p, 'dashboard.auto')} (0)`), true, `${v}: no auto decision: ${chips.join(' | ')}`);
-    assert.equal(chips.includes(`${t(p, 'dashboard.oneWay')} (0)`), true, `${v}: no one-way door: ${chips.join(' | ')}`);
-    const k = kpisOf(html).find(([l]) => l === t(p, 'dashboard.kpiDecisions'));
-    assert.deepEqual(k, [t(p, 'dashboard.kpiDecisions'), '2', t(p, 'dashboard.usersAuto', { user: 2, auto: 0 })], v);
-  }
-  // Feedback: "new" / "yeni" in the summary or theme is not a new item
-  const fb = feedback(feedbackDoc('Inbox', 'Themes', [[1, 'bug', 'done', 'new'], [2, 'hata', 'yapıldı', 'yeni']]).replace('summary 1', 'new yeni planned').replace('summary 2', 'yeni new planlandı'));
+  const x = V;
+  // Decisions: only the Decided by column makes an auto decision, only the Door column a one-way door
+  const p = project(twin({ 'docs/decisions/log.md': decisionsDoc(L, [
+    [1, 'tech', 'automatic? one-way?', 'automatic', x.twoWay, x.user],
+    [2, 'tech', 'Is the board on?', 'one-way', x.twoWay, x.user]]) }));
+  const html = dashboard(p);
+  const chips = chipsOf(p, html).map((c) => c.text);
+  assert.equal(chips.includes(`${t(p, 'dashboard.auto')} (0)`), true, `no auto decision: ${chips.join(' | ')}`);
+  assert.equal(chips.includes(`${t(p, 'dashboard.oneWay')} (0)`), true, `no one-way door: ${chips.join(' | ')}`);
+  const k = kpisOf(html).find(([l]) => l === t(p, 'dashboard.kpiDecisions'));
+  assert.deepEqual(k, [t(p, 'dashboard.kpiDecisions'), '2', t(p, 'dashboard.usersAuto', { user: 2, auto: 0 })]);
+  // Old Turkish values in the Door / Decided by columns are not one-way / automatic
+  const q = project(twin({ 'docs/decisions/log.md': decisionsDoc(L, [[1, 'tech', 'Database?', 'Postgres', 'tek', 'otomatik']]) }));
+  const qChips = chipsOf(q, dashboard(q)).map((c) => c.text);
+  assert.equal(qChips.includes(`${t(q, 'dashboard.auto')} (0)`), true, `"otomatik" is not automatic: ${qChips.join(' | ')}`);
+  assert.equal(qChips.includes(`${t(q, 'dashboard.oneWay')} (0)`), true, `"tek" is not one-way: ${qChips.join(' | ')}`);
+  // Feedback: "new" in the summary or theme is not a new item
+  const fb = feedback(feedbackDoc('Inbox', 'Themes', [[1, 'bug', 'done', 'new']]).replace('summary 1', 'new planned'));
   assert.equal(fb.newCount, 0);
   // Learning: the concept column does not decide the result
-  const l = learning(lines('## Records', '', '| Date | Task | Concept | Result |', '|---|---|---|---|', '| 2026-10-25 | G-01 | right | wrong |', '| 2026-10-25 | G-01 | doğru | yanlış |'));
+  const l = learning(lines('## Records', '', '| Date | Task | Concept | Result |', '|---|---|---|---|', '| 2026-10-25 | G-01 | right | wrong |', '| 2026-10-25 | G-01 | wrong | wrong |'));
   assert.deepEqual([l.right, l.wrong], [0, 2]);
   // Flags: "yes" in the purpose does not test the kill switch
-  assert.deepEqual(flags(flagsDoc('Flags', 'on', ['no', 'hayır']).replace(/\| purpose \|/g, '| yes evet ✅ |'), NOW).map((b) => b.untested), [true, true]);
+  assert.deepEqual(flags(flagsDoc('Flags', 'on', ['no', 'no']).replace(/\| purpose \|/g, '| yes ✅ |'), NOW).map((b) => b.untested), [true, true]);
   // Accounts: "no" in the purpose or note does not mean no 2FA
   const acc = accounts(lines('## Accounts', '', '| Service | Purpose | Owner | 2FA | Plan | Expiry | Key | Note |', '|---|---|---|---|---|---|---|---|',
-    '| Domain | no | hayır | yes | no | - | - | no |'), NOW);
+    '| Domain | no | no | yes | no | - | - | no |'), NOW);
   assert.equal(acc[0]?.noTwoFactor, false);
 });
 
 test('A-48.11 an unknown value is shown as it is, never mapped to on / off', () => {
-  for (const v of ['tr', 'en']) {
-    const p = progressOnly(v, { mode: 'maybe' });
-    assert.equal(questionPart(p, statusline(p)), t(p, 'statusline.question', { mode: 'maybe' }), `${v}: status line`);
-    assert.match(sessionStart(p).context, /Question mode: maybe · Board:/, `${v}: session start`);
-    const d = project(twin(v, { 'docs/workflow/progress.md': progressDoc(LBL[v], { phase: LBL[v].phaseValue, mode: 'maybe', profile: V[v].full }) }));
-    const html = dashboard(d);
-    assert.equal(html.includes(`${t(d, 'dashboard.questionMode')}</div><div>maybe</div>`), true, `${v}: dashboard`);
-    assert.equal(alertsOf(d, html).some((a) => a.includes(unMd(t(d, 'dashboard.alert.closedTopics', { topics: '' })).split(':')[0])), false, `${v}: no closed-topics alert`);
-  }
-  const s = qaSummary(qaDoc({ passed: 'maybe', failed: 'geçmedi', notRun: 'skipped' }));
+  const p = progressOnly({ mode: 'maybe' });
+  assert.equal(questionPart(p, statusline(p)), t(p, 'statusline.question', { mode: 'maybe' }), 'status line');
+  assert.match(sessionStart(p).context, /Question mode: maybe · Board:/, 'session start');
+  const d = project(twin({ 'docs/workflow/progress.md': progressDoc(L, { phase: L.phaseValue, mode: 'maybe', profile: V.full }) }));
+  const html = dashboard(d);
+  assert.equal(html.includes(`${t(d, 'dashboard.questionMode')}</div><div>maybe</div>`), true, 'dashboard');
+  assert.equal(alertsOf(d, html).some((a) => a.includes(unMd(t(d, 'dashboard.alert.closedTopics', { topics: '' })).split(':')[0])), false, 'no closed-topics alert');
+  const s = qaSummary(qaDoc({ passed: 'maybe', failed: 'not passed', notRun: 'skipped' }));
   assert.deepEqual([s.passed, s.failed, s.notRun], [0, 0, 0], 'unknown QA results are not counted');
   assert.equal(feedback(feedbackDoc('Inbox', 'Themes', [[1, 'bug', 'maybe', 'x'], [2, 'bug', 'newish', 'x']])).newCount, 0);
 });
 
-test('A-48.12 CRLF and a BOM give the same reader result as LF, in both languages', () => {
-  for (const v of ['tr', 'en']) {
-    assert.deepEqual(feedback(crlfBom(FEEDBACK[v])), feedback(FEEDBACK[v]), `${v}: feedback`);
-    assert.deepEqual(accounts(crlfBom(ACCOUNTS[v]), NOW), accounts(ACCOUNTS[v], NOW), `${v}: accounts`);
-    assert.deepEqual(learning(crlfBom(LEARNING[v])), learning(LEARNING[v]), `${v}: learning`);
-    assert.deepEqual(qaSummary(crlfBom(QA[v])), qaSummary(QA[v]), `${v}: qaSummary`);
-    assert.deepEqual(findingReports(crlfBom(FINDINGS[v])), findingReports(FINDINGS[v]), `${v}: findingReports`);
-    assert.deepEqual(spendAlarms(crlfBom(ALARMS[v]), NOW), spendAlarms(ALARMS[v], NOW), `${v}: spendAlarms`);
-  }
-  // And the English CRLF file still equals the Turkish LF file
-  assert.deepEqual(feedback(crlfBom(FEEDBACK.en)), feedback(FEEDBACK.tr));
-  assert.deepEqual(learning(crlfBom(LEARNING.en)), learning(LEARNING.tr));
+test('A-48.12 CRLF and a BOM give the same reader result as LF', () => {
+  assert.deepEqual(feedback(crlfBom(FEEDBACK)), feedback(FEEDBACK), 'feedback');
+  assert.deepEqual(accounts(crlfBom(ACCOUNTS), NOW), accounts(ACCOUNTS, NOW), 'accounts');
+  assert.deepEqual(learning(crlfBom(LEARNING)), learning(LEARNING), 'learning');
+  assert.deepEqual(qaSummary(crlfBom(QA)), qaSummary(QA), 'qaSummary');
+  assert.deepEqual(findingReports(crlfBom(FINDINGS.en)), findingReports(FINDINGS.en), 'findingReports');
+  assert.deepEqual(spendAlarms(crlfBom(ALARMS), NOW), spendAlarms(ALARMS, NOW), 'spendAlarms');
   const status = readStatus(project({ '.kit.json': KIT, 'docs/workflow/handoff.md': crlfBom('# Handoff note\n\n**Status:** waiting\n') }));
   assert.equal(status.handoffPending, true, 'handoff with CRLF and BOM');
 });

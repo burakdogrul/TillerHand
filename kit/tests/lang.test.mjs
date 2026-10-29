@@ -99,20 +99,21 @@ test('lang: readLang is null in a project that is not set up and has no language
   assert.equal(readLang(project({ ...PENDING, '.claude/state/lang.json': '{"lang": ' })), null, 'broken state file is absent');
 });
 
-test('lang: readLang defaults to tr in installed projects without lang and in plain folders', async () => {
+test('AC-49.11 lang: readLang defaults to en in set-up projects without lang and in plain folders (was tr)', async () => {
   const { readLang } = await load();
-  assert.equal(readLang(project({ '.kit.json': kitJson() })), 'tr', 'installed before 3.44.0');
-  assert.equal(readLang(project()), 'tr', 'plain folder');
-  assert.equal(readLang(project({ '.claude/state/lang.json': { lang: 'EN' } })), 'tr', 'invalid state lang is ignored');
+  assert.equal(readLang(project({ '.kit.json': kitJson() })), 'en', 'installed, no language chosen');
+  assert.equal(readLang(project()), 'en', 'plain folder');
+  assert.equal(readLang(project({ '.claude/state/lang.json': { lang: 'EN' } })), 'en', 'invalid state lang is ignored');
+  assert.equal(readLang(project({ '.kit.json': kitJson({ lang: 'tr' }) })), 'tr', 'a chosen tr stays tr');
 });
 
-test('lang: readLang never throws on broken JSON', async () => {
+test('AC-49.11 lang: readLang never throws on broken JSON', async () => {
   const { readLang } = await load();
-  assert.equal(readLang(project({ '.kit.json': '{"type": ', '.claude/state/lang.json': 'not json' })), 'tr', 'broken files, no kit clone');
+  assert.equal(readLang(project({ '.kit.json': '{"type": ', '.claude/state/lang.json': 'not json' })), 'en', 'broken files, no kit clone');
   // A broken .kit.json is absent: same rule as status-read kitPending
   assert.equal(readLang(project({ ...PENDING, '.kit.json': '{', '.claude/state/lang.json': '[]' })), null, 'broken .kit.json in a kit clone counts as not set up');
-  assert.equal(readLang(project({ '.kit.json': '{' })), 'tr', 'broken .kit.json without a kit clone: tr');
-  assert.equal(readLang(project({ '.kit.json': 'null', '.claude/state/lang.json': 'null' })), 'tr');
+  assert.equal(readLang(project({ '.kit.json': '{' })), 'en', 'broken .kit.json without a kit clone: en');
+  assert.equal(readLang(project({ '.kit.json': 'null', '.claude/state/lang.json': 'null' })), 'en');
 });
 
 // ---------- setLang ----------
@@ -165,7 +166,7 @@ test('lang: t returns tr and en text from the table', async () => {
     assert.equal(t(tr, k), M[k].tr, `tr: ${k}`);
     assert.equal(t(en, k), M[k].en, `en: ${k}`);
   }
-  assert.equal(t(project(), all[0]), M[all[0]].tr, 'a plain folder defaults to tr');
+  assert.equal(t(project(), all[0]), M[all[0]].en, 'a plain folder defaults to en');
   assert.equal(t(project(PENDING), all[0]), M[all[0]].en, 'no language chosen: en');
 });
 
@@ -228,8 +229,8 @@ test('lang attacker: a traversal lang in .kit.json or the state file does not ma
   const baitFiles = { 'x.json': bait, '.claude/x.json': bait, '.claude/i18n/x.json': bait };
   for (const evil of ['../../x', '../x', '..\\..\\x', 'x/../../x']) {
     const p = project({ '.kit.json': kitJson({ lang: evil }), ...baitFiles });
-    assert.equal(readLang(p), 'tr', `${evil}: invalid lang is absent`);
-    assert.equal(t(p, k), M[k].tr, `${evil}: .kit.json`);
+    assert.equal(readLang(p), 'en', `${evil}: invalid lang is absent`);
+    assert.equal(t(p, k), M[k].en, `${evil}: .kit.json`);
     const q = project({ ...PENDING, '.claude/state/lang.json': { lang: evil }, ...baitFiles });
     assert.equal(readLang(q), null, `${evil}: invalid state lang is absent`);
     assert.equal(t(q, k), M[k].en, `${evil}: state file`);
@@ -327,7 +328,7 @@ test('lang CLI: --set writes the language, --show prints it', async () => {
   assert.equal(s.stdout.trim(), 'none', 'no language');
   assert.equal(cli(q, ['--set', 'en']).status, 0);
   assert.deepEqual(JSON.parse(readFile(q, '.claude/state/lang.json')), { lang: 'en' });
-  assert.equal(cli(project(), ['--show']).stdout.trim(), 'tr', 'plain folder');
+  assert.equal(cli(project(), ['--show']).stdout.trim(), 'en', 'plain folder');
 });
 
 test('lang CLI attacker: --set with a traversal or malformed code exits non-zero, nothing written', async () => {
@@ -402,7 +403,29 @@ const session = (p) => {
 test('session-start: a chosen language gives the conversation language line', () => {
   assert.ok(session(project({ '.kit.json': kitJson({ lang: 'de' }) })).includes('Conversation language: de.'), '.kit.json lang');
   assert.ok(session(project({ ...PENDING, '.claude/state/lang.json': { lang: 'en' } })).includes('Conversation language: en.'), 'state lang before install');
-  assert.ok(session(project({ '.kit.json': kitJson() })).includes('Conversation language: tr.'), 'old installed project: tr');
+  assert.ok(session(project({ '.kit.json': kitJson() })).includes('Conversation language: en.'), 'installed, no language chosen: en');
+});
+
+test('AC-49.13 usage.mjs: the reset time format does not hard-code the tr-TR locale', () => {
+  const src = fs.readFileSync(path.join(HOOKS, 'usage.mjs'), 'utf8');
+  assert.doesNotMatch(src, /tr-TR/);
+});
+
+// The language note of the session context: the "Conversation language:" line and, if the rule is a note of its own, the next line
+const languageNote = (context) => {
+  const lines = context.split('\n');
+  const i = lines.findIndex((l) => l.includes('Conversation language:'));
+  return i < 0 ? '' : lines.slice(i, i + 2).join('\n');
+};
+
+test('AC-49.12 session-start: the language note says labels, headings, keys and verdict words stay English in every language', () => {
+  for (const lang of ['tr', 'de', 'en']) {
+    const note = languageNote(session(project({ '.kit.json': kitJson({ lang }) })));
+    assert.ok(note.includes(`Conversation language: ${lang}.`), `${lang}: ${note}`);
+    for (const word of [/\blabels?\b/i, /\bheadings?\b/i, /\bkeys?\b/i, /\bverdict/i, /\bEnglish\b/]) {
+      assert.match(note, word, `${lang}: the note names ${word}`);
+    }
+  }
 });
 
 test('session-start: no language chosen says so and gives no language line', () => {
@@ -425,7 +448,7 @@ test('reminder: a chosen language is repeated on every message, none without a l
   const p = project({ '.kit.json': kitJson({ lang: 'pt-BR' }) });
   for (let i = 1; i <= 3; i++) assert.ok(remind(p).includes('Reply in pt-BR.'), `call ${i}`);
   const old = project({ '.kit.json': kitJson() });
-  assert.ok(remind(old).includes('Reply in tr.'), 'old project: tr');
+  assert.ok(remind(old).includes('Reply in en.'), 'set up without a language: en');
   const q = project(PENDING);
   for (let i = 1; i <= 2; i++) assert.ok(!remind(q).includes('Reply in'), `no language, call ${i}`);
 });

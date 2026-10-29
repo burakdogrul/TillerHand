@@ -24,7 +24,7 @@ You are an application security auditor. Your default stance is skepticism: do n
 3. **Data layer:** Are RLS/access rules present on every table? Is there string concatenation in raw SQL? Where is the admin/service key used?
 4. **Secrets:** Variables that go to client code (`NEXT_PUBLIC_`, `EXPO_PUBLIC_`), keys embedded in code, sensitive data written to logs.
 5. **Dependencies:** Run the vulnerability scan command (`docs/architecture/stack.md`). Verify that newly added packages are real and widely used.
-6. **Adversarial tests** (`docs/quality/test-plan.md` §1b): For every endpoint that returns or writes data, are there tests for IDOR, unauthenticated access, role escalation, XSS and input limits? Adversarial test names start with `ATTACK:`; tests written before 3.48 may use `SALDIRI:`, and those count too. If not, KRİTİK.
+6. **Adversarial tests** (`docs/quality/test-plan.md` §1b): For every endpoint that returns or writes data, are there tests for IDOR, unauthenticated access, role escalation, XSS and input limits? Adversarial test names start with `ATTACK:`. If not, CRITICAL.
 7. **Agent security** (`docs/security/checklist.md` §8): In changes to `CLAUDE.md`, `.claude/`, `.mcp.json`, `.github/workflows/` `AGENTS.md`, `.codex/`, `.agents/`, is there a hidden instruction, privilege expansion or secret leak? Is there a new MCP server or an `@latest` version?
 8. **AI features (if any):** Is model output handled like untrusted input? If the model triggers a tool/action, is there approval or a limit? Is there a per-user cost limit?
 

@@ -1,14 +1,13 @@
 // Run: node --test "kit/tests/*.test.mjs"
-// 3.48.0 review and security audit fixes: verdict() reads bold and punctuated verdicts, the dashboard shows an unreadable
-// result as neutral, the commit gate's review-off switch needs the whole word, --approve refuses "skipped" in any case,
-// tools.mjs survives prototype names, kit update keeps a user's changed anlatici.md working, qa-report finds evidence under
-// the other id prefix, and the prod-ref action names the English accounts.md heading.
+// 3.48.0 review and security audit fixes: verdict() reads bold and punctuated verdicts, the commit gate's review-off switch
+// needs the whole word, --approve refuses "skipped" in any case, tools.mjs survives prototype names, the prod-ref action
+// names the English accounts.md heading. 3.49.0: an unreadable meeting result (old RET / ONAY too) is a warning, not
+// neutral; qa-report looks for evidence under the AC id only.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { verdict } from '../../.claude/hooks/labels.mjs';
@@ -32,28 +31,34 @@ function project(files, prefix = 'review-fixes-') {
 
 // ---------- 1. verdict(): bold and trailing punctuation ----------
 
-test('Ö-48.81 verdict: bold around the word is read (**RET**, **REJECT**, **ONAY**)', () => {
+test('Ö-48.81 verdict: bold around the word is read (**REJECT**, **APPROVE**, **CONDITIONAL**)', () => {
   const cases = [
-    ['**RET**', 'reject'], ['**REJECT**', 'reject'], ['**ONAY**', 'approve'], ['**APPROVE**', 'approve'],
-    ['**KOŞULLU ONAY**', 'conditional'], ['**CONDITIONAL**', 'conditional'], ['  **Ret**  ', 'reject'],
-    ['**Result:** **REJECT**', 'reject'], ['**RET** — eksik test', 'reject'],
+    ['**REJECT**', 'reject'], ['**APPROVE**', 'approve'], ['**CONDITIONAL**', 'conditional'], ['  **Reject**  ', 'reject'],
+    ['**Result:** **REJECT**', 'reject'], ['**REJECT** — missing test', 'reject'],
   ];
   for (const [input, want] of cases) assert.equal(verdict(input), want, JSON.stringify(input));
 });
 
 test('Ö-48.82 verdict: the word may be followed by ":", ",", ";" or "."', () => {
   const cases = [
-    ['RET: güvenlik', 'reject'], ['REJECT, 1 critical', 'reject'], ['APPROVE.', 'approve'], ['KOŞULLU ONAY; 2 fixes', 'conditional'],
-    ['ret: güvenlik', 'reject'], ['ONAY.', 'approve'], ['CONDITIONAL: fix the test first', 'conditional'], ['koşullu onay, 1 koşul', 'conditional'],
-    ['RET; no test', 'reject'], ['**RET**: güvenlik', 'reject'], ['**Sonuç:** RET: güvenlik', 'reject'],
+    ['REJECT: security', 'reject'], ['REJECT, 1 critical', 'reject'], ['APPROVE.', 'approve'], ['CONDITIONAL; 2 fixes', 'conditional'],
+    ['reject: security', 'reject'], ['approve.', 'approve'], ['CONDITIONAL: fix the test first', 'conditional'], ['conditional, 1 condition', 'conditional'],
+    ['REJECT; no test', 'reject'], ['**REJECT**: security', 'reject'], ['**Result:** REJECT: security', 'reject'],
   ];
   for (const [input, want] of cases) assert.equal(verdict(input), want, JSON.stringify(input));
 });
 
 test('A-48.23 verdict: bold or punctuation does not turn a substring, question, negation or mixed result into a verdict', () => {
-  for (const input of ['**RETRY**', '**SECRET**', '**APPROVED**', '**APPROVE?**', '**RET değil**', '**ONAY değil**', '**APPROVE / REJECT**',
-    '**RET**değil', 'RETRY:', 'SECRET.', 'APPROVED.', 'APPROVED,', 'REJECTED:', 'onaylandı.', 'conditionally;', 'RET değil.',
+  for (const input of ['**RETRY**', '**SECRET**', '**APPROVED**', '**APPROVE?**', '**REJECT not**', '**NOT REJECT**', '**APPROVE / REJECT**',
+    '**REJECT**not', 'RETRY:', 'SECRET.', 'APPROVED.', 'APPROVED,', 'REJECTED:', 'approved.', 'conditionally;', 'NOT REJECT.',
     'NOT APPROVE.', '**NOT APPROVE**', '****', '**:**', '**Result:** **RETRY**']) {
+    assert.equal(verdict(input), 'unknown', JSON.stringify(input));
+  }
+});
+
+test('A-49.4 verdict: the old Turkish verdicts in bold or with punctuation stay unknown (**RET**, RET: x, **ONAY**, KOŞULLU ONAY;)', () => {
+  for (const input of ['**RET**', '**Ret**', '**RET** — eksik test', 'RET: güvenlik', 'ret: güvenlik', 'RET; no test', '**RET**: güvenlik',
+    '**Sonuç:** RET: güvenlik', '**ONAY**', 'ONAY.', '**KOŞULLU ONAY**', 'KOŞULLU ONAY; 2 fixes', 'koşullu onay, 1 koşul']) {
     assert.equal(verdict(input), 'unknown', JSON.stringify(input));
   }
 });
@@ -86,16 +91,35 @@ const summaryCard = (html, lang) => html.match(new RegExp(`<h3>${msg('dashboard.
 const kpis = (card) => [...card.matchAll(/<div class="kpi-l">([^<]*)<\/div><div class="kpi-v">([^<]*)</g)].map((m) => [m[1], m[2]]);
 const row = (no, scope, result, decision = 'noted') => `| ${no} | 2026-10-2${no} | task | ${scope} | board-qa | ${result} | - | ${decision} |`;
 
-test('Ö-48.83 dashboard: a meeting result verdict() cannot read gets the neutral info badge, never good', () => {
+test('AC-49.4 dashboard: a meeting result verdict() cannot read gets the warn badge, never good or neutral', () => {
   const html = dashboard({ rows: [
     row(1, 'zqmcondapprove', 'CONDITIONAL APPROVE'), row(2, 'zqmmaybe', 'maybe'), row(3, 'zqmapprove', 'APPROVE'),
-    row(4, 'zqmbold', '**ONAY**'), row(5, 'zqmpunct', 'KOŞULLU ONAY; 2 fixes'),
+    row(4, 'zqmbold', '**APPROVE**'), row(5, 'zqmpunct', 'CONDITIONAL; 2 fixes'), row(6, 'zqmtrret', 'RET'), row(7, 'zqmtronay', 'ONAY'),
   ] });
-  assert.equal(rowBadge(html, 'zqmcondapprove'), 'info');
-  assert.equal(rowBadge(html, 'zqmmaybe'), 'info');
+  assert.equal(rowBadge(html, 'zqmcondapprove'), 'warn');
+  assert.equal(rowBadge(html, 'zqmmaybe'), 'warn');
+  assert.equal(rowBadge(html, 'zqmtrret'), 'warn', 'RET is unknown, not a reject');
+  assert.equal(rowBadge(html, 'zqmtronay'), 'warn', 'ONAY is unknown, not an approval');
   assert.equal(rowBadge(html, 'zqmapprove'), 'good', 'a real approval stays good');
   assert.equal(rowBadge(html, 'zqmbold'), 'good', 'a bold approval is an approval');
   assert.equal(rowBadge(html, 'zqmpunct'), 'warn', 'a punctuated conditional is conditional');
+});
+
+// The "Needs attention" card: the warn items in it, and whether it says "all good"
+const attention = (html) => html.match(/<h3 id="attention">[\s\S]*?<\/section>/)?.[0] ?? '';
+const warnItems = (html) => (attention(html).match(/<li class="warn">/g) ?? []).length;
+
+test('A-49.5 dashboard: minutes with RET are an unknown verdict: a warning in the attention list, not "all good", not an approval', () => {
+  const ok = dashboard({ rows: [row(1, 'G-001', 'APPROVE', 'noted')] });
+  const ret = dashboard({ rows: [row(1, 'G-001', 'RET', 'noted')] });
+  assert.notEqual(attention(ret), '', 'the attention card is there');
+  assert.equal(warnItems(ret), warnItems(ok) + 1, `one more warning than with APPROVE\n${attention(ret)}`);
+  assert.equal(attention(ret).includes(msg('dashboard.allGood', 'en')), false, 'not "All good"');
+  assert.deepEqual(kpis(summaryCard(ret, 'en')).map(([, v]) => v), ['1', '0', '%0'], 'meetings 1, rejects 0, approval 0%');
+  assert.equal(rowBadge(ret, 'G-001'), 'warn');
+  // The same for an unknown English result
+  const maybe = dashboard({ rows: [row(1, 'G-001', 'maybe', 'noted')] });
+  assert.equal(warnItems(maybe), warnItems(ok) + 1, 'an unreadable result is a warning too');
 });
 
 test('Ö-48.84 dashboard: a council decision that is an option name or unreadable is info, in the table and in the latest-council KPI', () => {
@@ -108,8 +132,8 @@ test('Ö-48.84 dashboard: a council decision that is an option name or unreadabl
   assert.equal(kpiBadge, 'info', 'the latest council\'s decision KPI');
 });
 
-test('Ö-48.85 dashboard: "RET: güvenlik" in the meeting log counts as a reject and raises the board-reject alert like RET', () => {
-  for (const result of ['RET: güvenlik', 'REJECT, 1 critical', '**RET**']) {
+test('Ö-48.85 dashboard: "REJECT: security" in the meeting log counts as a reject and raises the board-reject alert like REJECT', () => {
+  for (const result of ['REJECT: security', 'REJECT, 1 critical', '**REJECT**']) {
     const html = dashboard({ rows: [row(1, 'G-001', 'APPROVE'), row(2, 'G-010', result, '')] });
     assert.deepEqual(kpis(summaryCard(html, 'en')).map(([, v]) => v), ['2', '1', '%50'], `${result}: meetings, rejects, approval rate`);
     assert.match(html, /The board rejected \(task, G-010\)/, `${result}: an unanswered reject raises the critical alert`);
@@ -135,7 +159,7 @@ test('Ö-48.86 dashboard: the reject KPI label comes from messages.mjs in the pr
 
 // ---------- 3. commit gate: review off needs the whole word ----------
 
-test('Ö-48.87 commit gate: "off", "off (solo)" and "kapalı" exempt; "offer" and "kapalıdır" do not', () => {
+test('Ö-48.87 commit gate: "off" and "off (solo)" exempt; "offer", "offline", "on" and the old "kapalı" do not', () => {
   const p = project({ '.claude/agents/board-qa.md': '---\nname: board-qa\n---\n', 'a.js': 'x', 'docs/workflow/board.md': '**Commit review:** on\n' }, 'review-gate-');
   const sh = (c) => execSync(c, { cwd: p, stdio: 'ignore' });
   sh('git init -q && git config user.email t@t && git config user.name t && git add . && git commit -qm init');
@@ -144,8 +168,9 @@ test('Ö-48.87 commit gate: "off", "off (solo)" and "kapalı" exempt; "offer" an
   const door = () => spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')],
     { input: JSON.stringify({ tool_input: { command: 'git commit -m x' } }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p } });
   for (const [line, status] of [
-    ['**Commit review:** off', 0], ['**Commit review:** off (solo)', 0], ['**Commit denetimi:** kapalı', 0],
-    ['**Commit review:** offer', 2], ['**Commit denetimi:** kapalıdır', 2], ['**Commit review:** offline', 2], ['**Commit review:** on', 2],
+    ['**Commit review:** off', 0], ['**Commit review:** off (solo)', 0], ['**Commit review:** OFF', 0],
+    ['**Commit review:** offer', 2], ['**Commit review:** offline', 2], ['**Commit review:** on', 2],
+    ['**Commit denetimi:** kapalı', 2], ['**Commit review:** kapalı', 2],
   ]) {
     fs.writeFileSync(path.join(p, 'docs/workflow/board.md'), `**Status:** set up\n${line}\n`);
     const r = door();
@@ -187,59 +212,12 @@ test('A-48.25 tools: --required __proto__ / --enable constructor fail as an unkn
   assert.equal(fs.existsSync(path.join(p, '.claude/settings.local.json')), false, 'nothing written');
 });
 
-// ---------- 6. kit update: a user-changed anlatici.md keeps working ----------
+// ---------- 7. qa-report: evidence is looked up under the AC id only ----------
 
-const KIT_MJS = path.join(REPO, 'kit', 'kit.mjs');
-const sha = (s) => crypto.createHash('sha256').update(s.replace(/\r\n/g, '\n')).digest('hex');
-const OLD_STYLE = read('.claude/output-styles/narrator.md').replace(/^name: narrator$/m, 'name: anlatici');
-// An installed project made to look like one set up before 3.48: anlatici.md recorded by the kit, no narrator.md
-function oldProject(styleText) {
-  const p = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'review-style-')), 'changed');
-  made.push(path.dirname(p));
-  fs.cpSync(REPO, p, { recursive: true, filter: (src) => !/[\\/](\.git|node_modules|\.calisma)$/.test(src) && !src.endsWith('.kit.json') && !src.endsWith('settings.local.json') });
-  const r = spawnSync(process.execPath, [path.join(p, 'kit', 'kit.mjs'), 'install', '--type', 'backend'], { encoding: 'utf8' });
-  assert.equal(r.status, 0, r.stderr);
-  const rec = JSON.parse(fs.readFileSync(path.join(p, '.kit.json'), 'utf8'));
-  fs.rmSync(path.join(p, '.claude/output-styles/narrator.md'), { force: true });
-  delete rec.files['.claude/output-styles/narrator.md'];
-  fs.writeFileSync(path.join(p, '.claude/output-styles/anlatici.md'), styleText);
-  rec.files['.claude/output-styles/anlatici.md'] = sha(OLD_STYLE);
-  fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify(rec));
-  return p;
-}
-
-test('Ö-48.88 kit update: a user-changed anlatici.md stays, outputStyle "anlatici" is not rewritten, a second update does not report it again', () => {
-  const mine = `${OLD_STYLE}\nMy own rule: explain every step twice.\n`;
-  const p = oldProject(mine);
-  const style = path.join(p, '.claude/output-styles/anlatici.md');
-  const local = path.join(p, '.claude/settings.local.json');
-  const sharedFile = path.join(p, '.claude/settings.json');
-  fs.writeFileSync(local, JSON.stringify({ outputStyle: 'anlatici', env: { A: '1' } }, null, 2));
-  const shared = JSON.parse(fs.readFileSync(sharedFile, 'utf8'));
-  fs.writeFileSync(sharedFile, JSON.stringify({ ...shared, outputStyle: 'anlatici' }, null, 2));
-  const update = () => spawnSync(process.execPath, [KIT_MJS, 'update', '--project', p], { encoding: 'utf8' });
-
-  const first = update();
-  assert.equal(first.status, 0, first.stderr);
-  assert.equal(fs.readFileSync(style, 'utf8'), mine, 'the user\'s anlatici.md is untouched');
-  assert.equal(JSON.parse(fs.readFileSync(local, 'utf8')).outputStyle, 'anlatici', 'settings.local.json still picks the user\'s style');
-  assert.equal(JSON.parse(fs.readFileSync(sharedFile, 'utf8')).outputStyle, 'anlatici', 'settings.json still picks the user\'s style');
-  assert.match(first.stdout, /anlatici\.md/, 'the first update tells the user once');
-
-  const second = update();
-  assert.equal(second.status, 0, second.stderr);
-  assert.equal(fs.readFileSync(style, 'utf8'), mine, 'still there after a second update');
-  assert.equal(JSON.parse(fs.readFileSync(local, 'utf8')).outputStyle, 'anlatici', 'second update: settings.local.json unchanged');
-  assert.equal(JSON.parse(fs.readFileSync(sharedFile, 'utf8')).outputStyle, 'anlatici', 'second update: settings.json unchanged');
-  assert.doesNotMatch(second.stdout, /anlatici\.md/, 'the second update does not report the same file again');
-});
-
-// ---------- 7. qa-report: evidence under the other id prefix ----------
-
-function qaRun(prdId, shotId) {
+function qaRun(shotId) {
   const p = project({
-    'docs/product/prd.md': `- [ ] ${prdId}: Zorunlu alan boşsa kaydedilmez\n`,
-    'test-results-qa/junit.xml': `<testsuites><testsuite><testcase name="${shotId} zorunlu alan" classname="qa"/></testsuite></testsuites>`,
+    'docs/product/prd.md': '- [ ] AC-01.1: Required field is not saved empty\n',
+    'test-results-qa/junit.xml': '<testsuites><testsuite><testcase name="AC-01.1 required field" classname="qa"/></testsuite></testsuites>',
     [`test-results-qa/shots/${shotId}.png`]: 'png',
   }, 'review-qa-');
   const r = spawnSync(process.execPath, [path.join(HOOKS, 'qa-report.mjs')], { cwd: p, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p } });
@@ -247,17 +225,20 @@ function qaRun(prdId, shotId) {
   const [file] = fs.readdirSync(path.join(p, 'docs/quality/qa')).filter((f) => f.endsWith('.md'));
   const stamp = file.slice(0, -3);
   const text = fs.readFileSync(path.join(p, 'docs/quality/qa', file), 'utf8');
-  return { p, stamp, text };
+  const evidence = text.match(/^\| AC-01\.1 Required field is not saved empty \| passed \| ([^|]*) \|/m)?.[1]?.trim();
+  return { p, stamp, evidence };
 }
 
-test('Ö-48.89 qa-report: PRD Ö-01.1 with shots/AC-01.1.png, and PRD AC-01.1 with shots/Ö-01.1.png, still copy and link the evidence', () => {
-  for (const [prdId, shotId] of [['Ö-01.1', 'AC-01.1'], ['AC-01.1', 'Ö-01.1']]) {
-    const { p, stamp, text } = qaRun(prdId, shotId);
-    const evidence = text.match(new RegExp(`\\| ${prdId.replace('.', '\\.')} Zorunlu alan boşsa kaydedilmez \\| passed \\| ([^|]*) \\|`))?.[1]?.trim();
-    assert.match(evidence ?? '', new RegExp(`^\\.previews/qa-${stamp}/(Ö|AC)-01\\.1\\.png$`), `${prdId} / ${shotId}: the evidence cell links the copy`);
-    assert.equal(fs.existsSync(path.join(p, evidence)), true, `${prdId} / ${shotId}: the linked file is copied`);
-    assert.equal(fs.readFileSync(path.join(p, evidence), 'utf8'), 'png');
-  }
+test('Ö-48.89 qa-report: PRD AC-01.1 with shots/AC-01.1.png copies and links the evidence', () => {
+  const { p, stamp, evidence } = qaRun('AC-01.1');
+  assert.equal(evidence, `.previews/qa-${stamp}/AC-01.1.png`, 'the evidence cell links the copy');
+  assert.equal(fs.readFileSync(path.join(p, evidence), 'utf8'), 'png', 'the linked file is copied');
+});
+
+test('AC-49.9 qa-report: a screenshot named with the old Ö- id is not taken as the evidence of AC-01.1', () => {
+  const { p, stamp, evidence } = qaRun('Ö-01.1');
+  assert.equal(evidence, '', 'no evidence linked');
+  assert.equal(fs.existsSync(path.join(p, '.previews', `qa-${stamp}`, 'Ö-01.1.png')), false, 'the Ö- file is not copied');
 });
 
 // ---------- 8. messages.mjs: prod-ref action names the English heading ----------

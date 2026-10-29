@@ -3,7 +3,7 @@ description: Hands the project over to another person or account (writes a hando
 argument-hint: [empty = hand over | take]
 ---
 
-Mode: $ARGUMENTS (empty = hand over, `take` = take over; the pre-3.48 `devral` still means take over). Any other argument: do nothing, show these two modes.
+Mode: $ARGUMENTS (empty = hand over, `take` = take over). Any other argument: do nothing, show these two modes.
 
 The project's state lives in files and git, not in the chat. A handoff means leaving these files complete and current, and rebuilding the environment on the receiving side. **Never write secret values into the note, code or chat**; write only their names and where to get them.
 
@@ -51,5 +51,5 @@ The project's state lives in files and git, not in the chat. A handoff means lea
    - Personal settings: narrator mode (`/start` Step 0b) and the code map (Step 5) are asked separately for this user.
 3. Run the tests and show the result. If red, compare with "Watch out" in the handoff note.
 4. If there are pending decisions, ask them now.
-5. In `docs/workflow/handoff.md`, set `**Status:** taken over` (a pre-3.48 note: `**Durum:** devralındı`) and add a `**Received by:**` line. Suggest a commit: `docs: handoff received`.
+5. In `docs/workflow/handoff.md`, set `**Status:** taken over` and add a `**Received by:**` line. Suggest a commit: `docs: handoff received`.
 6. Last line: the next command (`/build G-NNN`, or continue from "Where we left off" if it is filled in).

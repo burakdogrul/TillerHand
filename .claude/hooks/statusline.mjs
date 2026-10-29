@@ -49,12 +49,12 @@ try {
     parts.push(t(root, 'statusline.notSetUp'));
   } else {
     const a = d.fields;
-    // progress.md says on / off (açık / kapalı before 3.48); only what the line shows is localized
+    // progress.md says on / off; only what the line shows is localized
     const mode = a['Question mode'] ?? 'on';
     const question = mode
       .replace(/^\S+/, (m) => (isValue(m, 'on') ? t(root, 'statusline.modeOpen') : isValue(m, 'off') ? t(root, 'statusline.modeOff') : m))
-      .replace(/\s*·\s*(?:kapalı konular|closed topics):\s*(?:yok|none)\s*$/i, '')
-      .replace(/\s*·\s*(?:kapalı konular|closed topics):\s*(.*)$/i, (_, topics) => ` ${t(root, 'statusline.closed', { topics })}`);
+      .replace(/\s*·\s*closed topics:\s*none\s*$/i, '')
+      .replace(/\s*·\s*closed topics:\s*(.*)$/i, (_, topics) => ` ${t(root, 'statusline.closed', { topics })}`);
     parts.push(`▶ ${a['Active phase'] ?? '-'}`);
     if (isValue(a['Active phase'], 'setup')) parts.push(t(root, 'statusline.step', { step: a['Setup step'] ?? '-' }));
     else parts.push(a['Active task'] ?? '-', t(root, 'statusline.task', { done: d.taskCount.done, total: d.taskCount.total }));

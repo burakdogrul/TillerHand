@@ -112,11 +112,9 @@ export function merge(a, b) {
   return b;
 }
 
-// Rules the kit added before 3.15.0 for Turkish flags that no longer exist: they match nothing now. Exact spelling only, so a rule
-// the user wrote is never removed.
+// Rules older kits added that match nothing now or were too broad. Exact spelling only, so a rule the user wrote is never removed.
 const OLD_RULES = {
-  allow: ['Bash(node .claude/hooks/freeze-guard.mjs --plan-kaydet:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-bitir)',
-    'Bash(node .claude/hooks/tools.mjs --gerekli:*)', 'Bash(node .claude/hooks/tools.mjs --olc)', 'Bash(node .claude/hooks/tools.mjs --kapat:*)',
+  allow: [
     // 3.19.1: in the project folder the CLI loads a repo's .playwright/cli.config.json (it can run a program); asked, not allowed
     ...['open', 'snapshot', 'console', 'requests', 'screenshot'].map((c) => `Bash(npx -y @playwright/cli@0.1.22 ${c}:*)`),
     // 3.28.0: --plan-end + --plan-save widened or dropped the scope shield unasked; both are asked now
@@ -400,34 +398,6 @@ function install({ type, addons, keepKit, project, tool }) {
   }
 }
 
-// Kit files that got a new name (3.48: English). An unchanged old copy goes away and the new one is copied as usual;
-// one the user changed stays where it is (reported), so nothing they wrote is lost.
-const RENAMED = { '.claude/output-styles/anlatici.md': '.claude/output-styles/narrator.md' };
-const RENAMED_STYLES = { anlatici: 'narrator' };
-function renameKitFiles(project, record, report) {
-  for (const [from, to] of Object.entries(RENAMED)) {
-    const old = path.join(project, from);
-    if (!fs.existsSync(old)) { delete record[from]; continue; }
-    if (record[from] === hash(old)) { fs.rmSync(old); delete record[from]; report.updated.push(`${from} -> ${to}`); continue; }
-    // Changed by the user: theirs from now on (no longer tracked, so it is not reported again), and their style setting stays
-    if (from in record) report.conflicts.push(`${from} (renamed to ${to} in the kit; yours was changed, so it stays and keeps working)`);
-    delete record[from];
-    delete RENAMED_STYLES[path.basename(from, '.md')];
-  }
-  // The setting that picks the style by name: personal (settings.local.json) or for the team (settings.json)
-  for (const name of ['settings.local.json', 'settings.json']) {
-    const file = path.join(project, '.claude', name);
-    try {
-      const s = JSON.parse(read(file));
-      if (Object.hasOwn(RENAMED_STYLES, s.outputStyle)) {
-        s.outputStyle = RENAMED_STYLES[s.outputStyle];
-        fs.writeFileSync(file, JSON.stringify(s, null, 2) + '\n');
-        report.updated.push(`.claude/${name} (outputStyle: ${s.outputStyle})`);
-      }
-    } catch { /* no such settings, or not JSON: leave it */ }
-  }
-}
-
 function update({ project, addons: newAddons, tool }) {
   project = path.resolve(project);
   const recordPath = path.join(project, '.kit.json');
@@ -441,7 +411,6 @@ function update({ project, addons: newAddons, tool }) {
 
   const { copies, patches } = layers(ROOT, layerNames(j.type, allAddons));
   const report = { added: [], updated: [], conflicts: [], removed: [] };
-  renameKitFiles(project, record, report);
   const addedAddons = newAddons.filter((e) => !oldAddons.includes(e)).map((e) => `addons/${e}`);
   const fromAddedAddon = (source) => addedAddons.some((a) => source.startsWith(path.join(TEMPLATES, a) + path.sep));
 

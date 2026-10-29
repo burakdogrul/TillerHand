@@ -64,3 +64,11 @@ test('3.34.0 flow CLI: reads the git diff, takes overrides, and /build and the b
   assert.match(read('.claude/board/rules.md'), /flow\.mjs/);
   assert.match(read('.claude/settings.json'), /"Bash\(node \.claude\/hooks\/flow\.mjs:\*\)"/);
 });
+
+test('AC-49.13 flow: the Turkish word "ödeme" in a path no longer marks it sensitive; the English "payment" does', () => {
+  const at = (paths) => flow({ paths, installed: [], context: 10, level: 'green' }).security;
+  assert.equal(at(['src/payment/charge.ts']), true, 'payment is sensitive (control)');
+  assert.equal(at(['src/checkout/index.ts']), true, 'checkout is sensitive (control)');
+  assert.equal(at(['src/ödeme/charge.ts']), false, 'ödeme is not a sensitive word any more');
+  assert.equal(at(['src/ÖDEME.ts', 'src/odeme/x.ts']), false);
+});

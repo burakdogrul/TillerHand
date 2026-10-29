@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot, isMain } from './shared.mjs';
-import { t, readLang } from './lang.mjs';
+import { t, readLang, locale } from './lang.mjs';
 
 export const THRESHOLDS = { five_hour: { yellow: 60, red: 85 }, seven_day: { yellow: 70, red: 90 } };
 // Window → message key of its name
@@ -68,7 +68,7 @@ export function level(data) {
 function timeLeft(resetsAt, now, root) {
   if (!resetsAt) return '';
   const min = Math.max(0, Math.round((resetsAt * 1000 - now) / 60000));
-  const clock = new Date(resetsAt * 1000).toLocaleString(readLang(root) === 'tr' ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const clock = new Date(resetsAt * 1000).toLocaleString(locale(readLang(root)), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   const left = min >= 1440
     ? t(root, 'usage.leftDays', { days: Math.floor(min / 1440), hours: Math.floor((min % 1440) / 60) })
     : t(root, 'usage.leftHours', { hours: Math.floor(min / 60), minutes: min % 60 });

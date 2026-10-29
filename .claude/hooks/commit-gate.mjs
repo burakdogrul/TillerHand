@@ -3,7 +3,7 @@
 //   PreToolUse (Bash) hook: without review approval it stops the commit with exit code 2 and says what to do.
 //   node .claude/hooks/commit-gate.mjs --approve "<members who took part, or a note>"   binds the approval to the current changes.
 //   node .claude/hooks/commit-gate.mjs --skip "<reason>"   only when the user asks: skips the board and the gate (always asked).
-// Exempt: no board set up, "Commit review: off" (or the old "Commit denetimi: kapalı") in docs/workflow/board.md, or only docs changed.
+// Exempt: no board set up, "Commit review: off" in docs/workflow/board.md, or only docs changed.
 // Commits the user makes from their own terminal are not affected (this is a Claude Code hook).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,7 +11,6 @@ import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { findRoot, isMain } from './shared.mjs';
 import { t } from './lang.mjs';
-import { normalize } from './labels.mjs';
 import { unquote } from './destructive-guard.mjs';
 import { isTestFile, isTestConfig, digest, readRecord } from './test-guard.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
@@ -106,19 +105,19 @@ function hasBoard() {
 function reviewOff() {
   try {
     // The whole word: "**Commit review:** offer" does not switch the review off
-    return /^\*\*Commit review:\*\*[ \t]*(off|kapalı)(?![\p{L}\p{N}])/imu.test(normalize(fs.readFileSync(path.join(root, 'docs', 'workflow', 'board.md'), 'utf8')));
+    return /^\*\*Commit review:\*\*[ \t]*off(?![\p{L}\p{N}])/imu.test(fs.readFileSync(path.join(root, 'docs', 'workflow', 'board.md'), 'utf8'));
   } catch {
     return false;
   }
 }
 
-// A note starting with "skipped" ("atlandı" before 3.48) skips the board and the gate. --approve refuses both whatever
-// the spelling ($'atland\xc4\xb1', $(printf ...)); only --skip writes it, and --skip is always asked.
-const SKIPPED = /^(skipped|atlandı)/i;
+// A note starting with "skipped" skips the board and the gate. --approve refuses it in any case;
+// only --skip writes it, and --skip is always asked.
+const SKIPPED = /^skipped/i;
 
 function approve(note) {
   if (SKIPPED.test(note)) {
-    console.error('A note starting with "skipped" or "atlandı" is not written with --approve. If the user explicitly asks: node .claude/hooks/commit-gate.mjs --skip "<reason>"');
+    console.error('A note starting with "skipped" is not written with --approve. If the user explicitly asks: node .claude/hooks/commit-gate.mjs --skip "<reason>"');
     process.exit(1);
   }
   save(note);
@@ -268,8 +267,8 @@ async function hook() {
       : `Commit stopped: the board has not reviewed these changes (${d.files.length} files).\n`) +
       '0. Run the deterministic gate (lint, types, tests, Semgrep) with node .claude/hooks/gate.mjs --run; give its output to the members.\n' +
       '1. Following .claude/board/rules.md §3, run at most 2 relevant board members for the changed files with model "haiku", on the diff only.\n' +
-      '2. If there is no RET: node .claude/hooks/commit-gate.mjs --approve "<members who took part>" and try the commit again.\n' +
-      '3. If there is a RET, do not commit; ask the user about the finding and the options.\n' +
+      '2. If there is no REJECT: node .claude/hooks/commit-gate.mjs --approve "<members who took part>" and try the commit again.\n' +
+      '3. If there is a REJECT, do not commit; ask the user about the finding and the options.\n' +
       'If the user explicitly wants to skip the review for this commit, use --skip "user request".\n'
   );
   process.exit(2);

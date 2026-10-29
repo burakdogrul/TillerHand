@@ -9,7 +9,7 @@ This is a **9-step alignment wizard** (0-9). It is the counterpart of `/start` f
 
 **Prerequisite:** The kit must be installed in this folder with `init` (`.kit.json` exists, `type` empty). If not installed, give the user the install command: `node <kit folder>/kit/kit.mjs init`. A new session must be opened after installation.
 
-**Resuming:** If `docs/workflow/progress.md` → `**Active phase:** Setup (adopt)` (before 3.48: `Başlangıç (uyum)`) and `**Setup step:**` is greater than 0, resume from that step. When a step ends, update this line (`N/9`) and the `**Last updated:**` line, then write the status block.
+**Resuming:** If `docs/workflow/progress.md` → `**Active phase:** Setup (adopt)` and `**Setup step:**` is greater than 0, resume from that step. When a step ends, update this line (`N/9`) and the `**Last updated:**` line, then write the status block.
 
 **Respect existing code:** Installation does not overwrite the project's files; the kit's version is placed next to it as `<file>.kit-new`. Handle them one by one in Step 2.
 

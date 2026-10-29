@@ -4,7 +4,7 @@
 > The "behavior that must not change" lines start with an acceptance criterion id (`- AC-01.1: ...`). The gate (`gate.mjs --run`) goes red if these ids have no test or if they are red in the last test report.
 > The gate reads only the test report written in its own run; if the test command writes no JUnit report, it only checks that the test exists.
 > If you change behavior on purpose or change a criterion id, update this file first; if the spec is no longer valid, move it to `docs/archive/`.
-> The dashboard reads the labels, values and the "Behavior that must not change" heading below; keep their wording. Specs written before 3.48 use Turkish ones (Tür, Sınıf, Kural, özellik/hata); they are still read.
+> The dashboard reads the labels, values and the "Behavior that must not change" heading below; keep their wording.
 
 **Type:** [feature / bug]
 **Class:** [bug only: empty-input / validation / authorization / date-time / locale / sorting / concurrency / configuration / external-service / contract / ui-state / other]

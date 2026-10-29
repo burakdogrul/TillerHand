@@ -50,13 +50,9 @@ function readJson(p) {
   }
 }
 
-// Package names before 3.48; they still work as input
-const OLD_NAMES = { tasarim: 'design', guvenlik: 'security', yayin: 'release' };
-export const packageName = (name) => (Object.hasOwn(OLD_NAMES, name ?? '') ? OLD_NAMES[name] : name);
-
 function pkg(name) {
-  if (!Object.hasOwn(PACKAGES, packageName(name ?? ''))) throw new Error(`Unknown package: ${name}. Options: ${Object.keys(PACKAGES).join(', ')}`);
-  return PACKAGES[packageName(name)];
+  if (!Object.hasOwn(PACKAGES, name ?? '')) throw new Error(`Unknown package: ${name}. Options: ${Object.keys(PACKAGES).join(', ')}`);
+  return PACKAGES[name];
 }
 
 export function packageStatus(root) {
@@ -149,7 +145,7 @@ const NOTE = 'After enabling, run /reload-plugins. Enabling mid-session breaks t
 if (isMain(import.meta.url)) {
   const root = findRoot();
   const [flag, typed] = process.argv.slice(2);
-  const name = packageName(typed);
+  const name = typed;
   try {
     if (flag === '--enable' || flag === '--disable') {
       const ids = setPackage(root, name, flag === '--enable');

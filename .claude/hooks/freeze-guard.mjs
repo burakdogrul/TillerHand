@@ -134,7 +134,7 @@ function hook() {
   const paths = g.files.map(({ path: p }) => realPath(path.resolve(g.dir, p)));
   // Gate command approval record (gate.mjs, in the user folder ~/.vibe-kit/): the AI must not write it by hand
   const approval = paths.find((p) => /[\\/]\.vibe-kit([\\/]|$)/i.test(p));
-  if (approval) decide(g.tool, 'ask', /(preferences|tercihler)\.md$/i.test(approval)
+  if (approval) decide(g.tool, 'ask', /preferences[.]md$/i.test(approval)
     ? t(g.root, 'guard.freeze.prefsFile', { path: approval })
     : t(g.root, 'guard.freeze.gateApproval', { path: approval }));
   if (g.tool !== 'claude') {

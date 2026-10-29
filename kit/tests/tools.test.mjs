@@ -29,7 +29,7 @@ const run = (p, arg, env = {}) => spawnSync(process.execPath, [SCRIPT, ...arg], 
 
 test('enabling a package: writes to personal settings, keeps other keys and plugins not in the project', () => {
   const p = project({ permissions: { allow: ['Bash(x)'] }, enabledPlugins: { 'foo@bar': true } });
-  setPackage(p, 'tasarim', true);
+  setPackage(p, 'design', true);
   const l = json(path.join(p, '.claude/settings.local.json'));
   assert.deepEqual(l.permissions, { allow: ['Bash(x)'] }, 'izinler korunur');
   assert.equal(l.enabledPlugins['foo@bar'], true, 'another plugin is kept');
@@ -37,10 +37,9 @@ test('enabling a package: writes to personal settings, keeps other keys and plug
   assert.equal(l.enabledPlugins['ui-ux-pro-max@ui-ux-pro-max-skill'], true);
   assert.ok(!('gsap-skills@gsap-skills' in l.enabledPlugins), 'a plugin the project does not know is not added');
   assert.equal(json(path.join(p, '.claude/settings.json')).enabledPlugins['taste-skill@taste-skill'], false, 'the project settings do not change');
-  // 3.48.0: package names are English; the old name "tasarim" still works as input
   assert.equal(packageStatus(p).find((d) => d.name === 'design').enabled, true);
 
-  setPackage(p, 'tasarim', false);
+  setPackage(p, 'design', false);
   const k = json(path.join(p, '.claude/settings.local.json'));
   assert.ok(!('taste-skill@taste-skill' in k.enabledPlugins), 'disabling deletes the personal override, back to the project default');
   assert.equal(k.enabledPlugins['foo@bar'], true);
@@ -50,7 +49,7 @@ test('enabling a package: writes to personal settings, keeps other keys and plug
 
 test('enabling a package: creates the personal settings file if missing', () => {
   const p = project();
-  setPackage(p, 'tasarim', true);
+  setPackage(p, 'design', true);
   assert.equal(json(path.join(p, '.claude/settings.local.json')).enabledPlugins['taste-skill@taste-skill'], true);
   fs.rmSync(p, { recursive: true, force: true });
 });
@@ -58,28 +57,27 @@ test('enabling a package: creates the personal settings file if missing', () => 
 test('attacker: unknown package, path and JSON arguments are rejected; a broken personal settings file is not overwritten', () => {
   const broken = '{"enabledPlugins": {';
   const p = project(broken);
-  for (const name of ['yok', '../x', '{"a":1}', '__proto__', 'constructor']) {
+  for (const name of ['yok', '../x', '{"a":1}', '__proto__', 'constructor', 'tasarim', 'guvenlik', 'yayin']) {
     assert.throws(() => setPackage(p, name, true), /Unknown package/, name);
     const r = run(p, ['--enable', name]);
     assert.equal(r.status, 1, `${name}: exit code 1`);
   }
-  assert.throws(() => setPackage(p, 'tasarim', true), /settings\.local\.json/);
+  assert.throws(() => setPackage(p, 'design', true), /settings\.local\.json/);
   assert.equal(fs.readFileSync(path.join(p, '.claude/settings.local.json'), 'utf8'), broken, 'the broken file stays as it is');
   fs.rmSync(p, { recursive: true, force: true });
 });
 
 test('--required: a disabled package exits 2 and says how to enable it, 0 when enabled', () => {
   const p = project();
-  const off = run(p, ['--required', 'tasarim']);
+  const off = run(p, ['--required', 'design']);
   assert.equal(off.status, 2);
-  // 3.48.0: the old name is still taken as input, the output names the English package
   assert.match(off.stdout, /Package design is disabled/);
   assert.match(off.stdout, /--enable design\b/);
-  assert.equal(run(p, ['--enable', 'tasarim']).status, 0);
-  const enabled = run(p, ['--required', 'tasarim']);
+  assert.equal(run(p, ['--enable', 'design']).status, 0);
+  const enabled = run(p, ['--required', 'design']);
   assert.equal(enabled.status, 0);
   assert.match(enabled.stdout, /Package design is enabled/);
-  assert.equal(run(p, ['--required', 'design']).status, 0, 'the English name is the same package');
+  assert.equal(run(p, ['--required', 'tasarim']).status, 1, 'the old Turkish name is an unknown package');
   assert.equal(run(p, []).status, 0, 'durum tablosu');
   fs.rmSync(p, { recursive: true, force: true });
 });

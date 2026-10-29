@@ -198,9 +198,10 @@ test('context percentage: the status line shows the ready field or the token cou
   const bar = (cw) => spawnSync(process.execPath, [path.join(HOOKS, 'statusline.mjs')], {
     input: JSON.stringify({ workspace: { project_dir: os.tmpdir() }, context_window: cw }), encoding: 'utf8',
   }).stdout;
-  assert.match(bar({ used_percentage: 41.6 }), /bağlam %42/);
-  assert.match(bar({ context_window_size: 200000, current_usage: { input_tokens: 1000, cache_read_input_tokens: 99000, output_tokens: 5000 } }), /bağlam %50 ⚠/);
-  assert.doesNotMatch(bar(null), /bağlam/);
+  // 3.49.0: a folder without a language choice is English
+  assert.match(bar({ used_percentage: 41.6 }), /context 42%/);
+  assert.match(bar({ context_window_size: 200000, current_usage: { input_tokens: 1000, cache_read_input_tokens: 99000, output_tokens: 5000 } }), /context 50% ⚠/);
+  assert.doesNotMatch(bar(null), /context \d/);
 });
 
 test('structure guard: map, sandbox, clutter patterns', async () => {

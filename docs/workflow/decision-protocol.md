@@ -17,7 +17,6 @@ Every choice that affects one of the following is a **decision point** and is as
 | `security` | Authorization model, roles, session length, rate limits, personal data handling |
 | `cost` | Choice of paid service, plan tier, AI model choice, spending limits |
 
-Projects set up before 3.48 may use the old Turkish codes (`urun`, `teknik`, `tasarim`, `icerik`, `veri`, `guvenlik`, `maliyet`); they mean the same topic. Write the English code; in a log that already uses the Turkish codes, keep using them.
 
 **Not a decision point** (not asked; apply it and report it briefly in the status block): file/variable/function names (follow `docs/product/glossary.md`), the internal layout of code, formatting, repeating a pattern the project has already decided.
 
@@ -55,7 +54,7 @@ Classify every decision before asking and state it in the question text:
 
 ## 4. Question mode
 
-The state is kept in the `**Question mode:**` line of `docs/workflow/progress.md` (before 3.48 `**Soru modu:**`). Default: `on · closed topics: none`.
+The state is kept in the `**Question mode:**` line of `docs/workflow/progress.md`. Default: `on · closed topics: none`.
 
 | What the user says | What you do |
 |---|---|

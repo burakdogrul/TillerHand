@@ -5,7 +5,7 @@ argument-hint: [empty = status | on <package> | off <package> | measure | comman
 
 Request: $ARGUMENTS
 
-The pre-3.48 arguments still work: `ac` = `on`, `kapat` = `off`, `olc` = `measure`, `komutlar hafif|tam` = `commands light|full`; the old package names `tasarim`, `guvenlik`, `yayin` mean `design`, `security`, `release`. Any other argument: change nothing, show the argument list above and the package names.
+Any other argument: change nothing, show the argument list above and the package names.
 
 Why it exists: The skill list is limited to 1% of context. When it overflows, descriptions of rarely used skills drop and Claude does not know them. So plugins outside the core come off by default and are turned on as packages when needed. Packages and their contents: `docs/workflow/skills.md` → "Context packages".
 

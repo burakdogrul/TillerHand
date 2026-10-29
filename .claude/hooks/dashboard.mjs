@@ -11,8 +11,7 @@ import { verdict, isValue } from './labels.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
 import { readModels, modelsFile, modelsNote, roleLabel } from './models.mjs';
-import { OLD_SIZES } from './progress.mjs';
-import { readLang, t } from './lang.mjs';
+import { readLang, t, locale } from './lang.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
@@ -28,8 +27,8 @@ const kindName = (k) => (Object.hasOwn(FINDING_KINDS, k) ? L(`dashboard.findingK
 // The dashboard is made in the user's language: none before /start or /adopt asks it
 const lang = readLang(root);
 if (!lang) { if (!quiet) console.log('No language chosen yet: the dashboard is made after /start or /adopt asks it.'); process.exit(0); }
-// Dates follow the conversation language (English when the runtime does not know the code)
-const loc = (() => { try { return Intl.DateTimeFormat.supportedLocalesOf(lang)[0] ?? 'en'; } catch { return 'en'; } })();
+// Dates follow the conversation language
+const loc = locale(lang);
 
 // ---------- data ----------
 const d = readStatus(root);
@@ -119,6 +118,8 @@ if (d.kitPending) addAlert('info', L('dashboard.alert.kitPending'), L('dashboard
 if (d.handoffPending) addAlert('warn', L('dashboard.alert.handoffPending'), '/handoff take');
 const lastReject = [...d.board.meetings].reverse().find((t) => verdict(t.result) === 'reject');
 if (lastReject && !lastReject.decision) addAlert('critical', L('dashboard.alert.boardReject', { kind: lastReject.kind, scope: lastReject.scope, critical: lastReject.critical || L('dashboard.criticalFinding') }), L('dashboard.act.askClaudeFix'));
+// A result verdict() cannot read is not an approval: the user checks it (fail-closed)
+for (const t of d.board.meetings.filter((m) => m.result && verdict(m.result) === 'unknown')) addAlert('warn', L('dashboard.alert.unknownVerdict', { kind: t.kind, scope: t.scope, result: t.result }), 'docs/workflow/board.md');
 const limitLevel = level(limit);
 const limitShort = limit ? [[L('dashboard.limit5h'), limit.five_hour], [L('dashboard.limitWeeklyLower'), limit.seven_day]].filter(([, p]) => p)
   .map(([name, p]) => `${name} %${Math.round(p.percent)}${p.resetsAt ? ` ${L('dashboard.resetsParen', { when: new Date(p.resetsAt * 1000).toLocaleString(loc, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) })}` : ''}`).join(', ') : '';
@@ -130,7 +131,7 @@ for (const s of d.issues.slice(0, 5)) addAlert('warn', L('dashboard.alert.openIs
 for (const r of repeatedBugClasses(root)) addAlert('info', L('dashboard.alert.repeatedBug', { count: r.specs.length, cls: r.cls, specs: r.specs.join(', ') }), '/retro');
 if (git?.changed.length > 15) addAlert('info', L('dashboard.alert.uncommitted', { count: git.changed.length }), L('dashboard.act.commitOrWrapUp'));
 if (git?.progressStale >= 3) addAlert('info', L('dashboard.alert.progressStale', { count: git.progressStale }), '/wrap-up');
-const off = (a['Question mode'] ?? '').match(/(?:kapalı konular|closed topics):\s*(.+)$/i)?.[1];
+const off = (a['Question mode'] ?? '').match(/closed topics:\s*(.+)$/i)?.[1];
 if (off && !isValue(off, 'none')) addAlert('info', L('dashboard.alert.closedTopics', { topics: off }), L('dashboard.act.askModeOpen'));
 if (d.installed && isValue(d.board.state, 'notSetUp') && !isValue(a['Active phase'], 'setup')) addAlert('info', L('dashboard.alert.boardNotSetUp'), '/board setup');
 if (github?.liveMonitoring?.length) addAlert('critical', L('dashboard.alert.liveMonitoring', { title: github.liveMonitoring[0].title }), L('dashboard.act.fixLive', { number: github.liveMonitoring[0].number }));
@@ -186,7 +187,7 @@ const autoDecisions = d.decisions.filter((k) => isValue(k.decidedBy, 'automatic'
 const rejectCount = d.board.meetings.filter((t) => verdict(t.result) === 'reject').length;
 const mvpCriteria = mvp.reduce((t, o) => ({ done: t.done + o.done, total: t.total + o.total }), { done: 0, total: 0 });
 const avgCost = Object.entries(cost.reduce((m, r) => {
-  if (!Number.isNaN(r.diff)) (m[OLD_SIZES[r.size] ?? r.size] ??= []).push(r.diff);
+  if (!Number.isNaN(r.diff)) (m[r.size] ??= []).push(r.diff);
   return m;
 }, Object.create(null))).map(([size, l]) => ({ size, avg: l.reduce((t, x) => t + x, 0) / l.length, n: l.length }));
 
@@ -202,25 +203,22 @@ const feedLabel = (k) => (Object.hasOwn(FEED_KEYS, k) ? L(FEED_KEYS[k]) : k);
 const onOff = (v) => (isValue(v, 'on') ? L('dashboard.on') : isValue(v, 'off') ? L('dashboard.off') : v);
 // A text for the page's own script: a single-quoted JS string, no tag can end the script block
 const jsStr = (key) => `'${L(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\u003c')}'`;
-// A board verdict in either language; an option name (decision council) or an unreadable result is neutral
-const verdictBadge = (k) => badge({ approve: 'good', conditional: 'warn', reject: 'critical' }[verdict(k)] ?? 'info', k);
+// A council decision: an option name or an unreadable result is neutral. A meeting result verdict() cannot read is a warning.
+const verdictBadge = (k, other = 'info') => badge({ approve: 'good', conditional: 'warn', reject: 'critical' }[verdict(k)] ?? other, k);
 const badge = (sev, caption) => `<span class="badge ${sev}"><span class="ic" aria-hidden="true">${SEV[sev][0]}</span> ${e(caption ?? L(SEV[sev][1]))}</span>`;
 const fmtDate = (t) => { const z = toDate(t); return Number.isNaN(z.getTime()) ? e(t) : z.toLocaleString(loc, { day: '2-digit', month: 'short', hour: t.length > 10 ? '2-digit' : undefined, minute: t.length > 10 ? '2-digit' : undefined }); };
 const limitSeverity = (p, k) => (p == null ? 'info' : p >= THRESHOLDS[k].red ? 'critical' : p >= THRESHOLDS[k].yellow ? 'warn' : 'good');
 const TOPICS = ['product', 'tech', 'design', 'content', 'data', 'security', 'cost'];
-// Decision log topics before 3.48, in the same order; they count under the English topic
-const TOPICS_TR = ['urun', 'teknik', 'tasarim', 'icerik', 'veri', 'guvenlik', 'maliyet'];
-const topicKey = (topic = '') => { const k = topic.trim().toLowerCase(); return TOPICS[TOPICS_TR.indexOf(k)] ?? k; };
+const topicKey = (topic = '') => topic.trim().toLowerCase();
 
-// The command to paste into Claude: "`/build G-013` …" or "/wrap-up ve /clear" → first command, without its <placeholder> or note
-const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/ ve | ile | and | to |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
+// The command to paste into Claude: "`/build G-013` …" or "/wrap-up and /clear" → first command, without its <placeholder> or note
+const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/\s+\S+\s+\/| and | to |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
 const copyBtn = (s) => { const c = cmdOf(s); return c ? ` <button class="copy-cmd" type="button" data-cmd="${e(c)}" aria-label="${e(L('dashboard.copyAria', { command: c }))}">${e(L('dashboard.copy'))}</button>` : ''; };
 const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${L(SEV[x.sev][1])}: </span>${md(x.text)}</span>${x.action ? `<span class="action">→ ${md(x.action)}${copyBtn(x.action)}</span>` : ''}</li>`;
 const kpi = (label, value, sub = '', bar = '') => `<div class="kpi"><div class="kpi-l">${e(label)}</div><div class="kpi-v">${value}</div>${bar}<div class="kpi-s">${sub}</div></div>`;
 
 // ---------- sections ----------
-// A pre-3.48 value says "Faz 1"; the roadmap headings are read as "Phase 1"
-const activePhase = (a['Active phase'] ?? '').replace(/^faz\b/i, 'Phase').replace(/^başlangıç(?![\p{L}\p{N}])/iu, 'Setup');
+const activePhase = a['Active phase'] ?? '';
 const activeIndex = Math.max(0, [{ name: 'Setup' }, ...d.phases].findIndex((f) => activePhase.toLowerCase().startsWith(f.name.toLowerCase().split(' ').slice(0, 2).join(' '))));
 const start = (a['Setup step'] ?? '0/9').split('/').map(Number);
 const stageStrip = `<ol class="steps">${[{ name: 'Setup', done: start[0] || 0, total: start[1] || 9 }, ...d.phases].map((f, i) =>
@@ -264,7 +262,7 @@ const boardSection = `
   <div class="tw"><table><thead><tr><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.kind')}</th><th>${L('dashboard.th.topic')}</th><th>${L('dashboard.th.decision')}</th><th>${L('dashboard.th.consensus')}</th><th>${L('dashboard.th.minutes')}</th></tr></thead><tbody>${councils.slice(0, 10).map((k) => `<tr><td class="num nw">${e(k.date)}</td><td>${e(k.kind)}</td><td>${md(k.topic)}</td><td>${decisionBadge(k.decision)}</td><td class="num">${k.consensus == null ? '-' : `%${k.consensus}`}</td><td><a href="${k.file.split('/').map(encodeURIComponent).join('/')}" target="_blank" rel="noopener">${L('dashboard.open')}</a></td></tr>`).join('')}</tbody></table></div>`;
 })() : empty(L('dashboard.noCouncil'), '/board council <question>')}</section>
 <section class="card"><h3>${L('dashboard.meetingLog')}</h3>${d.board.meetings.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.kind')}</th><th>${L('dashboard.th.scope')}</th><th>${L('dashboard.th.attendees')}</th><th>${L('dashboard.th.result')}</th><th>${L('dashboard.th.critical')}</th><th>${L('dashboard.th.userDecision')}</th></tr></thead><tbody>
-${[...d.board.meetings].reverse().map((t) => `<tr><td class="num">${e(t.no)}</td><td class="num nw">${e(t.date)}</td><td>${e(t.kind)}</td><td>${md(t.scope)}</td><td>${e(t.attendees)}</td><td>${verdictBadge(t.result)}</td><td>${md(t.critical)}</td><td>${md(t.decision)}</td></tr>`).join('')}
+${[...d.board.meetings].reverse().map((t) => `<tr><td class="num">${e(t.no)}</td><td class="num nw">${e(t.date)}</td><td>${e(t.kind)}</td><td>${md(t.scope)}</td><td>${e(t.attendees)}</td><td>${verdictBadge(t.result, 'warn')}</td><td>${md(t.critical)}</td><td>${md(t.decision)}</td></tr>`).join('')}
 </tbody></table></div>` : empty(L('dashboard.noMeetings'))}</section>`;
 
 const quality = `
@@ -278,7 +276,7 @@ const quality = `
 ${qa ? `<section class="card"><h3>${L('dashboard.lastQa', { name: e(qa.name) })}</h3><div class="kpis mini">${kpi(L('dashboard.passed'), qa.passed)}${kpi(L('dashboard.failed'), qa.failed, qa.failed ? badge('critical', L('dashboard.withEvidence')) : '')}${kpi(L('dashboard.notRun'), qa.notRun)}</div>${qa.failures.length ? `<ul>${qa.failures.slice(0, 5).map((x) => `<li>${md(x.criterion)}${x.note ? ` <span class="muted small">${e(x.note)}</span>` : ''}</li>`).join('')}</ul>` : ''}<p class="muted small"><a href="${e(qa.file)}" target="_blank" rel="noopener">${L('dashboard.openReport')}</a></p></section>` : ''}
 <section class="card"><h3>${L('dashboard.acceptanceTests')}</h3>${acceptance.total ? `<div class="kpis mini">${kpi(L('dashboard.th.criterion'), acceptance.total)}${kpi(L('dashboard.kpiTested'), `${acceptance.tested}/${acceptance.total}`, '', progressBar(acceptance.tested, acceptance.total))}${kpi(L('dashboard.kpiPassing'), `${acceptance.passing}/${acceptance.total}`, acceptance.reportTime ? L('dashboard.reportTime', { when: new Date(acceptance.reportTime).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }) : L('dashboard.noJunit'), progressBar(acceptance.passing, acceptance.total, 'good'))}</div>` : empty(L('dashboard.noAcceptanceIds'))}</section>
 <section class="card"><h3>${L('dashboard.metricsMonthly')}</h3>${metricRecords.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.period')}</th><th>${L('dashboard.th.task')}</th><th>${L('dashboard.th.avgMinutes')}</th><th>${L('dashboard.th.avgLimit')}</th><th>${L('dashboard.th.fixes')}</th><th>${L('dashboard.th.reverts')}</th><th>${L('dashboard.th.duplicateCode')}</th><th>${L('dashboard.th.openCritical')}</th><th>${L('dashboard.th.acceptance')}</th></tr></thead><tbody>${[...metricRecords].reverse().slice(0, 8).map((m) => `<tr><td class="nw">${e(m.period)}</td><td class="num">${e(m.taskCount)}</td><td class="num">${e(m.duration)}</td><td class="num">${e(m.limit)}</td><td class="num">${e(m.fixes)}</td><td class="num">${e(m.reverts)}</td><td class="num">${e(m.duplicates)}</td><td class="num">${e(m.critical)}</td><td class="num">${e(m.acceptance)}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noMetrics'))}</section>
-<section class="card"><h3>${L('dashboard.criticalFlowTests')}</h3>${criticalFlows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.flow')}</th><th>${L('dashboard.th.testKind')}</th><th>${L('dashboard.th.file')}</th><th>${L('dashboard.status')}</th></tr></thead><tbody>${criticalFlows.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(k.feed)}</td><td>${e(k.kind)}</td><td>${md(k.fileName)}</td><td>${/✅|yeşil|var/i.test(k.state) ? badge('good', L('dashboard.present')) : badge('warn', L('dashboard.missing'))}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noTestPlan'))}</section>
+<section class="card"><h3>${L('dashboard.criticalFlowTests')}</h3>${criticalFlows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.flow')}</th><th>${L('dashboard.th.testKind')}</th><th>${L('dashboard.th.file')}</th><th>${L('dashboard.status')}</th></tr></thead><tbody>${criticalFlows.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(k.feed)}</td><td>${e(k.kind)}</td><td>${md(k.fileName)}</td><td>${/✅|green|present/i.test(k.state) ? badge('good', L('dashboard.present')) : badge('warn', L('dashboard.missing'))}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noTestPlan'))}</section>
 <section class="card"><h3>${L('dashboard.maintenanceLog')}</h3>${maintenance.length ? `<ul class="feed compact">${[...maintenance].reverse().slice(0, 8).map((b) => feedRow({ time: b.date, kind: 'maintenance', title: `${b.kind}: ${b.findings}`, extra: b.work })).join('')}</ul>` : empty(L('dashboard.noMaintenance'), '/maintain weekly')}
 ${lastRetro ? `<p class="muted small">${L('dashboard.lastRetro', { value: e(lastRetro) })}</p>` : ''}</section>`;
 

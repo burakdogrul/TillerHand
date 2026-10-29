@@ -11,22 +11,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot, isMain } from './shared.mjs';
 import { clean, labels } from './status-read.mjs';
-import { label, labelIn, normalize } from './labels.mjs';
+import { label } from './labels.mjs';
 import { readLimits } from './usage.mjs';
 
 const REQUIRED = ['lastUpdated', 'activePhase', 'activeTask', 'setupStep', 'questionMode', 'profile'];
 const SIZES = ['S', 'M', 'L', 'BOARD', 'DESIGN', 'FINDINGS'];
-// Sizes before 3.48 (küçük / orta / büyük); still accepted, written as the English one
-export const OLD_SIZES = { K: 'S', O: 'M', B: 'L' };
 const USAGE = 'Usage: node .claude/hooks/progress.mjs [--done G-NNN] [--start] [--cost "<job>" <S|M|L|BOARD|DESIGN|FINDINGS> [<start %> <end %> <min>] ["<note>"]] [--limit N] [--task "<text>"] [--did "<text>"] [--next "<text>"] [--check]';
 // One line per value: a newline would break a label, a list item or a table row
 const line = (s) => clean(String(s).replace(/\s*\r?\n\s*/g, ' ')).trim();
 const today = () => new Date().toLocaleDateString('sv-SE');
-// Labels and headings are written in the language the file already uses (labelIn). Function replacements: a value
+// Labels and headings are written in English. Function replacements: a value
 // with $& or $' is text, not a replacement pattern.
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const setLabel = (text, key, v) => text.replace(new RegExp(`^(\\*\\*${esc(labelIn(text, key))}:\\*\\*).*$`, 'm'), (_, l) => `${l} ${v}`);
-const sectionRe = (text, key) => new RegExp(`^(## ${esc(labelIn(text, key))}[^\\n]*\\n)([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm');
+const setLabel = (text, key, v) => text.replace(new RegExp(`^(\\*\\*${esc(label(key))}:\\*\\*).*$`, 'm'), (_, l) => `${l} ${v}`);
+const sectionRe = (text, key) => new RegExp(`^(## ${esc(label(key))}[^\\n]*\\n)([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm');
 const setSection = (text, key, body) => text.replace(sectionRe(text, key), (_, h) => `${h}\n${body}\n\n`);
 const section = (text, key) => text.match(sectionRe(text, key))?.[2] ?? '';
 
@@ -40,7 +38,7 @@ export function markDone(text, id) {
 
 export function costRow(args, date = today()) {
   const [job, typed, start, end, min, note = ''] = args;
-  const size = OLD_SIZES[typed] ?? typed;
+  const size = typed;
   const nums = [start, end, min].map(Number);
   if (!job || !SIZES.includes(size) || nums.some((n) => !Number.isFinite(n) || n < 0) || args.length > 6) return null;
   // The end below the start means the 5-hour window renewed in between: the difference is unknown
@@ -62,7 +60,7 @@ export function updateProgress(text, { task, did, next }) {
 
 // By their English names, whichever language the file uses; an example inside a code block does not count
 export const missingLabels = (text) => {
-  const found = labels(normalize(text).replace(/^```[\s\S]*?^```.*$/gm, ''));
+  const found = labels(text.replace(/^```[\s\S]*?^```.*$/gm, ''));
   return REQUIRED.map((k) => label(k)).filter((k) => !(k in found));
 };
 

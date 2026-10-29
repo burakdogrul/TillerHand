@@ -23,7 +23,7 @@ const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursiv
 before(() => {
   p = fs.mkdtempSync(path.join(os.tmpdir(), 'kapi-test-'));
   sh('git init -q && git config user.email t@t && git config user.name t');
-  write('docs/workflow/board.md', '**Durum:** kuruldu\n**Commit denetimi:** açık\n');
+  write('docs/workflow/board.md', '**Status:** set up\n**Commit review:** on\n');
   write('a.js', 'x');
   sh('git add . && git commit -qm init');
 });
@@ -45,7 +45,7 @@ test('commit gate: with a board an unapproved code commit stops, passes with app
   assert.match(r.stderr, /the board has not reviewed these changes/);
   assert.equal(approve('board-qa').status, 0);
   // 3.14.1: an empty gate does not open the commit; commands run with user approval
-  write('AGENTS.md', '## Komutlar\n\n```bash\ntest: node -e "process.exit(0)"\n```\n');
+  write('AGENTS.md', '## Commands\n\n```bash\ntest: node -e "process.exit(0)"\n```\n');
   assert.equal(approve('board-qa').status, 0);
   spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--approve'], { cwd: p, env: env() });
   spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, env: { ...env(), SEMGREP: 'olmayan-semgrep-komutu' } });
@@ -64,6 +64,8 @@ test('commit gate: passes when only docs changed and when review is off', () => 
   sh('git add b.js');
   assert.equal(door('git commit -m x').status, 2);
   write('docs/workflow/board.md', '**Commit denetimi:** kapalı\n');
+  assert.equal(door('git commit -m x').status, 2, 'the old Turkish switch no longer turns the review off');
+  write('docs/workflow/board.md', '**Commit review:** off\n');
   assert.equal(door('git commit -m x').status, 0);
 });
 

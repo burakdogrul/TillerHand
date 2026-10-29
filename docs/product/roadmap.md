@@ -3,7 +3,7 @@
 > Each task must be small enough to **finish in one session** (about 1-3 hours, 1-5 files).
 > Split a task that looks big. Always give the AI a single task.
 > Format: `- [ ] G-NNN: [what] — done when: [how do I know it is done?]`
-> The dashboard reads the "## Phase N" headings; keep that form (roadmaps from before 3.48 say "## Faz N", and those are read too).
+> The dashboard reads the "## Phase N" headings; keep that form.
 
 ## Phase 0 — Setup (skeleton)
 

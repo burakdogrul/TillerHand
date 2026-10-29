@@ -18,7 +18,7 @@ const calls = () => (fs.existsSync(log()) ? fs.readFileSync(log(), 'utf8') : '')
 const env = (extra = {}) => ({ ...process.env, CLAUDE_PROJECT_DIR: p, PREVIEW_CLI: path.join(p, 'cli.mjs'), PREVIEW_LOG: log(), PREVIEW_TIMEOUT_MS: '15000', ...extra });
 const preview = (extra, task = 'G-01') => spawnSync(process.execPath, [path.join(HOOKS, 'preview.mjs'), task], { cwd: p, encoding: 'utf8', env: env(extra) });
 const approve = () => spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--approve'], { cwd: p, encoding: 'utf8', env: env() });
-const agents = (dev, url = `http://127.0.0.1:${port}`) => write('AGENTS.md', `# X\n\n## Komutlar\n\n\`\`\`bash\ngeliştirme:  ${dev}\nönizleme:    ${url}\ntest:        [ ]\nlint:        [ ]\ntip kontrol: [ ]\nbuild:       [ ]\n\`\`\`\n`);
+const agents = (dev, url = `http://127.0.0.1:${port}`) => write('AGENTS.md', `# X\n\n## Commands\n\n\`\`\`bash\ndev:  ${dev}\npreview:    ${url}\ntest:        [ ]\nlint:        [ ]\ntype check: [ ]\nbuild:       [ ]\n\`\`\`\n`);
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const pid = () => Number(fs.readFileSync(path.join(p, 'dev.pid'), 'utf8'));
 const reset = () => { fs.rmSync(log(), { force: true }); fs.rmSync(path.join(p, 'dev.pid'), { force: true }); };
@@ -96,11 +96,6 @@ test('Ö-17.2 a server that is already running is used and left open', async () 
 
 test('Ö-17.3 missing lines and an unapproved command: clear message, nothing runs', () => {
   reset();
-  // A pre-3.48 Turkish block is still read; the message names the line in English (3.48.0)
-  write('AGENTS.md', '# X\n\n## Komutlar\n\n```bash\ngeliştirme:  [ ]\ntest:        [ ]\n```\n');
-  const missing = preview();
-  assert.equal(missing.status, 1);
-  assert.match(missing.stdout, /preview:/);
   write('AGENTS.md', '# X\n\n## Commands\n\n```bash\ndev:  [ ]\ntest:        [ ]\n```\n');
   const missingEn = preview();
   assert.equal(missingEn.status, 1);
@@ -195,6 +190,23 @@ test('F-17 mobile project: the step is skipped with a message', () => {
   assert.match(r.stdout, /Expo Go/);
   assert.equal(calls(), '', 'no browser is opened');
   fs.rmSync(path.join(p, '.kit.json'));
+});
+
+test('AC-49.5 preview: a Turkish "## Komutlar" block (geliştirme / önizleme) is not read: the lines are missing, nothing runs', () => {
+  reset();
+  write('AGENTS.md', `# X\n\n## Komutlar\n\n\`\`\`bash\ngeliştirme:  node dev.mjs ${port}\nönizleme:    http://127.0.0.1:${port}\ntest:        [ ]\n\`\`\`\n`);
+  approve();
+  const r = preview();
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /`preview:` line/, 'the missing English line is named');
+  assert.equal(calls(), '', 'no browser call');
+  assert.ok(!fs.existsSync(path.join(p, 'dev.pid')), 'the Turkish dev command did not run');
+  // English heading, Turkish keys: the same
+  write('AGENTS.md', `# X\n\n## Commands\n\n\`\`\`bash\ngeliştirme:  node dev.mjs ${port}\nönizleme:    http://127.0.0.1:${port}\n\`\`\`\n`);
+  approve();
+  const mixed = preview();
+  assert.equal(mixed.status, 1, mixed.stdout + mixed.stderr);
+  assert.ok(!fs.existsSync(path.join(p, 'dev.pid')), 'nothing ran');
 });
 
 test('AC-48.2 preview: an English Commands block (dev / preview) starts the server and takes both screenshots', async () => {

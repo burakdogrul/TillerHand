@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Personal preferences: how this user likes to work (talk, questions, reports, code style, things to avoid).
-// One file for all projects: ~/.vibe-kit/preferences.md (tercihler.md before 3.48, renamed on first use). Git never sees
+// One file for all projects: ~/.vibe-kit/preferences.md. Git never sees
 // it; the session-start hook loads it every session.
 //   node .claude/hooks/prefs.mjs --list                          numbered list
 //   node .claude/hooks/prefs.mjs --add <category> "<preference>"     only with the user's approval (asked)
 //   node .claude/hooks/prefs.mjs --remove <no>                   (asked)
-// Categories: conversation, questions, reports, code, avoid (the pre-3.48 konusma, sorular, raporlar, kod, kacin still work).
+// Categories: conversation, questions, reports, code, avoid.
 // A project rule goes to AGENTS.md → Learned rules, not here.
 // Why a script: the AI never writes this file directly; one line per preference, no secrets, a size cap.
 // The same rules apply when reading: any program on the machine can write this file, so what is loaded is checked
@@ -17,27 +17,19 @@ import { findSecrets } from './guard-secrets.mjs';
 import { isMain } from './shared.mjs';
 
 export const CATEGORIES = { conversation: 'Conversation', questions: 'Questions and decisions', reports: 'Reports', code: 'Code', avoid: 'Avoid' };
-// Pre-3.48 keys and headings, still read
-const OLD = { konusma: ['conversation', 'Konuşma'], sorular: ['questions', 'Sorular ve kararlar'], raporlar: ['reports', 'Raporlar'], kod: ['code', 'Kod'], kacin: ['avoid', 'Kaçınılacaklar'] };
-export const categoryKey = (k) => (Object.hasOwn(CATEGORIES, k ?? '') ? k : Object.hasOwn(OLD, k ?? '') ? OLD[k][0] : null);
+export const categoryKey = (k) => (Object.hasOwn(CATEGORIES, k ?? '') ? k : null);
 export const MAX_ITEMS = 40;
 const MAX_LENGTH = 200;
 const MAX_BYTES = 64 * 1024;
 
 // os.homedir() follows HOME / USERPROFILE; the file name is fixed, so no other file can be written through it.
-// A pre-3.48 tercihler.md is renamed once (decision: a 3.47 project on the same machine no longer sees it).
-export const prefsFile = () => {
-  const file = path.join(os.homedir(), '.vibe-kit', 'preferences.md');
-  const old = path.join(os.homedir(), '.vibe-kit', 'tercihler.md');
-  if (fs.existsSync(file) || !fs.existsSync(old)) return file;
-  try { fs.renameSync(old, file); return file; } catch { return old; }
-};
+export const prefsFile = () => path.join(os.homedir(), '.vibe-kit', 'preferences.md');
 
-// A heading is matched by key or title, ignoring case and Turkish letters (## kod, ## Kacinilacaklar)
-const fold = (s) => s.toLocaleLowerCase('tr').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i').trim();
-const categoryOf = (heading) => Object.keys(CATEGORIES).find((k) => fold(k) === fold(heading) || fold(CATEGORIES[k]) === fold(heading))
-  ?? Object.values(OLD).find(([, title]) => fold(title) === fold(heading))?.[0]
-  ?? categoryKey(Object.keys(OLD).find((k) => fold(k) === fold(heading)));
+// A heading is matched by key or title, ignoring case (## code, ## Questions and decisions)
+const fold = (s) => s.toLowerCase().trim();
+const categoryOf = (heading) => Object.keys(CATEGORIES).find((k) => fold(k) === fold(heading) || fold(CATEGORIES[k]) === fold(heading));
+// Duplicate check on user text in any language: case and accents folded, dotless i as i ("KISA" = "kısa", "İ" = "i")
+const folded = (s) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\u0131/g, 'i');
 const clean = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim();
 const valid = (t) => t && t.length <= MAX_LENGTH && !findSecrets(t).length;
 
@@ -85,7 +77,7 @@ export function addPref(key, text, file = prefsFile()) {
   if (findSecrets(t).length) return { error: 'The preference contains a value that looks like a secret; secrets are not written to this file.' };
   const { items, unknown } = parsePrefs(file);
   if (unknown.length) return { error: `The file has unreadable lines; nothing was written, so they are not lost. Fix or remove them (${file}):\n${unknown.slice(0, 5).join('\n')}` };
-  const same = items.find((p) => p.text.toLocaleLowerCase('tr') === t.toLocaleLowerCase('tr'));
+  const same = items.find((p) => folded(p.text) === folded(t));
   if (same) return { existing: same.category };
   if (items.length >= MAX_ITEMS) return { error: `At most ${MAX_ITEMS} preferences are kept. Delete an old one first: --list, then --remove <no>.` };
   const error = writePrefs([...items, { category, text: t }], file);

@@ -2,7 +2,7 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: `MAJOR.MINOR.PATCH`.
 
-## [Yayınlanmamış]
+## [Unreleased]
 
 ### Added
 - 
