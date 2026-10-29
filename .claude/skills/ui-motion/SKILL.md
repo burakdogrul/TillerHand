@@ -1,6 +1,6 @@
 ---
 name: ui-motion
-description: In-app motion rules (micro-interactions, transitions, loading, list and page animations). Use when adding or changing an animation or transition in the interface, or when told to make it "daha canlı / akıcı" (livelier / smoother). Not for promo videos (use motion-video for those).
+description: In-app motion rules (micro-interactions, transitions, loading, list and page animations). Use when adding or changing an animation or transition in the interface, or when told to make it "livelier / smoother". Not for promo videos (use motion-video for those).
 ---
 
 # UI motion

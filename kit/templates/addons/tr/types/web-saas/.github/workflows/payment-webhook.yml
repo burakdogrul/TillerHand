@@ -1,5 +1,5 @@
-# Ödeme bildirimi imza saldırgan testi (tr eki). Sahte anahtarlarla çalışır; sır gerekmez.
-# Kırmızıysa merge etme: sahte veya değiştirilmiş ödeme bildirimi kabul ediliyor olabilir.
+# Payment notification signature adversarial test (tr add-on). Runs with fake keys; no secret needed.
+# If red, do not merge: a fake or altered payment notification may be accepted.
 name: payment-webhook
 
 on:
@@ -18,5 +18,5 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      # Node 22.18+ .ts modülünü doğrudan çalıştırır; bağımlılık kurulumu gerekmez
+      # Node 22.18+ runs a .ts module directly; no dependency install needed
       - run: node --test tests/security/payment-webhook.mjs

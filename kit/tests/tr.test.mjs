@@ -121,17 +121,34 @@ test('Ö-26.1 backend: the same vectors pass in Python; red without the check', 
 });
 
 test('Ö-26.2 every legal item has a primary source and a check date; the note says it is not legal advice', () => {
-  const doc = fs.readFileSync(path.join(ADDON, 'docs/legal/turkiye.md'), 'utf8');
-  assert.match(doc, /\*\*Hukuki görüş değildir\.\*\*/);
+  // 3.49.0: turkiye.md is English (section 3 heading "Payment notifications (iyzico, PayTR)")
+  const doc = fs.readFileSync(path.join(ADDON, 'docs/legal/turkiye.md'), 'utf8').replace(/\r\n/g, '\n');
+  assert.match(doc, /\*\*Not legal advice\.\*\*/);
   const sections = doc.split(/^## /m).slice(1);
   assert.equal(sections.length, 4);
-  const primary = { 'KVKK': 'mevzuat.gov.tr', 'e-Fatura': 'gib.gov.tr', 'Ödeme': 'docs.iyzico.com' };
+  assert.match(doc, /^## 3\. Payment notifications \(iyzico, PayTR\)$/m);
+  const primary = { 'KVKK': 'mevzuat.gov.tr', 'e-Fatura': 'gib.gov.tr', 'Payment notifications': 'docs.iyzico.com' };
   for (const [name, domain] of Object.entries(primary)) {
     const s = sections.find((x) => x.split('\n')[0].includes(name));
-    assert.match(s, /^Kontrol: \d{4}-\d{2}-\d{2}\./m, `${name}: check date`);
+    assert.equal(typeof s, 'string', `a section headed ${name}`);
+    assert.match(s, /^Checked: \d{4}-\d{2}-\d{2}\./m, `${name}: check date`);
     assert.ok(new RegExp(`\\]\\(https://[\\w.-]*${domain.replace(/\./g, '\\.')}/`).test(s), `${name}: primary source`);
   }
-  assert.match(doc, /5 iş günü içinde Kuruma bildirilir/);
+  assert.match(doc, /within 5 business days/);
   for (const f of ['legal', 'business']) assert.match(fs.readFileSync(path.join(REPO, `.claude/findings/lenses/${f}.md`), 'utf8'), /docs\/legal\/turkiye\.md/, f);
   assert.match(fs.readFileSync(path.join(REPO, '.claude/commands/start.md'), 'utf8'), /the Turkey add-on \(`tr`\) is recommended/);
+});
+
+test('AC-49.24 turkiye.md code examples use English values: status paid/pending, the EXAMPLE email domain', () => {
+  const doc = fs.readFileSync(path.join(ADDON, 'docs/legal/turkiye.md'), 'utf8').replace(/\r\n/g, '\n');
+  // The atomic order confirmation of section 3
+  assert.match(doc, /UPDATE … SET status='paid' WHERE id=… AND status='pending'/);
+  assert.doesNotMatch(doc, /durum\s*=|odendi|bekliyor/, 'no Turkish column or value');
+  // Machine text of section 4: lowercasing an email does not depend on the language
+  assert.match(doc, /^expect\('INFO@EXAMPLE\.COM'\.toLowerCase\(\)\)\.toBe\('info@example\.com'\);$/m);
+  assert.doesNotMatch(doc, /ORNEK|ornek/i, 'no Turkish example domain');
+  // The I/İ/ı test inputs stay Turkish on purpose
+  for (const s of ["'ISPARTA'.toLocaleLowerCase('tr')).toBe('ısparta')", "'istanbul'.toLocaleUpperCase('tr')).toBe('İSTANBUL')", "compare('İstanbul', 'istanbul')"]) {
+    assert.equal(doc.includes(s), true, s);
+  }
 });

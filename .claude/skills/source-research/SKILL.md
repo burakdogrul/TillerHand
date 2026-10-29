@@ -1,6 +1,6 @@
 ---
 name: source-research
-description: Researches sources for any work that depends on information where freshness matters (library/API version, price, quota, law, regulation, competitor, standard). Goes to the primary source first, attaches a source and date to every claim, shows contradictions. Use when choosing technology, in /findings-business and /findings-legal reports, when told "araştır" (research), and for every fact you are unsure of.
+description: Researches sources for any work that depends on information where freshness matters (library/API version, price, quota, law, regulation, competitor, standard). Goes to the primary source first, attaches a source and date to every claim, shows contradictions. Use when choosing technology, in /findings-business and /findings-legal reports, when told "research", and for every fact you are unsure of.
 ---
 
 # Source research

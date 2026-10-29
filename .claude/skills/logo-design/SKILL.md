@@ -1,6 +1,6 @@
 ---
 name: logo-design
-description: Designs a brand logo: asks brand questions first, presents 4-6 SVG concepts with a visual preview, refines the chosen concept and produces the brand pack with favicon, app icon and PNG sizes. Use when a logo, icon, favicon, brand mark or "marka kimliği" (brand identity) is requested. Needs no API; the output is vector and editable.
+description: Designs a brand logo: asks brand questions first, presents 4-6 SVG concepts with a visual preview, refines the chosen concept and produces the brand pack with favicon, app icon and PNG sizes. Use when a logo, icon, favicon, brand mark or "brand identity" is requested. Needs no API; the output is vector and editable.
 ---
 
 # Logo design

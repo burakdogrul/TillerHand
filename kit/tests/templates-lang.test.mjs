@@ -186,9 +186,14 @@ const SHIPPED = [
   ...['.claude/board', '.claude/agents', '.claude/commands', '.claude/output-styles'].flatMap((d) =>
     fs.readdirSync(path.join(REPO, d)).filter((f) => f.endsWith('.md')).map((f) => `${d}/${f}`)),
   ...walk('.claude/findings'), ...walk('docs'), ...walk('kit/templates'), 'AGENTS.md', 'CLAUDE.md',
-].filter((f) => f.endsWith('.md') && f !== 'docs/legal/privacy-kvkk.md' && !f.startsWith('kit/templates/addons/tr/'));
-// Turkish on purpose: test data the rules name, the font check, Turkish legal and document names
-const ALLOWED = ['İ/ı', 'ğ, ş, ı, İ', 'İYS', 'GİB', 'e-Arşiv'];
+].filter((f) => f.endsWith('.md'));
+// Turkish on purpose: test data the rules name, official Turkish names (registries, authorities, document types) and a
+// fixed legal sentence. 3.49.0: the Turkey add-on and the KVKK doc are English and scanned too; the font check names
+// "the characters of the project language" instead of Turkish letters.
+const ALLOWED = ['İ/ı', 'İYS', 'GİB', 'e-Arşiv', 'VERBİS', 'BTK', 'ETBİS', '"Bu satış internet üzerinden yapılmıştır."',
+  'ısparta', 'İSTANBUL', 'Çağla', 'Ömer', 'İstanbul'];
+// turkiye.md §4 is about the Turkish letters: it names them, and §3 names the currency subunit (kuruş)
+const FILE_ALLOWED = { 'kit/templates/addons/tr/docs/legal/turkiye.md': ['"ı"', '"İ"', 'ç, ğ, ı, ö, ş, ü', 'kuruş'] };
 const TURKISH_LETTER = /[çğıöşüÇĞİÖŞÜ]/u;
 const VERDICT_WORDS = /(?<![\p{L}\p{N}_])(KRİTİK|ÖNEMLİ|KOŞULLU|ONAY|RET)(?![\p{L}\p{N}_])/u;
 const offending = (test) => SHIPPED.flatMap((f) => read(f).split('\n').map((line, i) => ({ f, n: i + 1, line })))
@@ -200,9 +205,56 @@ test('Ö-48.70 no line with a Turkish letter in shipped kit text, outside 3.48 n
   for (const f of ['.claude/board/council.md', '.claude/commands/build.md', '.claude/output-styles/narrator.md', 'docs/workflow/progress.md', 'AGENTS.md']) {
     assert.equal(SHIPPED.includes(f), true, `scanned: ${f}`);
   }
-  assert.equal(SHIPPED.some((f) => f.startsWith('kit/templates/addons/tr/') || f === 'docs/legal/privacy-kvkk.md'), false, 'the Turkish add-on and the KVKK doc are skipped');
-  const left = offending((line) => TURKISH_LETTER.test(ALLOWED.reduce((s, a) => s.split(a).join(''), line)));
+  for (const f of ['kit/templates/addons/tr/docs/legal/turkiye.md', 'docs/legal/privacy-kvkk.md']) {
+    assert.equal(SHIPPED.includes(f), true, `AC-49.23 scanned since 3.49.0: ${f}`);
+  }
+  const strip = (f, line) => [...ALLOWED, ...(FILE_ALLOWED[f] ?? [])].reduce((s, a) => s.split(a).join(''), line);
+  const left = SHIPPED.flatMap((f) => read(f).split('\n').map((line, i) => ({ f, n: i + 1, line })))
+    .filter(({ f, line }) => !line.includes('3.48') && TURKISH_LETTER.test(strip(f, line)));
   assert.deepEqual(left.map(({ f, n }) => `${f}:${n}`), [], show(left));
+});
+
+test('AC-49.23 turkiye.md and privacy-kvkk.md are English: no Turkish letter outside the allow-list, English headings', () => {
+  for (const f of ['kit/templates/addons/tr/docs/legal/turkiye.md', 'docs/legal/privacy-kvkk.md']) {
+    const allowed = [...ALLOWED, ...(FILE_ALLOWED[f] ?? [])];
+    const left = read(f).split('\n').map((line, i) => ({ f, n: i + 1, line }))
+      .filter(({ line }) => TURKISH_LETTER.test(allowed.reduce((s, a) => s.split(a).join(''), line)));
+    assert.deepEqual(left.map(({ f: x, n }) => `${x}:${n}`), [], show(left));
+  }
+  // Turkish words without a Turkish letter, from the old texts
+  const plain = /\b(Kaynak|Kontrol|Projede|odendi|bekliyor|durum|ORNEK|ornek|Hukuki|Ticari|veya|icin)\b/;
+  for (const f of ['kit/templates/addons/tr/docs/legal/turkiye.md', 'docs/legal/privacy-kvkk.md']) {
+    const words = read(f).split('\n').map((line, i) => ({ f, n: i + 1, line }))
+      .filter(({ line }) => plain.test(ALLOWED.reduce((s, a) => s.split(a).join(''), line)));
+    assert.deepEqual(words.map(({ n, line }) => `${f}:${n}: ${line.match(plain)[0]}`), [], show(words));
+  }
+});
+
+// ---------- 3.49.0 step 4: skill descriptions and /design name no Turkish ----------
+
+const frontmatter = (text) => text.replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---\n/)?.[1] ?? '';
+const SKILL_TURKISH = /[çğıöşüÇĞİÖŞÜ]|\b(marka|kimligi|tanitim|videosu|urun|animasyonu|arastir|daha|canli|akici|yap|olustur)\b/i;
+
+test('AC-49.25 skill descriptions (.claude/skills/*/SKILL.md) contain no Turkish word', () => {
+  const skills = fs.readdirSync(path.join(REPO, '.claude/skills'), { withFileTypes: true }).filter((e) => e.isDirectory() && exists(`.claude/skills/${e.name}/SKILL.md`)).map((e) => e.name);
+  assert.equal(skills.length >= 4, true, `skills found: ${skills.join(', ')}`);
+  for (const name of skills) {
+    const fm = frontmatter(read(`.claude/skills/${name}/SKILL.md`));
+    const desc = fm.match(/^description:\s*(.+)$/m)?.[1] ?? '';
+    assert.notEqual(desc.trim(), '', `${name}: has a description`);
+    assert.doesNotMatch(desc, SKILL_TURKISH, `${name}: ${desc.match(SKILL_TURKISH)?.[0]}`);
+  }
+  // The K5 examples by name
+  const all = skills.map((n) => frontmatter(read(`.claude/skills/${n}/SKILL.md`))).join('\n');
+  for (const w of ['tanıtım videosu', 'marka kimliği', 'araştır', 'ürün animasyonu', 'daha canlı']) assert.equal(all.includes(w), false, w);
+});
+
+test('AC-49.26 /design names "the characters of the project language", not Turkish letters', () => {
+  const md = read('.claude/commands/design.md');
+  assert.match(md, /the characters of the project language/);
+  assert.doesNotMatch(md, /ğ, ş, ı, İ/);
+  const left = md.split('\n').map((line, i) => [i + 1, line]).filter(([, line]) => TURKISH_LETTER.test(line));
+  assert.deepEqual(left.map(([n, l]) => `${n}: ${l.slice(0, 120)}`), []);
 });
 
 test('Ö-48.71 no Turkish verdict or severity word (KRİTİK, ÖNEMLİ, KOŞULLU, ONAY, RET) in shipped kit text outside 3.48 notes', () => {

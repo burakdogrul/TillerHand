@@ -54,18 +54,16 @@ const translation = (root, lang) => {
 export function t(root, key, vars = {}) {
   if (!Object.hasOwn(MESSAGES, key)) return key;
   const lang = readLang(root) ?? 'en';
-  let text = MESSAGES[key][lang];
-  if (text === undefined) {
-    const own = translation(root, lang);
-    text = Object.hasOwn(own, key) && typeof own[key] === 'string' ? own[key] : MESSAGES[key].en;
-  }
+  const own = lang === 'en' ? {} : translation(root, lang);
+  const text = Object.hasOwn(own, key) && typeof own[key] === 'string' ? own[key] : MESSAGES[key].en;
   return text.replace(PLACEHOLDER, (m, name) => Object.hasOwn(vars, name) ? String(vars[name]) : m);
 }
 
 // Date and number locale for a language code (English when the runtime does not know the code)
 export const locale = (lang) => { try { return Intl.DateTimeFormat.supportedLocalesOf(lang ?? 'en')[0] ?? 'en'; } catch { return 'en'; } };
 
-const needsTranslation = (lang) => lang !== null && lang !== 'tr' && lang !== 'en';
+// Every language but English reads .claude/i18n/<lang>.json (tr ships with the kit)
+const needsTranslation = (lang) => Boolean(lang) && lang !== 'en';
 
 export function missingKeys(root = findRoot()) {
   const lang = readLang(root);
@@ -76,7 +74,7 @@ export function missingKeys(root = findRoot()) {
 
 export function writeTranslation(root, obj) {
   const lang = readLang(root);
-  if (!needsTranslation(lang)) throw new Error(`No translation file for language ${lang ?? 'none'}: tr and en are built in.`);
+  if (!needsTranslation(lang)) throw new Error(`No translation file for language ${lang ?? 'none'}: en is built in.`);
   if (!obj || typeof obj !== 'object' || Array.isArray(obj) || Object.getPrototypeOf(obj) !== Object.prototype) throw new Error('Translation must be a JSON object { key: text }.');
   for (const [k, v] of Object.entries(obj)) {
     if (!Object.hasOwn(MESSAGES, k)) throw new Error(`Unknown key: ${k}`);

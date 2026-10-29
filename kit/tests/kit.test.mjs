@@ -319,17 +319,20 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   const stop = (flag) => ({ Stop: [{ hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs" ${flag}` }] }] });
   // 3.49.0: the five Turkish-named allow rules (--plan-kaydet, --plan-bitir, --gerekli, --olc, --kapat) left OLD_RULES:
   // the kit no longer carries Turkish names and there is no migration for them
+  // AC-49.22: the last three Turkish-named ask rules (--plan-ekle, --onayla, --ac) left OLD_RULES too: OLD_RULES holds no
+  // Turkish-named rule, so they are not removed any more; in a project they are plain rules and stay
   const oldAllow = [];
-  const oldAsk = ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)', 'Bash(node .claude/hooks/gate.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac:*)'];
+  const oldAsk = [];
+  const formerKit = ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)', 'Bash(node .claude/hooks/gate.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac:*)'];
   // The user's own rule that only looks like an old one (another script, another spelling) stays
   const own = ['Bash(npm test)', 'Bash(node scripts/x.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac)'];
-  const old = { permissions: { allow: [own[0], ...oldAllow, own[1]], ask: [...oldAsk, own[2]] }, hooks: stop('--sessiz') };
+  const old = { permissions: { allow: [own[0], ...oldAllow, own[1]], ask: [...oldAsk, ...formerKit, own[2]] }, hooks: stop('--sessiz') };
   const { settings: s, added, removed } = migrateSettings(old, kit);
   assert.ok(added.includes('ask: Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'added rules are listed for the report');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'new ask rule added');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'));
-  assert.deepEqual(removed.sort(), [...oldAllow.map((r) => `allow: ${r}`), ...oldAsk.map((r) => `ask: ${r}`)].sort(), 'the 3 old kit ask rules still in OLD_RULES are removed and listed');
-  assert.ok(![...s.permissions.allow, ...s.permissions.ask].some((r) => [...oldAllow, ...oldAsk].includes(r)));
+  assert.deepEqual(removed, [], 'no old kit rule is in this project: nothing removed');
+  assert.deepEqual(s.permissions.ask.slice(0, formerKit.length), formerKit, 'the Turkish-named rules are not in OLD_RULES: kept, in order');
   assert.deepEqual(s.permissions.allow.slice(0, 2), own.slice(0, 2), 'project rules kept, in order');
   assert.ok(s.permissions.ask.includes(own[2]));
   assert.deepEqual(s.hooks, stop('--quiet'));

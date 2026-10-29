@@ -70,8 +70,11 @@ const CACHE = () => ({ time: Date.now(), data: { runs: [], prs: [], liveMonitori
 const boardFile = (rows) => `**Status:** set up\n**Commit review:** on\n\n## Meeting log\n\n| # | Date | Kind | Scope | Attendees | Result | Critical | Decision |\n|---|---|---|---|---|---|---|---|\n${rows.join('\n')}\n`;
 const councilFile = (marker, kind, line) => `# Council: ${kind} · ${marker}\n**Date:** 2026-10-14 · **Type:** ${kind}\n\n## 4. Chair decision\n${line}\n`;
 
+// 3.49.0: Turkish UI texts live in the shipped .claude/i18n/tr.json, not in messages.mjs
+const trText = () => JSON.parse(read('.claude/i18n/tr.json'));
 function dashboard({ lang = 'en', rows = [], councils = {} } = {}) {
   const files = { '.kit.json': KIT(lang), '.claude/state/github-cache.json': CACHE() };
+  if (lang === 'tr') files['.claude/i18n/tr.json'] = read('.claude/i18n/tr.json');
   if (rows.length) files['docs/workflow/board.md'] = boardFile(rows);
   let day = 10;
   for (const [marker, [kind, line]] of Object.entries(councils)) files[`docs/workflow/council/2026-10-${day++}-${kind}-${marker}.md`] = councilFile(marker, kind, line);
@@ -86,7 +89,7 @@ const rowBadge = (html, marker) => {
   assert.equal(typeof row, 'string', `a table row for ${marker}`);
   return row.match(/class="badge (\w+)"/)?.[1] ?? null;
 };
-const msg = (key, lang) => MESSAGES[key][lang];
+const msg = (key, lang) => (lang === 'tr' ? trText()[key] : MESSAGES[key][lang]);
 const summaryCard = (html, lang) => html.match(new RegExp(`<h3>${msg('dashboard.summary', lang)}</h3><div class="kpis mini">([\\s\\S]*?)</section>`))?.[1] ?? '';
 const kpis = (card) => [...card.matchAll(/<div class="kpi-l">([^<]*)<\/div><div class="kpi-v">([^<]*)</g)].map((m) => [m[1], m[2]]);
 const row = (no, scope, result, decision = 'noted') => `| ${no} | 2026-10-2${no} | task | ${scope} | board-qa | ${result} | - | ${decision} |`;
@@ -154,7 +157,8 @@ test('Ö-48.86 dashboard: the reject KPI label comes from messages.mjs in the pr
   assert.doesNotMatch(en, /\bRET\b/, 'no RET anywhere on an English dashboard whose log says REJECT');
   const keys = Object.entries(MESSAGES).filter(([, v]) => v.en === enLabels[1]).map(([k]) => k);
   assert.notDeepEqual(keys, [], `the English label "${enLabels[1]}" is a messages.mjs text`);
-  assert.equal(keys.some((k) => MESSAGES[k].tr === trLabels[1]), true, `the Turkish dashboard shows the same key's tr text (got "${trLabels[1]}")`);
+  assert.equal(keys.some((k) => trText()[k] === trLabels[1]), true, `the Turkish dashboard shows the same key's tr.json text (got "${trLabels[1]}")`);
+  assert.notEqual(trLabels[1], enLabels[1], 'the Turkish label is not the English one');
 });
 
 // ---------- 3. commit gate: review off needs the whole word ----------
@@ -246,7 +250,7 @@ test('AC-49.9 qa-report: a screenshot named with the old Ö- id is not taken as 
 test('Ö-48.90 messages: dashboardData.prodRefAction names the "Environments" heading of accounts.md in en and tr', () => {
   assert.match(read('docs/operations/accounts.md'), /^## Environments \(dev \/ prod\)$/m, 'the heading it points to');
   for (const lang of ['en', 'tr']) {
-    const text = MESSAGES['dashboardData.prodRefAction'][lang];
+    const text = msg('dashboardData.prodRefAction', lang);
     assert.match(text, /accounts\.md → Environments\b/, lang);
     assert.doesNotMatch(text, /Ortamlar/, `${lang}: not the old Turkish heading`);
   }

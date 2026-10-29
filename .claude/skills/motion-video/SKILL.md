@@ -1,6 +1,6 @@
 ---
 name: motion-video
-description: Produces the product's promo video (SaaS demo loop, landing page video, social media clip) with code. A single HTML file and renderAt(t), a real cursor, closed-form springs, a 120 BPM rhythm; frames are captured one by one with Playwright and converted to MP4 with ffmpeg. Use when a "tanıtım videosu" (promo video), "demo video", "ürün animasyonu" (product animation) or "landing page loop" is requested. Not for in-app animation (use ui-motion for that).
+description: Produces the product's promo video (SaaS demo loop, landing page video, social media clip) with code. A single HTML file and renderAt(t), a real cursor, closed-form springs, a 120 BPM rhythm; frames are captured one by one with Playwright and converted to MP4 with ffmpeg. Use when a "promo video", "demo video", "product animation" or "landing page loop" is requested. Not for in-app animation (use ui-motion for that).
 ---
 
 # Promo video (with code)

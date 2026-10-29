@@ -502,9 +502,14 @@ test('Ö-48.28 dashboard: board not set up alerts outside Setup only; the handof
 
 test('Ö-48.23 dashboard (Turkish UI): English "set up" / "not set up" and on / off are recognised', () => {
   const kit = { ...KIT, lang: 'tr' };
+  // 3.49.0: the Turkish UI comes from the shipped .claude/i18n/tr.json
+  const trFile = fs.readFileSync(path.join(HOOKS, '..', 'i18n', 'tr.json'), 'utf8');
+  const tr = JSON.parse(trFile);
   for (const [state, review, wantState, wantReview] of [[V.setUp, V.off, 'dashboard.boardSetUp', 'dashboard.off'], [V.notSetUp, V.on, 'dashboard.notSetUp', 'dashboard.on']]) {
-    const p = project({ '.kit.json': kit, '.claude/state/github-cache.json': CACHE(), 'AGENTS.md': '# P\n', 'docs/workflow/board.md': boardDoc(L, state, review) });
+    const p = project({ '.kit.json': kit, '.claude/i18n/tr.json': trFile, '.claude/state/github-cache.json': CACHE(), 'AGENTS.md': '# P\n', 'docs/workflow/board.md': boardDoc(L, state, review) });
     const h = dashboard(p);
+    assert.equal(t(p, 'dashboard.members'), tr['dashboard.members'], 'the heading text comes from tr.json');
+    assert.equal(h.includes(`<h3>${tr['dashboard.members']} · ${tr[wantState]}</h3>`), true, `${state}: Turkish board heading`);
     assert.equal(h.includes(`<h3>${t(p, 'dashboard.members')} · ${t(p, wantState)}</h3>`), true, `${state}: board heading`);
     assert.equal(h.includes(t(p, 'dashboard.commitReview', { value: t(p, wantReview) })), true, `${review}: commit review`);
   }

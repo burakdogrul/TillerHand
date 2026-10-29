@@ -45,22 +45,27 @@ async function keys() {
 
 // ---------- messages.mjs ----------
 
-test('messages: the table is non-empty, every entry has tr and en text', async () => {
+// 3.49.0: the table is English only; Turkish moved to the shipped .claude/i18n/tr.json (i18n-tr.test.mjs)
+const TR_JSON = path.join(ROOT, '.claude', 'i18n', 'tr.json');
+const shippedTr = () => fs.readFileSync(TR_JSON, 'utf8');
+
+test('messages: the table is non-empty, every entry has en text and no tr text', async () => {
   const M = await messages();
   assert.equal(typeof M, 'object');
   assert.ok(Object.keys(M).length > 0, 'at least one message');
   for (const [k, v] of Object.entries(M)) {
-    assert.equal(typeof v.tr, 'string', `${k}.tr`);
     assert.equal(typeof v.en, 'string', `${k}.en`);
-    assert.ok(v.tr.trim().length > 0, `${k}.tr is not empty`);
     assert.ok(v.en.trim().length > 0, `${k}.en is not empty`);
+    assert.equal(Object.hasOwn(v, 'tr'), false, `${k}: no tr text in the code`);
   }
 });
 
-test('messages: tr and en carry the same placeholder set', async () => {
+test('messages: the shipped tr.json and en carry the same placeholder set', async () => {
   const M = await messages();
+  const tr = JSON.parse(shippedTr());
   for (const [k, v] of Object.entries(M)) {
-    assert.deepEqual([...new Set(placeholders(v.tr))], [...new Set(placeholders(v.en))], `${k}: {name} placeholders`);
+    assert.equal(typeof tr[k], 'string', `${k}: in tr.json`);
+    assert.deepEqual([...new Set(placeholders(tr[k]))], [...new Set(placeholders(v.en))], `${k}: {name} placeholders`);
   }
 });
 
@@ -157,13 +162,14 @@ test('lang attacker: setLang rejects path traversal and malformed codes, nothing
 
 // ---------- t ----------
 
-test('lang: t returns tr and en text from the table', async () => {
+test('lang: t returns tr text from .claude/i18n/tr.json and en text from the table', async () => {
   const { t } = await load();
   const { M, all } = await keys();
-  const tr = project({ '.kit.json': kitJson({ lang: 'tr' }) });
+  const tr = project({ '.kit.json': kitJson({ lang: 'tr' }), '.claude/i18n/tr.json': shippedTr() });
+  const trText = JSON.parse(shippedTr());
   const en = project({ '.kit.json': kitJson({ lang: 'en' }) });
   for (const k of all) {
-    assert.equal(t(tr, k), M[k].tr, `tr: ${k}`);
+    assert.equal(t(tr, k), trText[k], `tr: ${k}`);
     assert.equal(t(en, k), M[k].en, `en: ${k}`);
   }
   assert.equal(t(project(), all[0]), M[all[0]].en, 'a plain folder defaults to en');
@@ -177,9 +183,9 @@ test('lang: t fills placeholders, keeps the ones without a value', async () => {
   const names = [...new Set(placeholders(M[withVar].en))];
   const vars = Object.fromEntries(names.map((n, i) => [n, `V${i}çİı`]));
   const en = project({ '.kit.json': kitJson({ lang: 'en' }) });
-  const tr = project({ '.kit.json': kitJson({ lang: 'tr' }) });
+  const tr = project({ '.kit.json': kitJson({ lang: 'tr' }), '.claude/i18n/tr.json': shippedTr() });
   assert.equal(t(en, withVar, vars), fill(M[withVar].en, vars));
-  assert.equal(t(tr, withVar, vars), fill(M[withVar].tr, vars));
+  assert.equal(t(tr, withVar, vars), fill(JSON.parse(shippedTr())[withVar], vars));
   assert.equal(t(en, withVar, { [names[0]]: 7 }), fill(M[withVar].en, { [names[0]]: '7' }), 'a number becomes a string');
   assert.equal(t(en, withVar), M[withVar].en, 'no vars: placeholders stay');
   assert.equal(t(en, withVar, {}), M[withVar].en);
@@ -213,12 +219,12 @@ test('lang: t reads other languages from .claude/i18n/<lang>.json, falls back to
   }
 });
 
-test('lang: t ignores i18n files for tr and en', async () => {
+test('lang: t ignores the i18n file for en; tr reads .claude/i18n/tr.json like any other language', async () => {
   const { t } = await load();
   const { M, all } = await keys();
   const k = all[0];
   assert.equal(t(project({ '.kit.json': kitJson({ lang: 'en' }), '.claude/i18n/en.json': { [k]: 'OVERRIDE' } }), k), M[k].en);
-  assert.equal(t(project({ '.kit.json': kitJson({ lang: 'tr' }), '.claude/i18n/tr.json': { [k]: 'OVERRIDE' } }), k), M[k].tr);
+  assert.equal(t(project({ '.kit.json': kitJson({ lang: 'tr' }), '.claude/i18n/tr.json': { [k]: 'OVERRIDE' } }), k), 'OVERRIDE');
 });
 
 test('lang attacker: a traversal lang in .kit.json or the state file does not make t read outside .claude/i18n/', async () => {
@@ -239,10 +245,10 @@ test('lang attacker: a traversal lang in .kit.json or the state file does not ma
 
 // ---------- missingKeys ----------
 
-test('lang: missingKeys is empty for tr, en and no language; lists untranslated keys otherwise', async () => {
+test('lang: missingKeys is empty for en and no language; lists untranslated keys otherwise (tr too)', async () => {
   const { missingKeys } = await load();
   const { all } = await keys();
-  assert.deepEqual(missingKeys(project({ '.kit.json': kitJson({ lang: 'tr' }) })), []);
+  assert.deepEqual([...missingKeys(project({ '.kit.json': kitJson({ lang: 'tr' }) }))].sort(), [...all].sort(), 'tr without tr.json: every key');
   assert.deepEqual(missingKeys(project({ '.kit.json': kitJson({ lang: 'en' }) })), []);
   assert.deepEqual(missingKeys(project(PENDING)), []);
   assert.deepEqual([...missingKeys(project({ '.kit.json': kitJson({ lang: 'de' }) }))].sort(), [...all].sort(), 'no file: every key');
@@ -270,11 +276,11 @@ test('lang: writeTranslation merges into .claude/i18n/<lang>.json, keeps earlier
   assert.equal(t(p, all[0]), `NEW ${M[all[0]].en}`);
 });
 
-test('lang: writeTranslation refuses when the language is tr, en or not chosen', async () => {
+test('lang: writeTranslation refuses when the language is en or not chosen (tr is allowed since 3.49.0)', async () => {
   const { writeTranslation } = await load();
   const { M, all } = await keys();
   const obj = { [all[0]]: M[all[0]].en };
-  for (const p of [project({ '.kit.json': kitJson({ lang: 'tr' }) }), project({ '.kit.json': kitJson({ lang: 'en' }) }), project(PENDING), project()]) {
+  for (const p of [project({ '.kit.json': kitJson({ lang: 'en' }) }), project(PENDING), project()]) {
     assert.throws(() => writeTranslation(p, obj));
     assert.equal(exists(p, '.claude/i18n'), false, 'nothing written');
   }
@@ -369,7 +375,9 @@ test('lang CLI: --write reads stdin, --check passes once every key is translated
   assert.deepEqual(Object.keys(JSON.parse(readFile(p, '.claude/i18n/de.json'))).sort(), [...all].sort());
   const c2 = cli(p, ['--check']);
   assert.equal(c2.status, 0, c2.stdout);
-  assert.equal(cli(project({ '.kit.json': kitJson({ lang: 'tr' }) }), ['--check']).status, 0, 'tr: nothing to check');
+  assert.equal(cli(project({ '.kit.json': kitJson({ lang: 'tr' }) }), ['--check']).status, 1, 'tr without tr.json: keys missing');
+  assert.equal(cli(project({ '.kit.json': kitJson({ lang: 'tr' }), '.claude/i18n/tr.json': shippedTr() }), ['--check']).status, 0, 'tr with the shipped tr.json: complete');
+  assert.equal(cli(project({ '.kit.json': kitJson({ lang: 'en' }) }), ['--check']).status, 0, 'en: nothing to check');
 });
 
 test('lang CLI attacker: --write rejects broken JSON, prototype keys and dropped placeholders, file unchanged', async () => {
@@ -385,9 +393,9 @@ test('lang CLI attacker: --write rejects broken JSON, prototype keys and dropped
     assert.notEqual(cli(p, ['--write'], input).status, 0, input);
     assert.equal(readFile(p, '.claude/i18n/de.json'), before, `${input}: file unchanged`);
   }
-  const tr = project({ '.kit.json': kitJson({ lang: 'tr' }) });
-  assert.notEqual(cli(tr, ['--write'], JSON.stringify({ [k]: M[k].en })).status, 0, 'tr has no translation file');
-  assert.equal(exists(tr, '.claude/i18n'), false);
+  const en = project({ '.kit.json': kitJson({ lang: 'en' }) });
+  assert.notEqual(cli(en, ['--write'], JSON.stringify({ [k]: M[k].en })).status, 0, 'en has no translation file');
+  assert.equal(exists(en, '.claude/i18n'), false);
 });
 
 // ---------- session-start ----------

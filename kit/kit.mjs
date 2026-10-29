@@ -45,6 +45,7 @@ const PERSONAL = /(^|\/)(\.env(\.(?!example(\.|$))[^/]*)?|secrets\/.*|\.claude\/
 // The rest belong to the project (CLAUDE.md, PRD, stack, settings.json...); the update only adds them if missing.
 const KIT_OWNED = [
   /^\.claude\/(commands|agents|hooks|board|findings|skills)\//,
+  /^\.claude\/i18n\/tr\.json$/,
   /^docs\/(security\/checklist|operations\/(release-checklist|maintenance|deploy-setup)|legal\/(privacy-kvkk|turkiye)|workflow\/(decision-protocol|skills|usage-limits|models))\.md$/,
 ];
 const isKitOwned = (rel) => KIT_OWNED.some((re) => re.test(rel));
@@ -121,7 +122,7 @@ const OLD_RULES = {
     'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-end)',
     // 3.10.0 allowed every tools.mjs flag; --enable and --commands are asked since 3.10.1, the broad rule skipped that
     'Bash(node .claude/hooks/tools.mjs:*)'],
-  ask: ['Bash(node .claude/hooks/freeze-guard.mjs --plan-ekle:*)', 'Bash(node .claude/hooks/gate.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac:*)'],
+  ask: [],
 };
 
 // settings.json belongs to the project and is not replaced on update, but the kit's permission rules must reach it:

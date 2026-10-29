@@ -1,5 +1,5 @@
 // Payment provider notification signatures (iyzico, PayTR). Verify before reading anything else from the request;
-// an unverified notification is rejected. Steps and sources: docs/legal/turkiye.md → "Ödeme bildirimleri".
+// an unverified notification is rejected. Steps and sources: docs/legal/turkiye.md → "Payment notifications".
 // Sources (checked 2026-10-25): docs.iyzico.com/en/advanced/webhook · dev.paytr.com/en/iframe-api/iframe-api-2-adim
 import { createHmac, timingSafeEqual } from 'node:crypto';
 

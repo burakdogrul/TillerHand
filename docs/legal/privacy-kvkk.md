@@ -1,54 +1,54 @@
-# Yasal / KVKK / Gizlilik
+# Legal / KVKK / Privacy
 
-> Bu bir kontrol listesidir, hukuki danışmanlık değildir. Kişisel veri işleyen veya ödeme alan
-> bir ürünü yayına almadan önce metinleri bir hukukçuya kontrol ettir.
-> Türkiye'de kullanıcıya hizmet veriyorsan KVKK (6698), yurt dışından kullanıcı varsa GDPR de gündeme gelir.
+> This is a checklist, not legal advice. Before you launch a product that processes personal data or takes payments,
+> have a lawyer check the texts.
+> If you serve users in Turkey, KVKK (6698) applies; if you have users from abroad, GDPR may apply too.
 
-## 1. Veri envanteri (önce bunu çıkar)
+## 1. Data inventory (do this first)
 
-| Veri | Neden toplanıyor (amaç) | Hukuki dayanak | Nerede saklanıyor (ülke) | Ne kadar süre | Kimlerle paylaşılıyor |
+| Data | Why it is collected (purpose) | Legal basis | Where it is stored (country) | How long | Who it is shared with |
 |---|---|---|---|---|---|
-| E-posta | Hesap, bildirim | Sözleşmenin ifası | [Servis, bölge] | Hesap silinene kadar | [E-posta servisi] |
-| IP, cihaz bilgisi | Güvenlik, hata takibi | Meşru menfaat | | | [Sentry vb.] |
+| Email | Account, notification | Performance of a contract | [Service, region] | Until the account is deleted | [Email service] |
+| IP, device information | Security, error tracking | Legitimate interest | | | [Sentry etc.] |
 | [...] | | | | | |
 
-Kural: **Amaç yoksa toplama.** Kullanmadığın veriyi isteme.
+Rule: **No purpose, no collection.** Do not ask for data you do not use.
 
-## 2. Yayında olması gereken metinler
+## 2. Texts that must be live
 
-- [ ] **Aydınlatma metni (KVKK md. 10):** Veri sorumlusu, amaçlar, aktarılan taraflar, toplama yöntemi, haklar.
-- [ ] **Gizlilik politikası:** Aydınlatma metniyle birleşik olabilir. Kayıt formunda ve footer'da link.
-- [ ] **Çerez politikası + çerez onay bandı:** Zorunlu olmayan (analitik, pazarlama) çerezler **onaydan önce yüklenmez**. Reddet butonu, kabul et kadar görünür olmalı.
-- [ ] **Kullanım şartları / üyelik sözleşmesi.**
-- [ ] **Açık rıza metni:** Sadece açık rıza gereken işlemler için (pazarlama, yurt dışına aktarımın bazı halleri, özel nitelikli veri). Aydınlatma metniyle aynı onay kutusunda birleştirme.
-- [ ] Ücretli ürün ise: **Mesafeli satış sözleşmesi** ve **ön bilgilendirme formu** (6502 sayılı Kanun), iade/cayma koşulları.
+- [ ] **Privacy notice (KVKK art. 10):** Data controller, purposes, parties it is transferred to, collection method, rights.
+- [ ] **Privacy policy:** Can be combined with the privacy notice. Link in the sign-up form and in the footer.
+- [ ] **Cookie policy + cookie consent banner:** Non-essential (analytics, marketing) cookies are **not loaded before consent**. The reject button must be as visible as the accept button.
+- [ ] **Terms of use / membership agreement.**
+- [ ] **Explicit consent text:** Only for processing that needs explicit consent (marketing, some cases of transfer abroad, special categories of data). Do not merge it into the same checkbox as the privacy notice.
+- [ ] For a paid product: **Distance sales contract** and **pre-information form** (Law no. 6502), return/withdrawal terms.
 
-## 3. Kullanıcı hakları süreçleri
+## 3. User rights processes
 
-- [ ] Kullanıcı verisini görebiliyor / indirebiliyor (veya talep edebiliyor).
-- [ ] **Hesap silme** uygulama içinden yapılabiliyor ve gerçekten siliyor/anonimleştiriyor (yedeklerdeki durum metinde belirtildi).
-- [ ] Başvuru kanalı (e-posta adresi) metinde yazılı; başvurular **en geç 30 gün** içinde yanıtlanıyor.
+- [ ] The user can see / download their data (or request it).
+- [ ] **Account deletion** can be done inside the app and really deletes/anonymizes (the status in backups is stated in the text).
+- [ ] The application channel (email address) is written in the text; applications are answered **within 30 days at most**.
 
-## 4. Yurt dışına veri aktarımı
+## 4. Transfer of data abroad
 
-Vercel, Supabase, AWS, OpenAI, Sentry gibi yurt dışı sunuculu servisler = yurt dışına aktarım.
+Services with servers abroad, such as Vercel, Supabase, AWS, OpenAI, Sentry = transfer abroad.
 
-- [ ] Hangi servislerin hangi bölgede veri tuttuğu veri envanterinde yazılı.
-- [ ] Mümkünse AB bölgesi seçildi.
-- [ ] KVKK md. 9 kapsamında aktarım dayanağı belirlendi (2024 değişikliği sonrası: standart sözleşme imzalanıyorsa Kurul'a süresi içinde bildirim gerekir). **Hukukçuya danış.**
+- [ ] Which services keep data in which region is written in the data inventory.
+- [ ] The EU region was chosen where possible.
+- [ ] The transfer basis under KVKK art. 9 was determined (after the 2024 amendment: if a standard contract is signed, notification to the Board is required within the deadline). **Ask a lawyer.**
 
-## 5. Diğer yükümlülükler
+## 5. Other obligations
 
-- [ ] **VERBİS** kayıt yükümlülüğü kontrol edildi (çalışan sayısı / bilanço eşiklerine göre muafiyet olabilir).
-- [ ] Ticari e-posta/SMS gönderiliyorsa: önceden onay, **İYS** (İleti Yönetim Sistemi) kaydı, her iletide ret linki.
-- [ ] Veri ihlali olursa: Kurul'a **72 saat** içinde bildirim prosedürü `docs/operations/maintenance.md` → olay müdahalede yazılı.
-- [ ] Çocuklara yönelik değilse yaş sınırı kullanım şartlarında belirtildi.
-- [ ] Kullanılan font, ikon, görsel ve kütüphanelerin lisansları ticari kullanıma uygun.
+- [ ] The **VERBİS** registration obligation was checked (an exemption may apply based on the number of employees / balance sheet thresholds).
+- [ ] If commercial email/SMS is sent: prior consent, **İYS** (Message Management System) registration, an opt-out link in every message.
+- [ ] In case of a data breach: the procedure for notifying the Board within **72 hours** is written in `docs/operations/maintenance.md` → incident response.
+- [ ] If the product is not aimed at children, the age limit is stated in the terms of use.
+- [ ] The licenses of the fonts, icons, images and libraries used allow commercial use.
 
-## 6. Mobil mağaza ek gereksinimleri
+## 6. Extra requirements for mobile stores
 
-`docs/architecture/stack.md` (mobil) → "Go live (extra)" bölümüne bak: App Store gizlilik etiketleri, Google Play Veri Güvenliği formu, uygulama içi hesap silme.
+See `docs/architecture/stack.md` (mobile) → the "Go live (extra)" section: App Store privacy labels, Google Play Data Safety form, in-app account deletion.
 
-## 7. Gözden geçirme
+## 7. Review
 
-Her **3 ayda bir** ve yeni bir veri türü / yeni bir servis eklendiğinde bu dosyayı ve yayındaki metinleri güncelle.
+Update this file and the live texts every **3 months** and whenever a new data type / a new service is added.
