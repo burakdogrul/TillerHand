@@ -20,8 +20,8 @@ const hashOf = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const node = (...args) => spawnSync(process.execPath, args, { encoding: 'utf8' });
 
 // Mimics a new project opened from the template with "Use this template"
-function cloneKit(ad) {
-  const target = path.join(tmp, ad);
+function cloneKit(name) {
+  const target = path.join(tmp, name);
   fs.cpSync(REPO, target, { recursive: true, filter: (src) => !/[\\/](\.git|node_modules)$/.test(src) && !src.endsWith('.kit.json') });
   return target;
 }
@@ -44,16 +44,16 @@ test('merge: objects deep, arrays without duplicates', () => {
   assert.deepEqual(merge({ a: [1, 2], b: { c: 1 } }, { a: [2, 3], b: { d: 2 } }), { a: [1, 2, 3], b: { c: 1, d: 2 } });
 });
 
-test('kur: web-saas + ai', () => {
+test('install: web-saas + ai', () => {
   const p = cloneKit('web');
   const r = installType(p, '--type', 'web-saas', '--addons', 'ai');
   assert.equal(r.status, 0, r.stderr);
-  assert.ok(!fs.existsSync(path.join(p, 'kit')), 'kit/ silindi');
+  assert.ok(!fs.existsSync(path.join(p, 'kit')), 'kit/ deleted');
   assert.match(read(path.join(p, 'docs/architecture/stack.md')), /Next\.js/, 'the stack placeholder was replaced by the type file');
   assert.ok(fs.existsSync(path.join(p, 'docs/design/design-guide.md')));
   assert.ok(fs.existsSync(path.join(p, 'docs/ai/guide.md')));
   assert.ok(fs.existsSync(path.join(p, '.claude/structure.json')) && fs.existsSync(path.join(p, 'docs/architecture/structure.md')), 'structure map and its guide');
-  assert.ok(fs.existsSync(path.join(p, '.claude/findings/protocol.md')) && fs.existsSync(path.join(p, '.claude/commands/findings-business.md')), 'bulgu sistemi');
+  assert.ok(fs.existsSync(path.join(p, '.claude/findings/protocol.md')) && fs.existsSync(path.join(p, '.claude/commands/findings-business.md')), 'findings system');
   assert.ok(!fs.existsSync(path.join(p, '.github/workflows/kit-tests.yml')), 'the kit-only workflow is not carried into the project');
   for (const sk of ['source-research', 'logo-design', 'ui-motion', 'motion-video']) assert.ok(fs.existsSync(path.join(p, `.claude/skills/${sk}/SKILL.md`)), `skill: ${sk}`);
   assert.match(read(path.join(p, 'README.md')), /\[PROJECT NAME\]/, 'README is the project template (English since 3.48.0)');
@@ -61,10 +61,10 @@ test('kur: web-saas + ai', () => {
   assert.ok(s.hooks.PostToolUse && s.hooks.PreToolUse && s.statusLine && s.enabledPlugins, 'settings merged');
   assert.ok(s.permissions.allow.includes('Bash(npm run lint)') && s.permissions.allow.includes('Bash(git status)'));
   const gi = read(path.join(p, '.gitignore'));
-  assert.ok(gi.includes('dashboard.html') && gi.includes('node_modules/'), '.gitignore = ortak + tip');
+  assert.ok(gi.includes('dashboard.html') && gi.includes('node_modules/'), '.gitignore = common + type');
   const env = read(path.join(p, '.env.example'));
-  assert.ok(env.includes('NEXT_PUBLIC_SUPABASE_URL') && env.includes('AI_MODEL_VARSAYILAN'), '.env.example = tip + AI');
-  assert.ok(!fs.readdirSync(p, { recursive: true }).some((f) => /\.(ekle|birlestir\.json)$/.test(f)), 'the patch file was not copied');
+  assert.ok(env.includes('NEXT_PUBLIC_SUPABASE_URL') && env.includes('AI_MODEL_DEFAULT'), '.env.example = type + AI');
+  assert.ok(!fs.readdirSync(p, { recursive: true }).some((f) => /\.(append|merge\.json)$/.test(f)), 'the patch file was not copied');
   const k = record(p);
   assert.equal(k.type, 'web-saas');
   assert.deepEqual(k.addons, ['ai']);
@@ -72,28 +72,28 @@ test('kur: web-saas + ai', () => {
 });
 
 test('install: stops before deleting kit/ when the clone has uncommitted work', () => {
-  const p = cloneKit('kirli');
+  const p = cloneKit('dirty');
   const git = (...a) => spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { cwd: p, encoding: 'utf8' });
   git('init', '-q');
   git('add', '-A');
-  git('commit', '-qm', 'ilk');
-  fs.appendFileSync(path.join(p, 'kit', 'kit.mjs'), '\n// yerel değişiklik\n');
+  git('commit', '-qm', 'first');
+  fs.appendFileSync(path.join(p, 'kit', 'kit.mjs'), '\n// local change\n');
   const r = installType(p, '--type', 'backend');
   assert.equal(r.status, 1);
   assert.match(r.stderr, /Uncommitted changes found/);
   assert.ok(fs.existsSync(path.join(p, 'kit', 'kit.mjs')) && !fs.existsSync(path.join(p, '.kit.json')), 'nothing changed');
-  git('commit', '-qam', 'iki');
+  git('commit', '-qam', 'second');
   assert.equal(installType(p, '--type', 'backend').status, 0, 'committed work can be restored from git: install runs');
 });
 
 test('lang install: the template path carries the chosen language into .kit.json, no lang without a valid choice', () => {
-  const p = cloneKit('dil');
+  const p = cloneKit('lang');
   fs.mkdirSync(path.join(p, '.claude/state'), { recursive: true });
   write(path.join(p, '.claude/state/lang.json'), JSON.stringify({ lang: 'en' }));
   const r = installType(p, '--type', 'backend');
   assert.equal(r.status, 0, r.stderr);
   assert.equal(record(p).lang, 'en', 'state lang written into .kit.json');
-  for (const [name, state] of [['dil-yok', null], ['dil-bozuk', JSON.stringify({ lang: '../x' })], ['dil-json', '{"lang": ']]) {
+  for (const [name, state] of [['lang-missing', null], ['lang-broken', JSON.stringify({ lang: '../x' })], ['lang-json', '{"lang": ']]) {
     const q = cloneKit(name);
     fs.rmSync(path.join(q, '.claude/state/lang.json'), { force: true }); // the developer's own choice must not leak into the clone
     fs.mkdirSync(path.join(q, '.claude/state'), { recursive: true }); // .claude/state is gitignored: a clean checkout has no such folder
@@ -105,13 +105,13 @@ test('lang install: the template path carries the chosen language into .kit.json
 });
 
 test('install: does not run twice, an invalid type is rejected', () => {
-  const p = cloneKit('iki');
-  assert.equal(installType(p, '--type', 'yok').status, 1);
+  const p = cloneKit('twice');
+  assert.equal(installType(p, '--type', 'none').status, 1);
   assert.equal(installType(p, '--type', 'mobile', '--keep-kit').status, 0);
   assert.equal(installType(p, '--type', 'mobile', '--keep-kit').status, 1);
 });
 
-test('guncelle: senaryolar', () => {
+test('update: scenarios', () => {
   const p = cloneKit('gnc');
   assert.equal(installType(p, '--type', 'backend').status, 0);
   let r = update(p);
@@ -119,27 +119,27 @@ test('guncelle: senaryolar', () => {
   assert.match(r.stdout, /No changes\./);
 
   const k = record(p);
-  const f1 = '.claude/commands/plan-task.md'; write(path.join(p, f1), 'eski kit'); k.files[f1] = hashOf('eski kit');
-  const f2 = '.claude/commands/review-changes.md'; write(path.join(p, f2), 'kullanici'); k.files[f2] = hashOf('eski kit');
-  const f3 = 'docs/security/checklist.md'; write(path.join(p, f3), 'kullanici notu');
+  const f1 = '.claude/commands/plan-task.md'; write(path.join(p, f1), 'old kit'); k.files[f1] = hashOf('old kit');
+  const f2 = '.claude/commands/review-changes.md'; write(path.join(p, f2), 'user'); k.files[f2] = hashOf('old kit');
+  const f3 = 'docs/security/checklist.md'; write(path.join(p, f3), 'user note');
   const f4 = 'docs/product/launch.md'; fs.rmSync(path.join(p, f4));
   const f5 = 'docs/product/glossary.md'; fs.rmSync(path.join(p, f5)); delete k.files[f5];
-  write(path.join(p, 'CLAUDE.md'), 'proje kurali');
+  write(path.join(p, 'CLAUDE.md'), 'project rule');
   fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify(k));
 
   r = update(p);
   assert.equal(r.status, 0, r.stderr);
-  assert.notEqual(read(path.join(p, f1)), 'eski kit', '(1) an untouched kit file was updated');
-  assert.equal(read(path.join(p, f2)), 'kullanici', '(2) the user change was kept');
+  assert.notEqual(read(path.join(p, f1)), 'old kit', '(1) an untouched kit file was updated');
+  assert.equal(read(path.join(p, f2)), 'user', '(2) the user change was kept');
   assert.ok(fs.existsSync(path.join(p, f2 + '.kit-new')), '(2) .kit-new was left');
-  assert.equal(read(path.join(p, f3)), 'kullanici notu', '(3) kit unchanged: not touched');
+  assert.equal(read(path.join(p, f3)), 'user note', '(3) kit unchanged: not touched');
   assert.ok(!fs.existsSync(path.join(p, f3 + '.kit-new')));
   assert.ok(!fs.existsSync(path.join(p, f4)), '(4) a deleted file did not come back');
   assert.ok(fs.existsSync(path.join(p, f5)), '(5) a new kit file was added');
-  assert.equal(read(path.join(p, 'CLAUDE.md')), 'proje kurali', '(6) a project-owned file was not touched');
+  assert.equal(read(path.join(p, 'CLAUDE.md')), 'project rule', '(6) a project-owned file was not touched');
 });
 
-test('guncelle: sonradan AI eki', () => {
+test('update: AI add-on added later', () => {
   const p = cloneKit('ek');
   assert.equal(installType(p, '--type', 'mobile').status, 0);
   assert.ok(!fs.existsSync(path.join(p, 'docs/ai/guide.md')));
@@ -147,18 +147,18 @@ test('guncelle: sonradan AI eki', () => {
   assert.equal(r.status, 0, r.stderr);
   assert.ok(fs.existsSync(path.join(p, 'docs/ai/guide.md')));
   const env = read(path.join(p, '.env.example'));
-  assert.equal(env.split('AI_MODEL_VARSAYILAN').length, 2, 'the patch was appended once');
+  assert.equal(env.split('AI_MODEL_DEFAULT').length, 2, 'the patch was appended once');
   update(p, '--addons', 'ai');
-  assert.equal(read(path.join(p, '.env.example')).split('AI_MODEL_VARSAYILAN').length, 2, 'tekrar eklenmedi');
+  assert.equal(read(path.join(p, '.env.example')).split('AI_MODEL_DEFAULT').length, 2, 'not appended again');
   assert.deepEqual(record(p).addons, ['ai']);
 });
 
 test('init: the kit stays in its own folder, the project is set up in its folder', () => {
-  const game = path.join(tmp, 'oyun');
+  const game = path.join(tmp, 'game');
   fs.mkdirSync(game);
-  fs.cpSync(cloneKit('oyun-kit'), path.join(game, 'git_repo'), { recursive: true });
+  fs.cpSync(cloneKit('game-kit'), path.join(game, 'git_repo'), { recursive: true });
   const kitMjs = path.join(game, 'git_repo', 'kit', 'kit.mjs');
-  fs.writeFileSync(path.join(game, 'git_repo', 'CLAUDE.local.md'), 'kişisel not'); // yerel klasörden kurulum
+  fs.writeFileSync(path.join(game, 'git_repo', 'CLAUDE.local.md'), 'personal note'); // install from a local folder
   // Git-ignored personal files and secrets of a local kit checkout (3.16.2)
   const personal = ['.claude/settings.local.json', '.claude/state/gate.json', '.env', '.env.local', 'secrets/key.txt', 'debug.log', 'CLAUDE-SECURITY-1/r.md'];
   for (const f of personal) {
@@ -172,16 +172,16 @@ test('init: the kit stays in its own folder, the project is set up in its folder
   assert.ok(!fs.existsSync(path.join(game, '.claude-plugin')), 'the kit marketplace is not copied into the project');
   for (const f of personal) assert.ok(!fs.existsSync(path.join(game, f)), `${f} is not copied into the project`);
   for (const f of ['CLAUDE.md', 'README.md', '.claude/commands/start.md', '.claude/commands/adopt.md', 'docs/workflow/progress.md', '.git']) {
-    assert.ok(fs.existsSync(path.join(game, f)), `${f} kuruldu`);
+    assert.ok(fs.existsSync(path.join(game, f)), `${f} installed`);
   }
   assert.ok(!fs.existsSync(path.join(game, 'kit')), 'the kit\'s own folder was not copied into the project');
   assert.ok(fs.existsSync(kitMjs), 'the kit folder was not touched');
   assert.match(read(path.join(game, '.gitignore')), /^git_repo\/$/m);
   assert.match(read(path.join(game, 'README.md')), /^# \[PROJECT NAME\]/m, 'the project\'s README template (English since 3.48.0)');
   assert.deepEqual([record(game).type, record(game).kit], [null, 'git_repo']);
-  const durum = spawnSync(process.execPath, [path.join(game, '.claude/hooks/statusline.mjs')], { input: JSON.stringify({ workspace: { project_dir: game } }), encoding: 'utf8' }).stdout;
-  assert.match(durum, /Kit not set up.*\/adopt/, 'no language chosen before setup: English');
-  assert.notEqual(node(kitMjs, 'init', '--project', game).status, 0, 'ikinci init reddedilir');
+  const statusText = spawnSync(process.execPath, [path.join(game, '.claude/hooks/statusline.mjs')], { input: JSON.stringify({ workspace: { project_dir: game } }), encoding: 'utf8' }).stdout;
+  assert.match(statusText, /Kit not set up.*\/adopt/, 'no language chosen before setup: English');
+  assert.notEqual(node(kitMjs, 'init', '--project', game).status, 0, 'a second init is refused');
 
   const k = node(kitMjs, 'install', '--type', 'web-saas', '--project', game);
   assert.equal(k.status, 0, k.stderr);
@@ -193,12 +193,12 @@ test('init: the kit stays in its own folder, the project is set up in its folder
 });
 
 test('init: in a non-empty folder it does not touch the project\'s files', () => {
-  const p = path.join(tmp, 'eski-proje');
-  const file = { 'CLAUDE.md': '# Eski\n- Her zaman pnpm kullan\n', '.gitignore': 'node_modules\n', 'package.json': '{"name":"eski"}\n', '.claude/settings.json': '{"model":"x","permissions":{"allow":["Bash(pnpm test)"]}}\n', '.env.example': 'ESKI=\n' };
+  const p = path.join(tmp, 'old-project');
+  const file = { 'CLAUDE.md': '# Old\n- Always use pnpm\n', '.gitignore': 'node_modules\n', 'package.json': '{"name":"old"}\n', '.claude/settings.json': '{"model":"x","permissions":{"allow":["Bash(pnpm test)"]}}\n', '.env.example': 'OLD=\n' };
   for (const [f, s] of Object.entries(file)) { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); write(path.join(p, f), s); }
-  const r = node(path.join(cloneKit('eski-kit'), 'kit', 'kit.mjs'), 'init', '--project', p);
+  const r = node(path.join(cloneKit('old-kit'), 'kit', 'kit.mjs'), 'init', '--project', p);
   assert.equal(r.status, 0, r.stderr);
-  assert.equal(read(path.join(p, 'CLAUDE.md')), file['CLAUDE.md'], 'eski CLAUDE.md duruyor');
+  assert.equal(read(path.join(p, 'CLAUDE.md')), file['CLAUDE.md'], 'the old CLAUDE.md stays');
   assert.ok(fs.existsSync(path.join(p, 'CLAUDE.md.kit-new')) && /CLAUDE\.md/.test(r.stdout), 'the kit\'s CLAUDE.md is beside it');
   assert.equal(read(path.join(p, 'package.json')), file['package.json']);
   assert.match(read(path.join(p, '.gitignore')), /^node_modules$/m);
@@ -206,12 +206,12 @@ test('init: in a non-empty folder it does not touch the project\'s files', () =>
   const settings = JSON.parse(read(path.join(p, '.claude/settings.json')));
   assert.equal(settings.model, 'x', 'the project\'s setting stayed');
   assert.ok(settings.permissions.allow.includes('Bash(pnpm test)') && settings.hooks, 'permissions and the kit\'s hooks merged');
-  const k = node(path.join(tmp, 'eski-kit', 'kit', 'kit.mjs'), 'install', '--type', 'web-saas', '--project', p);
+  const k = node(path.join(tmp, 'old-kit', 'kit', 'kit.mjs'), 'install', '--type', 'web-saas', '--project', p);
   assert.equal(k.status, 0, k.stderr);
   assert.equal(read(path.join(p, '.env.example')), file['.env.example'], 'the project\'s .env.example is still there');
   assert.ok(fs.existsSync(path.join(p, '.env.example.kit-new')));
   // 3.29.0: the kit clone outside the project is this machine's path: it stays out of the committed .kit.json
-  const kitDir = path.join(tmp, 'eski-kit');
+  const kitDir = path.join(tmp, 'old-kit');
   assert.equal(record(p).kit, 'local');
   assert.ok(!read(path.join(p, '.kit.json')).includes(path.basename(tmp)), 'no machine path in .kit.json');
   assert.equal(JSON.parse(read(path.join(p, '.kit.local.json'))).kit, kitDir);
@@ -219,9 +219,9 @@ test('init: in a non-empty folder it does not touch the project\'s files', () =>
 });
 
 test('update: an old .kit.json with an absolute kit path is moved to .kit.local.json', () => {
-  const p = cloneKit('eski-yol');
+  const p = cloneKit('old-path');
   assert.equal(installType(p, '--type', 'backend', '--keep-kit').status, 0);
-  const old = { ...record(p), kit: path.join(tmp, 'eski-kit') }; // a kit folder that exists on this machine
+  const old = { ...record(p), kit: path.join(tmp, 'old-kit') }; // a kit folder that exists on this machine
   fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify(old));
   fs.rmSync(path.join(p, '.kit.local.json'), { force: true });
   const r = update(p);
@@ -232,7 +232,7 @@ test('update: an old .kit.json with an absolute kit path is moved to .kit.local.
   assert.match(read(path.join(p, '.gitignore')), /^\.kit\.local\.json$/m);
   // Written on another machine (another OS's form too): not copied into .kit.local.json, /start and /adopt ask
   fs.rmSync(path.join(p, '.kit.local.json'));
-  for (const elsewhere of ['Z:\\baska\\makine\\kit', '/baska/makine/kit']) {
+  for (const elsewhere of ['Z:\\other\\machine\\kit', '/other/machine/kit']) {
     fs.writeFileSync(path.join(p, '.kit.json'), JSON.stringify({ ...old, kit: elsewhere }));
     const u = update(p);
     assert.equal(u.status, 0, u.stderr);
@@ -243,11 +243,11 @@ test('update: an old .kit.json with an absolute kit path is moved to .kit.local.
 });
 
 test('session start: the next command is shown to the user (after /clear)', () => {
-  const oturum = (p) => JSON.parse(spawnSync(process.execPath, [path.join(p, '.claude/hooks/session-start.mjs')], {
+  const session = (p) => JSON.parse(spawnSync(process.execPath, [path.join(p, '.claude/hooks/session-start.mjs')], {
     encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p, HOME: p, USERPROFILE: p }, // not the developer's preferences
   }).stdout);
-  const p = cloneKit('oturum');
-  assert.match(oturum(p).systemMessage, /\/start/);
+  const p = cloneKit('session');
+  assert.match(session(p).systemMessage, /\/start/);
   assert.equal(installType(p, '--type', 'backend').status, 0);
   const progress = path.join(p, 'docs/workflow/progress.md');
   // 3.48.0: the shipped progress.md is English; the label must exist, so the replace never silently does nothing
@@ -258,32 +258,32 @@ test('session start: the next command is shown to the user (after /clear)', () =
   };
   // 3.49.0: installed without a language choice, the messages are English
   set('Setup step', '4/9');
-  assert.match(oturum(p).systemMessage, /Continue: \/start \(step 4\/9\)/);
+  assert.match(session(p).systemMessage, /Continue: \/start \(step 4\/9\)/);
   set('Active phase', 'Phase 0');
   const filePath = path.join(p, 'docs/product/roadmap.md');
   write(filePath, read(filePath).replace('- [ ] G-001', '- [x] G-001'));
-  const o = oturum(p);
+  const o = session(p);
   assert.match(o.systemMessage, /Next: \/build G-002 · Project skeleton set up/);
   assert.match(o.hookSpecificOutput.additionalContext, /\/build G-002/);
 
   const handoff = path.join(p, 'docs/workflow/handoff.md');
   write(handoff, '# Handoff note\n\n**Status:** waiting\n**From:** a\n');
-  assert.match(oturum(p).systemMessage, /Handoff note waiting: \/handoff take/);
+  assert.match(session(p).systemMessage, /Handoff note waiting: \/handoff take/);
   const r = node(path.join(p, '.claude/hooks/dashboard.mjs'), p);
   assert.equal(r.status, 0, r.stderr);
   assert.ok(read(path.join(p, 'dashboard.html')).includes('Handoff note waiting'), 'the dashboard shows the handoff note in the alert list');
   write(handoff, read(handoff).replace('waiting', 'taken over'));
-  assert.match(oturum(p).systemMessage, /Next: \/build G-002/);
+  assert.match(session(p).systemMessage, /Next: \/build G-002/);
   // An old Turkish handoff note is not understood: no handoff suggestion
   write(handoff, '# Devir notu\n\n**Durum:** bekliyor\n');
-  assert.doesNotMatch(oturum(p).systemMessage, /\/handoff take/);
+  assert.doesNotMatch(session(p).systemMessage, /\/handoff take/);
 });
 
 test('status line and dashboard: before and after setup', () => {
   const statusBar = (p) => spawnSync(process.execPath, [path.join(p, '.claude/hooks/statusline.mjs')], {
     input: JSON.stringify({ workspace: { project_dir: p } }), encoding: 'utf8',
   }).stdout;
-  const p = cloneKit('durum');
+  const p = cloneKit('status');
   assert.match(statusBar(p), /Kit not set up/, 'no language chosen before setup: English');
   assert.equal(installType(p, '--type', 'web-saas').status, 0);
   const progress = path.join(p, 'docs/workflow/progress.md');
@@ -314,7 +314,7 @@ test('3.19.1 update removes the allowed Playwright CLI rules; the user\'s own ru
   assert.ok(s.permissions.allow.includes(own) && s.permissions.allow.includes('Bash(npm run dev)'));
 });
 
-test('3.15.0 update settings migration: missing kit permission rules are added, project rules stay, the old dashboard flag is rewritten', () => {
+test('3.15.0 update settings migration: missing kit permission rules are added, project rules stay, hooks are not touched', () => {
   const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
   const stop = (flag) => ({ Stop: [{ hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/hooks/dashboard.mjs" ${flag}` }] }] });
   // 3.49.0: the five Turkish-named allow rules (--plan-kaydet, --plan-bitir, --gerekli, --olc, --kapat) left OLD_RULES:
@@ -335,7 +335,8 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   assert.deepEqual(s.permissions.ask.slice(0, formerKit.length), formerKit, 'the Turkish-named rules are not in OLD_RULES: kept, in order');
   assert.deepEqual(s.permissions.allow.slice(0, 2), own.slice(0, 2), 'project rules kept, in order');
   assert.ok(s.permissions.ask.includes(own[2]));
-  assert.deepEqual(s.hooks, stop('--quiet'));
+  // 3.49.0 (K19): the old-install rewrite of the Turkish dashboard flag is gone; a hook command is never rewritten
+  assert.deepEqual(s.hooks, stop('--sessiz'), 'the old Turkish flag is not read or rewritten');
   const save = 'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)';
   const moved = migrateSettings({ permissions: { allow: [save] } }, kit).settings.permissions;
   assert.ok(!moved.allow.includes(save) && moved.ask.includes(save), '3.28.0: --plan-save moves from allow to ask');
@@ -348,7 +349,7 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   assert.deepEqual(old.hooks, stop('--sessiz'), 'the input is not mutated');
 });
 
-test('F-10 update settings migration: the kit command list is added when the project has none, a Tam profile ({}) is kept', () => {
+test('F-10 update settings migration: the kit command list is added when the project has none, a Full profile ({}) is kept', () => {
   const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
   const { settings: s, added } = migrateSettings({ permissions: {} }, kit);
   assert.deepEqual(s.skillOverrides, kit.skillOverrides);

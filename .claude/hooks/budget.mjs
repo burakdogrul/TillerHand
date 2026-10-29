@@ -31,7 +31,7 @@ export function longFiles(root, files) {
 export const lizardArgs = (files) => ['-C', String(BUDGET.complexity), '-L', String(BUDGET.function), '-w', '--', ...files];
 
 export function changedFiles(root, base) {
-  // -z: Turkish or spaced paths are not quoted and escaped; --end-of-options: base is not taken for a flag
+  // -z: non-ASCII or spaced paths are not quoted and escaped; --end-of-options: base is not taken for a flag
   const git = (...a) => execFileSync('git', a, { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
   let list;
   // base unknown (new branch, a commit missing from the clone after force-push): the whole repo is measured

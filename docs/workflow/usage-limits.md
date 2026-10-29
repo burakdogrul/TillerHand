@@ -18,7 +18,7 @@
 | 🟡 yellow | 60–84% | 70–89% | Before work starts, state the estimated cost. In board meetings, halve the member count. |
 | 🔴 red | ≥ 85% | ≥ 90% | Before new work starts, state the estimated cost and the remaining share in one line, then continue. Offer the options in §3 only if the user asks. |
 
-The thresholds are in `.claude/hooks/usage.mjs` → `ESIKLER`; if you change them, change both together.
+The thresholds are in `.claude/hooks/usage.mjs` → `THRESHOLDS`; if you change them, change both together.
 
 ## 3. When planning work
 

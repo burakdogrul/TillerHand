@@ -32,21 +32,21 @@ const weak = (before, after) => {
 };
 
 test('F-02 test file detection', () => {
-  for (const f of ['src/a.test.ts', 'b.spec.tsx', 'tests/e2e/giris.ts', 'src/features/x/__tests__/y.ts', 'app/test_odeme.py', 'odeme_test.py', 'kit/tests/x.test.mjs'])
+  for (const f of ['src/a.test.ts', 'b.spec.tsx', 'tests/e2e/login.ts', 'src/features/x/__tests__/y.ts', 'app/test_payment.py', 'payment_test.py', 'kit/tests/x.test.mjs'])
     assert.ok(isTestFile(f), f);
   for (const f of ['src/test-utils.ts', 'src/latest.ts', 'docs/test-plan.md', 'contest.py'])
     assert.ok(!isTestFile(f), f);
 });
 
 test('F-02 deleting an assert, adding .skip/.only, loosening an expectation are caught', () => {
-  const old = "test('Ö-01.1 toplam', () => {\n  expect(topla(1, 2)).toBe(3);\n  expect(topla(0, 0)).toBe(0);\n});\n";
-  assert.match(weak(old, old.replace('  expect(topla(0, 0)).toBe(0);\n', '')), /expectation \(expect\/assert\) is deleted/);
+  const old = "test('AC-01.1 sum', () => {\n  expect(sum(1, 2)).toBe(3);\n  expect(sum(0, 0)).toBe(0);\n});\n";
+  assert.match(weak(old, old.replace('  expect(sum(0, 0)).toBe(0);\n', '')), /expectation \(expect\/assert\) is deleted/);
   assert.match(weak(old, old.replace("test('", "test.skip('")), /test is skipped or focused/);
   assert.match(weak(old, old.replace("test('", "test .only ('")), /test is skipped or focused/, 'spaced spelling');
   assert.match(weak(old, old.replace("test('", "it.skip.each([1])('")), /test is skipped or focused/);
   assert.match(weak(old, old.replace('.toBe(3)', '.toBeTruthy()')), /expectation is loosened/);
-  assert.match(weak(old, old.replace('  expect(topla(0', '  // expect(topla(0')), /expectation \(expect\/assert\) is deleted/, 'commenting out counts as deleting');
-  assert.match(weak(old, old.replace('  expect(topla(0, 0)).toBe(0);', '  /* expect(topla(0, 0)).toBe(0); */')), /expectation \(expect\/assert\) is deleted/);
+  assert.match(weak(old, old.replace('  expect(sum(0', '  // expect(sum(0')), /expectation \(expect\/assert\) is deleted/, 'commenting out counts as deleting');
+  assert.match(weak(old, old.replace('  expect(sum(0, 0)).toBe(0);', '  /* expect(sum(0, 0)).toBe(0); */')), /expectation \(expect\/assert\) is deleted/);
   assert.match(weak('def test_a():\n    assert a == 1\n    assert b == 2\n', 'def test_a():\n    assert a == 1\n    # assert b == 2\n'), /expectation \(expect\/assert\) is deleted/);
   assert.match(weak('def test_a():\n    assert a\n', '@pytest.mark.skip\ndef test_a():\n    assert a\n'), /test is skipped or focused/);
   assert.match(weak('', "test.only('x', () => {});"), /test is skipped or focused/, '.only in a new file');
@@ -56,8 +56,8 @@ test('F-02 an edit that strengthens a test or is neutral stays silent', () => {
   const old = "test('a', () => {\n  expect(x).toBeTruthy();\n});\n";
   assert.equal(weakening(old, old.replace('.toBeTruthy()', '.toBe(3)')), null, 'tightening');
   assert.equal(weakening(old, old + "test('b', () => { expect(y).toBe(1); });\n"), null, 'adding a test');
-  assert.equal(weakening(old, old.replace("'a'", "'a yeniden adlandı'")), null);
-  assert.equal(weakening('', "test('yeni', () => { expect(1).toBe(1); });"), null, 'new test file');
+  assert.equal(weakening(old, old.replace("'a'", "'a renamed'")), null);
+  assert.equal(weakening('', "test('new', () => { expect(1).toBe(1); });"), null, 'new test file');
   assert.equal(weakening("const url = 'http://x';\nexpect(a).toBe(1);\n", "const url = 'http://y';\nexpect(a).toBe(1);\n"), null, 'a URL is not a comment');
 });
 
@@ -68,8 +68,8 @@ test('F-02 parseInput gives the old and new text (three tools)', () => {
   assert.deepEqual([m.before, m.after], ['A\nC', 'B\nD']);
   const w = parseInput({ tool_name: 'Write', tool_input: { file_path: '/p/a.test.ts', content: 'X' } }).files[0];
   assert.deepEqual([w.before, w.after], [undefined, 'X'], 'Write: the old text is read from disk');
-  const x = parseInput({ tool_name: 'apply_patch', turn_id: 't', tool_input: { command: '*** Begin Patch\n*** Update File: a.test.ts\n@@\n-  expect(a).toBe(1);\n+  // yok\n*** Delete File: b.test.ts\n*** End Patch' } }).files;
-  assert.deepEqual([x[0].before, x[0].after], ['  expect(a).toBe(1);\n', '  // yok\n']);
+  const x = parseInput({ tool_name: 'apply_patch', turn_id: 't', tool_input: { command: '*** Begin Patch\n*** Update File: a.test.ts\n@@\n-  expect(a).toBe(1);\n+  // gone\n*** Delete File: b.test.ts\n*** End Patch' } }).files;
+  assert.deepEqual([x[0].before, x[0].after], ['  expect(a).toBe(1);\n', '  // gone\n']);
   assert.equal(x[1].deleted, true);
   const ag = parseInput({ toolCall: { name: 'replace_file_content', args: { TargetFile: '/p/a.test.ts', TargetContent: 'A', ReplacementContent: 'B' } }, workspacePaths: ['/p'] }).files[0];
   assert.deepEqual([ag.before, ag.after], ['A', 'B']);
@@ -116,7 +116,7 @@ test('F-02 3.13.1 heuristics: ;// comment, #assert, skipIf/runIf, expect without
 });
 
 test('F-02 3.13.1 test path patterns', () => {
-  for (const f of ['src/app.e2e-spec.ts', 'pkg/odeme_test.go', 'spec/models/user_spec.rb']) assert.ok(isTestFile(f), f);
+  for (const f of ['src/app.e2e-spec.ts', 'pkg/payment_test.go', 'spec/models/user_spec.rb']) assert.ok(isTestFile(f), f);
 });
 
 test('F-02 3.13.1 a scope-narrowing change in a test config is asked, others are free', () => {
@@ -125,7 +125,7 @@ test('F-02 3.13.1 a scope-narrowing change in a test config is asked, others are
   assert.equal(edit('vitest.config.ts', "plugins: [],", "plugins: [react()],"), null, 'a plugin is free');
   assert.equal(edit('package.json', '"test": "vitest run",', '"test": "vitest run --passWithNoTests",').hookSpecificOutput.permissionDecision, 'ask');
   assert.equal(edit('package.json', '"lint": "eslint .",', '"lint": "eslint src",'), null);
-  assert.equal(edit('conftest.py', '', 'collect_ignore = ["tests/odeme"]\n').hookSpecificOutput.permissionDecision, 'ask');
+  assert.equal(edit('conftest.py', '', 'collect_ignore = ["tests/payment"]\n').hookSpecificOutput.permissionDecision, 'ask');
   assert.equal(edit('src/package.json.ts', '"test": 1', '"test": 2'), null, 'not a config file');
 });
 
@@ -179,8 +179,8 @@ test('test-writer K2 hook: in Claude a test file is written only by the test-wri
   const file = path.join(p, 'g.test.ts');
   fs.writeFileSync(file, "test('g', () => {\n  expect(1).toBe(1);\n  expect(2).toBe(2);\n});\n");
   const grow = (extra) => ({ tool_name: 'Edit', cwd: p, ...extra, tool_input: { file_path: file, old_string: '  expect(2).toBe(2);\n', new_string: '  expect(2).toBe(2);\n  expect(3).toBe(3);\n' } });
-  const fresh = (extra) => ({ tool_name: 'Write', cwd: p, ...extra, tool_input: { file_path: path.join(p, 'src/yeni.test.ts'), content: "test('y', () => { expect(1).toBe(1); });\n" } });
-  const multi = (extra) => ({ tool_name: 'MultiEdit', cwd: p, ...extra, tool_input: { file_path: file, edits: [{ old_string: "test('g'", new_string: "test('g yeniden'" }] } });
+  const fresh = (extra) => ({ tool_name: 'Write', cwd: p, ...extra, tool_input: { file_path: path.join(p, 'src/new.test.ts'), content: "test('y', () => { expect(1).toBe(1); });\n" } });
+  const multi = (extra) => ({ tool_name: 'MultiEdit', cwd: p, ...extra, tool_input: { file_path: file, edits: [{ old_string: "test('g'", new_string: "test('g again'" }] } });
   for (const [label, extra] of [['no agent_type (main session)', {}], ['general-purpose', { agent_type: 'general-purpose' }], ['another agent', { agent_type: 'code-reviewer' }], ['not a string', { agent_type: 7 }]]) {
     for (const input of [grow(extra), fresh(extra), multi(extra)]) {
       const out = run(input)?.hookSpecificOutput;
@@ -226,7 +226,7 @@ test('test-writer K5 the agent and the docs: build, fix-bug and AGENTS.md rule 7
 test('test-writer K7a hook: spellings Windows resolves to the same test file are test files too', () => {
   const base = path.join(p, 'src', 'a.test.ts');
   const content = "test('k7', () => { expect(1).toBe(1); });\n";
-  for (const [label, file] of [['trailing dot', `${base}.`], ['trailing space', `${base} `], ['::$DATA stream', `${base}::$DATA`], ['named stream', `${base}:akis`]]) {
+  for (const [label, file] of [['trailing dot', `${base}.`], ['trailing space', `${base} `], ['::$DATA stream', `${base}::$DATA`], ['named stream', `${base}:flow`]]) {
     const out = run({ tool_name: 'Write', cwd: p, tool_input: { file_path: file, content } })?.hookSpecificOutput;
     assert.equal(out?.permissionDecision, 'deny', `no agent, ${label}`);
     assert.match(out.permissionDecisionReason, /test-writer/, `${label}: the reason names the agent`);
@@ -269,13 +269,13 @@ test('test-writer K8b hook: a write through a folder link to tests into a nested
     t.skip(`folder link could not be created: ${e.code}`);
     return;
   }
-  const file = path.join(link, 'yeni', 'alt', 'x.ts');
+  const file = path.join(link, 'new', 'sub', 'x.ts');
   assert.equal(fs.existsSync(path.dirname(file)), false, 'the nested folder does not exist yet');
   const write = (extra) => run({ tool_name: 'Write', cwd: root, ...extra, tool_input: { file_path: file, content: "test('x', () => { expect(1).toBe(1); });\n" } }, { CLAUDE_PROJECT_DIR: root })?.hookSpecificOutput;
   const out = write({});
-  assert.equal(out?.permissionDecision, 'deny', 'no agent, lnk/yeni/alt/x.ts');
+  assert.equal(out?.permissionDecision, 'deny', 'no agent, lnk/new/sub/x.ts');
   assert.match(out.permissionDecisionReason, /test-writer/);
-  assert.notEqual(write({ agent_type: 'test-writer' })?.permissionDecision, 'deny', 'test-writer, lnk/yeni/alt/x.ts');
+  assert.notEqual(write({ agent_type: 'test-writer' })?.permissionDecision, 'deny', 'test-writer, lnk/new/sub/x.ts');
 });
 
 // K9: test-writer's writes are recorded (PostToolUse --record) so the commit gate can tell them from indirect changes.
@@ -284,7 +284,7 @@ const digest = (file) => crypto.createHash('sha256').update(fs.readFileSync(file
 const stateFile = (root) => path.join(root, '.claude', 'state', 'test-writer.json');
 // A missing or unreadable record shows up as a wrong value in the assertion, not as a crash of the test
 const recorded = (root) => {
-  try { return JSON.parse(fs.readFileSync(stateFile(root), 'utf8')).files; } catch (e) { return `kayıt okunamadı: ${e.code ?? e.message}`; }
+  try { return JSON.parse(fs.readFileSync(stateFile(root), 'utf8')).files; } catch (e) { return `record unreadable: ${e.code ?? e.message}`; }
 };
 const freshRoot = (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'test-guard-k9-'));
@@ -331,7 +331,7 @@ test('test-writer K9a --record: other agents, the main session, non-test files a
   for (const [label, extra] of [['main session (no agent_type)', {}], ['general-purpose', { agent_type: 'general-purpose' }], ['code-reviewer', { agent_type: 'code-reviewer' }], ['not a string', { agent_type: ['test-writer'] }]])
     neverBlocks(write(b, extra), label);
   // another agent changes the recorded file: its record is not refreshed
-  fs.appendFileSync(a, '// betik\n');
+  fs.appendFileSync(a, '// script\n');
   neverBlocks(write(a, {}), 'main session on a recorded file');
   for (const rel of ['src/a.ts', 'package.json', 'vitest.config.ts', 'docs/test-plan.md'])
     neverBlocks(write(put(root, rel, '{}\n'), { agent_type: 'test-writer' }), `test-writer, ${rel}`);
@@ -342,12 +342,12 @@ test('test-writer K9a --record: a broken or missing state file and a broken inpu
   const root = freshRoot(t);
   const a = put(root, 'src/a.test.ts', "test('a', () => { expect(1).toBe(1); });\n");
   const input = { tool_name: 'Write', agent_type: 'test-writer', cwd: root, tool_input: { file_path: a, content: fs.readFileSync(a, 'utf8') } };
-  for (const broken of ['{bozuk', '', 'null', '[]', '{"files": 5}', '{"files": "x"}']) {
+  for (const broken of ['{broken', '', 'null', '[]', '{"files": 5}', '{"files": "x"}']) {
     put(root, '.claude/state/test-writer.json', broken);
     neverBlocks(record(input, root), `state file: ${JSON.stringify(broken)}`);
     assert.deepEqual(recorded(root), { 'src/a.test.ts': digest(a) }, `state file: ${JSON.stringify(broken)}`);
   }
-  for (const bad of ['', 'json değil', '{"tool_name": "Write"}', JSON.stringify({ tool_name: 'Write', agent_type: 'test-writer', tool_input: { file_path: path.join(root, 'src/yok.test.ts') } })])
+  for (const bad of ['', 'not json', '{"tool_name": "Write"}', JSON.stringify({ tool_name: 'Write', agent_type: 'test-writer', tool_input: { file_path: path.join(root, 'src/missing.test.ts') } })])
     neverBlocks(record(bad, root), `input: ${bad.slice(0, 30)}`);
 });
 

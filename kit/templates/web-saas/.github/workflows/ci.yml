@@ -82,8 +82,8 @@ jobs:
         if: hashFiles('supabase/config.toml') != ''
         run: |
           # Only the needed keys are taken; the output is not run as a shell command
-          anahtarlar=$(npx -y supabase@2.120.0 status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL|PUBLISHABLE_KEY|SECRET_KEY)=')
-          while IFS="=" read -r ad deger; do deger="${deger%\"}"; export "$ad=${deger#\"}"; done <<< "$anahtarlar"
+          keys=$(npx -y supabase@2.120.0 status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL|PUBLISHABLE_KEY|SECRET_KEY)=')
+          while IFS="=" read -r name value; do value="${value%\"}"; export "$name=${value#\"}"; done <<< "$keys"
           node --test tests/security/rls.mjs
 
   semgrep:

@@ -63,8 +63,8 @@ test('parseInput: all three formats give the same command and file', () => {
 });
 
 test('Codex patch: added, updated and moved files', () => {
-  const f = patchFiles('*** Begin Patch\n*** Add File: yeni.ts\n+a\n+b\n*** Update File: eski.ts\n@@\n-x\n+y\n*** Update File: t.ts\n*** Move to: u.ts\n+z\n*** End Patch');
-  assert.deepEqual(f.map(({ path: p, isNew }) => [p, isNew]), [['yeni.ts', true], ['eski.ts', false], ['t.ts', false], ['u.ts', true]]);
+  const f = patchFiles('*** Begin Patch\n*** Add File: new.ts\n+a\n+b\n*** Update File: old.ts\n@@\n-x\n+y\n*** Update File: t.ts\n*** Move to: u.ts\n+z\n*** End Patch');
+  assert.deepEqual(f.map(({ path: p, isNew }) => [p, isNew]), [['new.ts', true], ['old.ts', false], ['t.ts', false], ['u.ts', true]]);
   assert.equal(f[0].text, 'a\nb\n');
   assert.equal(f[1].text, 'y\n', 'a removed line is not part of the text');
 });
@@ -104,7 +104,7 @@ test('structure guard and edit lock: root is cwd on Codex, workspacePaths on Ant
   for (const tool of TOOLS) {
     assert.equal(run('structure-guard.mjs', tool, root, write(tool, root, 'src/a.ts', 'x')), null, `${tool}: in map`);
     assert.equal(run('structure-guard.mjs', tool, root, write(tool, root, 'src/a.bak', 'x')), 'deny', `${tool}: clutter`);
-    assert.equal(run('structure-guard.mjs', tool, root, write(tool, root, 'baska/a.ts', 'x')), tool === 'codex' ? 'deny' : 'ask', `${tool}: off map`);
+    assert.equal(run('structure-guard.mjs', tool, root, write(tool, root, 'other/a.ts', 'x')), tool === 'codex' ? 'deny' : 'ask', `${tool}: off map`);
   }
   fs.writeFileSync(path.join(root, '.claude', 'state', 'freeze.json'), JSON.stringify({ dir: 'src/auth' }));
   for (const tool of TOOLS) {
@@ -125,10 +125,10 @@ test('session start: Codex additionalContext, Antigravity injectSteps', () => {
 });
 
 test('command -> skill: name, description and body', () => {
-  const s = commandToSkill('build', '---\ndescription: Görevi uygular: test eder.\nargument-hint: [görev kodu]\n---\n\nGörev: $ARGUMENTS\n');
-  assert.match(s, /^---\nname: build\ndescription: "Görevi uygular: test eder."\n---\n/);
-  assert.match(s, /Expected: \[görev kodu\]/);
-  assert.match(s, /Görev: \$ARGUMENTS\n$/);
+  const s = commandToSkill('build', '---\ndescription: Runs the task: tests it.\nargument-hint: [task id]\n---\n\nTask: $ARGUMENTS\n');
+  assert.match(s, /^---\nname: build\ndescription: "Runs the task: tests it."\n---\n/);
+  assert.match(s, /Expected: \[task id\]/);
+  assert.match(s, /Task: \$ARGUMENTS\n$/);
 });
 
 test('init --tool: files are generated per tool, no copies kept in the repo', () => {
@@ -175,10 +175,10 @@ test('init --tool: files are generated per tool, no copies kept in the repo', ()
   // Update: a changed command refreshes its skill copy; a hook config the user changed is kept
   assert.equal(spawnSync(process.execPath, [path.join(kit, 'kit', 'kit.mjs'), 'install', '--type', 'backend', '--project', cx], { encoding: 'utf8' }).status, 0);
   fs.writeFileSync(path.join(cx, '.codex/hooks.json'), '{"hooks":{}}\n');
-  fs.appendFileSync(path.join(kit, '.claude/commands/build.md'), '\nYENİ SATIR\n');
+  fs.appendFileSync(path.join(kit, '.claude/commands/build.md'), '\nNEW LINE\n');
   const u = spawnSync(process.execPath, [path.join(kit, 'kit', 'kit.mjs'), 'update', '--project', cx], { encoding: 'utf8' });
   assert.equal(u.status, 0, u.stderr);
-  assert.match(fs.readFileSync(path.join(cx, '.agents/skills/build/SKILL.md'), 'utf8'), /YENİ SATIR/);
+  assert.match(fs.readFileSync(path.join(cx, '.agents/skills/build/SKILL.md'), 'utf8'), /NEW LINE/);
   assert.equal(fs.readFileSync(path.join(cx, '.codex/hooks.json'), 'utf8'), '{"hooks":{}}\n');
   assert.ok(exists(cx, '.codex/hooks.json.kit-new') === false, 'kit unchanged: no .kit-new');
   fs.rmSync(tmp, { recursive: true, force: true });
@@ -190,7 +190,7 @@ const patch = (root, body, extra = {}) => ({ tool_name: 'apply_patch', turn_id: 
 test('attacker: a secret is denied even with a padded or unparsable patch header', () => {
   const root = tempRoot('patch');
   assert.equal(run('guard-secrets.mjs', 'codex', root, patch(root, `  *** Add File: x.ts\n+k = "${SECRET}"`)), 'deny', 'leading space');
-  assert.equal(run('guard-secrets.mjs', 'codex', root, patch(root, `*** Ekle: x.ts\n+k = "${SECRET}"`)), 'deny', 'unknown header');
+  assert.equal(run('guard-secrets.mjs', 'codex', root, patch(root, `*** Insert: x.ts\n+k = "${SECRET}"`)), 'deny', 'unknown header');
   assert.equal(run('guard-secrets.mjs', 'codex', root, { tool_name: 'apply_patch', turn_id: 't', cwd: root, tool_input: { command: { patch: SECRET } } }), 'deny', 'object-typed input is scanned without crashing');
 });
 
@@ -249,8 +249,8 @@ test('attacker: commands forbidden in the Claude permission list are also denied
   assert.equal(run('freeze-guard.mjs', 'antigravity', root, read('.env')), 'deny', 'Antigravity cannot read .env');
   assert.equal(run('freeze-guard.mjs', 'antigravity', root, read('.claude/hooks/shared.mjs')), null, 'rule files are readable');
   assert.equal(run('freeze-guard.mjs', 'antigravity', root, { toolCall: { name: 'list_dir', args: { DirectoryPath: path.join(root, 'secrets') } }, workspacePaths: [root] }), 'deny', 'the secrets folder itself');
-  assert.equal(run('freeze-guard.mjs', 'antigravity', root, { toolCall: { name: 'yeni_okuma_araci', args: { Dosya: path.join(root, '.env.local') } }, workspacePaths: [root] }), 'deny', 'unknown tool name');
-  assert.equal(run('freeze-guard.mjs', 'antigravity', root, { toolCall: { name: 'view_files', args: { Liste: [{ Yol: path.join(root, '.env') }] } }, workspacePaths: [root] }), 'deny', 'nested argument');
+  assert.equal(run('freeze-guard.mjs', 'antigravity', root, { toolCall: { name: 'new_read_tool', args: { Target: path.join(root, '.env.local') } }, workspacePaths: [root] }), 'deny', 'unknown tool name');
+  assert.equal(run('freeze-guard.mjs', 'antigravity', root, { toolCall: { name: 'view_files', args: { Items: [{ Where: path.join(root, '.env') }] } }, workspacePaths: [root] }), 'deny', 'nested argument');
   const lock = 'node .claude/hooks/freeze-guard.mjs --off';
   assert.equal(run('destructive-guard.mjs', 'codex', root, command('codex', root, lock)), 'deny');
   assert.equal(run('destructive-guard.mjs', 'antigravity', root, command('antigravity', root, lock)), 'ask');
@@ -273,13 +273,13 @@ test('init: the project\'s AGENTS.md and skill files are not overwritten; a tool
   const kitMjs = path.join(kit, 'kit', 'kit.mjs');
   const p = path.join(tmp, 'old');
   fs.mkdirSync(path.join(p, '.agents', 'skills', 'build'), { recursive: true });
-  fs.writeFileSync(path.join(p, 'AGENTS.md'), '# Eski\n- pnpm kullan\n');
-  fs.writeFileSync(path.join(p, '.agents/skills/build/SKILL.md'), 'kendi build skill\'im\n');
+  fs.writeFileSync(path.join(p, 'AGENTS.md'), '# Old\n- use pnpm\n');
+  fs.writeFileSync(path.join(p, '.agents/skills/build/SKILL.md'), 'my own build skill\n');
   const r = spawnSync(process.execPath, [kitMjs, 'init', '--project', p, '--tool', 'codex'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  assert.equal(fs.readFileSync(path.join(p, 'AGENTS.md'), 'utf8'), '# Eski\n- pnpm kullan\n');
+  assert.equal(fs.readFileSync(path.join(p, 'AGENTS.md'), 'utf8'), '# Old\n- use pnpm\n');
   assert.match(fs.readFileSync(path.join(p, 'CLAUDE.md'), 'utf8'), /^@AGENTS\.md\.kit-new$/m, 'Claude reads the kit rules from .kit-new until /adopt');
-  assert.equal(fs.readFileSync(path.join(p, '.agents/skills/build/SKILL.md'), 'utf8'), 'kendi build skill\'im\n');
+  assert.equal(fs.readFileSync(path.join(p, '.agents/skills/build/SKILL.md'), 'utf8'), 'my own build skill\n');
   assert.ok(fs.existsSync(path.join(p, '.agents/skills/build/SKILL.md.kit-new')) && /build\/SKILL\.md/.test(r.stdout), 'kit version beside it, in the report');
 
   // 3.8 project: no tool field; update --tool adds Codex
@@ -303,14 +303,14 @@ test('3.14.1 NotebookEdit: notebook path and new cell text are read', () => {
 
 test('3.15.1 F-13 the Codex/Antigravity section of AGENTS.md is filled only for those tools', () => {
   const block = (body) => `# X\n\n<!-- kit:other-tools -->\n${body}<!-- /kit:other-tools -->\n\n## Next\n`;
-  const kit = block('## Codex ve Antigravity\'de\n\nkural\n');
+  const kit = block('## In Codex and Antigravity\n\nrule\n');
   assert.equal(syncToolSection(kit, kit, false), block(''), 'claude only: emptied, markers stay');
   assert.equal(syncToolSection(block(''), kit, true), kit, 'tool added later: filled from the kit');
   assert.equal(syncToolSection(kit, kit, true), kit);
-  const edited = block('kendi notum\n');
+  const edited = block('my own note\n');
   assert.equal(syncToolSection(edited, kit, false), edited, 'a user-edited block is not emptied');
   assert.equal(syncToolSection(edited, kit, true), edited, 'and not overwritten');
-  assert.equal(syncToolSection('# Eski\n- pnpm\n', kit, false), '# Eski\n- pnpm\n', 'no markers: untouched');
+  assert.equal(syncToolSection('# Old\n- pnpm\n', kit, false), '# Old\n- pnpm\n', 'no markers: untouched');
 
   const tmp = tempRoot('tools-section');
   const kitDir = path.join(tmp, 'kit-clone');

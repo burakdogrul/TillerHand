@@ -53,7 +53,7 @@ Output folder: `public/brand/` for web, `assets/brand/` for mobile (allowed in t
 | `icon.png` (1024), `adaptive-icon.png` (Android foreground, safe area 66%) | Mobile |
 
 - **Convert text to paths:** Convert the wordmark text from the font file to paths, so it looks the same where the font is not installed. Example: a short script with `opentype.js`, run under `sandbox/`. Check that the font license allows this.
-- **Optimize:** `npx --yes svgo --multipass <dosya>`
+- **Optimize:** `npx --yes svgo --multipass <file>`
 - **Make PNGs:** `npx --yes sharp-cli -i logo-mark.svg -o icon-512.png resize 512 512`. If this tool fails, take a screenshot of the SVG with Playwright.
 - On web, `<link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">` and PNG fallbacks. On mobile, `app.config.ts` → `icon`, `android.adaptiveIcon`.
 

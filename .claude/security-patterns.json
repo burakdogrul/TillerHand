@@ -14,7 +14,7 @@
     {
       "rule_name": "personal_data_log",
       "regex": "console\\.(log|info)\\([^)]*(email|phone|tckn|tc_kimlik|password|token)",
-      "reminder": "Do not log personal data or credentials (KVKK, the Turkish data protection law). Mask the identity or log only the record id."
+      "reminder": "Do not log personal data or credentials (GDPR, KVKK or the local data protection law). Mask the identity or log only the record id."
     }
   ]
 }

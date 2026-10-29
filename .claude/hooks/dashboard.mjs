@@ -300,7 +300,7 @@ const product = `
 </div>
 <div class="grid2">
   <section class="card"><h3>${L('dashboard.technology')}</h3>${stack.length && !stack.every((s) => !s.choice) ? `<dl class="dl">${stack.map((s) => `<dt>${e(s.layer)}</dt><dd>${md(s.choice || '-')}</dd>`).join('')}</dl>` : empty(L('dashboard.noStack'))}</section>
-  <section class="card"><h3>${L('dashboard.design')}</h3>${designDirection.length ? `<dl class="dl">${designDirection.map((t) => `<dt>${e(t.area)}</dt><dd>${md(t.choice)}</dd>`).join('')}</dl>` : empty(L('dashboard.noDesign'), '/design genel')}
+  <section class="card"><h3>${L('dashboard.design')}</h3>${designDirection.length ? `<dl class="dl">${designDirection.map((t) => `<dt>${e(t.area)}</dt><dd>${md(t.choice)}</dd>`).join('')}</dl>` : empty(L('dashboard.noDesign'), '/design general')}
     ${previews.length ? `<h4>${L('dashboard.previews')}</h4><ul class="links">${previews.map((o) => `<li><b>${e(o.name)}</b> ${o.files.map((f) => `<a href=".previews/${encodeURIComponent(o.name)}/${encodeURIComponent(f)}" target="_blank" rel="noopener">${e(f.replace(/\.html$/, ''))}</a>`).join(' ')}</li>`).join('')}</ul>` : ''}</section>
 </div>
 <div class="grid2">
@@ -551,9 +551,9 @@ ${TABS.map(([id, , content], i) => `<div class="panel" role="tabpanel" id="p-${i
   });
 
   var auto = document.getElementById('auto-refresh'), timer;
-  try { auto.checked = localStorage.getItem('durum-oto') !== '0'; } catch (er) {}
+  try { auto.checked = localStorage.getItem('status-auto') !== '0'; } catch (er) {}
   function schedule() { clearTimeout(timer); if (auto.checked) timer = setTimeout(function () { location.reload(); }, 30000); }
-  auto.addEventListener('change', function () { try { localStorage.setItem('durum-oto', auto.checked ? '1' : '0'); } catch (er) {} schedule(); });
+  auto.addEventListener('change', function () { try { localStorage.setItem('status-auto', auto.checked ? '1' : '0'); } catch (er) {} schedule(); });
   schedule();
 })();
 </script>

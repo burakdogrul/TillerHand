@@ -51,7 +51,7 @@
 
 ## Context packages
 
-The skill descriptions of every plugin that is on are loaded into the context in each session. The skill list is limited to 1% of the context; when it overflows, the descriptions of rarely used skills drop and Claude does not recognize them. Skills inside a plugin cannot be switched off one by one. So plugins are split into **core** and **packages**. Packages come switched off in `.claude/settings.json`; in its first step the related command checks with `node .claude/hooks/tools.mjs --required <paket>` and, if the package is off, asks to switch it on together with its cost. Switching on affects only this machine (`.claude/settings.local.json`). Management: `/tools`. Definitions: `.claude/hooks/tools.mjs` → `PACKAGES`.
+The skill descriptions of every plugin that is on are loaded into the context in each session. The skill list is limited to 1% of the context; when it overflows, the descriptions of rarely used skills drop and Claude does not recognize them. Skills inside a plugin cannot be switched off one by one. So plugins are split into **core** and **packages**. Packages come switched off in `.claude/settings.json`; in its first step the related command checks with `node .claude/hooks/tools.mjs --required <package>` and, if the package is off, asks to switch it on together with its cost. Switching on affects only this machine (`.claude/settings.local.json`). Management: `/tools`. Definitions: `.claude/hooks/tools.mjs` → `PACKAGES`.
 
 | Package | Plugins | Command that switches it on |
 |---|---|---|
@@ -150,7 +150,7 @@ First the style direction is chosen (`/design`). Each direction maps to a skill;
 | PR description | `mattpocock-skills:pr` |
 | Edit CLAUDE.md, a command or a skill (`/retro`) | `mattpocock-skills:writing-for-agents` |
 | CLAUDE.md audit, session lessons (`/retro`, `/wrap-up`) | `claude-md-management`: `claude-md-improver`, `/revise-claude-md` |
-| "Don't do this again" → permanent rule | `/hookify <kural>` (`.claude/hookify.*.local.md`) |
+| "Don't do this again" → permanent rule | `/hookify <rule>` (`.claude/hookify.*.local.md`) |
 | React/Next performance (web) · React Native (mobile) | `react-best-practices`, `composition-patterns` · `react-native-guidelines` (Vercel) |
 | Database schema, query, index | `postgres-best-practices:*`, `supabase:*` |
 | Token and cost detail | `/session-report` (HTML), `node .claude/hooks/cost.mjs` for the dashboard |

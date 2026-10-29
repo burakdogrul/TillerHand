@@ -19,14 +19,14 @@ SALT = "test-merchant-salt"
 DIRECT = {
     "iyziEventType": "API_AUTH",
     "paymentId": "22416750",
-    "paymentConversationId": "siparis-42",
+    "paymentConversationId": "order-42",
     "status": "SUCCESS",
 }
 CHECKOUT = {
     "iyziEventType": "CHECKOUT_FORM_AUTH",
     "iyziPaymentId": "22416751",
     "token": "tok-abc",
-    "paymentConversationId": "siparis-43",
+    "paymentConversationId": "order-43",
     "status": "SUCCESS",
 }
 PAYTR = {"merchant_oid": "SIP42", "status": "success", "total_amount": "3456"}
@@ -66,7 +66,7 @@ class IyzicoTest(unittest.TestCase):
         self.assertFalse(verify_iyzico({**DIRECT, "status": "FAILURE"}, sig, SECRET))
         self.assertFalse(
             verify_iyzico(
-                {**DIRECT, "paymentConversationId": "siparis-99"}, sig, SECRET
+                {**DIRECT, "paymentConversationId": "order-99"}, sig, SECRET
             )
         )
         self.assertFalse(

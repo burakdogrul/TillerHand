@@ -47,11 +47,11 @@ test('paging: a note added between two requests does not shift the next page', a
   try {
     for (let i = 0; i < 10; i++) await call('POST', '/notes', 'ayse', { title: `m${i}`, createdAt: iso(i) });
     const first = await call('GET', '/notes?limit=5', 'ayse');
-    await call('POST', '/notes', 'ayse', { title: 'yeni', createdAt: iso(50) });
+    await call('POST', '/notes', 'ayse', { title: 'new', createdAt: iso(50) });
     const second = await call('GET', `/notes?limit=5&cursor=${encodeURIComponent(first.headers.get('x-next-cursor'))}`, 'ayse');
     const seen = [...first.json, ...second.json].map((n) => n.title);
     assert.equal(new Set(seen).size, 10, 'no repeats');
-    assert.ok(!seen.includes('yeni'));
+    assert.ok(!seen.includes('new'));
     assert.deepEqual(second.json.map((n) => n.title), ['m4', 'm3', 'm2', 'm1', 'm0']);
   } finally { await close(); }
 });
@@ -60,7 +60,7 @@ test('paging: limit outside 1-100 and a broken cursor are rejected', async () =>
   const { call, close } = await fresh();
   try {
     await call('POST', '/notes', 'ayse', { title: 'x' });
-    for (const q of ['limit=0', 'limit=101', 'limit=abc', 'limit=-5', 'cursor=bozuk']) assert.equal((await call('GET', `/notes?${q}`, 'ayse')).status, 400, q);
+    for (const q of ['limit=0', 'limit=101', 'limit=abc', 'limit=-5', 'cursor=broken']) assert.equal((await call('GET', `/notes?${q}`, 'ayse')).status, 400, q);
     assert.equal((await call('GET', '/notes?limit=100', 'ayse')).status, 200);
   } finally { await close(); }
 });

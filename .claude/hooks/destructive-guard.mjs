@@ -281,7 +281,7 @@ export const unquote = (s) => s.replace(/\$'((?:[^'\\]|\\.)*)'/g, '$1').replace(
 const RANK = { deny: 2, ask: 1 };
 const strictest = (...s) => s.filter(Boolean).sort((a, b) => RANK[b.decision] - RANK[a.decision])[0] ?? null;
 
-// A commit message that only names a command (git commit -m "commit-gate.mjs --skip anlatıldı") is text, not a call.
+// A commit message that only names a command (git commit -m "commit-gate.mjs --skip explained") is text, not a call.
 // Emptied only when the WHOLE command is one plain commit (optionally after "git add … &&") and the message is its last
 // word: then nothing else can hide in it. No quote, $, `, (, #, <, > before the message: a quote opened earlier
 // would make a real command look like the message. The message must be safe in bash, PowerShell and cmd alike: no

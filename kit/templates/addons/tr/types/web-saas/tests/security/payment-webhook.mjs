@@ -17,8 +17,8 @@ const iyzicoSign = (b, secret = SECRET) => {
 };
 const paytrSign = (f, key = KEY, salt = SALT) => createHmac('sha256', key).update(f.merchant_oid + salt + f.status + f.total_amount).digest('base64');
 
-const direct = { iyziEventType: 'API_AUTH', paymentId: '22416750', paymentConversationId: 'siparis-42', status: 'SUCCESS' };
-const checkout = { iyziEventType: 'CHECKOUT_FORM_AUTH', iyziPaymentId: '22416751', token: 'tok-abc', paymentConversationId: 'siparis-43', status: 'SUCCESS' };
+const direct = { iyziEventType: 'API_AUTH', paymentId: '22416750', paymentConversationId: 'order-42', status: 'SUCCESS' };
+const checkout = { iyziEventType: 'CHECKOUT_FORM_AUTH', iyziPaymentId: '22416751', token: 'tok-abc', paymentConversationId: 'order-43', status: 'SUCCESS' };
 const paytr = { merchant_oid: 'SIP42', status: 'success', total_amount: '3456' };
 
 test('iyzico: a correctly signed notification is accepted (direct and checkout form)', () => {
@@ -30,7 +30,7 @@ test('iyzico: a correctly signed notification is accepted (direct and checkout f
 });
 
 test('iyzico: a payment id rounded by JSON.parse (above 2^53) is rejected', () => {
-  const body = JSON.parse('{"iyziEventType":"CHECKOUT_FORM_AUTH","iyziPaymentId":9007199254740993,"token":"tok-abc","paymentConversationId":"siparis-43","status":"SUCCESS"}');
+  const body = JSON.parse('{"iyziEventType":"CHECKOUT_FORM_AUTH","iyziPaymentId":9007199254740993,"token":"tok-abc","paymentConversationId":"order-43","status":"SUCCESS"}');
   const sent = { ...body, iyziPaymentId: '9007199254740993' };
   assert.equal(verifyIyzico(body, iyzicoSign(sent), SECRET), false);
   assert.equal(verifyIyzico(body, iyzicoSign(body), SECRET), false, 'even when signed over the rounded value');
@@ -39,7 +39,7 @@ test('iyzico: a payment id rounded by JSON.parse (above 2^53) is rejected', () =
 test('iyzico: forged, altered or unsigned notifications are rejected', () => {
   const sig = iyzicoSign(direct);
   assert.equal(verifyIyzico({ ...direct, status: 'FAILURE' }, sig, SECRET), false, 'status changed after signing');
-  assert.equal(verifyIyzico({ ...direct, paymentConversationId: 'siparis-99' }, sig, SECRET), false, 'order switched');
+  assert.equal(verifyIyzico({ ...direct, paymentConversationId: 'order-99' }, sig, SECRET), false, 'order switched');
   assert.equal(verifyIyzico(direct, iyzicoSign(direct, 'attacker-key'), SECRET), false, 'signed with another key');
   assert.equal(verifyIyzico(direct, undefined, SECRET), false, 'no header');
   assert.equal(verifyIyzico(direct, '', SECRET), false, 'empty header');

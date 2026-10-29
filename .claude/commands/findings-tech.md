@@ -1,6 +1,6 @@
 ---
 description: Technical findings report. Scans the project through the eyes of a senior architect: bugs, duplicate and unused code, structure violations, type safety, test gaps. Scores the 20 most important findings out of 100.
-argument-hint: [empty = whole project | folder/feature | --since <commit|tarih>]
+argument-hint: [empty = whole project | folder/feature | --since <commit|date>]
 ---
 
 Type: **tech** · Scope: $ARGUMENTS

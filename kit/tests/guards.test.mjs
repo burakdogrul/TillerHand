@@ -13,7 +13,7 @@ import { evaluate, permissionEquivalent } from '../../.claude/hooks/destructive-
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 
 test('package gate: extracts package names from commands', () => {
-  assert.deepEqual(findPackages('npm install -D zod @types/node@20 ./yerel'), [{ eco: 'npm', name: 'zod' }, { eco: 'npm', name: '@types/node' }]);
+  assert.deepEqual(findPackages('npm install -D zod @types/node@20 ./local'), [{ eco: 'npm', name: 'zod' }, { eco: 'npm', name: '@types/node' }]);
   assert.deepEqual(findPackages('cd web && pnpm add react-dom@18.3.1'), [{ eco: 'npm', name: 'react-dom' }]);
   assert.deepEqual(findPackages('npx expo install expo-camera'), [{ eco: 'npm', name: 'expo-camera' }]);
   assert.deepEqual(findPackages('uv add "fastapi[standard]>=0.110" httpx'), [{ eco: 'pypi', name: 'fastapi' }, { eco: 'pypi', name: 'httpx' }]);
@@ -21,7 +21,7 @@ test('package gate: extracts package names from commands', () => {
   assert.deepEqual(findPackages('npm install'), [], 'an install without arguments (lock file) is not checked');
   assert.deepEqual(findPackages('npm run build && git status'), []);
   // 3.20.1: a redirect is not a package name (2>&1 was reported as a made-up package and the install was blocked)
-  for (const c of ['npm install -D zod 2>&1 | tail -2', 'npm i zod > kurulum.log', 'npm i zod 2>/dev/null', 'npm i zod &> log.txt', 'pip install requests >> out.txt'])
+  for (const c of ['npm install -D zod 2>&1 | tail -2', 'npm i zod > install.log', 'npm i zod 2>/dev/null', 'npm i zod &> log.txt', 'pip install requests >> out.txt'])
     assert.deepEqual(findPackages(c).map((x) => x.name), [c.startsWith('pip') ? 'requests' : 'zod'], c);
 });
 
@@ -59,21 +59,21 @@ test('package gate: download-and-run commands are checked; only the package, not
 });
 
 test('package gate: npx of a bin the project already has is not checked; a made-up one is denied', () => {
-  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'paket-'));
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'pkg-'));
   fs.mkdirSync(path.join(p, 'node_modules', '.bin'), { recursive: true });
-  fs.writeFileSync(path.join(p, 'node_modules', '.bin', 'yerel-bin-xq'), '');
+  fs.writeFileSync(path.join(p, 'node_modules', '.bin', 'local-bin-xq'), '');
   const run = (command) => spawnSync(process.execPath, [path.join(HOOKS, 'package-gate.mjs')], {
     input: JSON.stringify({ tool_input: { command }, cwd: p }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p }, timeout: 20000,
   });
-  const local = run('npx yerel-bin-xq --help');
+  const local = run('npx local-bin-xq --help');
   assert.equal(local.status, 0);
   assert.equal(local.stdout, '', 'local bin: no network check, no decision');
   assert.equal(run('npx -y tillerhand@3.28.0 install --type web-saas --project .').stdout, '', 'the kit\'s own package is not checked');
   // Only the plain spelling is exempt: an npm alias or a version spec downloads something else
-  assert.match(run('npx -y tillerhand@npm:uydurma-paket-adi-9f3k2-yok').stdout, /"(deny|ask)"/, 'alias target is checked');
-  assert.match(run('npx yerel-bin-xq@npm:uydurma-paket-adi-9f3k2-yok').stdout, /"(deny|ask)"/, 'local bin with a spec is checked');
-  const made = run('npx -y uydurma-paket-adi-9f3k2-yok');
-  if (!/doğrulanamadı/.test(made.stdout)) assert.match(made.stdout, /"deny"/, 'a made-up npx package is denied (offline: asked)');
+  assert.match(run('npx -y tillerhand@npm:made-up-package-name-9f3k2-none').stdout, /"(deny|ask)"/, 'alias target is checked');
+  assert.match(run('npx local-bin-xq@npm:made-up-package-name-9f3k2-none').stdout, /"(deny|ask)"/, 'local bin with a spec is checked');
+  const made = run('npx -y made-up-package-name-9f3k2-none');
+  if (!/could not be verified/.test(made.stdout)) assert.match(made.stdout, /"deny"/, 'a made-up npx package is denied (offline: asked)');
   fs.rmSync(p, { recursive: true, force: true });
 });
 
@@ -89,12 +89,12 @@ const now = Date.parse('2026-10-11T00:00:00Z');
 
 test('package gate: registry decisions', async () => {
   const get = (data) => async (url) => data[url.includes('downloads') ? 'downloads' : 'pkg'];
-  assert.equal((await check({ eco: 'npm', name: 'olmayan-paket' }, get({ pkg: response(404) }), now)).status, 'missing');
-  assert.equal((await check({ eco: 'npm', name: 'taze' }, get({ pkg: response(200, { time: { created: '2026-10-01' } }), downloads: response(200, { downloads: 99999 }) }), now)).status, 'new');
-  assert.equal((await check({ eco: 'npm', name: 'sessiz' }, get({ pkg: response(200, { time: { created: '2020-01-01' } }), downloads: response(200, { downloads: 12 }) }), now)).status, 'low');
-  assert.equal((await check({ eco: 'npm', name: 'saglam' }, get({ pkg: response(200, { time: { created: '2020-01-01' } }), downloads: response(200, { downloads: 50000 }) }), now)).status, 'ok');
-  assert.equal((await check({ eco: 'pypi', name: 'yeni-py' }, get({ pkg: response(200, { releases: { '0.1': [{ upload_time_iso_8601: '2026-10-05T00:00:00Z' }] } }) }), now)).status, 'new');
-  assert.equal((await check({ eco: 'pypi', name: 'x' }, async () => { throw new Error('ağ'); }, now)).status, 'unknown');
+  assert.equal((await check({ eco: 'npm', name: 'missing-package' }, get({ pkg: response(404) }), now)).status, 'missing');
+  assert.equal((await check({ eco: 'npm', name: 'fresh' }, get({ pkg: response(200, { time: { created: '2026-10-01' } }), downloads: response(200, { downloads: 99999 }) }), now)).status, 'new');
+  assert.equal((await check({ eco: 'npm', name: 'quiet' }, get({ pkg: response(200, { time: { created: '2020-01-01' } }), downloads: response(200, { downloads: 12 }) }), now)).status, 'low');
+  assert.equal((await check({ eco: 'npm', name: 'solid' }, get({ pkg: response(200, { time: { created: '2020-01-01' } }), downloads: response(200, { downloads: 50000 }) }), now)).status, 'ok');
+  assert.equal((await check({ eco: 'pypi', name: 'new-py' }, get({ pkg: response(200, { releases: { '0.1': [{ upload_time_iso_8601: '2026-10-05T00:00:00Z' }] } }) }), now)).status, 'new');
+  assert.equal((await check({ eco: 'pypi', name: 'x' }, async () => { throw new Error('network'); }, now)).status, 'unknown');
 });
 
 test('shield: destructive commands are denied, normal commands pass', () => {
@@ -127,7 +127,7 @@ test('shield: destructive commands are denied, normal commands pass', () => {
   assert.equal(k('eas deploy --message "x & y" --prod'), 'ask');
   assert.equal(k('eas update --branch preview --message x'), 'free');
   assert.equal(k('npx -y vercel@63.1.1 deploy'), 'free', 'preview deploy');
-  assert.equal(k('vercel --scope ekip promote https://app-abc.vercel.app'), 'ask', 'promote even with a flag in between');
+  assert.equal(k('vercel --scope team promote https://app-abc.vercel.app'), 'ask', 'promote even with a flag in between');
   assert.equal(k('npx vercel@63.1.1 -t $TOKEN rollback'), 'ask', 'rollback even with a flag in between');
   assert.equal(k('vercel deploy --target=production'), 'ask', '--target=production');
   assert.equal(k('vercel deploy --target production'), 'ask', '--target production');
@@ -135,7 +135,7 @@ test('shield: destructive commands are denied, normal commands pass', () => {
   assert.equal(k('vercel deploy --target "production"'), 'ask', 'quoted target');
   assert.equal(k("vercel deploy --target='prod'"), 'ask', 'quoted = target');
   assert.equal(k('vercel deploy --target    production'), 'ask', 'many spaces');
-  assert.equal(k('vercel --scope ekip "promote" https://a.vercel.app'), 'ask', 'quoted subcommand');
+  assert.equal(k('vercel --scope team "promote" https://a.vercel.app'), 'ask', 'quoted subcommand');
   // The same command once the shell removes quotes and escapes: the rules also apply to the unquoted text
   assert.equal(k('vercel deploy --pro""d'), 'ask', 'quote inside a word');
   assert.equal(k("vercel deploy --'prod'"), 'ask');
@@ -154,10 +154,10 @@ test('shield: destructive commands are denied, normal commands pass', () => {
   assert.equal(k('echo $(date) && npm run build'), 'free', 'obfuscation but no guarded word');
   assert.equal(k("vercel deploy $'--target=preview'"), 'free', 'preview');
   assert.equal(k('git push origin main'), 'ask');
-  assert.equal(k('psql postgres://u:p@db.ornek-prod.com:5432/app -c "select 1"'), 'ask', 'remote database');
+  assert.equal(k('psql postgres://u:p@db.example-prod.com:5432/app -c "select 1"'), 'ask', 'remote database');
   assert.equal(k('psql postgres://u:p@localhost:5432/app -c "select 1"'), 'free');
   assert.equal(k('npm run test && git status'), 'free');
-  assert.equal(k('git push origin ozellik/fatura'), 'free');
+  assert.equal(k('git push origin feature/billing'), 'free');
 });
 
 test('F-04 shield: prod environment variables cannot be pulled onto the agent\'s machine', () => {
@@ -173,8 +173,8 @@ test('F-04 shield: prod environment variables cannot be pulled onto the agent\'s
   assert.equal(k('vc env pull --environment=production'), 'deny', 'vc short name');
   assert.equal(k('vc deploy --prod'), 'ask', 'prod deploy with vc');
   assert.equal(k('vc promote https://a.vercel.app'), 'ask');
-  assert.equal(k('vercel env pull --environment=$ORTAM'), 'ask', 'environment from a variable');
-  assert.equal(k('vercel pull --environment $(cat ortam)'), 'ask', 'environment from command substitution');
+  assert.equal(k('vercel env pull --environment=$TARGET_ENV'), 'ask', 'environment from a variable');
+  assert.equal(k('vercel pull --environment $(cat envfile)'), 'ask', 'environment from command substitution');
   assert.equal(k('vercel env pull --environment=staging'), 'ask', 'unknown environment');
   assert.equal(k('vercel env pull --environment=pro$()duction'), 'ask', 'obfuscated pull');
 });
@@ -184,13 +184,13 @@ test('F-02 shield: a command that changes or deletes a test file from the shell 
   for (const s of [
     "sed -i 's/expect/x/' src/a.test.ts", 'rm src/a.test.ts', 'rm -r tests/', 'echo x > src/a.test.ts',
     "cat >> kit/tests/x.test.mjs <<'EOF'", 'mv tests/a.test.ts src/a.ts', 'git checkout -- tests/a.test.ts',
-    'Set-Content tests\\a.test.ts x', 'npm run lint && rm "src/a.test.ts"', 'perl -pi -e s/a/b/ odeme_test.py',
+    'Set-Content tests\\a.test.ts x', 'npm run lint && rm "src/a.test.ts"', 'perl -pi -e s/a/b/ payment_test.py',
     "sed -e 's/a/b/' -i tests/a.test.ts", "sed --in-place 's/a/b/' a.test.ts", "sed -i 's/x/y/' package.json",
     'rm vitest.config.ts', 'echo {} > conftest.py',
   ]) assert.equal(k(s), 'ask', s);
   for (const s of [
     'npx vitest run src/a.test.ts', 'node --test "kit/tests/*.test.mjs" 2>&1 | grep fail', 'cat tests/a.test.ts',
-    'rm -r node_modules && npx vitest run src/a.test.ts', 'node --test kit/tests/a.test.mjs > sonuc.txt',
+    'rm -r node_modules && npx vitest run src/a.test.ts', 'node --test kit/tests/a.test.mjs > result.txt',
   ]) assert.equal(k(s), 'free', s);
 });
 
@@ -216,17 +216,17 @@ test('structure guard: map, sandbox, clutter patterns', async () => {
     raw: { allow: ['README.md', 'docs/**', 'src/features/*/components/**', 'src/lib/**'] },
   };
   assert.equal(checkPath('src/features/invoice/components/List.tsx', map), null);
-  assert.equal(checkPath('sandbox/deneme.ts', map), null, 'sandbox is free');
+  assert.equal(checkPath('sandbox/trial.ts', map), null, 'sandbox is free');
   assert.equal(checkPath('src/utils/x.ts', map)?.decision, 'ask', 'off the map is asked');
   assert.equal(checkPath('src/lib/db-old.ts', map)?.decision, 'deny', 'an old-version file is denied');
   assert.equal(checkPath('docs/plan copy.md', map)?.decision, 'deny');
   assert.equal(checkPath(['src', 'lib', 'db.ts'].join(String.fromCharCode(92)), map), null, 'Windows separator');
-  assert.equal(checkPath('herhangi.txt', null), null, 'no map: free');
+  assert.equal(checkPath('any.txt', null), null, 'no map: free');
 });
 
 test('edit lock: inside the folder is free, outside and a similarly named folder are denied', async () => {
   const { allowedInLock } = await import('../../.claude/hooks/freeze-guard.mjs');
-  const root = path.resolve(os.tmpdir(), 'kilit-kok');
+  const root = path.resolve(os.tmpdir(), 'lock-root');
   assert.equal(allowedInLock('src/features/auth/login.ts', 'src/features/auth', root), true);
   assert.equal(allowedInLock(path.join(root, 'src/features/auth/x.ts'), 'src/features/auth/', root), true, 'absolute path and trailing /');
   assert.equal(allowedInLock('src/features/authz/x.ts', 'src/features/auth', root), false, 'a prefix match is not enough');
@@ -236,7 +236,7 @@ test('edit lock: inside the folder is free, outside and a similarly named folder
 
 test('edit lock: the hook rejects outside writes while locked, free once unlocked', async () => {
   const fs = await import('node:fs');
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kilit-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lock-'));
   const run = (args, input) => spawnSync('node', [path.join(HOOKS, 'freeze-guard.mjs'), ...args], { input, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root } });
   const write = (f) => JSON.stringify({ tool_input: { file_path: path.join(root, f) } });
   assert.equal(run([], write('src/lib/x.ts')).stdout, '', 'silent without a lock');
@@ -249,7 +249,7 @@ test('edit lock: the hook rejects outside writes while locked, free once unlocke
 
 test('edit lock: the allowed --set prefix cannot remove or widen the lock, only narrow it', async () => {
   const fs = await import('node:fs');
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kilit2-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lock2-'));
   const run = (...args) => spawnSync('node', [path.join(HOOKS, 'freeze-guard.mjs'), ...args], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root } });
   const lock = () => JSON.parse(fs.readFileSync(path.join(root, '.claude/state/freeze.json'), 'utf8')).dir;
   run('--set', 'src/features/auth');
@@ -267,11 +267,11 @@ test('test-writer K3 shield: in Claude only the test-writer agent may touch a te
   const touch = [
     "sed -i 's/expect/x/' src/a.test.ts", 'rm src/a.test.ts', 'rm -r tests/', 'echo x > src/a.test.ts',
     "cat >> kit/tests/x.test.mjs <<'EOF'", 'mv tests/a.test.ts src/a.ts', 'git checkout -- tests/a.test.ts',
-    'Set-Content tests\a.test.ts x', 'npm run lint && rm "src/a.test.ts"', 'perl -pi -e s/a/b/ odeme_test.py',
+    'Set-Content tests\a.test.ts x', 'npm run lint && rm "src/a.test.ts"', 'perl -pi -e s/a/b/ payment_test.py',
     "sed -e 's/a/b/' -i tests/a.test.ts", "sed --in-place 's/a/b/' a.test.ts",
   ];
   const run = ['npx vitest run src/a.test.ts', 'node --test "kit/tests/*.test.mjs" 2>&1 | grep fail', 'cat tests/a.test.ts',
-    'rm -r node_modules && npx vitest run src/a.test.ts', 'node --test kit/tests/a.test.mjs > sonuc.txt'];
+    'rm -r node_modules && npx vitest run src/a.test.ts', 'node --test kit/tests/a.test.mjs > result.txt'];
   const ctxs = [undefined, { tool: 'claude', agent: '' }, { tool: 'claude', agent: 'test-writer' }, { tool: 'claude', agent: 'general-purpose' }, { tool: 'codex', agent: '' }, { tool: 'antigravity', agent: '' }];
   for (const s of touch) {
     assert.equal(evaluate(s)?.decision, 'ask', `no ctx (old callers): ${s}`);
@@ -344,7 +344,7 @@ test('test-writer K8a shield: a path that goes through a dependency or git folde
 
 test('test-writer K8c shield: a path that stays inside a dependency or git folder anywhere in the path is not a project test path', () => {
   const main = { tool: 'claude', agent: '' };
-  for (const s of ['rm -rf C:\\proj\\node_modules\\x\\tests', 'rm -rf /home/u/p/node_modules/x/tests', // kit:yol-izinli
+  for (const s of ['rm -rf C:\\proj\\node_modules\\x\\tests', 'rm -rf /home/u/p/node_modules/x/tests', // kit:path-allowed
     'rm -rf src/node_modules/pkg/tests', 'rm -rf packages/a/.git/x/tests']) {
     assert.notEqual(evaluate(s, main)?.decision, 'deny', s);
   }

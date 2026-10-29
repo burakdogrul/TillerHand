@@ -17,7 +17,7 @@ const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursiv
 before(() => {
   p = fs.mkdtempSync(path.join(os.tmpdir(), 'budget-'));
   sh('git init -q && git config user.email t@t && git config user.name t');
-  write('src/kisa.ts', 'export const a = 1;\n');
+  write('src/short.ts', 'export const a = 1;\n');
   write('README.md', '# x\n');
   sh('git add . && git commit -qm init');
 });
@@ -29,16 +29,16 @@ test('F-07 thresholds match the decision', () => {
 
 test('F-07 only code files are measured; tests, migrations, generated and kit files are excluded', () => {
   assert.deepEqual(selectFiles([
-    'src/a.ts', 'app/page.tsx', 'api/odeme.py', 'lib/x.mjs',
-    'src/a.test.ts', 'tests/e2e/giris.ts', 'test_api.py', 'supabase/migrations/1.sql', 'alembic/versions/1_x.py',
+    'src/a.ts', 'app/page.tsx', 'api/payment.py', 'lib/x.mjs',
+    'src/a.test.ts', 'tests/e2e/login.ts', 'test_api.py', 'supabase/migrations/1.sql', 'alembic/versions/1_x.py',
     'next-env.d.ts', 'src/types.gen.ts', 'dist/app.js', '.claude/hooks/dashboard.mjs', 'README.md', 'package.json',
-  ]), ['src/a.ts', 'app/page.tsx', 'api/odeme.py', 'lib/x.mjs']);
+  ]), ['src/a.ts', 'app/page.tsx', 'api/payment.py', 'lib/x.mjs']);
 });
 
 test('F-07 a file over 400 lines is caught, 400 lines pass', () => {
-  write('src/sinir.ts', 'x;\n'.repeat(400));
-  write('src/uzun.ts', 'x;\n'.repeat(401));
-  assert.deepEqual(longFiles(p, ['src/sinir.ts', 'src/uzun.ts']), [{ file: 'src/uzun.ts', lines: 401 }]);
+  write('src/limit.ts', 'x;\n'.repeat(400));
+  write('src/long.ts', 'x;\n'.repeat(401));
+  assert.deepEqual(longFiles(p, ['src/limit.ts', 'src/long.ts']), [{ file: 'src/long.ts', lines: 401 }]);
 });
 
 test('F-07 lizard is called with a pinned version and the thresholds', () => {
@@ -47,12 +47,12 @@ test('F-07 lizard is called with a pinned version and the thresholds', () => {
 
 test('F-07 changed files: the diff if base is set, the whole repo if missing or zero', () => {
   const base = sh('git rev-parse HEAD');
-  write('src/yeni.ts', 'export const b = 2;\n');
-  sh('git add src/yeni.ts && git commit -qm yeni');
-  assert.deepEqual(changedFiles(p, base), ['src/yeni.ts']);
-  assert.ok(changedFiles(p, '').includes('src/kisa.ts'), 'no base: all');
-  assert.ok(changedFiles(p, '0000000000000000000000000000000000000000').includes('src/kisa.ts'), 'new branch: all');
-  assert.ok(changedFiles(p, 'deadbeefdeadbeef').includes('src/kisa.ts'), 'base missing from the clone: all');
+  write('src/new.ts', 'export const b = 2;\n');
+  sh('git add src/new.ts && git commit -qm new');
+  assert.deepEqual(changedFiles(p, base), ['src/new.ts']);
+  assert.ok(changedFiles(p, '').includes('src/short.ts'), 'no base: all');
+  assert.ok(changedFiles(p, '0000000000000000000000000000000000000000').includes('src/short.ts'), 'new branch: all');
+  assert.ok(changedFiles(p, 'deadbeefdeadbeef').includes('src/short.ts'), 'base missing from the clone: all');
 });
 
 test('F-07 --check: passes with no changed code file, a long file turns CI red', () => {
@@ -64,8 +64,8 @@ test('F-07 --check: passes with no changed code file, a long file turns CI red',
   assert.match(r.stdout, /no changed code files/i);
   const base2 = sh('git rev-parse HEAD');
   write('src/dev.ts', 'x;\n'.repeat(450));
-  sh('git add src/dev.ts && git commit -qm uzun');
-  const r2 = spawnSync(process.execPath, [SCRIPT, '--check', '--base', base2], { cwd: p, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p, LIZARD: 'olmayan-lizard-komutu' } });
+  sh('git add src/dev.ts && git commit -qm long');
+  const r2 = spawnSync(process.execPath, [SCRIPT, '--check', '--base', base2], { cwd: p, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p, LIZARD: 'missing-lizard-command' } });
   assert.equal(r2.status, 1);
   assert.match(r2.stderr, /src\/dev\.ts.*450 lines/);
 });
@@ -78,6 +78,6 @@ test('F-07 build/out/vendor in a subfolder are measured; Turkish paths are kept;
   sh('git add src/ödeme.ts && git commit -qm tr');
   assert.deepEqual(changedFiles(p, base), ['src/ödeme.ts'], 'diff');
   assert.ok(changedFiles(p, '').includes('src/ödeme.ts'), 'whole repo');
-  assert.ok(changedFiles(p, '--output=kotu.txt').includes('src/ödeme.ts'), 'flag-like base: whole repo');
-  assert.ok(!fs.existsSync(path.join(p, 'kotu.txt')), 'the git flag does not run');
+  assert.ok(changedFiles(p, '--output=bad.txt').includes('src/ödeme.ts'), 'flag-like base: whole repo');
+  assert.ok(!fs.existsSync(path.join(p, 'bad.txt')), 'the git flag does not run');
 });

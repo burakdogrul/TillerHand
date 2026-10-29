@@ -30,7 +30,7 @@ Checked: 2026-10-25. Sources: [Environment variables](https://vercel.com/docs/en
 
 **Environment variables.** Settings → Environment Variables. For each variable pick the environment: Production, Preview, Development. Keys and tokens are entered as **Secret** (unreadable after saving); open values such as URLs as **Config**. A change does not apply to old deploys; a new deploy is needed. Limit: 64 KB total per deploy (5 KB per variable at the edge).
 
-**Domain.** Settings → Domains → Add Domain (CLI: `vercel domains add example.com <proje>`). When you add the apex, `www` is recommended: add both and redirect one to the other.
+**Domain.** Settings → Domains → Add Domain (CLI: `vercel domains add example.com <project>`). When you add the apex, `www` is recommended: add both and redirect one to the other.
 - Apex (`example.com`): **A** record. Take the value from the project's domain card. In most projects it is `76.76.21.21`; new projects may differ (e.g. `216.198.79.1`); verification looks for the value on the card.
 - Subdomain (`www`, `app`): **CNAME**, the target is project-specific (on the card, e.g. `…vercel-dns-017.com`).
 - If the domain is in another Vercel account, a **TXT** verification named `_vercel` is requested.

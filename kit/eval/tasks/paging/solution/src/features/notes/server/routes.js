@@ -13,12 +13,12 @@ function decode(s) {
 function page(res, list, url) {
   const raw = url.searchParams.get('limit');
   const limit = raw === null ? 20 : /^\d+$/.test(raw) ? Number(raw) : NaN;
-  if (!(limit >= 1 && limit <= 100)) return sendJson(res, 400, { error: 'limit 1-100 arası olmalı' });
+  if (!(limit >= 1 && limit <= 100)) return sendJson(res, 400, { error: 'limit must be 1-100' });
   let rest = list;
   const c = url.searchParams.get('cursor');
   if (c !== null) {
     const pos = decode(c);
-    if (!pos) return sendJson(res, 400, { error: 'geçersiz cursor' });
+    if (!pos) return sendJson(res, 400, { error: 'invalid cursor' });
     rest = list.filter((n) => after(pos, n) < 0);
   }
   const items = rest.slice(0, limit);
@@ -39,26 +39,26 @@ export function notesRoutes(store) {
 
     if (!id && req.method === 'POST') {
       const body = await readJson(req);
-      if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title gerekli' });
+      if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title required' });
       return sendJson(res, 201, store.create({ owner: user, title: body.title.trim(), body: body.body, createdAt: body.createdAt }));
     }
 
     if (id && req.method === 'GET') {
       const note = store.get(id);
-      return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });
+      return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'not found' });
     }
 
     if (id && req.method === 'PATCH') {
       const body = await readJson(req);
-      if (!body) return sendJson(res, 400, { error: 'geçersiz JSON' });
+      if (!body) return sendJson(res, 400, { error: 'invalid JSON' });
       const note = store.update(id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });
-      return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });
+      return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'not found' });
     }
 
     if (id && req.method === 'DELETE') {
-      return store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });
+      return store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'not found' });
     }
 
-    return sendJson(res, 405, { error: 'yöntem desteklenmiyor' });
+    return sendJson(res, 405, { error: 'method not allowed' });
   };
 }

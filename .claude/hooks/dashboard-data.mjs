@@ -366,7 +366,7 @@ export function githubStatus(root, now = Date.now()) {
   }
   // Separate call: the live workflow may be missing (mobile) or older than the last 8 runs; a failure here must not hide the rest
   if (data) try { data.liveRun = gh('run', 'list', '--workflow', 'live-monitoring.yml', '--limit', '1', '--json', 'conclusion,status,createdAt,url')[0] ?? null; } catch { data.liveRun = null; }
-  try { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify({ time: now, data })); } catch { /* sessiz */ }
+  try { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify({ time: now, data })); } catch { /* silent */ }
   return safe(data);
 }
 

@@ -17,11 +17,11 @@ The states a record can have and the transitions between them. This stops the AI
 ```
 [invoice.status]: draft → sent → paid
                                   ↘ overdue → paid
-                  taslak → iptal (cancelled)
+                  draft → cancelled
 ```
 
 ## Writing rules
 
 - Code: English (`camelCase` variable, `PascalCase` component/type, `snake_case` DB field).
-- UI text: Turkish; formal or informal "you" ("siz" or "sen")? → [pick: sen]
-- Date: `GG.AA.YYYY`, money: `1.234,56 ₺` (`tr-TR` with `Intl`).
+- UI text: [language]; formal or informal "you", if the language has both → [pick]
+- Date and money: format with `Intl` and the UI locale (e.g. `tr-TR`: `29.10.2026`, `1.234,56 ₺`) → [locale]

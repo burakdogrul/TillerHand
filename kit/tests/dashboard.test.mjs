@@ -147,14 +147,14 @@ test('produced assets: brand kit, video output, research title', async () => {
   fs.writeFileSync(path.join(p, 'docs/design/brand.md'), '# Brand');
   fs.writeFileSync(path.join(p, 'marketing/motion/demo/out/demo.mp4'), '');
   // A research title with Turkish letters is content: shown as written
-  fs.writeFileSync(path.join(p, 'docs/research/2026-10-01-payment.md'), '# Ödeme sağlayıcıları\n');
+  fs.writeFileSync(path.join(p, 'docs/research/2026-10-01-payment.md'), '# Payment providers\n');
   fs.writeFileSync(path.join(p, 'docs/research/2026-10-05-kvkk.md'), 'no title');
   const v = producedAssets(p);
   assert.equal(v.brandDir, 'assets/brand');
   assert.deepEqual(v.brand, ['logo.svg']);
   assert.equal(v.brandGuide, true);
   assert.deepEqual(v.videos, [{ name: 'demo', mp4: 'marketing/motion/demo/out/demo.mp4' }, { name: 'draft', mp4: null }]);
-  assert.deepEqual(v.research.map((r) => r.title), ['2026-10-05-kvkk', 'Ödeme sağlayıcıları']);
+  assert.deepEqual(v.research.map((r) => r.title), ['2026-10-05-kvkk', 'Payment providers']);
   // Understand-Anything graph: its age in days (auto-update is off, the dashboard hints when it gets old)
   fs.mkdirSync(path.join(p, '.ua'));
   const graph = path.join(p, '.ua/knowledge-graph.json');
@@ -166,8 +166,8 @@ test('produced assets: brand kit, video output, research title', async () => {
 
 test('cost: ccusage project name and daily summary (date/period fields)', async () => {
   const { ccusageProjectName, costSummary } = await import('../../.claude/hooks/dashboard-data.mjs');
-  if (process.platform === 'win32') assert.equal(ccusageProjectName(String.raw`D:\Claude Projeler\Vibe_Kit`), 'D--Claude-Projeler-Vibe-Kit');
-  else assert.equal(ccusageProjectName('/home/a/my.app'), '-home-a-my-app'); // kit:yol-izinli
+  if (process.platform === 'win32') assert.equal(ccusageProjectName(String.raw`D:\Claude Projects\Vibe_Kit`), 'D--Claude-Projects-Vibe-Kit');
+  else assert.equal(ccusageProjectName('/home/a/my.app'), '-home-a-my-app'); // kit:path-allowed
   const o = costSummary({ projects: { x: [{ date: '2026-10-11', totalTokens: 2e6, totalCost: 3 }, { date: '2026-10-09', totalTokens: 1e6, totalCost: 1.5 }] }, totals: {} });
   assert.deepEqual(o.days.map((g) => g.date), ['2026-10-09', '2026-10-11']);
   assert.deepEqual(o.total, { token: 3e6, cost: 4.5 });

@@ -29,7 +29,7 @@ Goal: Keep what you learned in this project and improve the kit (the template fo
    - Get the proposals approved with **multi-select**.
 6. Apply the approved ones to the kit:
    1. Clone the `source` repo from `.kit.json` into a temp folder.
-   2. Open a `retro/<proje>-<tarih>` branch.
+   2. Open a `retro/<project>-<date>` branch.
    3. Make the changes, add them to `kit/CHANGELOG.md` → "[Unreleased]" section.
    4. Run `node --test "kit/tests/*.test.mjs"`, commit.
    5. Then ask: "Push the branch and open a PR / push and merge to main / leave local only". Pushing needs explicit approval.

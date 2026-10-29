@@ -15,7 +15,7 @@ const SCRIPT = path.join(ROOT, '.claude/hooks/tools.mjs');
 const json = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
 
 function project(local) {
-  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'paket-'));
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'pkg-'));
   fs.mkdirSync(path.join(p, '.claude'));
   fs.writeFileSync(path.join(p, '.claude/settings.json'), JSON.stringify({
     enabledPlugins: { 'taste-skill@taste-skill': false, 'ui-ux-pro-max@ui-ux-pro-max-skill': false, 'ponytail@ponytail': true },
@@ -31,7 +31,7 @@ test('enabling a package: writes to personal settings, keeps other keys and plug
   const p = project({ permissions: { allow: ['Bash(x)'] }, enabledPlugins: { 'foo@bar': true } });
   setPackage(p, 'design', true);
   const l = json(path.join(p, '.claude/settings.local.json'));
-  assert.deepEqual(l.permissions, { allow: ['Bash(x)'] }, 'izinler korunur');
+  assert.deepEqual(l.permissions, { allow: ['Bash(x)'] }, 'permissions kept');
   assert.equal(l.enabledPlugins['foo@bar'], true, 'another plugin is kept');
   assert.equal(l.enabledPlugins['taste-skill@taste-skill'], true);
   assert.equal(l.enabledPlugins['ui-ux-pro-max@ui-ux-pro-max-skill'], true);
@@ -57,7 +57,7 @@ test('enabling a package: creates the personal settings file if missing', () => 
 test('attacker: unknown package, path and JSON arguments are rejected; a broken personal settings file is not overwritten', () => {
   const broken = '{"enabledPlugins": {';
   const p = project(broken);
-  for (const name of ['yok', '../x', '{"a":1}', '__proto__', 'constructor', 'tasarim', 'guvenlik', 'yayin']) {
+  for (const name of ['none', '../x', '{"a":1}', '__proto__', 'constructor', 'tasarim', 'guvenlik', 'yayin']) {
     assert.throws(() => setPackage(p, name, true), /Unknown package/, name);
     const r = run(p, ['--enable', name]);
     assert.equal(r.status, 1, `${name}: exit code 1`);
@@ -78,7 +78,7 @@ test('--required: a disabled package exits 2 and says how to enable it, 0 when e
   assert.equal(enabled.status, 0);
   assert.match(enabled.stdout, /Package design is enabled/);
   assert.equal(run(p, ['--required', 'tasarim']).status, 1, 'the old Turkish name is an unknown package');
-  assert.equal(run(p, []).status, 0, 'durum tablosu');
+  assert.equal(run(p, []).status, 0, 'status table');
   fs.rmSync(p, { recursive: true, force: true });
 });
 
@@ -87,12 +87,12 @@ test('--measure: measures the skill description load of installed plugins', () =
   const cfg = fs.mkdtempSync(path.join(os.tmpdir(), 'cfg-'));
   const installRecord = path.join(cfg, 'plugins/cache/x/taste-skill');
   fs.mkdirSync(path.join(installRecord, 'skills/a'), { recursive: true });
-  fs.writeFileSync(path.join(installRecord, 'skills/a/SKILL.md'), `---\nname: a\ndescription: ${'x'.repeat(400)}\n---\ngövde`);
+  fs.writeFileSync(path.join(installRecord, 'skills/a/SKILL.md'), `---\nname: a\ndescription: ${'x'.repeat(400)}\n---\nbody`);
   fs.writeFileSync(path.join(cfg, 'plugins/installed_plugins.json'), JSON.stringify({ plugins: { 'taste-skill@taste-skill': [{ scope: 'user', installPath: installRecord }] } }));
   const r = run(p, ['--measure'], { CLAUDE_CONFIG_DIR: cfg });
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /taste-skill@taste-skill/);
-  assert.match(r.stdout, /\b100\b/, '400 karakter ≈ 100 token');
+  assert.match(r.stdout, /\b100\b/, '400 characters ≈ 100 tokens');
   fs.rmSync(p, { recursive: true, force: true });
   fs.rmSync(cfg, { recursive: true, force: true });
 });

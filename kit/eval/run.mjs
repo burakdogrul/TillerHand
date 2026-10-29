@@ -3,7 +3,7 @@
 //   node kit/eval/run.mjs [--task bug-sort,feature-tags] [--cond kit,plain] [--model sonnet] [--repeat 3] [--dry] [--keep]
 // --dry: prepares the run folders and scores them without running Claude (the hidden tests must fail).
 // Each run gets a fresh temp folder with the fixture. Kit runs get init + install web-saas and the state /start would
-// leave (stack, AGENTS.md → Komutlar, question mode off, gate approval). Both run `claude -p` with the same model, the
+// leave (stack, AGENTS.md → Commands, question mode off, gate approval). Both run `claude -p` with the same model, the
 // same allowed tools and only project settings (user plugins and hooks stay out of the plain run).
 import fs from 'node:fs';
 import net from 'node:net';
@@ -33,7 +33,7 @@ const DENIED = ['Bash(node *..*)', 'Bash(git * --output*)', 'Bash(git * --no-ind
   'Edit(./.git/**)', 'Edit(./.claude/**)'];
 const HEADLESS = 'This is an automated evaluation run: there is no user, you cannot ask questions and you cannot wait for approval. ' +
   'Where a decision is needed, pick the best option and go on. Stop when the work is done. Do not commit.';
-const KIT_HEADLESS = ' Question mode is closed (all topics): for plan approval and decision questions, pick the recommended option and record it as "otomatik".';
+const KIT_HEADLESS = ' Question mode is closed (all topics): for plan approval and decision questions, pick the recommended option and record it as "automatic".';
 const STACK = `# Stack
 
 - Node.js 24, ES modules, no dependencies: \`node:http\` server, \`node:test\` tests.
@@ -73,14 +73,15 @@ function setupKit(dir) {
   run(process.execPath, [path.join(REPO, 'kit', 'kit.mjs'), 'install', '--type', 'web-saas', '--project', dir], REPO);
   const edit = (rel, fn) => { const p = path.join(dir, rel); fs.writeFileSync(p, fn(fs.readFileSync(p, 'utf8'))); };
   fs.writeFileSync(path.join(dir, 'docs', 'architecture', 'stack.md'), STACK);
-  edit('AGENTS.md', (s) => s.replace(/^geliştirme:\s*\[ \]/m, 'geliştirme:  npm start').replace(/^test:\s*\[ \]/m, 'test:        npm test'));
+  edit('AGENTS.md', (s) => s.replace(/^dev:\s*\[ \]/m, 'dev:         npm start').replace(/^test:\s*\[ \]/m, 'test:        npm test'));
   edit('docs/workflow/progress.md', (s) => s
-    .replace(/^\*\*Aktif faz:\*\* .*$/m, '**Aktif faz:** Faz 1')
-    .replace(/^\*\*Aktif görev:\*\* .*$/m, '**Aktif görev:** -')
-    .replace(/^\*\*Başlangıç adımı:\*\* .*$/m, '**Başlangıç adımı:** 9/9')
-    .replace(/^\*\*Soru modu:\*\* .*$/m, '**Soru modu:** kapalı · kapalı konular: hepsi')
-    .replace(/^\*\*Profil:\*\* .*$/m, '**Profil:** Hafif · derinlik: Hızlı · araç: claude')
+    .replace(/^\*\*Active phase:\*\* .*$/m, '**Active phase:** Phase 1')
+    .replace(/^\*\*Active task:\*\* .*$/m, '**Active task:** -')
+    .replace(/^\*\*Setup step:\*\* .*$/m, '**Setup step:** 9/9')
+    .replace(/^\*\*Question mode:\*\* .*$/m, '**Question mode:** off · closed topics: all')
+    .replace(/^\*\*Profile:\*\* .*$/m, '**Profile:** Light · depth: Quick · tools: claude')
     .replace(/The project has not started yet\.[^\n]*/, 'Setup is done; the notes API works (npm test is green).'));
+  run(process.execPath, [path.join(dir, '.claude', 'hooks', 'lang.mjs'), '--set', 'en'], dir, { CLAUDE_PROJECT_DIR: dir });
   run(process.execPath, [path.join(dir, '.claude', 'hooks', 'gate.mjs'), '--approve'], dir, { CLAUDE_PROJECT_DIR: dir });
 }
 

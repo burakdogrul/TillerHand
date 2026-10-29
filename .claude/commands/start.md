@@ -98,7 +98,7 @@ node <kit>/kit/kit.mjs install --type <web-saas|mobile|backend> [--addons ai,tr]
 npx -y tillerhand@<version> install --type <web-saas|mobile|backend> [--addons ai,tr] --project .
 ```
 
-Report the output. From now on `docs/architecture/stack.md` is the chosen type's file. Show the user the project structure (`docs/architecture/structure.md`) briefly: code will be organized by feature, the structure map (`.claude/structure.json`) will be enforced, experiments go under `sandbox/`. Suggest a commit: `chore: kit kurulumu (<tip>)`.
+Report the output. From now on `docs/architecture/stack.md` is the chosen type's file. Show the user the project structure (`docs/architecture/structure.md`) briefly: code will be organized by feature, the structure map (`.claude/structure.json`) will be enforced, experiments go under `sandbox/`. Suggest a commit: `chore: kit setup (<type>)`.
 
 ## Step 4: Technology decisions → `docs/architecture/stack.md`
 
@@ -124,7 +124,7 @@ With `mattpocock-skills:domain-modeling` and `mattpocock-skills:codebase-design`
 3. **External services:** A table with monthly cost estimates; get approval for every paid service. If the chosen service has a connection in `docs/workflow/mcp-catalog.md` (GitHub, Stripe, Vercel, PostHog, Figma, Firebase, Linear), suggest installing it; the user connects the identity themselves (OAuth or environment variable). Add every service to `docs/operations/accounts.md` (owner, 2FA, expiry date; do not write passwords). For every paid service add a row to the "Alarms" (alarms) table in `docs/operations/spend-alarms.md` and ask the cap amount (recommended: 2 times the monthly estimate in unit economics).
 3b. **Unit economics** (if it is a paid product): Fill the inputs of `docs/product/unit-economics.md` with estimates for price, commission, fixed and per-user cost. If the contribution margin is negative or the variable cost exceeds 30% of the price, ask it as a `cost` decision (price / usage limit / model choice).
 4. **Environments:** Local / preview / prod separation.
-5. `docs/product/glossary.md`: Main concepts, UI names and state transitions. Ask whether the UI will use the informal or formal "you" (Turkish "sen" or "siz").
+5. `docs/product/glossary.md`: Main concepts, UI names and state transitions. If the UI language has an informal and a formal "you" (Turkish "sen" / "siz", German "du" / "Sie"), ask which one the UI uses.
 
 If the AI add-on is installed, fill the model inventory in `docs/ai/guide.md`: Which feature uses which model? Ask this as a decision with the cost estimate.
 

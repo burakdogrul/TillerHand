@@ -27,13 +27,13 @@ test('models: recommended by default, --set changes only the given roles, bad in
   assert.equal(setModels(['code=haiku:medium', 'PLAN=Opus:XHIGH'], file), null);
   assert.deepEqual(readModels(file), { ...RECOMMENDED, code: 'haiku:medium', plan: 'opus:xhigh' });
   assert.match(showModels(file), /^plan: opus \/ xhigh \(Planning and architecture\) · recommended opus \/ high$/m);
-  for (const bad of ['code=gpt:low', 'code=sonnet:max', 'code=sonnet', 'code=sonnet:low:x', 'code=sonnet:medium=x', 'yok=sonnet:low', '__proto__=sonnet:low', 'code'])
+  for (const bad of ['code=gpt:low', 'code=sonnet:max', 'code=sonnet', 'code=sonnet:low:x', 'code=sonnet:medium=x', 'none=sonnet:low', '__proto__=sonnet:low', 'code'])
     assert.match(setModels([bad], file), /Invalid/, bad);
   assert.match(setModels([], file), /Usage/);
   assert.equal(readModels(file).code, 'haiku:medium', 'a refused --set writes nothing');
   fs.writeFileSync(file, '{"code":"gpt-9:ultra","docs":"sonnet:low"}');
   assert.deepEqual(readModels(file), { ...RECOMMENDED, docs: 'sonnet:low' }, 'a bad hand edit falls back to the recommended value');
-  fs.writeFileSync(file, 'bozuk');
+  fs.writeFileSync(file, 'broken');
   assert.deepEqual(readModels(file), RECOMMENDED);
   assert.match(showModels(file), /saved choice unreadable/, 'a broken file is not shown as a saved choice');
 });

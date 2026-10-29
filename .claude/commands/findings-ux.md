@@ -1,6 +1,6 @@
 ---
 description: UX and accessibility findings report. Scans the project through the eyes of a user and a UX researcher: flows, consistency, states, WCAG 2.2 AA, copy. Scores the 20 most important findings out of 100.
-argument-hint: [empty = whole project | folder/feature | --since <commit|tarih>]
+argument-hint: [empty = whole project | folder/feature | --since <commit|date>]
 ---
 
 Type: **ux** · Scope: $ARGUMENTS

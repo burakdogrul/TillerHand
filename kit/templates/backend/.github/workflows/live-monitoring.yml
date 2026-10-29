@@ -3,7 +3,7 @@
 # It also raises an alarm if the /health response takes longer than LIVE_MAX_SECONDS (Variables, default 2) seconds.
 # If something breaks it opens an issue labeled "live-monitoring" (it does not open a new one if one is already open).
 # To enable:
-#   1. Settings > Variables > LIVE_URL = https://api.alanadin.com
+#   1. Settings > Variables > LIVE_URL = https://api.example.com
 #   2. Critical endpoint tests (that delete no data, limited to a test account): as pytest under tests/live/
 #   3. If needed, Settings > Secrets > LIVE_TEST_TOKEN (a test account with restricted rights in prod)
 name: Live monitoring

@@ -17,7 +17,7 @@ const is4xx = (s) => s >= 400 && s < 500;
 const ids = (r) => (Array.isArray(r.json) ? r.json.map((n) => n.id) : []);
 
 test('trash: a deleted note is gone from the live notes', async () => {
-  const n = (await call('POST', '/notes', 'ayse', { title: 'eski', body: 'metin' })).json;
+  const n = (await call('POST', '/notes', 'ayse', { title: 'old', body: 'text' })).json;
   assert.ok(is2xx((await call('DELETE', `/notes/${n.id}`, 'ayse')).status));
   assert.ok(!ids(await call('GET', '/notes', 'ayse')).includes(n.id), 'not in the list');
   assert.ok(is4xx((await call('GET', `/notes/${n.id}`, 'ayse')).status), 'not readable');
@@ -25,7 +25,7 @@ test('trash: a deleted note is gone from the live notes', async () => {
 });
 
 test('trash: a deleted note is in the trash and comes back unchanged', async () => {
-  const n = (await call('POST', '/notes', 'ayse', { title: 'geri gel', body: 'içerik' })).json;
+  const n = (await call('POST', '/notes', 'ayse', { title: 'come back', body: 'content' })).json;
   await call('DELETE', `/notes/${n.id}`, 'ayse');
   const trash = await call('GET', '/trash', 'ayse');
   assert.equal(trash.status, 200);
@@ -34,7 +34,7 @@ test('trash: a deleted note is in the trash and comes back unchanged', async () 
   assert.ok(is2xx(r.status), `restore ${r.status}`);
   const back = await call('GET', `/notes/${n.id}`, 'ayse');
   assert.equal(back.status, 200);
-  assert.deepEqual([back.json.title, back.json.body], ['geri gel', 'içerik']);
+  assert.deepEqual([back.json.title, back.json.body], ['come back', 'content']);
   assert.ok(ids(await call('GET', '/notes', 'ayse')).includes(n.id), 'live again');
   assert.ok(!ids(await call('GET', '/trash', 'ayse')).includes(n.id), 'no longer in the trash');
 });

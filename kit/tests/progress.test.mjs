@@ -43,8 +43,8 @@ test('3.35.0 progress.mjs: marks the roadmap, adds a cost row, updates progress 
   assert.equal(run('--done', 'G-999').status, 1);
 
   // Sizes are S / M / L (the old K / O / B are refused: templates-lang A-48.21)
-  assert.equal(run('--cost', 'G-002 iskelet | ilk', 'M', '40', '52', '35', 'not').status, 0);
-  assert.ok(read('docs/workflow/cost-log.md', p).trimEnd().endsWith(`| ${today} | G-002 iskelet \\| ilk | M | 40 | 52 | 12 | 35 | not |`));
+  assert.equal(run('--cost', 'G-002 skeleton | first', 'M', '40', '52', '35', 'note').status, 0);
+  assert.ok(read('docs/workflow/cost-log.md', p).trimEnd().endsWith(`| ${today} | G-002 skeleton \\| first | M | 40 | 52 | 12 | 35 | note |`));
   const beforeBad = read('docs/workflow/cost-log.md', p);
   assert.match(run('--cost', 'x', 'Q', '1', '2', '3').stderr, /Usage/);
   assert.equal(read('docs/workflow/cost-log.md', p), beforeBad, 'an unknown size writes nothing');
@@ -58,13 +58,13 @@ test('3.35.0 progress.mjs: marks the roadmap, adds a cost row, updates progress 
   assert.match(run('--cost', 'y', 'S').stderr, /--start/, 'the start is used once');
 
   // The shipped template (English since 3.48.0)
-  assert.equal(run('--task', 'G-003 lint', '--did', 'G-002 bitti', '--next', '/build G-003').status, 0);
+  assert.equal(run('--task', 'G-003 lint', '--did', 'G-002 done', '--next', '/build G-003').status, 0);
   const prog = read('docs/workflow/progress.md', p);
   assert.match(prog, new RegExp(`^\\*\\*Last updated:\\*\\* ${today}$`, 'm'));
   assert.match(prog, /^\*\*Active task:\*\* G-003 lint$/m);
-  assert.match(prog, /## Done last session\n\n- G-002 bitti\n\n## Next step\n\n1\. \/build G-003\n\n## /);
-  assert.equal(run('--did', 'satır\nkırık').status, 0);
-  assert.match(read('docs/workflow/progress.md', p), /- G-002 bitti\n- satır kırık\n/, 'one line per entry');
+  assert.match(prog, /## Done last session\n\n- G-002 done\n\n## Next step\n\n1\. \/build G-003\n\n## /);
+  assert.equal(run('--did', 'broken\nline').status, 0);
+  assert.match(read('docs/workflow/progress.md', p), /- G-002 done\n- broken line\n/, 'one line per entry');
 
   assert.equal(run('--check').status, 0);
   fs.writeFileSync(path.join(p, 'docs/workflow/progress.md'), prog.replace('**Active phase:**', 'Active phase:'));
@@ -75,13 +75,13 @@ test('3.35.0 progress.mjs: marks the roadmap, adds a cost row, updates progress 
   // 3.49.0: a pre-3.48 Turkish progress.md (the 3.47.1 template) is not understood: its labels are not written to,
   // and --check reports all six labels as missing
   fs.writeFileSync(path.join(p, 'docs/workflow/progress.md'), PROGRESS_TR_3_47_1);
-  run('--task', 'G-003 lint', '--did', 'G-002 bitti', '--next', '/build G-003');
+  run('--task', 'G-003 lint', '--did', 'G-002 done', '--next', '/build G-003');
   const tr = read('docs/workflow/progress.md', p);
   for (const line of ['**Son güncelleme:** -', '**Aktif görev:** /start', '**Aktif faz:** Başlangıç']) {
     assert.equal(tr.split('\n').includes(line), true, `the Turkish label line is left as it was: ${line}`);
   }
   assert.doesNotMatch(tr, /^\*\*Aktif görev:\*\* G-003 lint$/m, 'no value is written under a Turkish label');
-  assert.doesNotMatch(tr, /## Son oturumda yapılanlar\n\n- G-002 bitti/, 'nothing is appended to a Turkish section');
+  assert.doesNotMatch(tr, /## Son oturumda yapılanlar\n\n- G-002 done/, 'nothing is appended to a Turkish section');
   const badTr = run('--check');
   assert.equal(badTr.status, 1);
   assert.match(badTr.stdout, /broken bold labels: Last updated, Active phase, Active task, Setup step, Question mode, Profile\./);

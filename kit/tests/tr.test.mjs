@@ -67,10 +67,10 @@ test('Ö-26.1 an addon added later never overwrites or silently skips the projec
     for (const args of [['init', '--project', p], ['install', '--type', 'web-saas', '--project', p]]) assert.equal(run(process.execPath, [KIT, ...args]).status, 0);
     const own = path.join(p, 'src/lib/payments/webhook-signature.ts');
     fs.mkdirSync(path.dirname(own), { recursive: true });
-    fs.writeFileSync(own, '// projenin kendi kodu\n');
+    fs.writeFileSync(own, '// the project code\n');
     const r = run(process.execPath, [KIT, 'update', '--project', p, '--addons', 'tr']);
     assert.equal(r.status, 0, r.stderr);
-    assert.equal(fs.readFileSync(own, 'utf8'), '// projenin kendi kodu\n', 'the project file is untouched');
+    assert.equal(fs.readFileSync(own, 'utf8'), '// the project code\n', 'the project file is untouched');
     assert.ok(exists(p, 'src/lib/payments/webhook-signature.ts.kit-new'), 'the kit version waits next to it');
     assert.match(r.stdout, /webhook-signature\.ts/, 'and the report names it');
   } finally {

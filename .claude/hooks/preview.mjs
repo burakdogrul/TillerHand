@@ -57,7 +57,7 @@ export async function preview(root, task) {
   if (!url) return fail('AGENTS.md → Commands has no `preview:` line, or it is empty. Add it (example: `preview:     http://localhost:3000`) or produce the evidence by hand in this task.');
   if (!LOCAL.test(url)) return fail(`the preview address must be local (http://localhost:<port>, 127.0.0.1 or [::1]). Now: ${url}`);
   if (!isApproved(root, list)) return { code: 1, text: `Preview · ${approvalNeeded(list)}` };
-  const dir = `.previews/${String(task || 'son').replace(/[^\w-]/g, '-')}`;
+  const dir = `.previews/${String(task || 'latest').replace(/[^\w-]/g, '-')}`;
   // A linked folder from the repo would send the files elsewhere
   for (const d of ['.previews', dir]) {
     try { if (fs.lstatSync(path.join(root, d)).isSymbolicLink()) return fail(`${d} is a link (symlink/junction); it must be a real folder.`); } catch { /* missing: created below */ }

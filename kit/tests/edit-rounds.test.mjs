@@ -22,7 +22,7 @@ const run = (input, args = []) => {
 const edit = (file, session = 's1') => run({ tool_name: 'Edit', session_id: session, cwd: p, tool_input: { file_path: path.join(p, file), old_string: 'a', new_string: 'b' } });
 
 test('F-05 code file detection', () => {
-  for (const f of ['src/a.ts', 'app/page.tsx', 'api/odeme.py', 'x.mjs', 'supabase/migrations/1.sql']) assert.ok(isCodeFile(f), f);
+  for (const f of ['src/a.ts', 'app/page.tsx', 'api/payment.py', 'x.mjs', 'supabase/migrations/1.sql']) assert.ok(isCodeFile(f), f);
   for (const f of ['docs/workflow/progress.md', 'package.json', 'README.md', '.env.example']) assert.ok(!isCodeFile(f), f);
 });
 
@@ -65,8 +65,8 @@ test('F-05 a broken state file does not crash; the Antigravity note goes only to
   assert.equal(edit('src/e.ts', 'b1'), null);
   fs.writeFileSync(state, JSON.stringify({ session: 'b1', counts: { 'src/e.ts': '4' }, pending: [] }));
   assert.equal(edit('src/e.ts', 'b1'), null, 'a non-number count starts from zero');
-  fs.writeFileSync(state, JSON.stringify({ session: 'c9', counts: {}, pending: ['yabancı not'] }));
-  assert.equal(run({ invocationNum: 1, conversationId: 'baska', workspacePaths: [p] }, ['--inject']), null, 'another session\'s note is not given');
+  fs.writeFileSync(state, JSON.stringify({ session: 'c9', counts: {}, pending: ['foreign note'] }));
+  assert.equal(run({ invocationNum: 1, conversationId: 'other', workspacePaths: [p] }, ['--inject']), null, 'another session\'s note is not given');
 });
 
 test('3.17.0 a state file with pre-3.15 keys is not read: counting starts over with the new keys', () => {

@@ -117,7 +117,7 @@ function semgrep(root, files) {
 //   boundary after it; any slash style, JSON-escaped too; case-insensitive only on Windows).
 //   Note only: a generic C:\Users\<name>, /home/<name>/, /Users/<name>/ (a container path like /home/node/app or a route
 //   is not a machine path, so it never blocks).
-// "kit:yol-izinli" on the line or the line above allows a deliberate one (Dockerfile and JSON take no inline comment).
+// "kit:path-allowed" on the line or the line above allows a deliberate one (Dockerfile and JSON take no inline comment).
 // Only added lines of tracked files are read (an old path elsewhere in the file is not this change's); a new file is
 // read whole. Paths are read from the git top level, so a project in a monorepo subfolder is checked too.
 const ESCAPE = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -150,13 +150,13 @@ export function absPathCheck(root, files) {
     } catch { continue; }
     lines.forEach((l, i) => {
       if (added.has(f) && !added.get(f).has(i + 1)) return;
-      if (l.includes('kit:yol-izinli') || lines[i - 1]?.includes('kit:yol-izinli')) return;
+      if (l.includes('kit:path-allowed') || lines[i - 1]?.includes('kit:path-allowed')) return;
       const at = `${f}:${i + 1}: ${l.trim().slice(0, 120)}`;
       if (mine?.test(l)) red.push(at); else if (generic.test(l)) notes.push(at);
     });
   }
   const list = (a) => [...a.slice(0, 15), a.length > 15 ? `… and ${a.length - 15} more lines` : ''].filter(Boolean).join('\n');
-  if (red.length) return { name, status: 'failed', note: 'path specific to this machine; use import.meta.url, __dirname, path.join(root, …), os.tmpdir(). If deliberate, write kit:yol-izinli on the line or the line above',
+  if (red.length) return { name, status: 'failed', note: 'path specific to this machine; use import.meta.url, __dirname, path.join(root, …), os.tmpdir(). If deliberate, write kit:path-allowed on the line or the line above',
     output: list(red) };
   return { name, status: 'passed', ...(notes.length && { note: `${notes.length} lines have a path that looks like a user folder; fix it if it is machine-specific (does not block)`, output: list(notes) }) };
 }

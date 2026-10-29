@@ -10,7 +10,7 @@
                           │
                           ├──> [Auth provider]
                           ├──> [Payment]
-                          └──> [E-posta / AI API / Depolama]
+                          └──> [Email / AI API / Storage]
 ```
 
 ## 2. Technology choice

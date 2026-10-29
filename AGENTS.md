@@ -85,7 +85,7 @@ build:       [ ]
 - Do not do these without approval (regardless of question mode): data deletion/reset, `git push --force`, `git reset --hard`, bulk file deletion, prod deploy, any action that spends money.
 - Do not delete or weaken a test to make it pass (the test protection hook asks). Do not invent APIs or packages that do not exist.
 - Do not try to bypass hooks (secret block, commit gate). Do not decide for the user and report afterwards.
-- Do not write a machine-specific absolute path into code, tests or docs (`C:\Users\<name>\…`, `/home/<name>/…`, the full project folder path). Derive the path from the project root, the script location or a temp folder; the gate catches it. For a deliberate example, write `kit:yol-izinli` on the line.
+- Do not write a machine-specific absolute path into code, tests or docs (`C:\Users\<name>\…`, `/home/<name>/…`, the full project folder path). Derive the path from the project root, the script location or a temp folder; the gate catches it. For a deliberate example, write `kit:path-allowed` on the line.
 
 ## Git
 

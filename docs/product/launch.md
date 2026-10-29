@@ -14,7 +14,7 @@
 |---|---|---|
 | `signup` | Signup completed | Acquisition |
 | `activated` | [First moment of value: e.g. sent their first invoice] | Activation |
-| `[ana_eylem]` | [The product's main action] | Usage |
+| `[main_action]` | [The product's main action] | Usage |
 | `upgrade` | Moved to a paid plan | Revenue |
 
 - [ ] Feedback channel: an in-app form or email, in an easy-to-see place.

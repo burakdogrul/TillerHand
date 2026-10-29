@@ -2,7 +2,7 @@
 # Why 3 hours: GitHub Free gives 2,000 Actions minutes a month in a private repo; an hourly run (~3 min) would cost ~2,160 min (docs.github.com, 2026-10-25).
 # If something breaks it opens an issue labeled "live-monitoring" (it does not open a new one if one is already open).
 # To enable:
-#   1. Settings > Variables > LIVE_URL = https://alanadin.com
+#   1. Settings > Variables > LIVE_URL = https://example.com
 #   2. Create a separate test account with restricted rights in prod: Settings > Secrets > LIVE_TEST_EMAIL, LIVE_TEST_PASSWORD
 #   3. Write the tests under tests/live/*.spec.ts (flows that delete no data, limited to the test account). smoke.spec.ts comes ready:
 #      does the home page open, is it within LIVE_MAX_MS (Variables, default 3000), are there errors in the console.

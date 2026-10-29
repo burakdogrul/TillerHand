@@ -19,7 +19,7 @@
 | 8 | Email | **Resend** (recommended: developer friendly, React email templates; free plan gives 3,000 emails per month, 100 per day (source: https://resend.com/pricing, 2026-10-26)) · Postmark (very high deliverability) · Amazon SES (cheapest, hard to set up) |
 | 9 | Analytics | **Plausible** (cookieless, KVKK friendly; no free plan, starts at 9 dollars per month, 30-day trial (source: https://plausible.io/docs/billing, 2026-10-26)) · PostHog (product analytics, funnels, feature flags) · Umami (self-host, free) · None |
 | 10 | Error tracking | **Sentry** (recommended) · Highlight / Better Stack |
-| 11 | Language support | **Turkish only** (recommended for the MVP) · Turkish + English (next-intl; setting it up from the start is cheaper than adding it later) |
+| 11 | Language support | **One language: the users' language** (recommended for the MVP) · Two or more languages (next-intl; setting it up from the start is cheaper than adding it later) |
 | 12 | Test | **Vitest + Playwright** (recommended) · Playwright only (little logic, mostly UI) |
 
 ## Chosen technologies
@@ -98,7 +98,7 @@ supabase/migrations/            # database changes ONLY here
 - Every new table has RLS on, a written policy, and an entry in the `tests/security/rls.mjs` → `TABLES` list (the `rls` job in CI turns red on an unregistered table).
 - On every page, think about `loading.tsx` / empty state / `error.tsx`.
 - Images with `next/image`, links with `next/link`.
-- Texts are in Turkish; format date/money with `Intl` and `tr-TR`.
+- Texts are in the UI language (`docs/product/glossary.md`); format date/money with `Intl` and that locale.
 - Before UI work, read `DESIGN.md` and `docs/design/design-guide.md`; do not go outside the tokens and rules. If a new design decision is needed, use `/design`.
 
 ## Verification (evidence before a task is done)
@@ -152,7 +152,7 @@ npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-resul
 
 - [ ] Vercel prod environment variables entered (Preview and Production separate)
 - [ ] Supabase prod project is separate; prod domain and redirect URLs in Auth → URL Configuration
-- [ ] Supabase email templates in Turkish and a custom SMTP (the default SMTP limit is very low)
+- [ ] Supabase email templates in the UI language and a custom SMTP (the default SMTP limit is very low)
 - [ ] Payment: live keys, live webhook endpoint and signing secret
 - [ ] SEO: `metadata` (title, description), Open Graph image, `sitemap.ts`, `robots.ts`, favicon
 - [ ] Lighthouse (mobile): Performance ≥ 90, Accessibility ≥ 90, SEO ≥ 90

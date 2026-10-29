@@ -34,7 +34,7 @@ test('motion-video: the closed-form spring in SKILL.md satisfies the differentia
 });
 
 test('notification: none for a short job or with KIT_NOTIFY=off, no error', () => {
-  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'bildirim-'));
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'notify-'));
   fs.mkdirSync(path.join(p, '.claude', 'state'), { recursive: true });
   fs.writeFileSync(path.join(p, '.claude/state/reminder.json'), JSON.stringify({ turnAt: Date.now() }));
   const run = (arg, env = {}) => spawnSync(process.execPath, [path.join(ROOT, '.claude/hooks/notify.mjs'), ...arg], {
@@ -47,9 +47,9 @@ test('notification: none for a short job or with KIT_NOTIFY=off, no error', () =
 
 test('notification: project name never enters the PowerShell script (’ is a quote there)', async () => {
   const { winCommand } = await import('../../.claude/hooks/notify.mjs');
-  const title = 'Claude Code · Proje’; Write-Output INJECTED; ’';
-  const { args, env } = winCommand(title, 'mesaj ‘x');
-  assert.ok(!args.some((a) => a.includes('INJECTED') || a.includes('mesaj')), 'text is not in the command');
+  const title = 'Claude Code · Project’; Write-Output INJECTED; ’';
+  const { args, env } = winCommand(title, 'message ‘x');
+  assert.ok(!args.some((a) => a.includes('INJECTED') || a.includes('message')), 'text is not in the command');
   assert.match(args.at(-1), /\$env:KIT_T, \$env:KIT_M/);
   assert.equal(env.KIT_T, title);
 });
@@ -136,12 +136,12 @@ test('settings 3.12: rea, Understand-Anything, design-md, three.js pinned and wi
 
 test('plugin sync: finds the missing and the disabled, ignores installs in another project', async () => {
   const { missingPlugins } = await import('../../.claude/hooks/plugins-sync.mjs');
-  const root = path.resolve(os.tmpdir(), 'proje-a');
+  const root = path.resolve(os.tmpdir(), 'project-a');
   const installed = [
     { id: 'caveman@caveman', scope: 'user' },
     // Windows paths ignore case; Linux and macOS paths do not
     { id: 'hookify@claude-plugins-official', scope: 'project', projectPath: process.platform === 'win32' ? root.toUpperCase() : root },
-    { id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'proje-b') },
+    { id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'project-b') },
   ];
   const enabled = { 'caveman@caveman': true, 'hookify@claude-plugins-official': true, 'fp-check@trailofbits': true, 'remotion@remotion': false };
   assert.deepEqual(missingPlugins(enabled, installed, root), [{ id: 'fp-check@trailofbits', enabled: true }, { id: 'remotion@remotion', enabled: false }]);
@@ -149,13 +149,13 @@ test('plugin sync: finds the missing and the disabled, ignores installs in anoth
 
 test('plugin sync: a plugin disabled locally is not missing, it is reported as info', async () => {
   const { missingPlugins, disabledHere } = await import('../../.claude/hooks/plugins-sync.mjs');
-  const root = path.resolve(os.tmpdir(), 'proje-a');
+  const root = path.resolve(os.tmpdir(), 'project-a');
   const installed = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: root, enabled: false }];
   const enabled = { 'fp-check@trailofbits': true, 'remotion@remotion': false };
   assert.deepEqual(missingPlugins({ 'fp-check@trailofbits': true }, installed, root), [], 'installed: not reinstalled, the choice is not overridden');
   assert.deepEqual(disabledHere(enabled, installed, root), ['fp-check@trailofbits']);
   assert.deepEqual(disabledHere({ 'fp-check@trailofbits': false }, installed, root), [], 'no info when already off in the settings');
-  const otherProject = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'proje-b'), enabled: false }];
+  const otherProject = [{ id: 'fp-check@trailofbits', scope: 'project', projectPath: path.resolve(os.tmpdir(), 'project-b'), enabled: false }];
   assert.deepEqual(disabledHere(enabled, otherProject, root), [], 'a disabled record in another project does not concern this one');
   assert.deepEqual(missingPlugins({ 'fp-check@trailofbits': true }, otherProject, root), [{ id: 'fp-check@trailofbits', enabled: true }], 'not installed here: on the install list');
 });

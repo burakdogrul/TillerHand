@@ -56,7 +56,7 @@ test('hook: clean content and broken input pass', () => {
   const clean = run({ tool_input: { file_path: 'a', content: 'hello' } });
   assert.equal(clean.status, 0);
   assert.equal(clean.stdout, '');
-  assert.equal(spawnSync(process.execPath, [HOOK], { input: 'bozuk', encoding: 'utf8' }).status, 0);
+  assert.equal(spawnSync(process.execPath, [HOOK], { input: 'broken', encoding: 'utf8' }).status, 0);
 });
 
 test('hook: also runs when the project is opened through a symlink or junction (macOS /tmp, linked folders)', (t) => {

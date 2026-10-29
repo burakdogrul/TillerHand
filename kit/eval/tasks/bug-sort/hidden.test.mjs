@@ -13,9 +13,9 @@ test('bug-sort: the list is newest first', async () => {
 });
 
 test('bug-sort: notes without createdAt get one and still list', async () => {
-  const r = await call('POST', '/notes', 'ayse', { title: 'şimdi' });
+  const r = await call('POST', '/notes', 'ayse', { title: 'now' });
   assert.equal(r.status, 201);
   assert.ok(!Number.isNaN(Date.parse(r.json.createdAt)));
   const list = (await call('GET', '/notes', 'ayse')).json;
-  assert.equal(list[0].title, 'şimdi', 'the newest note is first');
+  assert.equal(list[0].title, 'now', 'the newest note is first');
 });

@@ -64,7 +64,7 @@ test('Ö-09.1 npx tillerhand init sets up a project from the package: .gitignore
     const packed = npm(['pack', '--pack-destination', tmp], REPO);
     assert.equal(packed.status, 0, packed.stderr);
     const tgz = path.join(tmp, `tillerhand-${pkg.version}.tgz`);
-    const project = path.join(tmp, 'proje');
+    const project = path.join(tmp, 'project');
     fs.mkdirSync(project);
     const r = spawnSync('npx', ['--yes', '--package', tgz, 'tillerhand', 'init'].map(q), { cwd: project, encoding: 'utf8', shell: WIN, env: { ...process.env, NODE_TEST_CONTEXT: undefined } });
     assert.equal(r.status, 0, r.stderr);

@@ -32,7 +32,7 @@
 
 **TillerHand** is a starter kit that takes a product from idea to production and maintenance with [Claude Code](https://claude.com/claude-code). The AI writes the code; **you make the decisions**. At every important step it lays out the options, when each one is the better choice, and what it recommends. An **expert board** reviews the work, **guardrails** stop dangerous actions before they happen, and the project always stays in a **clean folder structure**.
 
-> **Language first.** `/start` and `/adopt` open with one question: which language should the AI talk to you in? Turkish, English or any other. From then on questions, answers, reports, the dashboard and the status line come in that language; `/language` changes it later. Everything the kit ships (commands, rules, agents, hooks, document templates) is written in English; only the optional Turkey add-on stays Turkish.
+> **Language first.** `/start` and `/adopt` open with one question: which language should the AI talk to you in? Turkish, English or any other. From then on questions, answers, reports, the dashboard and the status line come in that language; `/language` changes it later. Everything the kit ships (commands, rules, agents, hooks, document templates) is written in English, the Turkey add-on included. Turkish interface texts ship in `.claude/i18n/tr.json`; labels and keys in project files stay English in every language, because the tools read them.
 
 | | |
 |---|---|

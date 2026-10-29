@@ -72,7 +72,7 @@ Test names start with the prefix `ATTACK:`. The `security-auditor` agent counts 
 ## 4. Commands
 
 ```bash
-[test komutu]          # all
-[test komutu] [dosya]  # single file
-[e2e komutu]           # end to end
+[test command]         # all
+[test command] [file]  # single file
+[e2e command]          # end to end
 ```

@@ -14,7 +14,7 @@
 
 - Research the sector's **standard workflows**, its **competitors** and the features customers **naturally expect** in the sector (WebSearch; `mattpocock-skills:research` if needed).
 - Scan the relevant regulations only for their effect on workflows; legal detail is the job of the `/findings-legal` report.
-- Write the source of every research finding in the report's "Kaynaklar" section. Do not make claims without a source.
+- Write the source of every research finding in the report's "Sources" section. Do not make claims without a source.
 
 ## Checklist
 

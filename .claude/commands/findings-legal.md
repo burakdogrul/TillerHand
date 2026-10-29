@@ -1,6 +1,6 @@
 ---
 description: Legal / KVKK / regulation findings report. Scans the project through the eyes of a compliance expert: KVKK, consent, texts, sector regulation, licenses. Not legal advice. Scores the 20 most important findings out of 100.
-argument-hint: [empty = whole project | folder/feature | --since <commit|tarih>]
+argument-hint: [empty = whole project | folder/feature | --since <commit|date>]
 ---
 
 Type: **legal** · Scope: $ARGUMENTS

@@ -21,7 +21,7 @@ const approvalFile = path.join(root, '.claude', 'state', 'commit-approval.json')
 const git = (c) => execSync(`git ${c}`, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
 
 // Changes that will go into the commit: staged, unstaged in tracked files (git commit -a) and untracked new
-// files (git add -A && git commit). -z: Turkish or spaced paths are not quoted and escaped
+// files (git add -A && git commit). -z: non-ASCII or spaced paths are not quoted and escaped
 // The signature is each changed file's content on disk, so "git add" of the approved content keeps the approval and the gate.
 // The commit takes the index: a file staged with other content than the disk (partial staging) also adds its index blob.
 // --no-renames: a staged rename must list the same two paths as the unstaged delete + new file.
@@ -42,8 +42,8 @@ export function changes() {
     h.update(`\0${f}\0`);
     let body = null;
     try { body = fs.readFileSync(path.join(root, f)); } catch { /* deleted */ }
-    h.update(body ?? '\0silindi');
-    hashes.set(f, body ? digest(body) : 'silindi');
+    h.update(body ?? '\0deleted');
+    hashes.set(f, body ? digest(body) : 'deleted');
   }
   for (const f of partial) {
     h.update(`\0index:${f}:${blobs.get(f)}`);
@@ -85,7 +85,7 @@ export function commitPattern(command) {
 // Allowed: commit alone, with "git add" and "cd" before it. A heredoc and a $(cat <<'EOF' … EOF) message do not count as commands.
 export function chainIssue(command, commit = COMMIT) {
   const k = command.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, '<<HEREDOC')
-    .replace(/\$\(\s*cat\s+<<HEREDOC\s*\)/g, 'MESAJ')
+    .replace(/\$\(\s*cat\s+<<HEREDOC\s*\)/g, 'MESSAGE')
     .replace(/'[^']*'/g, "''")
     .replace(/"((?:[^"\\]|\\.)*)"/g, (m, inner) => (/\$\(|`/.test(inner) ? m : '""'))
     .replace(/\d*>&\d+/g, '');
@@ -98,7 +98,7 @@ export const docsOnly = (files) => files.every((f) => /\.(md|txt)$/i.test(f) || 
 
 function hasBoard() {
   const agents = path.join(root, '.claude', 'agents');
-  // board-chair (council chair) ships with the template and is not a board member; member files are copied in the /start Kurul step
+  // board-chair (council chair) ships with the template and is not a board member; member files are copied in the /start board step
   return fs.existsSync(agents) && fs.readdirSync(agents).some((f) => /^board-.+\.md$/.test(f) && f !== 'board-chair.md');
 }
 
@@ -237,7 +237,7 @@ async function hook() {
   // written by the test runner, not by Write/Edit. A partially staged test (git apply --cached, skip-worktree) commits an
   // index blob the record does not describe, so it always stops.
   const written = readRecord(root);
-  const foreign = d.files.filter((f) => isTestFile(f) && isCodeFile(f) && !isTestConfig(f) && d.hashes[f] !== 'silindi' && written[f] !== d.hashes[f]);
+  const foreign = d.files.filter((f) => isTestFile(f) && isCodeFile(f) && !isTestConfig(f) && d.hashes[f] !== 'deleted' && written[f] !== d.hashes[f]);
   if (foreign.length && !(skipped && approval.signature === d.signature)) {
     process.stderr.write(`Commit stopped: test-writer did not write these test files, or they changed after it wrote them, or they were partially staged: ${foreign.join(', ')}.\n` +
       'Only the test-writer agent writes test files with Write/Edit (AGENTS.md rule 7); a test written by patch, script, shell, git mv or Codex/Antigravity does not count.\n' +

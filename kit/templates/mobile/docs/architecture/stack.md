@@ -43,7 +43,7 @@ npx expo start                          # development
 npx expo lint
 npx tsc --noEmit
 npm run test                            # jest
-npx expo install [paket]                # add a package (picks the SDK-compatible version, not npm install)
+npx expo install [package]              # add a package (picks the SDK-compatible version, not npm install)
 npx expo-doctor                         # dependency compatibility check
 eas build --profile preview --platform all     # test build
 eas build --profile production --platform all  # store build
@@ -72,7 +72,7 @@ src/
 │       ├── types.ts
 │       └── index.ts
 ├── components/                 # shared components: Button, TextField, Screen, EmptyState...
-├── hooks/                      # shared hooks (useBayrak etc.)
+├── hooks/                      # shared hooks (useFlag etc.)
 ├── lib/                        # supabase, sentry, secure storage, analytics clients
 ├── theme/                      # design tokens (from DESIGN.md)
 ├── config/                     # environment variables, constants
@@ -124,7 +124,7 @@ maestro test .maestro/ --format junit --output test-results/junit-e2e.xml
 
 **Feature flags** (`docs/operations/feature-flags.md`): It must be possible to turn a feature off without a store update. The app reads the flag remotely at launch and caches the last known value; with no network, the safe default (off) is used:
 - PostHog feature flags or Firebase Remote Config; or a Supabase `feature_flags` table.
-- Reading goes through a single hook: `hooks/useBayrak.ts`. Features that take payments, use AI or send notifications are not released without a flag.
+- Reading goes through a single hook: `hooks/useFlag.ts`. Features that take payments, use AI or send notifications are not released without a flag.
 
 ## Common AI mistakes (watch for these)
 

@@ -8,7 +8,7 @@ export function notesRoutes(store) {
     const match = url.pathname.match(/^\/notes(?:\/([^/]+))?$/);
     if (!match) return false;
     const id = match[1];
-    if (!user) return sendJson(res, 401, { error: 'kimlik gerekli' });
+    if (!user) return sendJson(res, 401, { error: 'identity required' });
     // Another user's note answers like a missing one: its existence does not leak
     const own = (noteId) => { const n = store.get(noteId); return n && n.owner === user ? n : null; };
 
@@ -16,26 +16,26 @@ export function notesRoutes(store) {
 
     if (!id && req.method === 'POST') {
       const body = await readJson(req);
-      if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title gerekli' });
+      if (!body || typeof body.title !== 'string' || !body.title.trim()) return sendJson(res, 400, { error: 'title required' });
       return sendJson(res, 201, store.create({ owner: user, title: body.title.trim(), body: body.body, createdAt: body.createdAt }));
     }
 
     if (id && req.method === 'GET') {
       const note = own(id);
-      return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'bulunamadı' });
+      return note ? sendJson(res, 200, note) : sendJson(res, 404, { error: 'not found' });
     }
 
     if (id && req.method === 'PATCH') {
       const body = await readJson(req);
-      if (!body) return sendJson(res, 400, { error: 'geçersiz JSON' });
+      if (!body) return sendJson(res, 400, { error: 'invalid JSON' });
       const note = store.update(id, { ...(body.title ? { title: body.title } : {}), ...(body.body !== undefined ? { body: body.body } : {}) });
       return sendJson(res, 200, note);
     }
 
     if (id && req.method === 'DELETE') {
-      return own(id) && store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'bulunamadı' });
+      return own(id) && store.remove(id) ? sendJson(res, 204, {}) : sendJson(res, 404, { error: 'not found' });
     }
 
-    return sendJson(res, 405, { error: 'yöntem desteklenmiyor' });
+    return sendJson(res, 405, { error: 'method not allowed' });
   };
 }

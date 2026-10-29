@@ -344,10 +344,10 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
   <div class="container">
     <a class="brand" href="#top"><svg class="mark"><use href="#mark"/></svg>TillerHand</a>
     <nav class="nav-links" aria-label="Main menu">
-      <a href="#nasil">How it works</a>
-      <a href="#ekranlar">Screens</a>
-      <a href="#olcum">Results</a>
-      <a href="#rehber">Guide</a>
+      <a href="#how">How it works</a>
+      <a href="#screens">Screens</a>
+      <a href="#measurement">Results</a>
+      <a href="#guide">Guide</a>
       <a class="btn ghost small" href="https://github.com/burakdogrul/TillerHand">GitHub</a>
     </nav>
     <div class="lang" role="group" aria-label="Language"><span aria-current="true">English</span><a href="guide.tr.html" hreflang="tr" lang="tr">Türkçe</a></div>
@@ -377,7 +377,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
         </div>
         <p class="next" aria-live="polite">Run it in the project folder. Then open a new session in the same folder and type <code>/start your idea</code>.</p>
       </div>
-      <p class="hero-note">One command is enough; the plugin and git routes are in <a href="#baslangic">Setup</a> · Also works in Codex and Antigravity · No coding knowledge needed</p>
+      <p class="hero-note">One command is enough; the plugin and git routes are in <a href="#getting-started">Setup</a> · Also works in Codex and Antigravity · No coding knowledge needed</p>
     </div>
     <div class="window demo" aria-label="Example: a decision question the AI asks you">
       <div class="bar"><i></i><i></i><i></i><span>Claude Code · /start</span></div>
@@ -422,7 +422,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 </section>
 
 <!-- ============ CYCLE ============ -->
-<section class="band" id="nasil">
+<section class="band" id="how">
   <div class="container">
     <p class="kicker">How it works</p>
     <h2>The same cycle for every task. You sit in the middle.</h2>
@@ -472,7 +472,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 </section>
 
 <!-- ============ SCREENS ============ -->
-<section class="band soft" id="ekranlar">
+<section class="band soft" id="screens">
   <div class="container">
     <p class="kicker">At work</p>
     <h2>This is what a day with TillerHand looks like.</h2>
@@ -540,7 +540,7 @@ Next: G-013 password reset · pending decision: email service</pre>
 </section>
 
 <!-- ============ RESULTS ============ -->
-<section class="band" id="olcum">
+<section class="band" id="measurement">
   <div class="container">
     <p class="kicker">Results</p>
     <h2>The difference is in the tests that catch bugs.</h2>
@@ -563,7 +563,7 @@ Next: G-013 password reset · pending decision: email service</pre>
 </section>
 
 <!-- ============ GUIDE ============ -->
-<div class="band soft" style="padding:72px 0 0" id="rehber">
+<div class="band soft" style="padding:72px 0 0" id="guide">
   <div class="container">
     <p class="kicker">Guide</p>
     <h2>The full guide</h2>
@@ -574,36 +574,36 @@ Next: G-013 password reset · pending decision: email service</pre>
 <div class="container docs">
   <nav class="side" aria-label="Guide contents">
     <p>Start</p>
-    <a href="#baslangic">Setup</a>
-    <a href="#hic-bilmiyorsan">If you're new</a>
+    <a href="#getting-started">Setup</a>
+    <a href="#new-to-this">If you're new</a>
     <a href="#adopt">Existing project</a>
-    <a href="#gunluk">Every day</a>
+    <a href="#daily">Every day</a>
     <p>How it works</p>
-    <a href="#protokol">Decision protocol</a>
-    <a href="#sihirbaz">The /start wizard</a>
+    <a href="#protocol">Decision protocol</a>
+    <a href="#wizard">The /start wizard</a>
     <a href="#design">Design flow</a>
-    <a href="#asamalar">Four stages</a>
-    <a href="#kurul">Expert board</a>
+    <a href="#phases">Four stages</a>
+    <a href="#board">Expert board</a>
     <p>Quality and security</p>
-    <a href="#kontroller">Guardrail layers</a>
-    <a href="#bulgular">Findings reports</a>
-    <a href="#yapi">Project structure</a>
+    <a href="#checks">Guardrail layers</a>
+    <a href="#findings">Findings reports</a>
+    <a href="#structure">Project structure</a>
     <p>Tracking</p>
-    <a href="#rapor">Reports and dashboard</a>
-    <a href="#limit">Limit awareness</a>
+    <a href="#report">Reports and dashboard</a>
+    <a href="#limits">Limit awareness</a>
     <p>Tools</p>
-    <a href="#yetenekler">Capability packs</a>
-    <a href="#skiller">Which skill for which job</a>
-    <a href="#araclar">Codex and Antigravity</a>
+    <a href="#capabilities">Capability packs</a>
+    <a href="#skills">Which skill for which job</a>
+    <a href="#tools">Codex and Antigravity</a>
     <p>Reference</p>
-    <a href="#komutlar">Commands</a>
+    <a href="#commands">Commands</a>
     <a href="#kit">Updates and maintenance</a>
-    <a href="#kurallar">Golden rules</a>
+    <a href="#rules">Golden rules</a>
   </nav>
 
   <div class="doc">
 
-<section id="baslangic">
+<section id="getting-started">
   <p class="path">Before you start</p>
   <h2>Setup</h2>
   <p class="lead">Pick your path first: are you starting a new idea in an empty folder, or do you already have code? The install is the same for both; what changes is the command you type after it.</p>
@@ -617,7 +617,7 @@ Next: G-013 password reset · pending decision: email service</pre>
         <li>Phase 0: CI and the first deploy</li>
         <li>Every day <code>/build</code>: the next task</li>
       </ol>
-      <a class="go" href="#sihirbaz">The /start wizard →</a>
+      <a class="go" href="#wizard">The /start wizard →</a>
     </article>
     <article class="route">
       <h3>I already have code</h3>
@@ -657,14 +657,14 @@ node vibe-kit/kit/kit.mjs init</pre>
   <div class="note"><b>Recommended: the code map.</b> If <a href="https://github.com/DeusData/codebase-memory-mcp">codebase-memory-mcp</a> is connected, the AI queries the code instead of reading it file by file; as the project grows this saves a lot of tokens. <code>/start</code> asks whether you want it; you do the install in your own terminal.</div>
 </section>
 
-<section id="hic-bilmiyorsan">
+<section id="new-to-this">
   <p class="path">Without coding</p>
   <h2>If you're new: step by step</h2>
   <p class="lead">You don't need to know how to code. Claude does the git, terminal and install work and asks you at every important step. You describe what you want and make the choices.</p>
   <ol>
     <li><b>Accounts (once):</b> a <a href="https://github.com">GitHub</a> account (free) and a Claude <b>Pro</b> or <b>Max</b> subscription.</li>
     <li><b>Programs (once):</b> the <a href="https://claude.com/download">Claude desktop app</a>, <a href="https://nodejs.org">Node.js</a> (LTS version), <a href="https://git-scm.com/downloads">Git</a>. You can also install <a href="https://desktop.github.com">GitHub Desktop</a> if you like.</li>
-    <li><b>Project:</b> Create a folder for your project and select it in the <b>Code</b> tab of the Claude desktop app. Tell Claude "run <code>npx tillerhand init</code> in this folder". If you've <a href="#baslangic">installed the TillerHand plugin once</a>, <code>/tillerhand:init</code> works too.</li>
+    <li><b>Project:</b> Create a folder for your project and select it in the <b>Code</b> tab of the Claude desktop app. Tell Claude "run <code>npx tillerhand init</code> in this folder". If you've <a href="#getting-started">installed the TillerHand plugin once</a>, <code>/tillerhand:init</code> works too.</li>
     <li><b>Open:</b> Open a <b>new session</b> in the same folder; the kit's commands and guardrails load in the new session. If it offers to install the plugins, accept.</li>
     <li><b>Start:</b> Type <code>/start your idea</code> (or <a href="#adopt"><code>/adopt</code></a> if you already have code). <b>The first option of every question is the recommended one</b>; if you're unsure, pick it. If you're on Pro, suggested answers for the first questions: profile <b>Light</b>, planning depth <b>Quick</b> (~25-35% of your 5-hour limit), dashboard <b>Yes</b>, narrator mode <b>Yes</b>.</li>
   </ol>
@@ -714,7 +714,7 @@ npx tillerhand init
   </div>
 </section>
 
-<section id="gunluk">
+<section id="daily">
   <p class="path">Routine</p>
   <h2>Every day</h2>
   <div class="table-wrap"><table>
@@ -729,7 +729,7 @@ npx tillerhand init
   </table></div>
 </section>
 
-<section id="protokol">
+<section id="protocol">
   <p class="path">docs/workflow/decision-protocol.md</p>
   <h2>You make the decisions</h2>
   <p class="lead">Every choice about product, tech, design, content, data, security and cost is a decision point. The AI prepares the options, puts its recommendation first, and writes when each option is better and what it costs. Your answer is saved to <code>docs/decisions/log.md</code>, then applied, and never asked again.</p>
@@ -757,19 +757,19 @@ npx tillerhand init
   <div class="table-wrap"><table>
     <thead><tr><th>Topic</th><th>Example decisions</th></tr></thead>
     <tbody>
-      <tr><td class="f">urun</td><td>MVP scope, priority, user flow, price</td></tr>
-      <tr><td class="f">teknik</td><td>Language, framework, database, auth, hosting, adding a library, API style</td></tr>
+      <tr><td class="f">product</td><td>MVP scope, priority, user flow, price</td></tr>
+      <tr><td class="f">tech</td><td>Language, framework, database, auth, hosting, adding a library, API style</td></tr>
       <tr><td class="f">design</td><td>Style direction, color, typeface, layout, component style, animation, dark theme</td></tr>
-      <tr><td class="f">icerik</td><td>Copy, tone of voice, formal/informal address, headline and CTA alternatives</td></tr>
-      <tr><td class="f">veri</td><td>Data model, delete behavior, retention period</td></tr>
+      <tr><td class="f">content</td><td>Copy, tone of voice, formal/informal address, headline and CTA alternatives</td></tr>
+      <tr><td class="f">data</td><td>Data model, delete behavior, retention period</td></tr>
       <tr><td class="f">security</td><td>Roles, session length, rate limits, personal data</td></tr>
-      <tr><td class="f">maliyet</td><td>Paid service, plan tier, AI model, spending limit</td></tr>
+      <tr><td class="f">cost</td><td>Paid service, plan tier, AI model, spending limit</td></tr>
     </tbody>
   </table></div>
   <div class="note">For hard-to-reverse decisions (database, auth, payment, data model; a "one-way door") the board's opinion, and if needed the council's, is taken first. Whatever the question mode, approval is always asked for: data deletion, deploys to prod, anything that spends money, irreversible commands. Implementation details such as file and variable names are not asked, only reported.</div>
 </section>
 
-<section id="sihirbaz">
+<section id="wizard">
   <p class="path">.claude/commands/start.md</p>
   <h2>/start: the nine-step wizard</h2>
   <p class="lead">It makes all the basic decisions of the project without writing application code. Decisions are written to the log the moment they are made and show up on the dashboard. If it stops halfway, it continues from the step it reached.</p>
@@ -817,7 +817,7 @@ npx tillerhand init
   <div class="note"><b>Inspiration brand (optional):</b> The DESIGN.md of a product you like (awesome-design-md) is downloaded and its principles are distilled with Impeccable. The logo, name and exact palette are not taken; there is no brand imitation.</div>
 </section>
 
-<section id="asamalar">
+<section id="phases">
   <p class="path">After /start</p>
   <h2>Four stages</h2>
   <p class="lead">Every stage has an exit gate: you don't move on to the next one until the items at the gate are complete.</p>
@@ -868,7 +868,7 @@ npx tillerhand init
   </div>
 </section>
 
-<section id="kurul">
+<section id="board">
   <p class="path">.claude/agents/board-* · docs/workflow/board.md</p>
   <h2>Expert board</h2>
   <p class="lead">Expert agents are created in your project for the product type you choose and tailored to the stack. They review the work continuously, recommend decisions and keep you informed. They are advisors; they stop the work only on a critical finding. The decision is always yours.</p>
@@ -891,7 +891,7 @@ npx tillerhand init
   <p>Karpathy's <a href="https://github.com/karpathy/llm-council">llm-council</a> structure, adapted to the board. Heavy meetings and decisions that are expensive to reverse go through three stages:</p>
   <div class="tiles">
     <article class="tile"><h3>1 · First opinions</h3><p>Members (or advisors on different models) work in parallel without knowing about each other. Opinions are labeled A, B, C; findings A1, A2…</p></article>
-    <article class="tile"><h3>2 · Anonymous cross-vote</h3><p>Each member reads the others' opinions without knowing who wrote them, votes each finding DOĞRU · ABARTILI · YANLIŞ (true · exaggerated · false), writes what is missing, and ranks the opinions.</p></article>
+    <article class="tile"><h3>2 · Anonymous cross-vote</h3><p>Each member reads the others' opinions without knowing who wrote them, votes each finding AGREE · OVERSTATED · DISAGREE, writes what is missing, and ranks the opinions.</p></article>
     <article class="tile"><h3>Count (code)</h3><p><code>council.mjs</code> computes the average rank, the finding votes and the consensus percentage in code; the model can't change the numbers.</p></article>
     <article class="tile"><h3>3 · Chair</h3><p>board-chair (opus) reads the minutes, writes the decision, drops refuted findings with a reason, and keeps the minority opinion. It can't drop a disputed critical finding; it asks you.</p></article>
   </div>
@@ -910,7 +910,7 @@ npx tillerhand init
   <div class="note">When a REJECT comes, the task is not counted as done. You get three options: fix it (recommended), accept the risk and record the reason, or roll the task back. If members disagree, the two opinions are shown side by side and the decision is asked from you.</div>
 </section>
 
-<section id="kontroller">
+<section id="checks">
   <p class="path">Rules are written, checks are automatic</p>
   <h2>Guardrail layers</h2>
   <p class="lead">Decisions are made in Claude Code's permission layer (allow · ask · block); the AI can't bypass them. In Codex and Antigravity the same scripts run through that tool's hooks.</p>
@@ -966,7 +966,7 @@ npx tillerhand init
   </table></div>
 </section>
 
-<section id="bulgular">
+<section id="findings">
   <p class="path">/findings-* · docs/findings/</p>
   <h2>Findings reports</h2>
   <p class="lead">Scans the project through an expert's eyes and ranks the most important findings, at most 20, with evidence, a 0-100 severity score and a technical fix. Each report gives a health score for its area and is compared with the previous one (new / continuing / worse / resolved).</p>
@@ -985,7 +985,7 @@ npx tillerhand init
   <div class="note">Severity score = impact (40) + likelihood (25) + spread (20) + urgency (15). Levels: Critical ≥80 · High 60-79 · Medium 40-59 · Low &lt;40. Health = 100 − penalty (critical 15 · high 8 · medium 4 · low 1). At the end of the report are the fix plan, the relevant board member's opinion, and the question of which findings go into the roadmap.</div>
 </section>
 
-<section id="yapi">
+<section id="structure">
   <p class="path">.claude/structure.json · docs/architecture/structure.md</p>
   <h2>The project structure is protected</h2>
   <p class="lead">The code is organized by feature: everything that belongs to a feature lives under <code>features/&lt;feature&gt;/</code>. If a new file is about to be written outside the structure map, you are asked; clutter files are blocked. Trial work goes to <code>sandbox/</code>, outdated docs to <code>docs/archive/</code>.</p>
@@ -1010,7 +1010,7 @@ AGENTS.md · CLAUDE.md · README.md · CHANGELOG.md</pre>
   <div class="note"><code>AGENTS.md</code> holds the shared rules (read by Claude Code, Codex and Antigravity); <code>CLAUDE.md</code> imports it and carries the Claude Code-specific additions. The structure is protected in four places: the hook at write time, CI on every PR, the board's Architect, and <code>/findings-tech</code>. Changing the map is a technical decision; you are asked and it is recorded as an ADR.</div>
 </section>
 
-<section id="rapor">
+<section id="report">
   <p class="path">Where are we, at every moment</p>
   <h2>Reports and dashboard</h2>
   <div class="grid2">
@@ -1042,7 +1042,7 @@ Next: G-013 password reset · pending decision: email service</pre>
   </div>
 </section>
 
-<section id="limit">
+<section id="limits">
   <p class="path">docs/workflow/usage-limits.md</p>
   <h2>Limit awareness</h2>
   <p class="lead">Before work starts, the 5-hour and weekly limits are read: on the desktop with the <code>get_usage</code> tool, in the terminal and IDE from what Claude Code sends to the status line. The limit is only a reason to warn: work doesn't stop, and continues until you say "stop".</p>
@@ -1068,7 +1068,7 @@ Next: G-013 password reset · pending decision: email service</pre>
   <div class="note">Task costs are written to <code>docs/workflow/cost-log.md</code>; estimates settle on real data over time. At session start only the summary rules and <code>docs/workflow/progress.md</code> are loaded (about 1,700 tokens). If the code map is connected, the code is queried without reading the files. The main session's context is kept small too: independent questions are asked in one round, gate and subagent reports come back short, and <code>/clear</code> is suggested once a task is done and committed.</div>
 </section>
 
-<section id="yetenekler">
+<section id="capabilities">
   <p class="path">.claude/skills · MCP</p>
   <h2>Capability packs</h2>
   <p class="lead">The core jobs rely on the kit's own skills, not on tools installed from outside; outside tools are turned on only where they make a difference and according to the project type.</p>
@@ -1090,13 +1090,13 @@ Next: G-013 password reset · pending decision: email service</pre>
     <article class="tile"><h3>Mobile testing and services</h3><p class="stack">Maestro · Expo MCP · service catalog</p><ul><li>Acceptance tests on a device or simulator</li><li>EAS build, TestFlight crash logs</li><li>GitHub, Stripe, PostHog, Figma: once the service is chosen</li></ul></article>
     <article class="tile"><h3>Measurement and cost</h3><p class="stack">Playwright CLI · Chrome DevTools MCP · ccusage</p><ul><li>Console, network and screenshots through the CLI; performance traces through MCP</li><li>Tokens and cost per project on the dashboard</li></ul></article>
     <article class="tile"><h3>Rollback</h3><p class="stack">/rollback · checkpoint.mjs</p><ul><li>A working point is saved while tests are green</li><li>Going back is a new commit; history is not deleted</li><li>Unfinished work is stashed, .env is not touched</li></ul></article>
-    <article class="tile"><h3>In your language</h3><p class="stack">.kit.json → lang</p><ul><li><code>/start</code> and <code>/adopt</code> ask the language first: Turkish / English / Other</li><li>Questions, answers, documents, the dashboard and the status line come in that language; change it with <code>/language</code></li></ul></article>
+    <article class="tile"><h3>In your language</h3><p class="stack">.kit.json → lang</p><ul><li><code>/start</code> and <code>/adopt</code> ask the language first: Turkish / English / Other</li><li>Questions, answers, documents, the dashboard and the status line come in that language; change it with <code>/language</code></li><li>Labels and keys in project files (<code>**Active phase:**</code>, <code>APPROVE</code>) stay English: the tools read them</li></ul></article>
     <article class="tile"><h3>Narrator mode</h3><p class="stack">output style: narrator</p><ul><li>After every step: what I did, why, how you can see it</li><li>At the end of a task, at most 2 comprehension questions; the answers go on the dashboard</li></ul></article>
     <article class="tile"><h3>Spend alarm</h3><p class="stack">spend-alarms.md · dashboard</p><ul><li>The provider's cap and a 50%/80% warning</li><li>In code: a per-user quota, a daily budget, automatic shutdown</li><li>/release and /maintain check it</li></ul></article>
   </div>
 </section>
 
-<section id="skiller">
+<section id="skills">
   <p class="path">docs/workflow/skills.md</p>
   <h2>Which skill for which job</h2>
   <div class="table-wrap"><table>
@@ -1134,7 +1134,7 @@ Next: G-013 password reset · pending decision: email service</pre>
   <div class="note"><b>Deliberately left out:</b> superpowers, gstack, spec-kit, BMAD, GSD and OpenSpec would replace the kit's question, plan and board flow; their good ideas were worked into the kit's own rules. claude-mem and Serena do the same job as the kit's progress file and code map.</div>
 </section>
 
-<section id="araclar">
+<section id="tools">
   <p class="path">With another tool</p>
   <h2>Codex and Antigravity</h2>
   <p class="lead">TillerHand was written for Claude Code. The rules, commands and guardrails also work in OpenAI Codex and Google Antigravity. The board runs on a single model; the question UI, the status line and the commit gate are not available in these tools.</p>
@@ -1157,7 +1157,7 @@ Next: G-013 password reset · pending decision: email service</pre>
   <div class="note">The commands have a single source (<code>.claude/commands/</code>); the copies under <code>.agents/skills/</code> are generated by <code>init</code>, <code>install</code> and <code>update</code>. Codex runs the project's hooks only when you trust the folder and approve them with <code>/hooks</code>; do this in the first session. On first use, try writing a secret to see the guardrails work.</div>
 </section>
 
-<section id="komutlar">
+<section id="commands">
   <p class="path">.claude/commands</p>
   <h2>Commands</h2>
   <div class="table-wrap"><table>
@@ -1184,7 +1184,7 @@ Next: G-013 password reset · pending decision: email service</pre>
       <tr><td class="f">/retro</td><td>Writes the lessons into the project; kit suggestions go to a branch in the TillerHand repo</td></tr>
       <tr><td class="f">/research [topic]</td><td>Articles, similar projects on GitHub and competing products; a difference table; chosen features go into the PRD</td></tr>
       <tr><td class="f">/handoff [take]</td><td>Hands the project to another person or account, or takes it over; continues from the same place</td></tr>
-      <tr><td class="f">/tools [ac|kapat|olc|komutlar]</td><td>Shows, turns on or turns off context packs; measures the skill load; makes the command list light or full</td></tr>
+      <tr><td class="f">/tools [on|off|measure|commands]</td><td>Shows, turns on or turns off context packs; measures the skill load; makes the command list light or full</td></tr>
       <tr><td class="f">/kit-update</td><td>Brings the project to TillerHand's latest version; asks about conflicts; adds a tool with <code>--tool</code> and an add-on with <code>--addons</code></td></tr>
       <tr><td class="f">/language [language]</td><td>Changes the conversation language (Turkish, English or another language); refreshes the translation of the hook messages and the dashboard</td></tr>
     </tbody>
@@ -1211,10 +1211,10 @@ Next: G-013 password reset · pending decision: email service</pre>
       <tr><td>A file newly added to the kit</td><td>Added if the project doesn't have it. If you deleted it on purpose before, it is not brought back.</td></tr>
     </tbody>
   </table></div>
-  <div class="note"><b>Evaluation:</b> <code>node kit/eval/run.mjs</code> runs the same task with and without the kit and scores it with hidden acceptance and adversarial tests. The latest measurement is above, in <a href="#olcum">Results</a>.</div>
+  <div class="note"><b>Evaluation:</b> <code>node kit/eval/run.mjs</code> runs the same task with and without the kit and scores it with hidden acceptance and adversarial tests. The latest measurement is above, in <a href="#measurement">Results</a>.</div>
 </section>
 
-<section id="kurallar">
+<section id="rules">
   <p class="path">In every project</p>
   <h2>Golden rules</h2>
   <ol class="rules">

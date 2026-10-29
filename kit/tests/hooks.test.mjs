@@ -21,7 +21,7 @@ const sh = (k) => execSync(k, { cwd: p, stdio: 'ignore' });
 const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true }); fs.writeFileSync(path.join(p, f), s); };
 
 before(() => {
-  p = fs.mkdtempSync(path.join(os.tmpdir(), 'kapi-test-'));
+  p = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-test-'));
   sh('git init -q && git config user.email t@t && git config user.name t');
   write('docs/workflow/board.md', '**Status:** set up\n**Commit review:** on\n');
   write('a.js', 'x');
@@ -48,19 +48,19 @@ test('commit gate: with a board an unapproved code commit stops, passes with app
   write('AGENTS.md', '## Commands\n\n```bash\ntest: node -e "process.exit(0)"\n```\n');
   assert.equal(approve('board-qa').status, 0);
   spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--approve'], { cwd: p, env: env() });
-  spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, env: { ...env(), SEMGREP: 'olmayan-semgrep-komutu' } });
+  spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, env: { ...env(), SEMGREP: 'missing-semgrep-command' } });
   assert.equal(door('git commit -m "feat: x"').status, 0, 'passes after approval and a green gate');
-  write('a.js', 'z'); // onaydan sonra değişiklik: onay geçersiz
+  write('a.js', 'z'); // a change after the approval: the approval is void
   assert.equal(door('git -c core.x=1 commit -am x').status, 2);
 });
 
 test('commit gate: passes when only docs changed and when review is off', () => {
-  sh('git commit -qam ara'); // önceki testlerin değişikliklerini temizle
-  write('docs/NOT.md', 'not');
-  sh('git add docs/NOT.md');
+  sh('git commit -qam step'); // commit the changes of the earlier tests
+  write('docs/NOTE.md', 'note');
+  sh('git add docs/NOTE.md');
   const rd = door('git commit -m docs');
   assert.equal(rd.status, 0, rd.stderr);
-  write('b.js', 'kod');
+  write('b.js', 'code');
   sh('git add b.js');
   assert.equal(door('git commit -m x').status, 2);
   write('docs/workflow/board.md', '**Commit denetimi:** kapalı\n');
@@ -72,15 +72,15 @@ test('commit gate: passes when only docs changed and when review is off', () => 
 test('limit: write, read, level and reset', () => {
   const now = 1_800_000_000_000;
   fs.mkdirSync(path.join(p, '.claude'), { recursive: true });
-  assert.equal(level(readLimits(path.join(p, 'yok'))), 'unknown');
+  assert.equal(level(readLimits(path.join(p, 'missing'))), 'unknown');
   writeLimits(p, { five_hour: { used_percentage: 64.4, resets_at: now / 1000 + 3600 }, seven_day: { used_percentage: 5, resets_at: now / 1000 + 86400 } }, now);
   assert.equal(level(readLimits(p, now)), 'yellow');
   writeLimits(p, { five_hour: { used_percentage: 91, resets_at: now / 1000 + 60 } }, now);
   assert.equal(level(readLimits(p, now)), 'red');
-  const later = readLimits(p, now + 120_000); // sıfırlanma geçti
+  const later = readLimits(p, now + 120_000); // the reset time has passed
   assert.equal(later.five_hour.percent, 0);
   assert.equal(level(later), 'green');
-  writeLimits(p, undefined, now); // rate_limits yoksa dosyaya dokunmaz
+  writeLimits(p, undefined, now); // no rate_limits: the file is not touched
   assert.ok(readLimits(p, now));
 });
 

@@ -1,6 +1,6 @@
 ---
 description: Business findings report. Scans the project through the eyes of a senior expert of the sector (e.g. a banker in banking): missing workflows, business rules, revenue model, trust, competition. Does web research. Scores the 20 most important findings out of 100.
-argument-hint: [empty = whole project | folder/feature | --since <commit|tarih>]
+argument-hint: [empty = whole project | folder/feature | --since <commit|date>]
 ---
 
 Type: **business** · Scope: $ARGUMENTS

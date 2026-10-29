@@ -3,6 +3,29 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.0] - 2026-10-29
+
+### Changed
+- **Everything the kit ships is English.** Hooks, commands, agents, board files, templates, the eval fixtures and the Turkey add-on (`docs/legal/turkiye.md`, the KVKK checklist) are written in English; official names (KVKK, GİB, e-Fatura, iyzico, PayTR) stay as they are. The conversation language is still chosen in the first question of `/start` and `/adopt`.
+- **Turkish interface texts ship as a translation file.** Hook messages, the status line and the dashboard read Turkish from `.claude/i18n/tr.json`; other languages are still translated by `/language`. A missing key falls back to English.
+- **A set-up project with no language chosen talks in English.**
+- **Labels and keys stay English in every language.** The session note tells the AI to keep `**Active phase:**`, `## Where we left off`, `type check:` and the verdict words English, because the tools read them.
+- Skill descriptions no longer carry Turkish trigger words.
+- Renamed: the checkpoint tag prefix is `checkpoint/` (was `calisan/`), the path marker is `kit:path-allowed` (was `kit:yol-izinli`), the AI add-on variables are `AI_MODEL_DEFAULT`, `AI_MODEL_FAST`, `AI_USER_DAILY_LIMIT`, the Dependabot group is `minor-updates`, the preview folder of an unnamed task is `.previews/latest`, and `/adopt` archives the old files as `claude-md-old.md` / `agents-md-old.md`.
+- The dashboard warns when a board meeting result has no verdict it knows, and the gate warns about unknown keys under `## Commands`.
+
+### Breaking
+- Turkish labels, values, verdicts, ids (`Ö-01.1`, `O_01_1`), prefixes (`SALDIRI:`) and arguments (`/tools ac`, `hepsi`, `K/O/B`…) are no longer read. A project file that still uses them looks empty to the dashboard and the status line, and a meeting with a Turkish verdict shows as unknown.
+- The gate asks for the command approval once more after the update.
+- The update no longer migrates from older versions: the narrator style rename, the old dashboard flag, the old preferences file name and the old package names are not rewritten.
+- `/rollback` lists only `checkpoint/*` tags.
+
+### Compatibility
+- Adapt by hand: move Turkish labels in `docs/workflow/progress.md`, `AGENTS.md` (`## Commands`), the decision log and board files to English; take the kit's template as `.kit-new` and copy your content over. Rename the AI variables in your `.env`, and replace `kit:yol-izinli` markers with `kit:path-allowed`.
+
+### Fixed
+- The eval set-up wrote Turkish labels into the test project, so the kit condition read nothing from it.
+
 ## [3.48.1] - 2026-10-29
 
 ### Changed

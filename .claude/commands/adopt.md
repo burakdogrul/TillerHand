@@ -61,7 +61,7 @@ The shared rules are in `AGENTS.md` (read by Claude Code, Codex, Antigravity); `
 1. Take the kit's `AGENTS.md` (or `AGENTS.md.kit-new`) as the base; fill the project name, the one-sentence description and the "Commands" (commands) section. `CLAUDE.md` becomes the kit's `CLAUDE.md.kit-new` version. If `init` wrote `@AGENTS.md.kit-new` into `CLAUDE.md` because of the project's `AGENTS.md`, change this line to `@AGENTS.md`.
 2. Read the old `CLAUDE.md` (and the old `AGENTS.md` if any) and list the project-specific rules in them (code style, forbidden commands, package manager, environment notes, places to be careful). Filter out those that are the same as the kit's rules.
 3. Ask the rest with **multi-select**: "Which of the old rules should go into the new AGENTS.md?" If any conflicts with a kit rule, point it out separately.
-4. Add the selected ones to `AGENTS.md` as a `## Project rules` section (after "Core rules"; only the Claude Code-specific ones go to `CLAUDE.md`). Keep the old ones as `docs/archive/claude-md-eski.md` (and `agents-md-eski.md`), delete the `.kit-new` files.
+4. Add the selected ones to `AGENTS.md` as a `## Project rules` section (after "Core rules"; only the Claude Code-specific ones go to `CLAUDE.md`). Keep the old ones as `docs/archive/claude-md-old.md` (and `agents-md-old.md`), delete the `.kit-new` files.
 
 ## Step 5: Tests and critical flows
 
@@ -100,5 +100,5 @@ Ask: "Which one should we start with in Phase 2?" Summarize the roadmap and get 
 1. `docs/workflow/progress.md`: Active phase `Phase 0`, active task `G-001`, start step `9/9`, next step, pending decisions.
 2. Run `node .claude/hooks/dashboard.mjs`.
 3. Give a summary: type and stack, current test state, critical flows, rules moved to AGENTS.md, structure gap, the 3 most important findings, first task, remaining limit.
-4. Suggest a commit: `docs: kit uyumu (adopt)`.
+4. Suggest a commit: `docs: kit alignment (adopt)`.
 5. Last line: "Continue: `/build G-001`".

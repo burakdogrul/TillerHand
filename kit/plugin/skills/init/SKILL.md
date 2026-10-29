@@ -1,6 +1,6 @@
 ---
 name: init
-description: Installs the TillerHand kit into the open folder (npx tillerhand init). Use when the user says "install TillerHand" ("TillerHand'i kur"), "install the kit in this project" ("kiti bu projeye kur") or types /tillerhand:init.
+description: Installs the TillerHand kit into the open folder (npx tillerhand init). Use when the user says "install TillerHand", "install the kit in this project" or types /tillerhand:init.
 ---
 
 # TillerHand installation

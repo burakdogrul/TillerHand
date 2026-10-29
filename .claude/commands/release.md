@@ -14,7 +14,7 @@ Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.m
    - In `first` mode, optional: an architecture map for humans via Understand-Anything, for the person who will take over maintenance after release (`release` package; `/understand --language en`, then `/understand-onboard`). The first run reads all the code: state the cost and ask.
    - In `first` mode, start in parallel: the `security-auditor` subagent (whole codebase; do not run it again if it already joins the board meeting), the `security-review` skill, `ponytail:ponytail-audit` (quality, places that break under load); if there is an interface, `impeccable:impeccable` → `audit` (accessibility, performance, responsive)
    - Status of the last CI run (`gh run list --branch main --limit 1`, if gh is installed)
-   - Lint, type check, tests, build (`AGENTS.md` → Komutlar)
+   - Lint, type check, tests, build (`AGENTS.md` → Commands)
    - Dependency vulnerability scan and Semgrep (`docs/security/checklist.md` §9)
    - Acceptance tests: are all MVP criteria green (JUnit report)? Do adversarial tests exist?
    - **RLS adversarial test (blocking):** If Supabase is used (`supabase/config.toml` exists), is `tests/security/rls.mjs` present and is the `rls` job in the last CI green? ❌ if the test is missing, red, or if a public table exists while the `TABLES` list is empty.
@@ -31,7 +31,7 @@ Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.m
 2. **Ask about what you cannot check** (panel settings, backup, domain, legal texts, store settings) with AskUserQuestion: Done / Not done / Not applicable to this project. For each, write in one line how I would check it. For multi-step setups I must do by hand (DNS, SPF/DKIM, store account, prod environment variables), prepare a step-by-step guide with `mattpocock-skills:wizard`.
    - **Deploy setup (`first`, if hosting or domain is not set up; before the report):** `docs/operations/deploy-setup.md` → only the section for the providers in `docs/architecture/stack.md`.
      1. Reopen the section's source pages with `source-research`. If a panel path, record value or plan limit changed, go by the current source; do not edit the file (the kit updates it), write the difference in the report.
-     2. With `mattpocock-skills:wizard`, prepare the steps the user will do, in order: hosting project, environment variables, domain and DNS, backup and PITR, rollback drill. Follow "Kurallar" (rules) in the file: do not ask for a secret value, do not write it in chat or in a file; give only the variable name, the user enters the value in the panel. The user takes the prod database backup in their own terminal.
+     2. With `mattpocock-skills:wizard`, prepare the steps the user will do, in order: hosting project, environment variables, domain and DNS, backup and PITR, rollback drill. Follow "Rules" in the file: do not ask for a secret value, do not write it in chat or in a file; give only the variable name, the user enters the value in the panel. The user takes the prod database backup in their own terminal.
      3. Ask about each step with AskUserQuestion: Done / Later / Not applicable to this project. Record the result in `docs/operations/accounts.md` and in the report table.
      4. The rollback drill and restore from backup touch prod: do not start them without approval.
    - Did the texts going live (landing page, store description, emails) pass through `humanizer:humanizer`?

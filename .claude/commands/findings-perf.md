@@ -1,6 +1,6 @@
 ---
 description: Performance and cost findings report. Scans the project through the eyes of a performance engineer and FinOps: slow paths, unnecessary work, bundle size, infrastructure and AI cost. Scores the 20 most important findings out of 100.
-argument-hint: [empty = whole project | folder/feature | --since <commit|tarih>]
+argument-hint: [empty = whole project | folder/feature | --since <commit|date>]
 ---
 
 Type: **perf** · Scope: $ARGUMENTS

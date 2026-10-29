@@ -9,10 +9,10 @@ export function createApp() {
   return http.createServer(async (req, res) => {
     try {
       for (const h of handlers) if ((await h(req, res)) !== false) return;
-      sendJson(res, 404, { error: 'bulunamadı' });
+      sendJson(res, 404, { error: 'not found' });
     } catch (e) {
       console.error(e);
-      sendJson(res, 500, { error: 'sunucu hatası' });
+      sendJson(res, 500, { error: 'server error' });
     }
   });
 }

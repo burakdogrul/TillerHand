@@ -22,7 +22,7 @@ src/
 │       ├── types.ts
 │       └── index.ts
 ├── components/                 # shared components: Button, TextField, Screen, EmptyState...
-├── hooks/                      # shared hooks (useBayrak etc.)
+├── hooks/                      # shared hooks (useFlag etc.)
 ├── lib/                        # supabase, sentry, secure storage, analytics clients
 ├── theme/                      # design tokens (from DESIGN.md)
 ├── config/                     # environment variables, constants

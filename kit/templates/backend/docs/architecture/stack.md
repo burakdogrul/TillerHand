@@ -68,7 +68,7 @@ app/
 │       ├── router.py           # HTTP endpoints (thin)
 │       ├── service.py          # business logic
 │       ├── repository.py       # database access
-│       ├── models.py           # SQLAlchemy modelleri
+│       ├── models.py           # SQLAlchemy models
 │       ├── schemas.py          # Pydantic input/output schemas
 │       ├── dependencies.py
 │       └── exceptions.py
@@ -76,7 +76,7 @@ app/
 └── jobs/                       # scheduled and background jobs (idempotent)
 alembic/                        # migration'lar
 tests/
-├── <feature>/                   # tests by feature (test_AC_01_1_... kabul testleri dahil)
+├── <feature>/                   # tests by feature (test_AC_01_1_... acceptance tests included)
 └── live/                       # live monitoring tests
 Dockerfile  pyproject.toml  uv.lock
 ```

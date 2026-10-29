@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Claude Code bottom status line: phase, task progress, question mode and usage limits.
-// Example: ▶ Faz 1 · G-012 · task 7/23 · questions: open (closed: tasarim) · 5h 34% · weekly 5%
+// Example: ▶ Phase 1 · G-012 · task 7/23 · questions: open (closed: design) · 5h 34% · weekly 5%
 // Also writes the rate_limits Claude Code sends into .claude/state/usage.json (usage.mjs reads it).
 import fs from 'node:fs';
 import { readStatus } from './status-read.mjs';

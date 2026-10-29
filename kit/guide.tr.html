@@ -760,13 +760,13 @@ npx tillerhand init
   <div class="table-wrap"><table>
     <thead><tr><th>Konu</th><th>Örnek kararlar</th></tr></thead>
     <tbody>
-      <tr><td class="f">urun</td><td>MVP kapsamı, öncelik, kullanıcı akışı, fiyat</td></tr>
-      <tr><td class="f">teknik</td><td>Dil, framework, veritabanı, auth, hosting, kütüphane ekleme, API stili</td></tr>
+      <tr><td class="f">product</td><td>MVP kapsamı, öncelik, kullanıcı akışı, fiyat</td></tr>
+      <tr><td class="f">tech</td><td>Dil, framework, veritabanı, auth, hosting, kütüphane ekleme, API stili</td></tr>
       <tr><td class="f">design</td><td>Stil yönü, renk, yazı tipi, düzen, bileşen stili, animasyon, koyu tema</td></tr>
-      <tr><td class="f">icerik</td><td>Metinler, ses tonu, sen/siz, başlık ve CTA alternatifleri</td></tr>
-      <tr><td class="f">veri</td><td>Veri modeli, silme davranışı, saklama süresi</td></tr>
+      <tr><td class="f">content</td><td>Metinler, ses tonu, sen/siz, başlık ve CTA alternatifleri</td></tr>
+      <tr><td class="f">data</td><td>Veri modeli, silme davranışı, saklama süresi</td></tr>
       <tr><td class="f">security</td><td>Roller, oturum süresi, hız sınırları, kişisel veri</td></tr>
-      <tr><td class="f">maliyet</td><td>Ücretli servis, plan seviyesi, AI modeli, harcama limiti</td></tr>
+      <tr><td class="f">cost</td><td>Ücretli servis, plan seviyesi, AI modeli, harcama limiti</td></tr>
     </tbody>
   </table></div>
   <div class="note">Geri dönüşü zor kararlarda (veritabanı, auth, ödeme, veri modeli; "tek yönlü kapı") önce kurulun ve gerekirse konseyin görüşü alınır. Soru modundan bağımsız olarak her zaman onay istenir: veri silme, prod'a deploy, para harcatan işlem, geri dönülemez komutlar. Dosya ve değişken adı gibi uygulama ayrıntıları sorulmaz, raporlanır.</div>
@@ -894,7 +894,7 @@ npx tillerhand init
   <p>Karpathy'nin <a href="https://github.com/karpathy/llm-council">llm-council</a> yapısı kurula uyarlandı. Ağır toplantılar ve geri dönüşü pahalı kararlar üç aşamadan geçer:</p>
   <div class="tiles">
     <article class="tile"><h3>1 · İlk görüşler</h3><p>Üyeler (veya farklı modellerdeki danışmanlar) birbirinden habersiz, paralel çalışır. Görüşler A, B, C diye etiketlenir; bulgular A1, A2…</p></article>
-    <article class="tile"><h3>2 · Anonim çapraz oy</h3><p>Her üye diğerlerinin görüşünü kimin yazdığını bilmeden okur, her bulguya DOĞRU · ABARTILI · YANLIŞ oyu verir, eksik olanı yazar ve görüşleri sıralar.</p></article>
+    <article class="tile"><h3>2 · Anonim çapraz oy</h3><p>Her üye diğerlerinin görüşünü kimin yazdığını bilmeden okur, her bulguya AGREE · OVERSTATED · DISAGREE (doğru · abartılı · yanlış) oyu verir, eksik olanı yazar ve görüşleri sıralar.</p></article>
     <article class="tile"><h3>Sayım (kod)</h3><p><code>council.mjs</code> ortalama sırayı, bulgu oylarını ve uzlaşma yüzdesini kodla hesaplar; model sayıyı değiştiremez.</p></article>
     <article class="tile"><h3>3 · Başkan</h3><p>board-chair (opus) tutanağı okur, kararı yazar, çürütülen bulguları gerekçesiyle eler, azınlık görüşünü korur. Tartışmalı kritik bulguyu eleyemez; sana sorar.</p></article>
   </div>
@@ -1094,7 +1094,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
     <article class="tile"><h3>Mobil test ve servisler</h3><p class="stack">Maestro · Expo MCP · servis kataloğu</p><ul><li>Kabul testleri cihazda veya simülatörde</li><li>EAS build, TestFlight çökme kayıtları</li><li>GitHub, Stripe, PostHog, Figma: servis seçilince</li></ul></article>
     <article class="tile"><h3>Ölçüm ve maliyet</h3><p class="stack">Playwright CLI · Chrome DevTools MCP · ccusage</p><ul><li>Konsol, ağ, ekran görüntüsü CLI ile; performans izi MCP ile</li><li>Proje başına token ve maliyet panoda</li></ul></article>
     <article class="tile"><h3>Geri alma</h3><p class="stack">/rollback · checkpoint.mjs</p><ul><li>Testler yeşilken çalışan nokta kaydedilir</li><li>Geri dönüş yeni bir commit'tir, geçmiş silinmez</li><li>Yarım iş saklanır, .env'e dokunulmaz</li></ul></article>
-    <article class="tile"><h3>Senin dilinde</h3><p class="stack">.kit.json → lang</p><ul><li><code>/start</code> ve <code>/adopt</code> ilk iş dili sorar: Turkish / English / Other</li><li>Sorular, cevaplar, belgeler, pano ve durum çubuğu o dilde; <code>/language</code> ile değişir</li></ul></article>
+    <article class="tile"><h3>Senin dilinde</h3><p class="stack">.kit.json → lang</p><ul><li><code>/start</code> ve <code>/adopt</code> ilk iş dili sorar: Turkish / English / Other</li><li>Sorular, cevaplar, belgeler, pano ve durum çubuğu o dilde; <code>/language</code> ile değişir</li><li>Proje dosyalarındaki etiket ve anahtarlar (<code>**Active phase:**</code>, <code>APPROVE</code>) İngilizce kalır: araçlar onları okur</li></ul></article>
     <article class="tile"><h3>Anlatıcı mod</h3><p class="stack">output style: narrator</p><ul><li>Her adımdan sonra: ne yaptım, neden, nasıl görürsün</li><li>Görev sonunda en fazla 2 anlama sorusu; cevaplar panoda</li></ul></article>
     <article class="tile"><h3>Harcama alarmı</h3><p class="stack">spend-alarms.md · pano</p><ul><li>Sağlayıcı tavanı ve %50/%80 uyarısı</li><li>Kodda kullanıcı kotası, günlük bütçe, otomatik kapatma</li><li>/release ve /maintain kontrol eder</li></ul></article>
   </div>
@@ -1188,7 +1188,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
       <tr><td class="f">/retro</td><td>Dersleri projeye yazar; kite önerileri TillerHand reposunda bir dala</td></tr>
       <tr><td class="f">/research [konu]</td><td>Makaleler, GitHub'daki benzer projeler ve rakip ürünler; fark tablosu; seçilen özellikler PRD'ye</td></tr>
       <tr><td class="f">/handoff [take]</td><td>Projeyi başka kişiye veya hesaba devreder ya da devralır; aynı yerden devam</td></tr>
-      <tr><td class="f">/tools [ac|kapat|olc|komutlar]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer; komut listesini hafif veya tam yapar</td></tr>
+      <tr><td class="f">/tools [on|off|measure|commands]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer; komut listesini hafif veya tam yapar</td></tr>
       <tr><td class="f">/kit-update</td><td>Projeyi TillerHand'in son sürümüne çeker; çakışmaları sorar; <code>--tool</code> ile araç, <code>--addons</code> ile ek ekler</td></tr>
       <tr><td class="f">/language [dil]</td><td>Konuşma dilini değiştirir (Türkçe, İngilizce ya da başka bir dil); hook metinlerinin çevirisini ve panoyu yeniler</td></tr>
     </tbody>

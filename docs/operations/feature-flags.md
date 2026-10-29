@@ -21,7 +21,7 @@ The `/dashboard` dashboard reads this table. Date format `YYYY-MM-DD`, status `o
 
 ## Rules
 
-- The flag name uses the `ozellik_adi` form and matches `docs/product/glossary.md`.
+- The flag name uses the `feature_name` form and matches `docs/product/glossary.md`.
 - The code path is also tested while the flag is off (at least one test for each of the two states).
 - After the feature is open to everyone and has run without problems for 2 weeks, the flag and the old code path are removed.
 - Kill switch: the step to turn it off from the panel or an environment variable is written in this file and has been tried at least once.

@@ -15,11 +15,11 @@ const call = (method, path, user, body) => fetch(base + path, {
 });
 
 test('a created note can be read back', async () => {
-  const r = await call('POST', '/notes', 'ayse', { title: 'Alışveriş', body: 'süt' });
+  const r = await call('POST', '/notes', 'ayse', { title: 'Shopping', body: 'milk' });
   assert.equal(r.status, 201);
   const note = await r.json();
   const got = await (await call('GET', `/notes/${note.id}`, 'ayse')).json();
-  assert.equal(got.title, 'Alışveriş');
+  assert.equal(got.title, 'Shopping');
 });
 
 test('a note without a title is rejected', async () => {
@@ -27,8 +27,8 @@ test('a note without a title is rejected', async () => {
 });
 
 test('a note can be updated and deleted', async () => {
-  const note = await (await call('POST', '/notes', 'ayse', { title: 'Taslak' })).json();
-  assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Son' })).json()).title, 'Son');
+  const note = await (await call('POST', '/notes', 'ayse', { title: 'Draft' })).json();
+  assert.equal((await (await call('PATCH', `/notes/${note.id}`, 'ayse', { title: 'Final' })).json()).title, 'Final');
   assert.equal((await call('DELETE', `/notes/${note.id}`, 'ayse')).status, 204);
   assert.equal((await call('GET', `/notes/${note.id}`, 'ayse')).status, 404);
 });

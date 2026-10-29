@@ -24,7 +24,7 @@ A run spends from the Claude subscription. In the first measurement, 6 Sonnet ru
   - `paging` (multi-step contract): `limit`/`cursor` paging. First the sorting bug in the fixture must be fixed. Then there must be no repeats or gaps with equal dates, or when a new note is added between two requests. The response must stay an array for old clients. Command: `/build`.
   - `tr-sort` (trap): alphabetical sort by title and case-insensitive search; in Turkish, `localeCompare` and `toLowerCase` give wrong results without a locale (`I`/`ı`, `İ`/`i`, `ç`, `ş`). Command: `/build`.
 - **Conditions:** Every run starts in a fresh temp folder.
-  - `kit`: runs `init` + `install --type web-saas`, then writes the state `/start` would leave: stack, `AGENTS.md` → Komutlar, question mode closed, gate approval for the command.
+  - `kit`: runs `init` + `install --type web-saas`, then writes the state `/start` would leave: stack, `AGENTS.md` → Commands, question mode closed, gate approval for the command.
   - `plain`: the fixture alone.
   - Both conditions run as `claude -p` with the same model and the same `--allowedTools` list, with project settings only (`--setting-sources project,local`).
   - Permissions are narrow. Reading and writing stay inside the run folder. In Bash, only `npm test`/`npm start`, `node --test`, `node src/…`, `node tests/…`, `node .claude/hooks/…` and read-only git work. Easy ways out of the folder are forbidden: `node -e`, `..`, `git --output`/`--no-index`, `npm --prefix`/`--script-shell`. In both conditions `.git/` and `.claude/` cannot be edited.

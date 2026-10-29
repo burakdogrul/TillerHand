@@ -16,7 +16,7 @@ First read `.claude/board/rules.md` and `docs/workflow/board.md`.
   - `release`: the whole codebase
   - Other texts: a topic given by the user (e.g. "payment flow")
 
-- **`council <soru>`:** Decision council (`.claude/board/council.md`). Clarify the question and the options; if options are missing, first have the user confirm them. When done, ask for the decision with AskUserQuestion, using the chair's recommendation.
+- **`council <question>`:** Decision council (`.claude/board/council.md`). Clarify the question and the options; if options are missing, first have the user confirm them. When done, ask for the decision with AskUserQuestion, using the chair's recommendation.
 
 Before a meeting, check the limit (`node .claude/hooks/usage.mjs`). A full board meeting is expensive. If the level is yellow or red, say the estimated cost in one line (`docs/workflow/usage-limits.md` §3). If the full board is an optional meeting, propose reducing the member count; do not stop the meeting because of the limit.
 

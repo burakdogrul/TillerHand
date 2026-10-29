@@ -32,7 +32,7 @@
 
 **TillerHand**, [Claude Code](https://claude.com/claude-code) ile bir ürünü fikirden canlıya ve bakıma kadar götüren bir başlangıç kitidir. Kodu AI yazar, **kararları sen verirsin**: her önemli adımda seçenekleri, hangisinin ne zaman daha iyi olduğunu ve önerisini sunar. Bir **uzman kurulu** işi denetler, **koruma katmanları** tehlikeli işlemleri daha olmadan durdurur, proje her an **düzenli bir klasör yapısında** kalır.
 
-> **Önce dil.** `/start` ve `/adopt` tek bir soruyla açılır: AI seninle hangi dilde konuşsun? Türkçe, İngilizce ya da başka bir dil. Bundan sonra sorular, cevaplar, raporlar, pano ve durum çubuğu o dilde gelir; `/language` ile sonradan değişir. Kitin içindeki her şey (komutlar, kurallar, ajanlar, hook'lar, belge şablonları) İngilizce yazılıdır; yalnızca isteğe bağlı Türkiye eki Türkçe kalır.
+> **Önce dil.** `/start` ve `/adopt` tek bir soruyla açılır: AI seninle hangi dilde konuşsun? Türkçe, İngilizce ya da başka bir dil. Bundan sonra sorular, cevaplar, raporlar, pano ve durum çubuğu o dilde gelir; `/language` ile sonradan değişir. Kitin içindeki her şey (komutlar, kurallar, ajanlar, hook'lar, belge şablonları) İngilizce yazılıdır, Türkiye eki dahil. Türkçe arayüz metinleri `.claude/i18n/tr.json` dosyasıyla gelir; proje dosyalarındaki etiketler ve anahtarlar her dilde İngilizce kalır, çünkü araçlar onları okur.
 
 | | |
 |---|---|

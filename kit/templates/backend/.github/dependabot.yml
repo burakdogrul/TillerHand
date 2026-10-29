@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: weekly
     groups:
-      kucuk-guncellemeler:
+      minor-updates:
         update-types: [minor, patch]
     ignore:
       - dependency-name: "*"

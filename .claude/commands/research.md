@@ -9,7 +9,7 @@ Work by the rules of the `source-research` skill: every claim with source, date 
 
 ## 0. Scope and cost
 
-1. Restate the topic in one sentence and derive 3-6 search terms (in Turkish and English).
+1. Restate the topic in one sentence and derive 3-6 search terms (in the user's language and in English).
 2. Read the limit and ask for the depth, with the estimated cost:
    - **Quick (Recommended, on Pro):** At most 5 sources per category. About 10-15% of the 5-hour limit.
    - **Deep:** 10-15 sources per category, three categories in parallel with subagents (the docs role's `model` and `effort`, `docs/workflow/models.md`). About 25-35%.
@@ -17,12 +17,12 @@ Work by the rules of the `source-research` skill: every claim with source, date 
 
 ## 1. Academic papers
 
-- Open interfaces (with WebFetch, no key needed): `https://api.semanticscholar.org/graph/v1/paper/search?query=<terimler>&fields=title,year,abstract,citationCount,url&limit=10` and `https://export.arxiv.org/api/query?search_query=all:<terimler>&max_results=10`. Also WebSearch (Google Scholar results).
+- Open interfaces (with WebFetch, no key needed): `https://api.semanticscholar.org/graph/v1/paper/search?query=<terms>&fields=title,year,abstract,citationCount,url&limit=10` and `https://export.arxiv.org/api/query?search_query=all:<terms>&max_results=10`. Also WebSearch (Google Scholar results).
 - For each paper: title, year, citation count, link, a 2-3 sentence summary (write the summary in your own sentences, do not copy), relevance to this idea.
 
 ## 2. GitHub projects
 
-- If `gh` is installed: `gh search repos "<terimler>" --sort stars --limit 15 --json fullName,description,stargazersCount,updatedAt,licenseInfo,url`. Otherwise WebSearch (`site:github.com`).
+- If `gh` is installed: `gh search repos "<terms>" --sort stars --limit 15 --json fullName,description,stargazersCount,updatedAt,licenseInfo,url`. Otherwise WebSearch (`site:github.com`).
 - Read the README of the top candidates. For each project: stars, last update, license, main features, similar and different aspects compared with this idea. Mark unmaintained projects (not updated for over 1 year). The license affects taking code: for copyleft licenses (GPL, AGPL), state that no code will be taken.
 
 ## 3. Commercial products

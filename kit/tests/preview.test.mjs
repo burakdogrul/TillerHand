@@ -100,11 +100,11 @@ test('Ö-17.3 missing lines and an unapproved command: clear message, nothing ru
   const missingEn = preview();
   assert.equal(missingEn.status, 1);
   assert.match(missingEn.stdout, /preview:/);
-  agents(`node dev.mjs ${port} --yeni`);
+  agents(`node dev.mjs ${port} --new`);
   const unapproved = preview();
   assert.equal(unapproved.status, 1);
   assert.match(unapproved.stdout, /Preview · command approval needed/);
-  assert.match(unapproved.stdout, /--yeni/, 'the user sees what they approve');
+  assert.match(unapproved.stdout, /--new/, 'the user sees what they approve');
   assert.ok(!fs.existsSync(path.join(p, 'dev.pid')), 'an unapproved dev command does not run');
   const prompt = spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], { input: JSON.stringify({ tool_input: { command: 'node .claude/hooks/gate.mjs --approve' } }), encoding: 'utf8', env: env() });
   const reason = JSON.parse(prompt.stdout).hookSpecificOutput.permissionDecisionReason;
@@ -128,12 +128,12 @@ test('F-17 audit: only a plain local address is accepted (shell characters, user
 
 test('Ö-17.3 a server that exits or never opens: clear message, the process is stopped', async () => {
   reset();
-  agents('node -e "console.error(\'PORT dolu\'); process.exit(1)"');
+  agents('node -e "console.error(\'PORT in use\'); process.exit(1)"');
   approve();
   const exited = preview();
   assert.equal(exited.status, 1);
   assert.match(exited.stdout, /exited before it came up/);
-  assert.match(exited.stdout, /PORT dolu/, 'the last lines of the server output are shown');
+  assert.match(exited.stdout, /PORT in use/, 'the last lines of the server output are shown');
   agents('node hang.mjs');
   approve();
   const hung = preview({ PREVIEW_TIMEOUT_MS: '1500' });
@@ -155,10 +155,10 @@ test('Ö-17.3 a failed browser step still closes the browser and stops the serve
   }
 });
 
-test('F-17 audit: the task name cannot leave .previews; an empty one is "son"', () => {
+test('F-17 audit: the task name cannot leave .previews; an empty one is "latest"', () => {
   agents(`node dev.mjs ${port}`);
   approve();
-  for (const [task, folder] of [['../x', '---x'], ['G-01; touch x', 'G-01--touch-x'], ['', 'son']]) {
+  for (const [task, folder] of [['../x', '---x'], ['G-01; touch x', 'G-01--touch-x'], ['', 'latest']]) {
     reset();
     const r = preview({}, task);
     assert.equal(r.status, 0, `${task}: ${r.stdout}`);

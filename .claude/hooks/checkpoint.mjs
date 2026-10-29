@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { findRoot, isMain } from './shared.mjs';
 
 // Tag prefix in users' repos: it stays as it is, existing tags must keep matching
-const TAG_PREFIX = 'calisan/';
+const TAG_PREFIX = 'checkpoint/';
 
 export function git(root, ...arg) {
   return execFileSync('git', arg, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();

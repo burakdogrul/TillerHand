@@ -36,7 +36,7 @@ test('preferences: add, de-duplicate, list by category, remove; bad input is ref
   assert.deepEqual(addPref('code', 'raporu KISA tut, önce sonucu yaz', file), { existing: 'reports' }, 'the same text is reported where it already is');
   assert.deepEqual(readPrefs(file).map((p) => [p.category, p.text]), [['conversation', 'Türkçe yaz'], ['reports', 'Raporu kısa tut, önce sonucu yaz']]);
   assert.match(fs.readFileSync(file, 'utf8'), /## Conversation\n\n- Türkçe yaz\n\n## Reports/);
-  for (const bad of ['yok', 'kod', 'konusma', 'constructor', 'toString', '__proto__']) assert.match(addPref(bad, 'x', file).error, /Category must be one of/, bad);
+  for (const bad of ['none', 'kod', 'konusma', 'constructor', 'toString', '__proto__']) assert.match(addPref(bad, 'x', file).error, /Category must be one of/, bad);
   assert.match(addPref('code', '', file).error, /empty/);
   assert.match(addPref('code', 'x'.repeat(201), file).error, /200/);
   assert.match(addPref('code', `key ${SECRET} use`, file).error, /looks like a secret/);
@@ -72,7 +72,7 @@ test('preferences: the CLI writes under the home folder only, the session start 
   assert.match(cli('--add', 'code', 'Seçenekleri kısa yaz').stdout, /already saved \(Questions and decisions\)/);
   assert.match(cli('--list').stdout, /1\. \[Questions and decisions\] Seçenekleri kısa yaz/);
   assert.equal(cli('--add', 'code', `${SECRET}`).status, 1);
-  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'proje-'));
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'project-'));
   const s = spawnSync(process.execPath, [path.join(HOOKS, 'session-start.mjs')], { input: '{}', encoding: 'utf8', env: { ...homeEnv(home), CLAUDE_PROJECT_DIR: project } });
   assert.match(s.stdout, /style preferences[^"]*Seçenekleri kısa yaz/);
   assert.equal(cli('--remove', '1').status, 0);
@@ -134,7 +134,7 @@ test('AC-48.8 preferences: English headings are read whatever their case (Turkis
 
 test('A-48.4 preferences: an unknown category is an error listing the English keys; nothing is written', () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pref-')), 'preferences.md');
-  for (const bad of ['yok', ...OLD_KEYS, 'Kod', 'KONUSMA', 'constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf', '', undefined, null]) {
+  for (const bad of ['none', ...OLD_KEYS, 'Kod', 'KONUSMA', 'constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf', '', undefined, null]) {
     const r = addPref(bad, 'x', file);
     assert.match(r.error ?? '', CATEGORY_ERROR, String(bad));
   }
@@ -202,20 +202,20 @@ test('A-48.5 preferences: when both files exist preferences.md wins and tercihle
   const vk = path.join(home, '.vibe-kit');
   fs.mkdirSync(vk);
   const oldBytes = Buffer.from('## Konuşma\n\n- eski tercih\n', 'utf8');
-  const newBytes = Buffer.from('## Code\n\n- yeni tercih\n', 'utf8');
+  const newBytes = Buffer.from('## Code\n\n- new preference\n', 'utf8');
   fs.writeFileSync(path.join(vk, 'tercihler.md'), oldBytes);
   fs.writeFileSync(path.join(vk, 'preferences.md'), newBytes);
   const r = inHome(home, 'console.log(m.prefsFile()); console.log(JSON.stringify(m.readPrefs().map((p) => [p.category, p.text])));');
   assert.equal(r.status, 0, r.stderr);
   const [file, items] = r.stdout.trim().split('\n');
   assert.equal(file, path.join(vk, 'preferences.md'));
-  assert.deepEqual(JSON.parse(items), [['code', 'yeni tercih']]);
+  assert.deepEqual(JSON.parse(items), [['code', 'new preference']]);
   assert.deepEqual(fs.readFileSync(path.join(vk, 'tercihler.md')), oldBytes, 'tercihler.md not changed');
   assert.deepEqual(fs.readFileSync(path.join(vk, 'preferences.md')), newBytes, 'preferences.md not changed by reading');
   // a write goes to preferences.md only
-  assert.equal(cliIn(home)('--add', 'avoid', 'Emoji kullanma').status, 0);
+  assert.equal(cliIn(home)('--add', 'avoid', 'No emoji').status, 0);
   assert.deepEqual(fs.readFileSync(path.join(vk, 'tercihler.md')), oldBytes, 'tercihler.md still not changed');
-  assert.match(fs.readFileSync(path.join(vk, 'preferences.md'), 'utf8'), /## Code\n\n- yeni tercih\n\n## Avoid\n\n- Emoji kullanma\n/);
+  assert.match(fs.readFileSync(path.join(vk, 'preferences.md'), 'utf8'), /## Code\n\n- new preference\n\n## Avoid\n\n- No emoji\n/);
   fs.rmSync(home, { recursive: true, force: true });
 });
 

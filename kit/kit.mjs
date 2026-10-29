@@ -152,11 +152,6 @@ export function migrateSettings(projectSettings, kitSettings) {
     s.skillOverrides = { ...kitSettings.skillOverrides };
     added.push(`skillOverrides: ${Object.keys(s.skillOverrides).length} commands are listed by name only (in the Full profile: node .claude/hooks/tools.mjs --commands full)`);
   }
-  for (const groups of Object.values(isObject(s.hooks) ? s.hooks : {})) {
-    for (const h of (Array.isArray(groups) ? groups : []).flatMap((g) => (Array.isArray(g?.hooks) ? g.hooks : []))) {
-      if (typeof h?.command === 'string') h.command = h.command.replace(/(dashboard\.mjs"?)\s+--sessiz\b/, '$1 --quiet');
-    }
-  }
   return { settings: s, added, removed };
 }
 
@@ -382,9 +377,9 @@ function install({ type, addons, keepKit, project, tool }) {
   copy(path.join(KIT, 'project', 'README.md'), path.join(ROOT, 'README.md'));
   for (const rel of KIT_ONLY) fs.rmSync(path.join(ROOT, rel), { force: true });
 
-  const izlenen = new Set([...listFiles(ROOT, COMMON_EXCLUDE), ...copies.keys()]);
+  const tracked = new Set([...listFiles(ROOT, COMMON_EXCLUDE), ...copies.keys()]);
   const files = {};
-  for (const rel of [...izlenen].sort()) if (fs.existsSync(path.join(ROOT, rel))) files[rel] = hash(path.join(ROOT, rel));
+  for (const rel of [...tracked].sort()) if (fs.existsSync(path.join(ROOT, rel))) files[rel] = hash(path.join(ROOT, rel));
   installTools(ROOT, tools, files, []);
   const today = new Date().toISOString().slice(0, 10);
   const lang = readLang(ROOT); // chosen by /start before install (.claude/state/lang.json); null if not
@@ -428,7 +423,7 @@ function update({ project, addons: newAddons, tool }) {
       try {
         local = JSON.parse(read(target));
         migrated = migrateSettings(local, JSON.parse(read(source)));
-      } catch (e) { report.conflicts.push(`${rel} (izinler eklenmedi: ${e.message})`); continue; }
+      } catch (e) { report.conflicts.push(`${rel} (permissions not added: ${e.message})`); continue; }
       if (JSON.stringify(migrated.settings) !== JSON.stringify(local)) {
         fs.writeFileSync(target, JSON.stringify(migrated.settings, null, 2) + '\n');
         const notes = [migrated.added.length && `added: ${migrated.added.join(' · ')}`, migrated.removed.length && `removed old lines: ${migrated.removed.join(' · ')}`].filter(Boolean);

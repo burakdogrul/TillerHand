@@ -15,7 +15,7 @@
 ## 0. Preparation
 
 1. **Limit:** A deep scan is expensive: about 10-25% of the 5-hour limit on the Pro plan. Read the limit (`docs/workflow/usage-limits.md`). If it is yellow or red, state the estimated cost and ask: full scan / recent changes only / postpone.
-2. **Scope** (`$ARGUMENTS`): If empty, the whole project. If a folder or feature name is given, only that. If `--since <commit|tarih>` is given, only files changed since then. Always exclude `sandbox/` and `docs/archive/`.
+2. **Scope** (`$ARGUMENTS`): If empty, the whole project. If a folder or feature name is given, only that. If `--since <commit|date>` is given, only files changed since then. Always exclude `sandbox/` and `docs/archive/`.
 3. **Read:** The lens file, `docs/findings/config.md`, the previous report `docs/findings/<type>/latest.md` if any, `docs/product/prd.md`, `docs/architecture/stack.md`.
 4. **Inventory:** If the code map (codebase-memory-mcp) is connected, start with `get_architecture` and `index_status`. Otherwise list the file and folder distribution with `git ls-files`. In a large project, define the areas (feature folders).
 

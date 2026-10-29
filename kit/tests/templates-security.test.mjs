@@ -83,7 +83,7 @@ test('Supabase keys use the new names (legacy anon/service_role are retired by t
 
 test('format hook: runs Prettier without a shell, so a spaced or quoted path works (web and mobile)', () => {
   for (const t of ['web-saas', 'mobile']) {
-    const p = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'proje boşluk & x '));
+    const p = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'project space & x '));
     const bin = path.join(p, 'node_modules', 'prettier', 'bin');
     fs.mkdirSync(bin, { recursive: true });
     fs.writeFileSync(path.join(bin, 'prettier.cjs'), "require('fs').writeFileSync(require('path').join(process.cwd(), 'args.json'), JSON.stringify(process.argv.slice(2)));");

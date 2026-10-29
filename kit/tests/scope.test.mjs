@@ -27,7 +27,7 @@ before(() => {
   // On Codex the project root comes from the script's location: hooks are copied into the temporary project
   fs.cpSync(HOOKS, path.join(p, '.claude', 'hooks'), { recursive: true });
   HOOK = path.join(p, '.claude', 'hooks', 'freeze-guard.mjs');
-  for (const f of ['src/a.ts', 'src/b.ts', 'src/lib/c.ts', 'src/ödeme dosyası.ts', 'docs/not.md', 'CHANGELOG.md']) write(f);
+  for (const f of ['src/a.ts', 'src/b.ts', 'src/lib/c.ts', 'src/ödeme dosyası.ts', 'docs/note.md', 'CHANGELOG.md']) write(f);
 });
 after(() => { fs.rmSync(approvalPath(p), { force: true }); fs.rmSync(p, { recursive: true, force: true }); });
 
@@ -43,8 +43,8 @@ test('F-06 silent without a plan; once a plan is saved an existing file off the 
   assert.match(off.reason, /Scope shield.*src\/b\.ts.*G-1/);
   assert.equal(edit(path.join(p, 'src/b.ts')).decision, 'ask', 'absolute path');
   assert.equal(edit('src/lib/../b.ts').decision, 'ask', 'with ..');
-  assert.equal(edit('src/yeni.ts'), null, 'new file: the structure guard looks at it');
-  assert.equal(edit('docs/not.md'), null, 'docs is free');
+  assert.equal(edit('src/new.ts'), null, 'new file: the structure guard looks at it');
+  assert.equal(edit('docs/note.md'), null, 'docs is free');
   assert.equal(edit('CHANGELOG.md'), null);
   assert.match(cli('--status').stdout, /G-1.*3 paths/);
 });
@@ -76,7 +76,7 @@ test('F-06 Codex and Antigravity; the lock comes first; a broken plan file does 
   cli('--set', 'src/lib');
   assert.equal(edit('src/a.ts').decision, 'deny', 'in the plan but outside the lock');
   fs.rmSync(path.join(p, '.claude/state/freeze.json'));
-  fs.writeFileSync(path.join(p, '.claude/state/plan.json'), '{bozuk');
+  fs.writeFileSync(path.join(p, '.claude/state/plan.json'), '{broken');
   assert.equal(edit('src/b.ts'), null);
   cli('--plan-end');
 });
@@ -124,7 +124,7 @@ test('3.14.1 shell: while a plan is active a shell write to an existing file off
     assert.match(r.permissionDecisionReason, /Scope shield/, k);
   }
   assert.equal(shell('sed -i s/x/y/ b.ts', path.join(p, 'src'))?.permissionDecision, 'ask', 'relative to the session cwd');
-  for (const k of ['sed -i s/x/y/ src/a.ts', 'cat src/b.ts', 'grep x src/b.ts > /dev/null', 'echo y > src/yeni.ts', 'echo y > docs/not.md', 'node --test 2>&1'])
+  for (const k of ['sed -i s/x/y/ src/a.ts', 'cat src/b.ts', 'grep x src/b.ts > /dev/null', 'echo y > src/new.ts', 'echo y > docs/not.md', 'node --test 2>&1'])
     assert.equal(shell(k), null, k);
   cli('--plan-end');
 });
@@ -139,16 +139,16 @@ test('3.14.1 shell: a shell write outside the lock is asked', () => {
 });
 
 test('3.14.1 symlink/junction: a file outside cannot be written from inside the plan or lock', () => {
-  const link = path.join(p, 'src', 'lib', 'kok');
+  const link = path.join(p, 'src', 'lib', 'up');
   fs.symlinkSync(p, link, 'junction');
   try {
     cli('--plan-save', 'G-5', 'src/lib/');
-    assert.equal(edit('src/lib/kok/src/b.ts')?.decision, 'ask', 'real path is src/b.ts');
+    assert.equal(edit('src/lib/up/src/b.ts')?.decision, 'ask', 'real path is src/b.ts');
     cli('--plan-end');
     cli('--set', 'src/lib');
-    assert.equal(edit('src/lib/kok/src/b.ts')?.decision, 'deny');
+    assert.equal(edit('src/lib/up/src/b.ts')?.decision, 'deny');
     fs.rmSync(path.join(p, '.claude/state/freeze.json'));
-    const codex = hook({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Update File: src/lib/kok/AGENTS.md\n@@\n-x\n+y\n*** End Patch' } }, { CLAUDE_PROJECT_DIR: '' });
+    const codex = hook({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Update File: src/lib/up/AGENTS.md\n@@\n-x\n+y\n*** End Patch' } }, { CLAUDE_PROJECT_DIR: '' });
     assert.equal(codex?.decision, 'deny');
     assert.match(codex.reason, /AGENTS\.md:/, 'a protected file stays protected through a link');
   } finally {
@@ -182,7 +182,7 @@ test('3.14.1 re-audit: cd resolution, shell wrappers, combined flags, guard fold
   cli('--set', 'src/lib');
   const msys = `/${p[0].toLowerCase()}${p.slice(2).replace(/\\/g, '/')}`;
   const asked = [
-    'cd $PWD/src && rm a.ts', 'cd "$(pwd)/src" && rm a.ts', '(cd src/lib); rm CHANGELOG.md', 'cd olmayan || rm CHANGELOG.md',
+    'cd $PWD/src && rm a.ts', 'cd "$(pwd)/src" && rm a.ts', '(cd src/lib); rm CHANGELOG.md', 'cd missing || rm CHANGELOG.md',
     'cd', 'Set-Location src; rm a.ts', 'rm {src/a.ts,x}', 'rm src/{a,b}.ts', "rm sr'c'/a.ts", '\\rm src/a.ts', `rm ~/${path.relative(os.homedir(), p).split(path.sep).join('/')}/src/a.ts`,
     'bash -c "rm src/a.ts"', "sh -c 'sed -i s/x/y/ src/a.ts'", 'find src -delete', 'find src -name x -exec rm {} ;', 'ls | xargs rm',
     'git checkout main', 'git switch main', 'curl -sSLo src/a.ts http://x', 'curl -osrc/a.ts http://x', 'wget -qO src/a.ts http://x',

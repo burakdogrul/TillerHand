@@ -410,7 +410,7 @@ function twin(over = {}) {
       '| Style direction | Swiss grid | taste-skill | `.previews/01/b.html` | 2026-10-20 |', '| Font pair | Inter + IBM Plex Mono | ui-ux-pro-max | | |', '| Dark theme | | | | |', '',
       '## 2. Design decision log', '', '- none', ''),
     'docs/product/prd.md': lines('# PRD', '', '## 1. Problem', '', 'Invoices take too long.', '', '## 2. Users', '', 'Freelancers.', '',
-      `## ${l.valueProp}`, '', 'With Fatura, freelancers send an invoice in one minute, because the data is already there.', '', '## 4. Success criteria (measurable)', '', '- [ ] 50 users', ''),
+      `## ${l.valueProp}`, '', 'With Billfast, freelancers send an invoice in one minute, because the data is already there.', '', '## 4. Success criteria (measurable)', '', '- [ ] 50 users', ''),
   };
   return { ...files, ...over };
 }
@@ -459,7 +459,7 @@ test('Ö-48.27 dashboard: critical flows, design direction and value proposition
   assert.equal(flows.includes(t(p, 'dashboard.noTestPlan')), false, 'not the empty state');
   assert.match(plain(design), /Style direction Swiss grid Font pair Inter \+ IBM Plex Mono/, 'design direction');
   assert.equal(design.includes(t(p, 'dashboard.noDesign')), false, 'design not empty');
-  assert.match(plain(value), /With Fatura, freelancers send an invoice in one minute, because the data is already there\./, 'value proposition');
+  assert.match(plain(value), /With Billfast, freelancers send an invoice in one minute, because the data is already there\./, 'value proposition');
 });
 
 test('AC-49.5 dashboard: Turkish critical-flow, design-direction and value-proposition headings are not found (empty states)', () => {
@@ -468,7 +468,7 @@ test('AC-49.5 dashboard: Turkish critical-flow, design-direction and value-propo
       '|---|---|---|---|---|---|', '| K1 | Sign-up | Everyone uses it | e2e | tests/auth.spec.ts | ✅ |', ''),
     'docs/design/design-guide.md': lines('# Design guide', '', '## 1. Seçilen yön', '', '| Area | Choice | Skill | Preview | Date |', '|---|---|---|---|---|',
       '| Style direction | Swiss grid | taste-skill | | 2026-10-20 |', ''),
-    'docs/product/prd.md': lines('# PRD', '', '## 3. Değer önerisi', '', 'With Fatura, freelancers send an invoice in one minute.', ''),
+    'docs/product/prd.md': lines('# PRD', '', '## 3. Değer önerisi', '', 'With Billfast, freelancers send an invoice in one minute.', ''),
   }));
   const h = dashboard(p);
   assert.equal(after_(h, `${t(p, 'dashboard.criticalFlowTests')}</h3>`, '</section>').includes(t(p, 'dashboard.noTestPlan')), true, 'critical flows: empty state');

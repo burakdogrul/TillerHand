@@ -6,7 +6,7 @@
 //   node .claude/hooks/progress.mjs --cost "<job>" <size> ["<note>"] [--limit N]  start from --start, end now (once)
 //   node .claude/hooks/progress.mjs --task "<active task>" --did "<done>" --next "<next step>"
 //   node .claude/hooks/progress.mjs --check                          progress.md labels the status line and dashboard read
-// Every progress write also sets **Last updated:** (**Son güncelleme:** in a Turkish file) to today. Flags can be combined in one call.
+// Every progress write also sets **Last updated:** to today. Flags can be combined in one call.
 import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot, isMain } from './shared.mjs';

@@ -176,8 +176,8 @@ test('Ö-48.80 the project name placeholder is [PROJECT NAME] and counts as unna
   assert.match(read('kit/project/README.md'), /^# \[PROJECT NAME\]$/m);
   const name = (agents, claude) => readStatus(project({ 'AGENTS.md': agents, ...(claude ? { 'CLAUDE.md': claude } : {}) }, 'tpl-name-')).project;
   // Projects before 3.9.0 keep the name in CLAUDE.md: a placeholder in AGENTS.md falls through to it
-  assert.equal(name('# [PROJECT NAME]\n', '# Fatura App\n'), 'Fatura App');
-  assert.equal(name('# Fatura App\n', '# Başka\n'), 'Fatura App', 'a real name in AGENTS.md wins');
+  assert.equal(name('# [PROJECT NAME]\n', '# Billfast App\n'), 'Billfast App');
+  assert.equal(name('# Billfast App\n', '# Other\n'), 'Billfast App', 'a real name in AGENTS.md wins');
 });
 
 // ---------- 2. no Turkish in shipped kit text ----------
