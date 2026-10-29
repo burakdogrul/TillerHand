@@ -3,6 +3,15 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.48.1] - 2026-10-29
+
+### Changed
+- **CI job ids in the templates are English.** `ci.yml`: `check`, `complexity`, `duplicate-code`, `secret-scan` (were `kontrol`, `karmasiklik`, `kopya-kod`, `sir-taramasi`). The CI repair job is `fix` and writes its log to `ci-error.log`; the weekly maintenance job is `maintenance`, live monitoring is `monitor`. The backend pre-commit secret scan hook id is `secret-scan`.
+- **AI eval cases use English fields.** `ai/evals/cases.jsonl`: `id`, `feature`, `kind` (`typical` / `hard` / `malicious`), `input`, `expected` with the checks `contains`, `not_contains`, `equals`, `schema`, `error`, `rubric`. The run script is `evals/run.ts` or `evals/run.py`.
+
+### Compatibility
+- Adapt by hand (optional): GitHub names status checks after the job id. If a branch protection rule requires the old check names (`kontrol`, `sir-taramasi`…), pick the new names there after updating the workflow files. Existing eval files and run scripts keep working as they are; the template only shows the new field names.
+
 ## [3.48.0] - 2026-10-29
 
 ### Changed

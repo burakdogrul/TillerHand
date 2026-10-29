@@ -66,7 +66,7 @@ test('F-01 3.13.1 CI templates: GITHUB_TOKEN is read-only, the supabase status o
     const ci = read(`kit/templates/${t}/.github/workflows/ci.yml`);
     assert.match(ci, /^permissions:\n {2}contents: read$/m, t);
     assert.ok(!/\beval\b/.test(ci), t);
-    assert.match(ci, /sir-taramasi:\n.*\n.*\n {4}permissions:\n {6}contents: read\n {6}pull-requests: read/, `${t}: gitleaks reads PR commits in a private repo`);
+    assert.match(ci, /secret-scan:\n.*\n.*\n {4}permissions:\n {6}contents: read\n {6}pull-requests: read/, `${t}: gitleaks reads PR commits in a private repo`);
   }
 });
 
@@ -142,10 +142,10 @@ test('CI repair agent: works on the commit CI saw, skips Dependabot and red secu
   assert.match(y, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/);
   assert.doesNotMatch(y, /ref: \$\{\{ github\.event\.workflow_run\.head_branch \}\}/, 'a branch can move after CI');
   assert.match(y, /actor\.login != 'dependabot\[bot\]'/);
-  assert.match(y, /semgrep\|sir-taramasi\|rls/);
+  assert.match(y, /semgrep\|secret-scan\|rls/);
   assert.match(y, /claude-code-action@[0-9a-f]{40} # v1/);
   for (const t of ['web-saas', 'mobile', 'backend']) {
     const jobs = [...read(`kit/templates/${t}/.github/workflows/ci.yml`).matchAll(/^ {2}([a-z-]+):$/gm)].map((m) => m[1]);
-    for (const j of ['semgrep', 'sir-taramasi']) assert.ok(jobs.includes(j), `${t}: the repair skip list names ${j}, which must exist`);
+    for (const j of ['semgrep', 'secret-scan']) assert.ok(jobs.includes(j), `${t}: the repair skip list names ${j}, which must exist`);
   }
 });

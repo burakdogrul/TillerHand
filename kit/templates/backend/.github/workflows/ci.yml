@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  kontrol:
+  check:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -47,7 +47,7 @@ jobs:
       - name: Folder structure (.claude/structure.json)
         run: node .claude/hooks/structure-guard.mjs --check
 
-  karmasiklik:
+  complexity:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -67,14 +67,14 @@ jobs:
       - name: Static security analysis (high severity findings stop CI)
         run: semgrep scan --config p/default --config p/owasp-top-ten --severity ERROR --error
 
-  kopya-kod:
+  duplicate-code:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - name: Duplicate code ratio (threshold 5%)
         run: npx --yes jscpd@4 --threshold 5 --silent --ignore "**/node_modules/**,**/.next/**,**/dist/**,**/build/**,**/.venv/**,**/coverage/**,**/.expo/**" .
 
-  sir-taramasi:
+  secret-scan:
     runs-on: ubuntu-latest
     # gitleaks reads the commit list on a PR (pulls/{n}/commits); in a private repo this gives 403 without this permission
     permissions:

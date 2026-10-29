@@ -8,7 +8,7 @@
 
 | Feature | Model | Why this model | Average input/output tokens | Cost per request | Eval set |
 |---|---|---|---|---|---|
-| [E.g. invoice summarization] | [model id] | [speed / quality / price] | | | `evals/ozet.jsonl` |
+| [E.g. invoice summarization] | [model id] | [speed / quality / price] | | | `evals/summary.jsonl` |
 
 - The model id is not embedded in code; use an `AI_MODEL_*` environment variable or a single config file.
 - For simple jobs (classification, extraction) try a small/cheap model first; move up to a bigger one only if the eval fails.

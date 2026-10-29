@@ -9,7 +9,7 @@ repos:
       - id: ruff-format
   - repo: local
     hooks:
-      - id: sir-taramasi
+      - id: secret-scan
         name: Secret scan
         entry: node .claude/hooks/guard-secrets.mjs --staged
         language: system
