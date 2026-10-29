@@ -35,13 +35,13 @@ Services with servers abroad, such as Vercel, Supabase, AWS, OpenAI, Sentry = tr
 
 - [ ] Which services keep data in which region is written in the data inventory.
 - [ ] The EU region was chosen where possible.
-- [ ] The transfer basis under KVKK art. 9 was determined (after the 2024 amendment: if a standard contract is signed, notification to the Board is required within the deadline). **Ask a lawyer.**
+- [ ] The transfer basis under KVKK art. 9 was determined (after the 2024 amendment: if a standard contract is signed, notification to the Personal Data Protection Authority (KVKK Authority) is required within the deadline). **Ask a lawyer.**
 
 ## 5. Other obligations
 
 - [ ] The **VERBİS** registration obligation was checked (an exemption may apply based on the number of employees / balance sheet thresholds).
 - [ ] If commercial email/SMS is sent: prior consent, **İYS** (Message Management System) registration, an opt-out link in every message.
-- [ ] In case of a data breach: the procedure for notifying the Board within **72 hours** is written in `docs/operations/maintenance.md` → incident response.
+- [ ] In case of a data breach: the procedure for notifying the Personal Data Protection Board (KVKK Board) within **72 hours** is written in `docs/operations/maintenance.md` → incident response.
 - [ ] If the product is not aimed at children, the age limit is stated in the terms of use.
 - [ ] The licenses of the fonts, icons, images and libraries used allow commercial use.
 

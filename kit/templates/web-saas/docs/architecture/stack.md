@@ -41,7 +41,7 @@
 | Analytics | Plausible / PostHog | Watch cookie consent |
 | Test | Vitest (unit), Playwright (e2e) | |
 
-## Commands (commands)
+## Commands
 
 ```bash
 npm run dev            # development

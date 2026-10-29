@@ -11,9 +11,9 @@ Checked: 2026-10-25. Source: [Law no. 6698 (KVKK), art. 9](https://www.mevzuat.g
 
 Personal data going to a service abroad is a transfer: AI provider (user data in the prompt text), hosting and database region, email, analytics, error tracking. Order:
 
-1. Is there an **adequacy decision** (art. 9/1-3)? The Board (Personal Data Protection Authority) issues it; it is published in the Official Gazette. If there is one, transfer is allowed under a condition in art. 5 or art. 6.
+1. Is there an **adequacy decision** (art. 9/1-3)? The Personal Data Protection Board (KVKK Board) issues it; it is published in the Official Gazette. If there is one, transfer is allowed under a condition in art. 5 or art. 6.
 2. If not, **appropriate safeguards** (art. 9/4): the **standard contract** announced by the Board, approved binding corporate rules, an undertaking permitted by the Board or (between public bodies) an agreement permitted by the Board. A condition in art. 5 or art. 6 is still required here, and the data subject must be able to exercise their rights in that country.
-   - **After the standard contract is signed, notify the Authority within 5 business days** (art. 9/5).
+   - **After the standard contract is signed, notify the Personal Data Protection Authority (KVKK Authority) within 5 business days** (art. 9/5).
 3. If neither exists, only in **incidental** (non-repeated) cases (art. 9/6): informed explicit consent, necessity for performing a contract and the other cases listed in the article. An AI or hosting service that runs continuously is not "incidental".
 
 Project to-do:
@@ -24,7 +24,7 @@ Project to-do:
 
 ## 2. e-Fatura and e-Arşiv Fatura
 
-Checked: 2026-10-25. Source: [General Communiqué on the Tax Procedure Law no. 509, current version](https://cdn.gib.gov.tr/api/gibportal-file/file/getFile?objectKey=MEVZUAT_TEBLIGLER%2FUNIVERSAL%2F2026%2FMEVZUAT_TEBLIGLER_2026_VukTeb509_Guncel.pdf) (GİB, with the amendments of Communiqué no. 589 applied) · [e-Belge](https://ebelge.gib.gov.tr/)
+Checked: 2026-10-25. Source: [General Communiqué on the Tax Procedure Law no. 509 (VUK General Communiqué No. 509), current version](https://cdn.gib.gov.tr/api/gibportal-file/file/getFile?objectKey=MEVZUAT_TEBLIGLER%2FUNIVERSAL%2F2026%2FMEVZUAT_TEBLIGLER_2026_VukTeb509_Guncel.pdf) (GİB, with the amendments of Communiqué no. 589 applied) · [e-Belge](https://ebelge.gib.gov.tr/)
 
 - **e-Fatura obligation** (IV.1.4): those whose gross sales revenue was **3 million TL** or more in accounting periods of 2022 or later. For those selling goods/services on their own site or in another electronic medium, intermediary service providers and internet listing/advertising intermediaries, the threshold is **500 thousand TL**. Those who exceed the threshold switch by the start of the seventh month of the following year (IV.1.5).
 - **e-Arşiv**: those in e-Fatura also switch to e-Arşiv (IV.2.4.1). Invoices of those not in e-Arşiv are issued as e-Arşiv Fatura (through the GİB portal or a private integrator) from 1/1/2026, regardless of amount. For the simplified procedure and the business account basis this date is 1/1/2027 (IV.2.4.3).

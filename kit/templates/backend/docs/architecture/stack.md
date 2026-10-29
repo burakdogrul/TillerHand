@@ -41,7 +41,7 @@
 | Error tracking | Sentry | |
 | Cron monitoring | Healthchecks.io (dead man's switch) | Alarm if a job does not run |
 
-## Commands (commands)
+## Commands
 
 ```bash
 uv sync                                  # install dependencies

@@ -3,7 +3,7 @@
 > Approach: **Balanced.** Automatic tests are required for critical flows; a manual checklist is enough for the rest.
 > Test tools and commands: `docs/architecture/stack.md`.
 
-## 1. Critical flows (critical flows; automatic test REQUIRED)
+## 1. Critical flows (automatic test REQUIRED)
 
 Every change that touches one of these flows comes with a test. If a test is red, there is no merge/deploy.
 

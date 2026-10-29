@@ -51,11 +51,26 @@ const translation = (root, lang) => {
   return j && typeof j === 'object' && !Array.isArray(j) ? j : {};
 };
 
+// Per process: the dashboard calls t() hundreds of times; the modification time keeps a rewritten file visible
+const cache = new Map();
+const cachedTranslation = (root, lang) => {
+  const file = i18nFile(root, lang);
+  let stamp = 0;
+  try { stamp = fs.statSync(file).mtimeMs; } catch { /* no file: English */ }
+  const hit = cache.get(file);
+  if (hit?.stamp === stamp) return hit.own;
+  const own = translation(root, lang);
+  cache.set(file, { stamp, own });
+  return own;
+};
+
 export function t(root, key, vars = {}) {
   if (!Object.hasOwn(MESSAGES, key)) return key;
   const lang = readLang(root) ?? 'en';
-  const own = lang === 'en' ? {} : translation(root, lang);
-  const text = Object.hasOwn(own, key) && typeof own[key] === 'string' ? own[key] : MESSAGES[key].en;
+  const own = lang === 'en' ? {} : cachedTranslation(root, lang);
+  const en = MESSAGES[key].en;
+  // A hand-edited text that drops or adds a placeholder could hide what an approval dialog asks: English instead
+  const text = Object.hasOwn(own, key) && typeof own[key] === 'string' && placeholders(own[key]) === placeholders(en) ? own[key] : en;
   return text.replace(PLACEHOLDER, (m, name) => Object.hasOwn(vars, name) ? String(vars[name]) : m);
 }
 

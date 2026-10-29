@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readCommands, approvalPath } from '../../.claude/hooks/gate.mjs';
+import { readCommands, approvalPath, unknownCommandKeys } from '../../.claude/hooks/gate.mjs';
 import { permissionEquivalent, evaluate } from '../../.claude/hooks/destructive-guard.mjs';
 import { maskOwnHook } from '../../.claude/hooks/commit-gate.mjs';
 
@@ -775,4 +775,56 @@ test('A-48.7 commit gate: --approve refuses a "skipped" note in any case, so the
     assert.equal(commit().status, 2, JSON.stringify(note));
   }
   redEnd('a487-end');
+});
+
+// A Semgrep that passes on every platform: SEMGREP is node itself, and "node scan …" (cwd = project) runs ./scan, which exits 0
+function withPassingSemgrep(fn) {
+  write('scan', 'process.exit(0)\n');
+  write('sg-change.js', 'const x = 1;\n'); // Semgrep only runs on a changed code file
+  const run = () => { gate('--approve'); return spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, encoding: 'utf8', env: { ...env(), SEMGREP: process.execPath } }); };
+  try { fn(run); } finally {
+    for (const f of ['scan', 'sg-change.js']) fs.rmSync(path.join(p, f), { force: true });
+    agents('node -e "process.exit(0)"');
+  }
+}
+const gateState = () => JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8'));
+
+test('F-03 audit: Semgrep alone never makes the gate green; with no Commands block the result is EMPTY', () => {
+  withPassingSemgrep((run) => {
+    agents('node -e "process.exit(0)"');
+    const green = run();
+    assert.match(green.stdout, /✅ Semgrep/, 'precondition: the fake Semgrep passes');
+    assert.equal(green.status, 0, green.stdout);
+    assert.match(green.stdout, /Result: GREEN\./, 'a real passing test command with a passing Semgrep stays green');
+    write('AGENTS.md', '# X\n\nNo commands section in this file.\n');
+    const r = run();
+    assert.match(r.stdout, /✅ Semgrep/, 'precondition: the fake Semgrep passes');
+    assert.equal(r.status, 1, r.stdout);
+    assert.match(r.stdout, /Result: EMPTY/);
+    assert.doesNotMatch(r.stdout, /Result: GREEN/);
+    assert.equal(gateState().passed, false);
+    assert.equal(gateState().empty, true);
+  });
+});
+
+test('F-03 audit: a "## Komutlar" heading is not the Commands block; its test command plus a passing Semgrep is EMPTY, not green', () => {
+  withPassingSemgrep((run) => {
+    write('AGENTS.md', '# X\n\n## Komutlar\n\n```bash\ntest: node -e 0\n```\n');
+    const r = run();
+    assert.match(r.stdout, /✅ Semgrep/, 'precondition: the fake Semgrep passes');
+    assert.equal(r.status, 1, r.stdout);
+    assert.match(r.stdout, /Result: EMPTY/);
+    assert.doesNotMatch(r.stdout, /Result: GREEN/);
+    assert.equal(gateState().passed, false);
+    assert.equal(gateState().empty, true);
+  });
+});
+
+test('F-03 audit: unknownCommandKeys reads only the code fence under ## Commands; prose and a URL line are not keys', () => {
+  const md = '# X\n\n## Commands\n\nNote: fill these in\n\n```bash\ntest: npm test\ntip kontrol: tsc\nhttp://x.dev\n```\n\nTip: prose after the fence\n\n## Next\n\nother: x\n';
+  assert.deepEqual(unknownCommandKeys(md), ['tip kontrol']);
+  assert.deepEqual(unknownCommandKeys('## Commands\n\n```bash\nhttps://example.com/docs\nlint: eslint .\n```\n'), [], 'a URL inside the fence is not a key');
+  assert.deepEqual(unknownCommandKeys('## Commands\n\nWarning: no fence here\ntest: npm test\n'), [], 'no fence: nothing is read');
+  // kept: an unknown key inside the fence is still reported
+  assert.deepEqual(unknownCommandKeys('## Commands\n\n```bash\nderleme: npm run build\ntest: npm test\n```\n'), ['derleme']);
 });

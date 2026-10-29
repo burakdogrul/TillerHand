@@ -58,7 +58,7 @@ Write the score next to the finding with its dimensions. The reader must see whe
 
 1. Write it in the `.claude/findings/report-template.md` format: `docs/findings/<type>/YYYY-MM-DD.md` (add the suffix `-2` on a second run the same day).
 2. Save the same content as `docs/findings/<type>/latest.md`.
-3. Add one row to the "Reports" table in `docs/findings/README.md` (the dashboard reads this table).
+3. Add one row to the "Reports" table in `docs/findings/README.md` (the dashboard reads this table). In the Type column write the key: `tech`, `business`, `security`, `ux`, `perf` or `legal`.
 4. Do not change code; write only the report.
 
 ## 7. Board opinion

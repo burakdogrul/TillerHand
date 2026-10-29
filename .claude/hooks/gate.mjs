@@ -50,7 +50,8 @@ export function readCommands(md, names = CHECKS) {
 const KNOWN_KEYS = ['dev', 'preview', 'test', 'lint', 'type check', 'build'];
 export function unknownCommandKeys(md) {
   const section = md.match(/^## Commands[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
-  return [...section.matchAll(/^([\p{L}][\p{L}\p{N} _-]*?)[ \t]*:/gmu)].map((m) => m[1]).filter((k) => !KNOWN_KEYS.includes(k));
+  const fenced = [...section.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)].map((m) => m[1]).join('\n'); // prose around the block is not a key
+  return [...fenced.matchAll(/^([\p{L}][\p{L}\p{N} _-]*?)[ \t]*:(?!\/\/)/gmu)].map((m) => m[1]).filter((k) => !KNOWN_KEYS.includes(k));
 }
 
 // The approval record lives outside the project, in the user folder (keyed by a digest of the project's real path): no repo,
@@ -191,7 +192,7 @@ export function runGate(root) {
   const list = approvedCommands(root);
   if (!isApproved(root, list)) return { passed: false, text: `## Gate · ${approvalNeeded(list)}` };
   const checks = [...list.filter((k) => CHECKS.includes(k.name)).map((k) => check(root, k)), semgrep(root, files)];
-  const empty = !checks.some((k) => k.status === 'passed');
+  const empty = !checks.some((k) => CHECKS.includes(k.name) && k.status === 'passed'); // Semgrep alone does not fill a gate
   const spec = specCheck(root, start); // after the test command, which may have refreshed the JUnit report; it does not fill an empty gate
   if (spec) checks.push(spec);
   checks.push(absPathCheck(root, files)); // after "empty": it does not fill a gate with no lint/test either

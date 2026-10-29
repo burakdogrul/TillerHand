@@ -14,7 +14,7 @@
 | [Primary] | | | |
 | [Secondary] | | | |
 
-## 3. Value proposition (value proposition)
+## 3. Value proposition
 
 [One sentence: "With [product], [user] gets [result], because [difference]."]
 
@@ -40,7 +40,7 @@ The dashboard reads the "Priority" label; keep its wording.
 ### AC-02: [Feature name]
 ...
 
-## 6. Out of scope (out of scope: NOT built in this release)
+## 6. Out of scope (NOT built in this release)
 
 This list stops the AI from widening the scope. Write every "later" idea that comes to mind here.
 

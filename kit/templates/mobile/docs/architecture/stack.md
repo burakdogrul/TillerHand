@@ -36,7 +36,7 @@
 | Error tracking | Sentry (`@sentry/react-native`) | |
 | Test | Jest + React Native Testing Library, Maestro (e2e) | |
 
-## Commands (commands)
+## Commands
 
 ```bash
 npx expo start                          # development

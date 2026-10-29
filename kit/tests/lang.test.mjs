@@ -219,6 +219,38 @@ test('lang: t reads other languages from .claude/i18n/<lang>.json, falls back to
   }
 });
 
+test('lang attacker: a hand-edited translation whose placeholders differ from the English text is not used; t gives the English text filled in', async () => {
+  const { t } = await load();
+  const { M, all, withVar } = await keys();
+  assert.equal(typeof withVar, 'string', 'the table has a message with a placeholder');
+  const names = [...new Set(placeholders(M[withVar].en))];
+  const vars = { ...Object.fromEntries(names.map((n) => [n, `<${n}>`])), evil: 'EVIL' };
+  const english = fill(M[withVar].en, vars);
+  const de = (text) => project({ '.kit.json': kitJson({ lang: 'de' }), '.claude/i18n/de.json': { [withVar]: text } });
+  for (const [name, text] of [
+    ['every placeholder dropped', 'Schritt'],
+    ['a placeholder added', `DE ${M[withVar].en} {evil}`],
+    ['a placeholder renamed', `DE ${M[withVar].en.replace(`{${names[0]}}`, '{evil}')}`],
+    ['a placeholder in another case', `DE ${M[withVar].en.replace(`{${names[0]}}`, `{${names[0].toUpperCase()}}`)}`],
+  ]) {
+    assert.equal(t(de(text), withVar, vars), english, `de: ${name}`);
+    assert.equal(t(de(text), withVar), M[withVar].en, `de: ${name}, no vars: the English text with its placeholders`);
+  }
+  const tr = project({ '.kit.json': kitJson({ lang: 'tr' }), '.claude/i18n/tr.json': { [withVar]: 'Adım' } });
+  assert.equal(t(tr, withVar, vars), english, 'tr: a dropped placeholder gives English too');
+  // A translation with the same placeholders is still used, also when it puts them in another order
+  const same = `DE ${M[withVar].en}`;
+  assert.equal(t(de(same), withVar, vars), fill(same, vars), 'matching placeholders: the translation');
+  const multi = all.find((k) => new Set(placeholders(M[k].en)).size >= 2);
+  if (multi) {
+    const order = [...new Set(placeholders(M[multi].en))].reverse();
+    const text = `DE ${order.map((n) => `{${n}}`).join(' · ')}`;
+    const mvars = Object.fromEntries(order.map((n) => [n, `<${n}>`]));
+    const p = project({ '.kit.json': kitJson({ lang: 'de' }), '.claude/i18n/de.json': { [multi]: text } });
+    assert.equal(t(p, multi, mvars), fill(text, mvars), 'reordered placeholders: the translation');
+  }
+});
+
 test('lang: t ignores the i18n file for en; tr reads .claude/i18n/tr.json like any other language', async () => {
   const { t } = await load();
   const { M, all } = await keys();

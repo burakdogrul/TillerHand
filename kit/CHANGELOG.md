@@ -25,6 +25,11 @@ Items with an "Adapt by hand" note concern files owned by the project; the updat
 
 ### Fixed
 - The eval set-up wrote Turkish labels into the test project, so the kit condition read nothing from it.
+- **The gate is no longer green on Semgrep alone.** With lint, type check and test all missing (no `## Commands` block, or a heading in another language), a clean Semgrep scan made the gate green and opened the commit gate. Now the result is EMPTY unless a project check passed.
+- The unknown-key warning under `## Commands` reads only the code block: a note line or an address no longer counts as a key.
+- A translation whose text drops or adds a placeholder (`{list}`, `{path}`) is not shown; the English text is shown instead, so an approval dialog never hides what it asks. Translation files are read once per process.
+- The Turkey add-on names the Personal Data Protection Board and the Personal Data Protection Authority separately (who issues decisions, who is notified), and the e-invoice source keeps the communiqué's short name (VUK No. 509).
+- `/start` says that writing a translation file asks for approval once.
 
 ## [3.48.1] - 2026-10-29
 
