@@ -828,3 +828,51 @@ test('F-03 audit: unknownCommandKeys reads only the code fence under ## Commands
   // kept: an unknown key inside the fence is still reported
   assert.deepEqual(unknownCommandKeys('## Commands\n\n```bash\nderleme: npm run build\ntest: npm test\n```\n'), ['derleme']);
 });
+
+// 3.49.1: the command approval names a key the gate will not run, so the user does not approve thinking it is checked
+const commandsBlock = (lines) => write('AGENTS.md', `# X\n\n## Commands\n\n\`\`\`bash\n${lines}\n\`\`\`\n`);
+const approvalReason = () => {
+  const r = commit('node .claude/hooks/gate.mjs --approve');
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout).hookSpecificOutput;
+  assert.equal(out.permissionDecision, 'ask');
+  return out.permissionDecisionReason;
+};
+
+test('3.49.1 command approval prompt: an unknown Commands key (tip kontrol) is named; a clean block keeps today\'s reason', async () => {
+  const { MESSAGES } = await import('../../.claude/hooks/messages.mjs');
+  const base = (list) => MESSAGES['guard.commit.gateApprovalAsk'].en.replace('{list}', list);
+  try {
+    commandsBlock('test: node -e 0');
+    const clean = approvalReason();
+    assert.equal(clean, base('- test: node -e 0'), 'no unknown key: the reason is exactly today\'s text');
+    commandsBlock('test: node -e 0\ntip kontrol: tsc --noEmit');
+    const reason = approvalReason();
+    assert.ok(reason.includes('tip kontrol'), `the key that will not run is named:\n${reason}`);
+    assert.ok(reason.includes('- test: node -e 0'), 'the approved command list is still shown');
+    assert.ok(reason.includes(MESSAGES['guard.commit.gateApprovalAsk'].en.split('{list}')[0]), 'the approval text is still there');
+    assert.equal(reason.includes('- tip kontrol: tsc --noEmit'), false, 'not listed as a command that will run');
+  } finally {
+    agents('node -e "process.exit(0)"');
+  }
+});
+
+test('3.49.1 gate --run before approval: "command approval needed" also names an unknown Commands key', () => {
+  try {
+    fs.rmSync(approvalPath(p), { force: true });
+    commandsBlock('test: node -e 0');
+    const clean = gate('--run');
+    assert.equal(clean.status, 1, clean.stdout);
+    assert.match(clean.stdout, /^## Gate · command approval needed/m);
+    assert.doesNotMatch(clean.stdout, /tip kontrol/);
+    commandsBlock('test: node -e 0\ntip kontrol: tsc --noEmit');
+    const r = gate('--run');
+    assert.equal(r.status, 1, r.stdout);
+    assert.match(r.stdout, /^## Gate · command approval needed/m);
+    assert.match(r.stdout, /- test: node -e 0/, 'the command to approve is listed');
+    assert.match(r.stdout, /tip kontrol/, `the key the gate will not run is named:\n${r.stdout}`);
+    assert.doesNotMatch(r.stdout, /- tip kontrol: tsc --noEmit/, 'not listed as a command to approve');
+  } finally {
+    agents('node -e "process.exit(0)"');
+  }
+});

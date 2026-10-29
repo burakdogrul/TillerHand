@@ -205,10 +205,12 @@ async function hook() {
       process.exit(0);
     }
     // Loaded only here: every Bash call runs this hook, and gate.mjs pulls in the dashboard and edit-round modules
-    const { approvedCommands, commandList } = await import('./gate.mjs');
+    const { approvedCommands, commandList, readAgents, unknownCommandKeys } = await import('./gate.mjs');
     const list = commandList(approvedCommands(root)) || t(root, 'guard.commit.noCommands');
+    const unknown = unknownCommandKeys(readAgents(root));
+    const note = unknown.length ? `\n${t(root, 'guard.commit.gateUnknownKeys', { keys: unknown.join(', ') })}` : '';
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
-      permissionDecisionReason: t(root, 'guard.commit.gateApprovalAsk', { list }) } }));
+      permissionDecisionReason: t(root, 'guard.commit.gateApprovalAsk', { list }) + note } }));
     process.exit(0);
   }
   if (!commit.test(command) && !commit.test(open)) process.exit(0);

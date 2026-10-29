@@ -212,7 +212,7 @@ const TOPICS = ['product', 'tech', 'design', 'content', 'data', 'security', 'cos
 const topicKey = (topic = '') => topic.trim().toLowerCase();
 
 // The command to paste into Claude: "`/build G-013` …" or "/wrap-up and /clear" → first command, without its <placeholder> or note
-const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/\s+\S+\s+\/| and | to |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
+const cmdOf = (s = '') => { const m = String(s).match(/`(\/[^`\n]+)`/) ?? String(s).match(/^(\/.*)$/); return m ? m[1].split(/\s+\S+\s+\/[\w:-]+(?![\w:/-]|\.\w)| and | to |\s*\(/)[0].replace(/\s*[[<].*$/, '').trim() : ''; };
 const copyBtn = (s) => { const c = cmdOf(s); return c ? ` <button class="copy-cmd" type="button" data-cmd="${e(c)}" aria-label="${e(L('dashboard.copyAria', { command: c }))}">${e(L('dashboard.copy'))}</button>` : ''; };
 const alertRow = (x) => `<li class="${x.sev}"><span class="ic" aria-hidden="true">${SEV[x.sev][0]}</span><span><span class="sr-only">${L(SEV[x.sev][1])}: </span>${md(x.text)}</span>${x.action ? `<span class="action">→ ${md(x.action)}${copyBtn(x.action)}</span>` : ''}</li>`;
 const kpi = (label, value, sub = '', bar = '') => `<div class="kpi"><div class="kpi-l">${e(label)}</div><div class="kpi-v">${value}</div>${bar}<div class="kpi-s">${sub}</div></div>`;

@@ -274,6 +274,34 @@ test('3.41.0 copy buttons: the next step and slash-command actions get the bare 
   fs.rmSync(p, { recursive: true, force: true });
 });
 
+// 3.49.1: the copy command is cut only before a second slash command (connector word + "/name"), not before a path
+test('3.49.1 copy buttons: a path after a word (/api/login, /index.html) stays in the command; a second slash command is cut', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'dash-cut-'));
+  const cmdFor = (step) => {
+    fs.mkdirSync(path.join(p, 'docs/workflow'), { recursive: true });
+    fs.writeFileSync(path.join(p, 'docs/workflow/progress.md'), `**Active phase:** Phase 1\n\n## Next step\n\n1. ${step}\n`);
+    const r = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks', 'dashboard.mjs'), p, '--quiet'], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    return [...fs.readFileSync(path.join(p, 'dashboard.html'), 'utf8').matchAll(/data-cmd="([^"]*)"/g)].map((m) => m[1]);
+  };
+  try {
+    // a path token (more "/" or a ".") after a word is an argument, not a second command
+    assert.deepEqual(cmdFor('`/fix-bug login fails on /api/login`'), ['/fix-bug login fails on /api/login'], 'backtick: path kept');
+    assert.deepEqual(cmdFor('/fix-bug login fails on /api/login'), ['/fix-bug login fails on /api/login'], 'bare line: path kept');
+    assert.deepEqual(cmdFor('`/fix-bug blank page in /index.html`'), ['/fix-bug blank page in /index.html'], 'a dot in the token: a file, kept');
+    assert.deepEqual(cmdFor('`/freeze src/features/auth`'), ['/freeze src/features/auth'], 'a relative path is kept');
+    // a real second slash command after any connector word is cut (language-agnostic)
+    assert.deepEqual(cmdFor('/wrap-up und /clear'), ['/wrap-up'], 'any connector word before /clear');
+    assert.deepEqual(cmdFor('/wrap-up then /clear.'), ['/wrap-up'], 'second command followed by punctuation');
+    assert.deepEqual(cmdFor('`/build G-013` then /clear'), ['/build G-013'], 'backtick command, second command outside');
+    assert.deepEqual(cmdFor('/build G-013 then /clear'), ['/build G-013'], 'bare line, second command cut');
+  } finally {
+    fs.rmSync(p, { recursive: true, force: true });
+  }
+});
+
 // 3.44.0 language selection: the dashboard waits for a language and takes <html lang> from it
 const langDashboard = async (files) => {
   const { spawnSync } = await import('node:child_process');

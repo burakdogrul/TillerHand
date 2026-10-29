@@ -381,6 +381,7 @@ export const MESSAGES = {
   'guard.commit.skipAsk': { en: 'Commit gate: --skip bypasses the board review and the deterministic gate. Approve only if the user explicitly asks.' },
   'guard.commit.noCommands': { en: '(no commands defined)' },
   'guard.commit.gateApprovalAsk': { en: 'Gate command approval: from now on the gate runs these commands from AGENTS.md → Commands every time:\n{list}\nApprove only if you trust them.' },
+  'guard.commit.gateUnknownKeys': { en: 'These keys under AGENTS.md → Commands do not run (the gate reads dev, preview, test, lint, type check, build): {keys}' },
   'guard.destructive.approvalSuffix': { en: '{reason}. User approval required.' },
   'guard.destructive.prodDeploy': { en: 'Deploy to the prod environment' },
   'guard.destructive.promoteRollback': { en: 'The prod environment is changing (promote/rollback)' },

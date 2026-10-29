@@ -162,7 +162,8 @@ export function absPathCheck(root, files) {
   return { name, status: 'passed', ...(notes.length && { note: `${notes.length} lines have a path that looks like a user folder; fix it if it is machine-specific (does not block)`, output: list(notes) }) };
 }
 
-export const approvalNeeded = (list) => `command approval needed\nAGENTS.md → Commands is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
+export const approvalNeeded = (list, unknown = []) => `command approval needed\nAGENTS.md → Commands is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
+  (unknown.length ? `Keys the gate does not read (they never run; use dev, preview, test, lint, type check, build): ${unknown.join(', ')}\n` : '') +
   'Show the commands to the user and ask. If they approve: node .claude/hooks/gate.mjs --approve, then run the command again.';
 
 // Spec drift (F-23): a "must not change" behavior whose test is missing or red stops the gate; no result is only a note
@@ -190,7 +191,7 @@ export function runGate(root) {
   let signature = null, files = [];
   try { ({ signature, files } = changes()); } catch { /* not a git repo: the commands still run */ }
   const list = approvedCommands(root);
-  if (!isApproved(root, list)) return { passed: false, text: `## Gate · ${approvalNeeded(list)}` };
+  if (!isApproved(root, list)) return { passed: false, text: `## Gate · ${approvalNeeded(list, unknownCommandKeys(readAgents(root)))}` };
   const checks = [...list.filter((k) => CHECKS.includes(k.name)).map((k) => check(root, k)), semgrep(root, files)];
   const empty = !checks.some((k) => CHECKS.includes(k.name) && k.status === 'passed'); // Semgrep alone does not fill a gate
   const spec = specCheck(root, start); // after the test command, which may have refreshed the JUnit report; it does not fill an empty gate

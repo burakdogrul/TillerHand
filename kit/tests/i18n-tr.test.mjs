@@ -330,6 +330,32 @@ test('AC-49.20 destructive guard: a lang tr project gets the tr.json reason; wit
   assert.equal(without.includes(tr['guard.destructive.rewriteHistory']), false, 'no Turkish text from the code');
 });
 
+// 3.49.1: the gate command approval prompt names an unknown Commands key; in a tr project that note is Turkish too
+function gateApprovalReason(p) {
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], {
+    input: JSON.stringify({ tool_name: 'Bash', cwd: p, tool_input: { command: 'node .claude/hooks/gate.mjs --approve' } }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p },
+  });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout).hookSpecificOutput;
+  assert.equal(out.permissionDecision, 'ask');
+  return out.permissionDecisionReason;
+}
+
+test('3.49.1 commit gate: a lang tr project gets the gate approval prompt in Turkish, naming the unknown key tip kontrol', async () => {
+  const M = await messages();
+  const tr = shipped();
+  const AGENTS = '# X\n\n## Commands\n\n```bash\ntest: node -e 0\ntip kontrol: tsc --noEmit\n```\n';
+  const en = gateApprovalReason(project({ '.kit.json': kitJson({ lang: 'en' }), 'AGENTS.md': AGENTS }));
+  const reason = gateApprovalReason(withShipped({ 'AGENTS.md': AGENTS }));
+  assert.ok(reason.includes('tip kontrol'), `the unknown key is named:\n${reason}`);
+  assert.ok(reason.includes(tr['guard.commit.gateApprovalAsk'].split('{list}')[0]), 'the Turkish approval text from tr.json');
+  assert.equal(reason.includes(M['guard.commit.gateApprovalAsk'].en.split('{list}')[0]), false, 'not the English approval text');
+  // every English prose line of the en prompt (the note on the unknown key included) is absent from the tr prompt
+  const prose = en.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('- ') && l !== 'tip kontrol');
+  assert.ok(en.includes('tip kontrol'), `the en prompt names the key too:\n${en}`);
+  assert.deepEqual(prose.filter((l) => reason.includes(l)), [], 'no English line in the tr prompt');
+});
+
 // ---------- kit.mjs: tr.json is kit-owned and shipped ----------
 
 const node = (...args) => spawnSync(process.execPath, args, { encoding: 'utf8', env: { ...process.env, NODE_TEST_CONTEXT: undefined } });

@@ -3,6 +3,12 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.1] - 2026-10-29
+
+### Fixed
+- **The gate command approval names keys that will not run.** A key under `## Commands` the gate does not read (for example `tip kontrol:` instead of `type check:`) is listed in the approval dialog and in the gate's "command approval needed" text, so a skipped check is visible before you approve.
+- The dashboard's copy button keeps a path in the command (`/fix-bug login fails on /api/login`, `/fix-bug blank page in /index.html`); only a second slash command (`then /clear`) cuts it.
+
 ## [3.49.0] - 2026-10-29
 
 ### Changed

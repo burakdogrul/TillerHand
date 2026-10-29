@@ -378,6 +378,7 @@
   "guard.commit.skipAsk": "Commit kapısı: --skip kurul denetimini ve deterministik kapıyı aşar. Sadece kullanıcı açıkça isterse onayla.",
   "guard.commit.noCommands": "(tanımlı komut yok)",
   "guard.commit.gateApprovalAsk": "Kapı komut onayı: AGENTS.md → Commands bölümündeki şu komutlar bundan sonra her kapıda çalışır:\n{list}\nGüvendiğin komutlarsa onayla.",
+  "guard.commit.gateUnknownKeys": "AGENTS.md → Commands altındaki şu anahtarlar çalışmaz (kapı dev, preview, test, lint, type check, build okur): {keys}",
   "guard.destructive.approvalSuffix": "{reason}. Kullanıcı onayı gerekli.",
   "guard.destructive.prodDeploy": "Prod ortamına deploy",
   "guard.destructive.promoteRollback": "Prod ortamı değişiyor (promote/rollback)",
