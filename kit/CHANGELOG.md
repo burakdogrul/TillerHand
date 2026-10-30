@@ -3,6 +3,11 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.5] - 2026-10-30
+
+### Security
+- A `.env` glob with an equivalence class or collating symbol (`cat .e[[=n=]]v`, `.e[[.n.]]v`) is asked. The glob check now parses only plain bracket sets (`[nm]`, `[!x]`); any other bracket form counts as a match and asks, instead of being guessed.
+
 ## [3.49.4] - 2026-10-30
 
 ### Security

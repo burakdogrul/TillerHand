@@ -612,3 +612,13 @@ test('3.49.4: ATTACK shield: a .env glob with a bracket range or POSIX class (.e
     assert.equal(shield(root, 'cat .e[x]v'), null, 'cat .e[x]v');
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('3.49.5: ATTACK shield: a .env glob with an equivalence class, collating symbol, nested or empty bracket (.e[[=n=]]v, .e[[.n.]]v, .e[]n]v, .e[n[]v) is asked', () => {
+  const root = shieldProject();
+  try {
+    for (const c of ['cat .e[[=n=]]v', 'cat .e[[.n.]]v', 'cat .e[]n]v', 'cat .e[n[]v'])
+      assert.equal(shield(root, c), 'ask', c);
+    for (const c of ['cat .e[x]v', 'cat .env.example', "jq '.[0]' f.json"])
+      assert.equal(shield(root, c), null, c);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

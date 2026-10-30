@@ -265,18 +265,20 @@ const ENV_NAMES = ['.env', '.env.local', '.env.production', '.env.development', 
 // Glob match (* ? [..] [!..]) by dynamic programming, not a regex: no throw on an unclosed [ (bash reads it as a
 // plain [) and no backtracking blow-up on ********. Case-insensitive, like the Windows file system.
 export function globMatch(glob, name) {
+  // Only plain bracket sets ([nm], [!x]) are parsed. A range, class, equivalence class, collating symbol, escape,
+  // nested or empty set ([a-z], [[:alpha:]], [[=n=]], [[.n.]], []n]) counts as a match: asked, never guessed
+  for (let i = glob.indexOf('['); i > -1; i = glob.indexOf('[', i + 1)) {
+    const end = glob.indexOf(']', i + 1);
+    if (end > -1 && !/^[!^]?[\w.]+$/.test(glob.slice(i + 1, end))) return true;
+  }
   const tokens = [];
   for (let i = 0; i < glob.length; i++) {
-    const c = glob[i];
-    let end = c === '[' ? glob.indexOf(']', i + 2) : -1;
-    // [[:alpha:]]: the class's own ] does not close the set
-    if (end > -1 && glob.slice(i + 1, end).includes('[:')) end = glob.indexOf(']', end + 1);
+    const c = glob[i], end = c === '[' ? glob.indexOf(']', i + 1) : -1;
     if (c === '*') { if (tokens.at(-1) !== '*') tokens.push('*'); }
     else if (c === '?') tokens.push((x) => true);
     else if (end > -1) {
       const body = glob.slice(i + 1, end).toLowerCase(), neg = /^[!^]/.test(body), set = neg ? body.slice(1) : body;
-      // A range (a-z), a POSIX class ([:alpha:]) or an escape is not parsed: it counts as any character (asked)
-      tokens.push(/[-\\]|\[:/.test(set) ? () => true : (x) => set.includes(x) !== neg);
+      tokens.push((x) => set.includes(x) !== neg);
       i = end;
     } else tokens.push((x) => x === c.toLowerCase());
   }
