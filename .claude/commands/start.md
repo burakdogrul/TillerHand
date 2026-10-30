@@ -87,7 +87,7 @@ Also ask: **Will the project have an AI (LLM) feature?** If yes, the AI add-on i
 
 ## Step 3: Installation
 
-Tell the user in one sentence what will be done, then run:
+Tell the user in one sentence what will be done (the install asks for approval once: it writes over the kit's guard files), then run:
 
 ```bash
 # template path (kit/ is in the root): kit/ is deleted after the install

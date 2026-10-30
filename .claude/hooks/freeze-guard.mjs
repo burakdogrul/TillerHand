@@ -16,7 +16,7 @@
 //   node .claude/hooks/freeze-guard.mjs --plan-end                     close when the task is done (asked)
 import fs from 'node:fs';
 import path from 'node:path';
-import { readInput, decide, findRoot, isMain } from './shared.mjs';
+import { readInput, decide, findRoot, isMain, reviewOff } from './shared.mjs';
 import { t } from './lang.mjs';
 
 // Project root even when called from a subfolder: lock and plan are written where the hook reads them; paths are root-relative
@@ -26,9 +26,9 @@ const LOCK = lockPath();
 // Kit files that must stay writable under a lock (progress note, hook states)
 const FREE = ['docs/workflow/progress.md', '.claude/state/'];
 
-// Counterpart of .claude/settings.json → permissions (deny: .env and secrets/, ask: rule and guard files)
+// Counterpart of .claude/settings.json → permissions (deny: .env and secrets/ at any depth, ask: rule and guard files)
 const PROTECTED = [
-  ['deny', /^(\.env(\.local|\.production|\.[^/]+\.local)?|secrets(\/.*)?)$/i, 'Environment and secret files are not read or written by the AI.'],
+  ['deny', /^(.*\/)?(\.env(\.local|\.production|\.development|\.staging|\.[^/]+\.local)?|secrets(\/.*)?)$/i, 'Environment and secret files are not read or written by the AI.'],
   ['ask', /^(CLAUDE\.md|AGENTS\.md|\.mcp\.json|\.claude\/.*|\.codex\/.*|\.agents\/hooks\.json|\.github\/workflows\/.*|\.git(\/.*)?)$/i, 'guard.freeze.protectedAsk'],
 ];
 // Returns [decision, pattern, text]; the text of an ask rule is in the user's language (message key), a deny rule's is for the AI
@@ -127,6 +127,18 @@ function configure(mode, value) {
   }
 }
 
+// The file as it would be after the write; null when the edit cannot be placed
+export function boardAfter(disk, f) {
+  if (f.deleted) return '';
+  if (f.before === undefined) return f.after ?? '';
+  let s = disk;
+  for (const e of f.edits ?? [{ old: f.before, new: f.after ?? '' }]) {
+    if (!s.includes(e.old)) return null;
+    s = e.all ? s.split(e.old).join(e.new) : s.replace(e.old, () => e.new);
+  }
+  return s;
+}
+
 function hook() {
   const g = readInput();
   if (!g) process.exit(0);
@@ -149,13 +161,15 @@ function hook() {
       if (k?.[0] === 'deny') decide(g.tool, 'deny', `${rel}: ${k[2]}`);
     }
   }
-  // "**Commit review:** off" in board.md turns the commit review off: changing that value is the user's call
+  // "**Commit review:** off" in board.md turns the commit review off: changing what the commit gate reads is the user's call.
+  // The whole file is rebuilt and read the gate's way, so a short Edit, a second line or a decoy line cannot slip past.
   for (const [i, p] of paths.entries()) {
     if (relPath(p, groot) !== 'docs/workflow/board.md') continue;
-    const review = (s) => s?.match(/\*\*Commit review:\*\*[ \t]*([^\r\n]*)/i)?.[1].trim().toLowerCase();
-    let now; try { now = review(fs.readFileSync(p, 'utf8')); } catch { /* new file */ }
-    const next = review(g.files[i].after);
-    if (next !== undefined && next !== now) decide(g.tool, 'ask', t(g.root, 'guard.freeze.commitReview', { value: next }));
+    let disk = ''; try { disk = fs.readFileSync(p, 'utf8'); } catch { /* new file */ }
+    const next = boardAfter(disk, g.files[i]);
+    // Not rebuildable (old text not found, a Codex patch with gaps): any "off" in the new text is asked
+    const changed = next === null ? /off/i.test(g.files[i].after ?? '') : reviewOff(next) !== reviewOff(disk);
+    if (changed) decide(g.tool, 'ask', t(g.root, 'guard.freeze.commitReview', { value: next !== null && reviewOff(next) ? 'off' : 'on' }));
   }
   const lock = readLock(g.root);
   const outside =lock && paths.find((p) => !allowedInLock(p, lock, groot));

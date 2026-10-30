@@ -893,3 +893,20 @@ test('3.49.2: ATTACK commit gate: a backslash-newline after "commit" is still a 
     fs.rmSync(path.join(p, 'continued.js'), { force: true });
   }
 });
+
+test('3.49.2b: ATTACK commit gate: a backslash-newline inside the word (git comm\\<newline>it, bash joins it to commit) is stopped exactly like git commit -m x', () => {
+  agents('node -e "process.exit(0)"');
+  sh('git add -A && git commit -qm step3492b --allow-empty');
+  write('split-word.js', 'not reviewed');
+  try {
+    const plain = commit('git commit -m x');
+    assert.equal(plain.status, 2, 'the plain spelling is stopped: no gate run, no board approval');
+    for (const c of ['git comm\\\nit -m x', 'g\\\nit commit -m x']) {
+      const r = commit(c);
+      assert.equal(r.status, plain.status, `${JSON.stringify(c)}: same exit code as the plain spelling`);
+      assert.equal(r.stderr, plain.stderr, `${JSON.stringify(c)}: same reason as the plain spelling`);
+    }
+  } finally {
+    fs.rmSync(path.join(p, 'split-word.js'), { force: true });
+  }
+});

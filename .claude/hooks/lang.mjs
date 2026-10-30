@@ -64,14 +64,24 @@ const cachedTranslation = (root, lang) => {
   return own;
 };
 
+// A hand-edited text that drops or adds a placeholder, pushes it away with extra lines or padding, or hides it with
+// control characters (\r, ESC, bidi overrides, line separators) could hide what an approval dialog asks: English instead.
+// Returns why the translation is not used, or null.
+const HIDING = /[\0-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028-\u202e\u2066-\u2069]/;
+export function translationIssue(text, en) {
+  if (placeholders(text) !== placeholders(en)) return `keep the placeholders exactly ({${placeholders(en).split(',').join('}, {')}})`;
+  if (text.split('\n').length !== en.split('\n').length) return 'keep the number of lines of the English text';
+  if (HIDING.test(text)) return 'no control characters (\\r, ESC, bidi marks, line separators)';
+  if (text.length > 3 * en.length + 40) return `at most ${3 * en.length + 40} characters`;
+  return null;
+}
+
 export function t(root, key, vars = {}) {
   if (!Object.hasOwn(MESSAGES, key)) return key;
   const lang = readLang(root) ?? 'en';
   const own = lang === 'en' ? {} : cachedTranslation(root, lang);
   const en = MESSAGES[key].en;
-  // A hand-edited text that drops or adds a placeholder, or pushes it away with extra lines, could hide what an approval dialog asks: English instead
-  const lines = (s) => s.split('\n').length;
-  const text = Object.hasOwn(own, key) && typeof own[key] === 'string' && placeholders(own[key]) === placeholders(en) && lines(own[key]) === lines(en) ? own[key] : en;
+  const text = Object.hasOwn(own, key) && typeof own[key] === 'string' && !translationIssue(own[key], en) ? own[key] : en;
   return text.replace(PLACEHOLDER, (m, name) => Object.hasOwn(vars, name) ? String(vars[name]) : m);
 }
 
@@ -95,7 +105,8 @@ export function writeTranslation(root, obj) {
   for (const [k, v] of Object.entries(obj)) {
     if (!Object.hasOwn(MESSAGES, k)) throw new Error(`Unknown key: ${k}`);
     if (typeof v !== 'string') throw new Error(`Not a text: ${k}`);
-    if (placeholders(v) !== placeholders(MESSAGES[k].en)) throw new Error(`${k}: keep the placeholders exactly ({${placeholders(MESSAGES[k].en).split(',').join('}, {')}}).`);
+    const issue = translationIssue(v, MESSAGES[k].en);
+    if (issue) throw new Error(`${k}: ${issue}.`);
   }
   const file = i18nFile(root, lang);
   fs.mkdirSync(path.dirname(file), { recursive: true });

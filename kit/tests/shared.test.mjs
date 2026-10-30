@@ -341,3 +341,18 @@ test('3.28.1 every hook finds the project root the same way (findRoot), not from
   assert.equal(r.status, 0, r.stderr);
   assert.ok(Array.isArray(JSON.parse(r.stdout).commits), 'runs against the repo from kit/');
 });
+
+test('3.49.2b: ATTACK on Codex and Antigravity, env files and secrets in subfolders are denied like the root ones; .env.example stays free at any depth', () => {
+  const root = tempRoot('nested-env');
+  try {
+    for (const f of ['apps/web/.env.local', 'packages/x/.env.development', 'a/secrets/k.pem']) {
+      assert.equal(run('freeze-guard.mjs', 'codex', root, patch(root, `*** Add File: ${f}\n+A=1`)), 'deny', `codex: ${f}`);
+      assert.equal(run('freeze-guard.mjs', 'antigravity', root, write('antigravity', root, f, 'A=1')), 'deny', `antigravity write: ${f}`);
+      assert.equal(run('freeze-guard.mjs', 'antigravity', root, { toolCall: { name: 'view_file', args: { AbsolutePath: path.join(root, f) } }, workspacePaths: [root] }), 'deny', `antigravity read: ${f}`);
+    }
+    for (const f of ['.env.example', 'apps/web/.env.example']) {
+      assert.equal(run('freeze-guard.mjs', 'codex', root, patch(root, `*** Add File: ${f}\n+A=`)), null, `codex: ${f}`);
+      assert.equal(run('freeze-guard.mjs', 'antigravity', root, write('antigravity', root, f, 'A=')), null, `antigravity: ${f}`);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

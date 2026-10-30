@@ -277,6 +277,39 @@ test('3.49.2: lang attacker: a translation with another number of line breaks th
   assert.equal(t(p, key, vars), fill(same, vars), 'same shape: the translation');
 });
 
+test('3.49.2b: lang attacker: a translation with \\r, ESC, U+202E, U+2028 or longer than 3x the English text + 40 is not used by t and is rejected by writeTranslation', async () => {
+  const { t, writeTranslation } = await load();
+  const { M, plain } = await keys();
+  const en = M[plain].en;
+  const limit = 3 * en.length + 40;
+  const bad = [
+    ['carriage return', `TR ${en}\r`],
+    ['ESC', `\x1b[2J${en}`],
+    ['U+202E right-to-left override', `‮${en}`],
+    ['U+2028 line separator', `${en} `],
+    ['one char over the limit', `${en} `.padEnd(limit + 1, 'x')],
+  ];
+  assert.equal(bad.at(-1)[1].length, limit + 1);
+  for (const lang of ['tr', 'de']) {
+    for (const [name, text] of bad) {
+      const p = project({ '.kit.json': kitJson({ lang }), [`.claude/i18n/${lang}.json`]: { [plain]: text } });
+      assert.equal(t(p, plain), en, `t, ${lang}: ${name}`);
+    }
+  }
+  const p = project({ '.kit.json': kitJson({ lang: 'de' }), '.claude/i18n/de.json': { [plain]: 'alt' } });
+  const before = readFile(p, '.claude/i18n/de.json');
+  for (const [name, text] of bad) {
+    assert.throws(() => writeTranslation(p, { [plain]: text }), Error, `writeTranslation: ${name}`);
+    assert.equal(readFile(p, '.claude/i18n/de.json'), before, `${name}: file unchanged`);
+  }
+  // Exactly at the limit is still a translation
+  const atLimit = `${en} `.padEnd(limit, 'x');
+  const ok = project({ '.kit.json': kitJson({ lang: 'de' }), '.claude/i18n/de.json': { [plain]: atLimit } });
+  assert.equal(t(ok, plain), atLimit, 'at the limit: used');
+  writeTranslation(p, { [plain]: atLimit });
+  assert.equal(JSON.parse(readFile(p, '.claude/i18n/de.json'))[plain], atLimit, 'at the limit: written');
+});
+
 test('lang: t ignores the i18n file for en; tr reads .claude/i18n/tr.json like any other language', async () => {
   const { t } = await load();
   const { M, all } = await keys();

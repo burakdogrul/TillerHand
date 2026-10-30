@@ -364,6 +364,23 @@ test('3.49.2: ATTACK update removes the whole-script lang.mjs allow rule (it all
   assert.deepEqual(migrateSettings(s, kit), { settings: s, added: [], removed: [] }, 'running again changes nothing');
 });
 
+test('3.49.2b: ATTACK settings: kit.mjs install is asked, not allowed; nested env files and secrets are denied for Read and Edit at any depth; update moves the old allow out', () => {
+  const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
+  const install = 'Bash(node kit/kit.mjs install:*)';
+  assert.equal(kit.permissions.allow.includes(install), false, 'install is not in allow');
+  assert.equal(kit.permissions.ask.includes(install), true, 'install is in ask');
+  for (const tool of ['Read', 'Edit'])
+    for (const p of ['./**/.env', './**/.env.local', './**/.env.*.local', './**/.env.production', './**/.env.development', './**/.env.staging', './**/secrets/**'])
+      assert.ok(kit.permissions.deny.includes(`${tool}(${p})`), `deny ${tool}(${p})`);
+  const own = 'Bash(npm test)';
+  const { settings: s, removed } = migrateSettings({ permissions: { allow: [own, install] } }, kit);
+  assert.equal(s.permissions.allow.includes(install), false, 'update removes the old allow');
+  assert.ok(s.permissions.ask.includes(install), 'the ask rule arrives');
+  assert.deepEqual(removed, [`allow: ${install}`], 'the removal is listed for the report');
+  assert.equal(s.permissions.allow[0], own, 'the project\'s own rule stays');
+  assert.deepEqual(migrateSettings(s, kit), { settings: s, added: [], removed: [] }, 'running again changes nothing');
+});
+
 test('F-10 update settings migration: the kit command list is added when the project has none, a Full profile ({}) is kept', () => {
   const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
   const { settings: s, added } = migrateSettings({ permissions: {} }, kit);

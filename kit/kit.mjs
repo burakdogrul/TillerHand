@@ -123,7 +123,9 @@ const OLD_RULES = {
     // 3.10.0 allowed every tools.mjs flag; --enable and --commands are asked since 3.10.1, the broad rule skipped that
     'Bash(node .claude/hooks/tools.mjs:*)',
     // 3.49.2: lang.mjs --write saves the texts approval prompts show; only --show, --check, --export and --set stay allowed
-    'Bash(node .claude/hooks/lang.mjs:*)'],
+    'Bash(node .claude/hooks/lang.mjs:*)',
+    // 3.49.2: kit.mjs install copies files over the project, the guards included; asked, not allowed
+    'Bash(node kit/kit.mjs install:*)'],
   ask: [],
 };
 

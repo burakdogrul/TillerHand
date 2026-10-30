@@ -22,6 +22,9 @@ export function isMain(metaUrl) {
   }
 }
 
+// What the commit gate reads in board.md: a line starting with **Commit review:** off (the whole word, "offer" is not off)
+export const reviewOff = (s) => /^\*\*Commit review:\*\*[ \t]*off(?![\p{L}\p{N}])/imu.test(s ?? '');
+
 const AG_WRITE = ['write_to_file', 'replace_file_content', 'multi_replace_file_content'];
 
 // Claude Code passes CLAUDE_PROJECT_DIR to hooks; Codex does not. Codex has no "ask", so a misdetection stays on the safe side.
@@ -65,6 +68,7 @@ export function patchFiles(patch) {
 // reads: Antigravity read tools. isNew is undefined when unknown (the script checks the disk).
 // dir: folder that relative paths resolve against (the session cwd in a Codex patch).
 // text: all written text to scan. before/after: the edited part before and after (before undefined means a full write: the script checks the disk).
+// edits: [{ old, new, all }] in order, when the tool gives them one by one (Claude Edit/MultiEdit, Antigravity chunks).
 export function parseInput(g) {
   const tool = detectTool(g);
   const root = findRoot();
@@ -84,6 +88,7 @@ export function parseInput(g) {
         path: isText(args.TargetFile) ? args.TargetFile : '', text: JSON.stringify(args),
         before: full ? undefined : join('TargetContent'),
         after: full ? (isText(args.CodeContent) ? args.CodeContent : '') : join('ReplacementContent'),
+        edits: full ? undefined : chunks.map((c) => ({ old: String(c?.TargetContent ?? ''), new: String(c?.ReplacementContent ?? ''), all: c?.AllowMultiple === true })),
       });
     }
     // Reads: independent of the tool name, every string in the arguments counts as a possible path (unknown read tools too)
@@ -102,7 +107,10 @@ export function parseInput(g) {
       : isText(t.new_source) ? t.new_source : '';
     const before = isText(t.old_string) ? t.old_string
       : Array.isArray(t.edits) ? t.edits.map((e) => e?.old_string ?? '').join('\n') : undefined;
-    result.files.push({ path: String(file), text, before, after: text });
+    const edits = isText(t.old_string) ? [{ old: t.old_string, new: isText(t.new_string) ? t.new_string : '', all: t.replace_all === true }]
+      : Array.isArray(t.edits) ? t.edits.map((e) => ({ old: String(e?.old_string ?? ''), new: String(e?.new_string ?? ''), all: e?.replace_all === true }))
+      : undefined;
+    result.files.push({ path: String(file), text, before, after: text, edits });
   }
   return result;
 }

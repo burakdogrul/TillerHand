@@ -449,10 +449,12 @@ const newConfig = (files, file, content) => {
   try { return decisionIn(q, 'Write', { file_path: path.join(q, file), content }); } finally { fs.rmSync(q, { recursive: true, force: true }); }
 };
 
-test('3.49.2: a first test config whose testDir/include covers every existing test file is not asked', () => {
-  assert.equal(newConfig(E2E, 'playwright.config.ts', PW()), null, 'playwright, testDir covers tests/e2e/a.spec.ts');
-  assert.equal(newConfig(UNIT, 'vitest.config.ts', VT()), null, 'vitest, include covers tests/unit/b.test.ts');
-  assert.equal(newConfig({ ...UNIT, 'vite.config.ts': "export default { plugins: [] };\n" }, 'vitest.config.ts', VT()), null, 'a vite.config without a test block is not a vitest config');
+// 3.49.2b: was "a first test config ... is not asked"; the first-config exemption is removed, a new config with testDir/include is asked
+test('3.49.2b: ATTACK a NEW playwright.config.ts or vitest.config.ts with testDir/include is asked, even when it covers every existing test file', () => {
+  assert.equal(newConfig(E2E, 'playwright.config.ts', PW()), 'ask', 'playwright, testDir covers tests/e2e/a.spec.ts');
+  assert.equal(newConfig(UNIT, 'vitest.config.ts', VT()), 'ask', 'vitest, include covers tests/unit/b.test.ts');
+  assert.equal(newConfig({ ...UNIT, 'vite.config.ts': "export default { plugins: [] };\n" }, 'vitest.config.ts', VT()), 'ask', 'next to a vite.config without a test block');
+  assert.equal(newConfig({}, 'vitest.config.ts', VT()), 'ask', 'no test file exists yet');
 });
 
 test('3.49.2: ATTACK a first test config is still asked when it narrows or loosens the run, leaves a test out, or another config of the runner exists', () => {
@@ -472,4 +474,39 @@ test('3.49.2: ATTACK a first test config is still asked when it narrows or loose
   assert.equal(newConfig({ 'tests/b.test.js': "test('b', () => { expect(1).toBe(1); });\n", 'package.json': pkg({ test: 'jest' }).replace('"scripts"', '"jest": { "testEnvironment": "node" },\n  "scripts"') },
     'jest.config.js', "module.exports = { testMatch: ['**/tests/**/*.test.js'] };\n"), 'ask', 'package.json has a jest field');
   assert.equal(newConfig({ ...UNIT, 'vitest.config.ts': VT({ include: "['src/**/*.test.ts', 'tests/**/*.test.ts']" }) }, 'vitest.config.ts', VT()), 'ask', 'overwriting an existing config');
+});
+
+// ---------- 3.49.2b ----------
+
+test('3.49.2b: ATTACK package.json: the placeholder -> plain runner exemption holds only when nothing else in package.json changes', () => {
+  const before = { name: 'app', version: '1.0.0', scripts: { ...BASE, test: NPM_PLACEHOLDER } };
+  const json = (o) => `${JSON.stringify(o, null, 2)}\n`;
+  const plain = { ...before, scripts: { ...before.scripts, test: 'vitest run' } };
+  const extras = [
+    ['a jest field', { ...plain, jest: { testPathIgnorePatterns: ['tests'] } }],
+    ['devDependencies.vitest aliased to another package', { ...plain, devDependencies: { vitest: 'npm:evil@1' } }],
+    ['workspaces', { ...plain, workspaces: ['packages/*'] }],
+    ['a c8 field', { ...plain, c8: { exclude: ['src/**'] } }],
+    ['an ava field', { ...plain, ava: { files: ['nothing/**'] } }],
+    ['another field (private)', { ...plain, private: true }],
+    ['another script (dev) changes', { ...plain, scripts: { ...plain.scripts, dev: 'vite --port 1' } }],
+  ];
+  for (const [label, next] of extras) {
+    const q = fresh({ 'package.json': json(before) });
+    try {
+      assert.equal(decisionIn(q, 'Write', { file_path: path.join(q, 'package.json'), content: json(next) }), 'ask', `Write: ${label}`);
+      assert.equal(decisionIn(q, 'Edit', { file_path: path.join(q, 'package.json'), old_string: json(before).trimEnd(), new_string: json(next).trimEnd() }), 'ask', `Edit: ${label}`);
+    } finally { fs.rmSync(q, { recursive: true, force: true }); }
+  }
+  // The plain case: only scripts.test changes
+  const q = fresh({ 'package.json': json(before) });
+  try {
+    assert.equal(decisionIn(q, 'Write', { file_path: path.join(q, 'package.json'), content: json(plain) }), null, 'Write: only scripts.test changes');
+    assert.equal(decisionIn(q, 'Edit', { file_path: path.join(q, 'package.json'), old_string: json(before).trimEnd(), new_string: json(plain).trimEnd() }), null, 'Edit: only scripts.test changes');
+  } finally { fs.rmSync(q, { recursive: true, force: true }); }
+});
+
+test('3.49.2b: test file detection: Latest.swift and Contest.swift ("test" inside a word) are not test files; LoginTests.swift and AppTests/HomeTest.swift are', () => {
+  for (const f of ['Latest.swift', 'Contest.swift', 'src/latest.swift']) assert.equal(isTestFile(f), false, f);
+  for (const f of ['LoginTests.swift', 'ios/AppTests/HomeTest.swift']) assert.equal(isTestFile(f), true, f);
 });

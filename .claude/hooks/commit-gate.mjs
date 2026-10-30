@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { findRoot, isMain } from './shared.mjs';
+import { findRoot, isMain, reviewOff } from './shared.mjs';
 import { t } from './lang.mjs';
 import { unquote } from './destructive-guard.mjs';
 import { isTestFile, isTestConfig, digest, readRecord } from './test-guard.mjs';
@@ -102,10 +102,9 @@ function hasBoard() {
   return fs.existsSync(agents) && fs.readdirSync(agents).some((f) => /^board-.+\.md$/.test(f) && f !== 'board-chair.md');
 }
 
-function reviewOff() {
+function boardReviewOff() {
   try {
-    // The whole word: "**Commit review:** offer" does not switch the review off
-    return /^\*\*Commit review:\*\*[ \t]*off(?![\p{L}\p{N}])/imu.test(fs.readFileSync(path.join(root, 'docs', 'workflow', 'board.md'), 'utf8'));
+    return reviewOff(fs.readFileSync(path.join(root, 'docs', 'workflow', 'board.md'), 'utf8'));
   } catch {
     return false;
   }
@@ -179,8 +178,11 @@ async function hook() {
   let command = '', dir = root;
   try {
     const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-    // A backslash-newline is a line continuation to the shell: "git commit\<newline> -m x" is a commit
-    command = String(input.tool_input?.command ?? '').replace(/\\\r?\n/g, ' ');
+    // A backslash-newline is a line continuation: bash joins the words ("git comm\<newline>it" is git commit), the
+    // text rules may also need it as a space ("git commit\<newline>-m x"). Whichever spelling is a commit is checked.
+    const raw = String(input.tool_input?.command ?? '');
+    const joined = raw.replace(/\\\r?\n/g, '');
+    command = [joined, unquote(joined)].some((c) => commitPattern(joined).test(c)) ? joined : raw.replace(/\\\r?\n/g, ' ');
     if (typeof input.cwd === 'string' && input.cwd) dir = input.cwd;
   } catch {
     process.exit(0);
@@ -215,7 +217,7 @@ async function hook() {
     process.exit(0);
   }
   if (!commit.test(command) && !commit.test(open)) process.exit(0);
-  if (!hasBoard() || reviewOff()) process.exit(0);
+  if (!hasBoard() || boardReviewOff()) process.exit(0);
   const chain = chainIssue(command, commit.inline ? COMMIT : commit);
   if (chain) {
     process.stderr.write(`Commit stopped: ${chain}. The gate reviews the changes as they were before the command runs; run the commit on its own ` +
