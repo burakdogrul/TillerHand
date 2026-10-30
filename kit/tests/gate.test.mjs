@@ -910,3 +910,197 @@ test('3.49.2b: ATTACK commit gate: a backslash-newline inside the word (git comm
     fs.rmSync(path.join(p, 'split-word.js'), { force: true });
   }
 });
+
+// ---------- 3.50.0: the commit gate on Codex and Antigravity ----------
+
+// A temp repo of its own with the kit hooks copied in: Codex and Antigravity set no CLAUDE_PROJECT_DIR, the root comes from
+// the script's location. Committed: .kit.json (en), board.md (review on), AGENTS.md commands, a board member unless board is
+// false, src/a.ts. testCommand: the AGENTS.md test command (exit 1 turns the gate red).
+const repo350 = ({ board = true, testCommand = 'node -e "process.exit(0)"' } = {}) => {
+  const r = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-350-'));
+  const w = (f, s) => { fs.mkdirSync(path.dirname(path.join(r, f)), { recursive: true }); fs.writeFileSync(path.join(r, f), s); };
+  fs.cpSync(HOOKS, path.join(r, '.claude', 'hooks'), { recursive: true });
+  w('.kit.json', JSON.stringify({ lang: 'en' }));
+  w('docs/workflow/board.md', '**Commit review:** on\n');
+  w('.gitignore', '.claude/state/\n');
+  if (board) w('.claude/agents/board-architect.md', '---\nname: board-architect\n---\n');
+  w('AGENTS.md', `# X\n\n## Commands\n\n\`\`\`bash\ndev:  [ ]\ntest:        ${testCommand}\nlint:        [ ]\ntype check: [ ]\nbuild:       [ ]\n\`\`\`\n`);
+  w('src/a.ts', 'export const a = 1;\n');
+  execSync('git init -q && git config user.email t@t && git config user.name t && git add . && git commit -qm init', { cwd: r, stdio: 'ignore' });
+  return { r, w };
+};
+const cleanup350 = (r) => { fs.rmSync(approvalPath(r), { force: true }); fs.rmSync(r, { recursive: true, force: true }); };
+// A kit script of the temp repo run from the command line (as Claude Code would: CLAUDE_PROJECT_DIR set)
+const cli350 = (r, script, ...args) => spawnSync(process.execPath, [path.join(r, '.claude', 'hooks', script), ...args],
+  { cwd: r, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: r, SEMGREP: 'missing-semgrep-command' } });
+// Gate command approval, gate run and board approval for the current changes; returns the gate run's exit code
+const ready350 = (r) => {
+  cli350(r, 'gate.mjs', '--approve');
+  const run = cli350(r, 'gate.mjs', '--run');
+  assert.equal(cli350(r, 'commit-gate.mjs', '--approve', 'board-architect').status, 0, 'board approval written');
+  return run.status;
+};
+// The copied commit-gate.mjs as a PreToolUse hook on tool (codex | antigravity | claude); input overrides the default command input
+const hook350 = (tool, r, command, input) => {
+  const env = { ...process.env, SEMGREP: 'missing-semgrep-command' };
+  delete env.CLAUDE_PROJECT_DIR;
+  if (tool === 'claude') env.CLAUDE_PROJECT_DIR = r;
+  const g = input ?? (tool === 'antigravity'
+    ? { toolCall: { name: 'run_command', args: { CommandLine: command, Cwd: r } }, workspacePaths: [r] }
+    : { tool_name: 'Bash', ...(tool === 'codex' && { turn_id: 't1' }), cwd: r, tool_input: { command } });
+  const out = spawnSync(process.execPath, [path.join(r, '.claude', 'hooks', 'commit-gate.mjs')], { input: JSON.stringify(g), encoding: 'utf8', env, cwd: os.tmpdir(), timeout: 20000 });
+  let decision = null, reason = '';
+  if (out.stdout.trim()) {
+    const j = JSON.parse(out.stdout);
+    if (tool === 'antigravity') ({ decision, reason } = j);
+    else {
+      assert.equal(j.hookSpecificOutput?.hookEventName, 'PreToolUse', `${tool}: PreToolUse format: ${out.stdout}`);
+      decision = j.hookSpecificOutput.permissionDecision; reason = j.hookSpecificOutput.permissionDecisionReason;
+    }
+  }
+  return { status: out.status, stdout: out.stdout, stderr: out.stderr, decision, reason };
+};
+const OTHER_TOOLS = ['codex', 'antigravity'];
+
+test('3.50.0: ATTACK commit gate on Codex and Antigravity: a commit without board approval is denied as a JSON decision (exit 0), naming gate.mjs --run and a single-model review, not haiku', () => {
+  const { r, w } = repo350();
+  try {
+    w('src/a.ts', 'export const a = 2;\n');
+    for (const tool of OTHER_TOOLS) {
+      const h = hook350(tool, r, 'git commit -m x');
+      assert.equal(h.status, 0, `${tool}: exit 0, stderr ${h.stderr}`);
+      assert.equal(h.decision, 'deny', `${tool}: stdout ${h.stdout}`);
+      assert.match(h.reason, /not reviewed/i, `${tool}: says the board has not reviewed`);
+      assert.match(h.reason, /gate\.mjs --run/, `${tool}: names gate.mjs --run`);
+      assert.match(h.reason, /definition/i, `${tool}: read the board member definitions`);
+      assert.match(h.reason, /single model/i, `${tool}: review as those roles yourself (single model)`);
+      assert.doesNotMatch(h.reason, /haiku/i, `${tool}: no subagent model to run`);
+    }
+  } finally { cleanup350(r); }
+});
+
+test('3.50.0: commit gate on Codex and Antigravity: a valid approval and a green gate for the same changes let the commit through (no output, exit 0)', () => {
+  const { r, w } = repo350();
+  try {
+    w('src/a.ts', 'export const a = 2;\n');
+    assert.equal(ready350(r), 0, 'green gate');
+    for (const tool of OTHER_TOOLS) {
+      const h = hook350(tool, r, 'git commit -m x');
+      assert.deepEqual([h.status, h.stdout], [0, ''], `${tool}: ${h.stderr}`);
+    }
+  } finally { cleanup350(r); }
+});
+
+test('3.50.0: ATTACK commit gate on Codex and Antigravity: a valid approval with a red gate is denied, naming the failed check', () => {
+  const { r, w } = repo350({ testCommand: 'node -e "process.exit(1)"' });
+  try {
+    w('src/a.ts', 'export const a = 2;\n');
+    assert.equal(ready350(r), 1, 'red gate');
+    for (const tool of OTHER_TOOLS) {
+      const h = hook350(tool, r, 'git commit -m x');
+      assert.equal(h.status, 0, `${tool}: exit 0, stderr ${h.stderr}`);
+      assert.equal(h.decision, 'deny', `${tool}: stdout ${h.stdout}`);
+      assert.match(h.reason, /red/i, `${tool}: the gate is red`);
+      assert.match(h.reason, /\btest\b/, `${tool}: names the failed check`);
+    }
+  } finally { cleanup350(r); }
+});
+
+test('3.50.0: ATTACK commit gate on Codex and Antigravity: a commit chained after another command is denied even with a valid approval and a green gate', () => {
+  const { r, w } = repo350();
+  try {
+    w('src/a.ts', 'export const a = 2;\n');
+    assert.equal(ready350(r), 0, 'green gate');
+    for (const tool of OTHER_TOOLS) {
+      const h = hook350(tool, r, 'npm test; git commit -m x');
+      assert.equal(h.status, 0, `${tool}: exit 0, stderr ${h.stderr}`);
+      assert.equal(h.decision, 'deny', `${tool}: stdout ${h.stdout}`);
+    }
+  } finally { cleanup350(r); }
+});
+
+test('3.50.0: commit gate on Codex and Antigravity: a docs-only change and a project without a board member pass', () => {
+  const docs = repo350(), none = repo350({ board: false });
+  try {
+    docs.w('docs/x.md', '# x\n');
+    none.w('src/a.ts', 'export const a = 2;\n');
+    for (const tool of OTHER_TOOLS) {
+      for (const [r, label] of [[docs.r, 'docs only'], [none.r, 'no board member']]) {
+        const h = hook350(tool, r, 'git commit -m x');
+        assert.deepEqual([h.status, h.stdout], [0, ''], `${tool} ${label}: ${h.stderr}`);
+      }
+    }
+  } finally { cleanup350(docs.r); cleanup350(none.r); }
+});
+
+test('3.50.0: ATTACK commit gate: commit-gate.mjs --skip is asked on Antigravity and denied on Codex (no approval prompt there)', () => {
+  const { r } = repo350();
+  try {
+    const ag = hook350('antigravity', r, 'node .claude/hooks/commit-gate.mjs --skip "x"');
+    assert.deepEqual([ag.status, ag.decision], [0, 'ask'], `antigravity: ${ag.stdout} ${ag.stderr}`);
+    const cx = hook350('codex', r, 'node .claude/hooks/commit-gate.mjs --skip "x"');
+    assert.deepEqual([cx.status, cx.decision], [0, 'deny'], `codex: ${cx.stdout} ${cx.stderr}`);
+  } finally { cleanup350(r); }
+});
+
+test('3.50.0: ATTACK commit gate: the exact gate.mjs --approve is asked on Antigravity listing the commands (denied on Codex); a chained spelling is denied', () => {
+  const { r } = repo350();
+  try {
+    const ag = hook350('antigravity', r, 'node .claude/hooks/gate.mjs --approve');
+    assert.deepEqual([ag.status, ag.decision], [0, 'ask'], `antigravity: ${ag.stdout} ${ag.stderr}`);
+    assert.ok(ag.reason.includes('process.exit(0)'), `the reason lists the AGENTS.md commands: ${ag.reason}`);
+    const cx = hook350('codex', r, 'node .claude/hooks/gate.mjs --approve');
+    assert.deepEqual([cx.status, cx.decision], [0, 'deny'], `codex: ${cx.stdout} ${cx.stderr}`);
+    for (const tool of OTHER_TOOLS) {
+      const h = hook350(tool, r, 'node .claude/hooks/gate.mjs --approve && echo x');
+      assert.deepEqual([h.status, h.decision], [0, 'deny'], `${tool} chained: ${h.stdout} ${h.stderr}`);
+    }
+  } finally { cleanup350(r); }
+});
+
+test('3.50.0: commit gate: a changed test file with a valid approval and a green gate passes on Codex and Antigravity (no test-writer record there); Claude Code still stops it', () => {
+  const { r, w } = repo350();
+  try {
+    w('src/a.test.ts', 'import { test } from "node:test";\ntest("a", () => {});\n');
+    assert.equal(ready350(r), 0, 'green gate');
+    for (const tool of OTHER_TOOLS) {
+      const h = hook350(tool, r, 'git commit -m x');
+      assert.deepEqual([h.status, h.stdout], [0, ''], `${tool}: ${h.stderr}`);
+    }
+    const cc = hook350('claude', r, 'git commit -m x');
+    assert.equal(cc.status, 2, `Claude Code: the foreign-test stop is unchanged; stdout ${cc.stdout}`);
+    assert.match(cc.stderr, /test-writer/, 'Claude Code: names test-writer');
+  } finally { cleanup350(r); }
+});
+
+test('3.50.0: ATTACK commit gate: an Antigravity call without CommandLine and a Codex command that is not a string do not crash the hook', () => {
+  const { r, w } = repo350();
+  try {
+    w('src/a.ts', 'export const a = 2;\n');
+    const odd = [
+      ['antigravity', { toolCall: { name: 'run_command', args: { Cwd: r } }, workspacePaths: [r] }],
+      ['antigravity', { toolCall: { name: 'run_command' }, workspacePaths: [r] }],
+      ['codex', { tool_name: 'Bash', turn_id: 't1', cwd: r, tool_input: { command: ['git', 'commit', '-m', 'x'] } }],
+      ['codex', { tool_name: 'Bash', turn_id: 't1', cwd: r, tool_input: { command: { a: 1 } } }],
+    ];
+    for (const [tool, input] of odd) {
+      const h = hook350(tool, r, null, input);
+      assert.equal(h.status, 0, `${tool} ${JSON.stringify(input.toolCall?.args ?? input.tool_input)}: exit ${h.status}, stderr ${h.stderr.slice(0, 300)}`);
+    }
+  } finally { cleanup350(r); }
+});
+
+test('3.50.0: wiring: Codex Bash and Antigravity run_command run commit-gate.mjs like the other guards', () => {
+  const ROOT = path.resolve(HOOKS, '..', '..');
+  const json = (rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+  const bash = json('kit/tools/codex/.codex/hooks.json').hooks.PreToolUse.find((b) => b.matcher === 'Bash');
+  assert.notEqual(bash, undefined, 'Codex has a Bash PreToolUse block');
+  const cx = bash.hooks.find((h) => /commit-gate\.mjs/.test(h.command));
+  assert.notEqual(cx, undefined, 'Codex Bash runs commit-gate.mjs');
+  assert.equal(cx.type, 'command');
+  assert.equal(cx.command, 'node "$(git rev-parse --show-toplevel)/.claude/hooks/commit-gate.mjs"');
+  assert.equal(cx.commandWindows, 'node .claude/hooks/commit-gate.mjs');
+  const run = json('kit/tools/antigravity/.agents/hooks.json')['kit-command-guards'].PreToolUse.find((b) => b.matcher === 'run_command');
+  assert.notEqual(run, undefined, 'Antigravity kit-command-guards has a run_command block');
+  assert.equal(run.hooks.some((h) => h.type === 'command' && h.command === 'node .claude/hooks/commit-gate.mjs'), true, 'Antigravity run_command runs commit-gate.mjs');
+});

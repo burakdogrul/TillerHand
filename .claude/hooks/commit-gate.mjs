@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { findRoot, isMain, reviewOff } from './shared.mjs';
+import { findRoot, isMain, reviewOff, parseInput, decisionText } from './shared.mjs';
 import { t } from './lang.mjs';
 import { unquote } from './destructive-guard.mjs';
 import { isTestFile, isTestConfig, digest, readRecord } from './test-guard.mjs';
@@ -174,16 +174,27 @@ export function maskOwnHook(command, dir) {
   });
 }
 
+// Claude Code stops a tool call with exit code 2 and the reason on stderr; Codex and Antigravity get their JSON decision
+// (shared.decisionText; Codex has no ask, so an ask is a deny there and the user runs the command themselves).
+let tool = 'claude';
+const decideOut = (decision, reason) => { console.log(decisionText(tool, decision, reason)); process.exit(0); };
+function stop(reason) {
+  if (tool !== 'claude') decideOut('deny', reason.trim());
+  process.stderr.write(reason);
+  process.exit(2);
+}
+
 async function hook() {
   let command = '', dir = root;
   try {
-    const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+    const g = parseInput(JSON.parse(fs.readFileSync(0, 'utf8')) ?? {});
+    tool = g.tool;
     // A backslash-newline is a line continuation: bash joins the words ("git comm\<newline>it" is git commit), the
     // text rules may also need it as a space ("git commit\<newline>-m x"). Whichever spelling is a commit is checked.
-    const raw = String(input.tool_input?.command ?? '');
+    const raw = String(g.command ?? '');
     const joined = raw.replace(/\\\r?\n/g, '');
     command = [joined, unquote(joined)].some((c) => commitPattern(joined).test(c)) ? joined : raw.replace(/\\\r?\n/g, ' ');
-    if (typeof input.cwd === 'string' && input.cwd) dir = input.cwd;
+    if (g.dir) dir = g.dir;
   } catch {
     process.exit(0);
   }
@@ -191,11 +202,7 @@ async function hook() {
   // A commit whose message names --skip goes on to the commit checks below (a real --skip chained to a commit is stopped there).
   const open = unquote(command);
   const commit = commitPattern(command);
-  if (!commit.test(command) && [command, open].some((c) => /commit-gate\.mjs\b[^;&|\n]*--skip\b/i.test(c))) {
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
-      permissionDecisionReason: t(root, 'guard.commit.skipAsk') } }));
-    process.exit(0);
-  }
+  if (!commit.test(command) && [command, open].some((c) => /commit-gate\.mjs\b[^;&|\n]*--skip\b/i.test(c))) decideOut('ask', t(root, 'guard.commit.skipAsk'));
   // The gate command approval gives the commands in AGENTS.md permission to run: the user is asked (also covers spellings the permission list misses).
   // Only this project's commit-gate.mjs --approve is left out (maskOwnHook); both the raw and unquoted text are tested.
   const masked = maskOwnHook(command, dir);
@@ -203,26 +210,21 @@ async function hook() {
     // The prompt reads AGENTS.md now: a chain, an env variable, a node flag or a redirect must not change it after the
     // prompt and get another list approved. Only the exact spelling is accepted.
     if (!/^\s*node\s+(\.\/)?\.claude[\\/]hooks[\\/]gate\.mjs\s+(['"]?)--approve\2\s*$/.test(command)) {
-      console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny',
-        permissionDecisionReason: 'The gate command approval runs only with exactly this spelling, on its own (no chain, environment variable, flag or redirect): node .claude/hooks/gate.mjs --approve' } }));
-      process.exit(0);
+      decideOut('deny', 'The gate command approval runs only with exactly this spelling, on its own (no chain, environment variable, flag or redirect): node .claude/hooks/gate.mjs --approve');
     }
     // Loaded only here: every Bash call runs this hook, and gate.mjs pulls in the dashboard and edit-round modules
     const { approvedCommands, commandList, readAgents, unknownCommandKeys } = await import('./gate.mjs');
     const list = commandList(approvedCommands(root)) || t(root, 'guard.commit.noCommands');
     const unknown = unknownCommandKeys(readAgents(root));
     const note = unknown.length ? `\n${t(root, 'guard.commit.gateUnknownKeys', { keys: unknown.join(', ') })}` : '';
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask',
-      permissionDecisionReason: t(root, 'guard.commit.gateApprovalAsk', { list }) + note } }));
-    process.exit(0);
+    decideOut('ask', t(root, 'guard.commit.gateApprovalAsk', { list }) + note);
   }
   if (!commit.test(command) && !commit.test(open)) process.exit(0);
   if (!hasBoard() || boardReviewOff()) process.exit(0);
   const chain = chainIssue(command, commit.inline ? COMMIT : commit);
   if (chain) {
-    process.stderr.write(`Commit stopped: ${chain}. The gate reviews the changes as they were before the command runs; run the commit on its own ` +
+    stop(`Commit stopped: ${chain}. The gate reviews the changes as they were before the command runs; run the commit on its own ` +
       '(or only as "git add … && git commit"). Run push and other commands separately.\n');
-    process.exit(2);
   }
 
   let d;
@@ -241,19 +243,19 @@ async function hook() {
   // Deleted files are left to the guards that ask before a delete. Only code files: snapshots, images and fixtures are
   // written by the test runner, not by Write/Edit. A partially staged test (git apply --cached, skip-worktree) commits an
   // index blob the record does not describe, so it always stops.
+  // Only Claude Code records what test-writer wrote; on Codex and Antigravity test separation is a written rule (AGENTS.md)
   const written = readRecord(root);
-  const foreign = d.files.filter((f) => isTestFile(f) && isCodeFile(f) && !isTestConfig(f) && d.hashes[f] !== 'deleted' && written[f] !== d.hashes[f]);
+  const foreign = tool !== 'claude' ? [] : d.files.filter((f) => isTestFile(f) && isCodeFile(f) && !isTestConfig(f) && d.hashes[f] !== 'deleted' && written[f] !== d.hashes[f]);
   if (foreign.length && !(skipped && approval.signature === d.signature)) {
-    process.stderr.write(`Commit stopped: test-writer did not write these test files, or they changed after it wrote them, or they were partially staged: ${foreign.join(', ')}.\n` +
+    stop(`Commit stopped: test-writer did not write these test files, or they changed after it wrote them, or they were partially staged: ${foreign.join(', ')}.\n` +
       'Only the test-writer agent writes test files with Write/Edit (AGENTS.md rule 7); a test written by patch, script, shell, git mv or Codex/Antigravity does not count.\n' +
       'If a change is needed, have test-writer review the file and rewrite it with Write/Edit. If the user made the change themselves ' +
       'and explicitly asks to skip the review for this commit, use --skip "user request".\n');
-    process.exit(2);
   }
   if (approval?.signature === d.signature && (skipped || (gate?.signature === d.signature && gate.passed === true))) process.exit(0);
   if (approval?.signature === d.signature) {
     const failed = gate?.signature === d.signature ? gate.checks.filter((k) => k.status === 'failed').map((k) => k.name) : null;
-    process.stderr.write(failed && !failed.length && gate.empty
+    stop(failed && !failed.length && gate.empty
       ? 'Commit stopped: the deterministic gate is empty (no check ran). Fill in AGENTS.md → Commands and run the gate again.\n' +
         'If the user explicitly asks for this commit, use --skip "user request".\n'
       : failed
@@ -261,22 +263,22 @@ async function hook() {
         'If the user explicitly asks for an intermediate (WIP) commit, use --skip "user request".\n'
       : 'Commit stopped: the deterministic gate has not run for these changes (or the changes were modified after it ran). ' +
         'Run node .claude/hooks/gate.mjs --run; if nothing is red, renew the board approval and try the commit again.\n');
-    process.exit(2);
   }
 
   const delta = approval && !skipped ? sinceApproval(approval, d) : [];
-  process.stderr.write(
+  stop(
     (delta.length && delta.length < d.files.length
       ? `Commit stopped: files changed since the last approval (${approval.note}) were not reviewed: ${delta.join(', ')}.\n` +
         'The board looks only at the diff of these files; files approved earlier are not reviewed again.\n'
       : `Commit stopped: the board has not reviewed these changes (${d.files.length} files).\n`) +
       '0. Run the deterministic gate (lint, types, tests, Semgrep) with node .claude/hooks/gate.mjs --run; give its output to the members.\n' +
-      '1. Following .claude/board/rules.md §3, run at most 2 relevant board members for the changed files with model "haiku", on the diff only.\n' +
+      (tool === 'claude'
+        ? '1. Following .claude/board/rules.md §3, run at most 2 relevant board members for the changed files with model "haiku", on the diff only.\n'
+        : '1. Following .claude/board/rules.md §3, read the definitions of at most 2 relevant board members (.claude/agents/board-*.md) and review the diff as those roles yourself (single model).\n') +
       '2. If there is no REJECT: node .claude/hooks/commit-gate.mjs --approve "<members who took part>" and try the commit again.\n' +
       '3. If there is a REJECT, do not commit; ask the user about the finding and the options.\n' +
       'If the user explicitly wants to skip the review for this commit, use --skip "user request".\n'
   );
-  process.exit(2);
 }
 
 if (isMain(import.meta.url)) {

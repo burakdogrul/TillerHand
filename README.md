@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.49.12-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.50.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -277,7 +277,7 @@ Every command, setting, tool and skill is in the **[guide](https://burakdogrul.g
 
 ## Codex and Antigravity
 
-The kit is built for Claude Code; its rules, commands and guardrails also work in OpenAI Codex and Google Antigravity. There the board runs on a single model, and the question UI, status bar and commit gate are not available. These tools don't report which agent is running, so test separation stays a written rule there. Install with `node <kit>/kit/kit.mjs init --tool codex` (or `antigravity`).
+The kit is built for Claude Code; its rules, commands and guardrails also work in OpenAI Codex and Google Antigravity. There the board runs on a single model, and the question UI and status bar are not available; the commit gate works there too. These tools don't report which agent is running, so test separation stays a written rule there. Install with `node <kit>/kit/kit.mjs init --tool codex` (or `antigravity`).
 
 ## Measured
 

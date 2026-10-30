@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.49.12</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.50.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -1141,7 +1141,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 <section id="araclar">
   <p class="path">Başka araçla</p>
   <h2>Codex ve Antigravity</h2>
-  <p class="lead">TillerHand Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü, durum çubuğu ve commit kapısı bu araçlarda yok.</p>
+  <p class="lead">TillerHand Claude Code için yazıldı. Kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü ve durum çubuğu bu araçlarda yok. Commit kapısı orada da çalışır.</p>
 <pre class="term">npx tillerhand init --tool codex          <span class="c"># ya da antigravity, ya da claude,codex</span>
 <span class="c"># var olan projeye araç eklemek</span>
 /kit-update --tool claude,codex</pre>
@@ -1155,7 +1155,8 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
       <tr><td>Seçenekli sorular</td><td>AskUserQuestion</td><td>Numaralı düz metin</td><td>ask_question</td></tr>
       <tr><td>Kurul ve konsey</td><td>Ayrı ajanlar ve modeller</td><td>Tek model rolleri sırayla üstlenir</td><td>Tek model</td></tr>
       <tr><td>Test ayrımı</td><td>Hook zorlar: test dosyasına yalnız test-writer yazar</td><td>Kural metinde (ajan kimliği yok)</td><td>Kural metinde (ajan kimliği yok)</td></tr>
-      <tr><td>Durum çubuğu, limit, pano yenileme, commit kapısı</td><td>Var</td><td>Yok</td><td>Yok</td></tr>
+      <tr><td>Durum çubuğu, limit, pano yenileme</td><td>Var</td><td>Yok</td><td>Yok</td></tr>
+      <tr><td>Commit kapısı</td><td>Var</td><td>Var; durdurma engel olarak gelir, AI kurul rollerini kendisi üstlenir</td><td>Var; AI kurul rollerini kendisi üstlenir</td></tr>
     </tbody>
   </table></div>
   <div class="note">Komutların kaynağı tektir (<code>.claude/commands/</code>); <code>.agents/skills/</code> altındaki kopyaları <code>init</code>, <code>install</code> ve <code>update</code> üretir. Codex proje hook'larını sadece klasöre güvendiğinde ve <code>/hooks</code> ile onayladığında çalıştırır; bunu ilk oturumda yap. İlk kullanımda bir sır yazma denemesiyle korumaların çalıştığını gör.</div>
@@ -1245,7 +1246,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.49.12 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.50.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

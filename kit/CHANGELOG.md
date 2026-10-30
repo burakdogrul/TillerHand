@@ -3,6 +3,14 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.50.0] - 2026-10-30
+
+### Added
+- **The commit gate runs on Codex and Antigravity.** A commit stops there too until the deterministic gate (`gate.mjs --run`) is green and the board review is approved with `commit-gate.mjs --approve`; a commit chained to other commands stops as well. The stop comes as the tool's own decision. Since these tools run one model, the AI reviews the diff as the relevant board members itself. `commit-gate.mjs --skip` and the gate command approval are asked on Antigravity and left to you on Codex (it has no approval prompt). Test separation stays a written rule there: these tools do not report which agent wrote a test file.
+
+### Fixed
+- The cloud deletion rule of the shield no longer slows down on a long repeated command (`aws s3 rm` × 999: 24 ms).
+
 ## [3.49.12] - 2026-10-30
 
 ### Security
