@@ -3,6 +3,12 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.8] - 2026-10-30
+
+### Security
+- **The package gate sees installs in more places.** An `npm i` after a newline, a background `&`, inside `$( )`, backticks, `if … then`, `( )` or `{ }` is checked, and so are `timeout`/`nice`/`bash -lc` in front, a quoted Windows path (`"C:\Program Files\nodejs\npm.cmd" i`), upper case (`NPM i`) and npm's install aliases (`npm in`, `npm isntall`, `npm it`…).
+- A command the package gate cannot check (a parser error, more than 50 packages at once) asks you instead of running unchecked.
+
 ## [3.49.7] - 2026-10-30
 
 ### Security

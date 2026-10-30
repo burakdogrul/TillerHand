@@ -637,3 +637,63 @@ test('3.49.5: ATTACK shield: a .env glob with an equivalence class, collating sy
       assert.equal(shield(root, c), null, c);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+// ---------- 3.49.8: package gate chain splitting, spellings, crash and cap ----------
+
+const hasZzz = (c) => findPackages(c).some((p) => p.eco === 'npm' && p.name === 'zzz-pkg');
+
+test('3.49.8: ATTACK package gate: an install after a newline, &, $( ), backticks, if/then, ( ) or { } is still found', () => {
+  for (const c of ['cd /tmp\nnpm i zzz-pkg', 'true & npm i zzz-pkg', 'echo $(npm i zzz-pkg)', 'echo `npm i zzz-pkg`',
+    'if true; then npm i zzz-pkg; fi', '(npm i zzz-pkg)', '{ npm i zzz-pkg; }'])
+    assert.equal(hasZzz(c), true, JSON.stringify(c));
+});
+
+test('3.49.8: package gate: a 2>&1 redirect does not split the command or become a package name', () => {
+  assert.deepEqual(findPackages('npm i zzz-pkg 2>&1'), [{ eco: 'npm', name: 'zzz-pkg' }]);
+});
+
+test('3.49.8: ATTACK package gate: timeout, nice, bash -lc, a quoted Windows path with spaces, upper/mixed case and npm install aliases are found', () => {
+  for (const c of ['timeout 60 npm i zzz-pkg', 'nice -n 5 npm i zzz-pkg', 'bash -lc "npm i zzz-pkg"',
+    '"C:\\Program Files\\nodejs\\npm.cmd" i zzz-pkg', 'NPM i zzz-pkg', 'Npm Install zzz-pkg'])
+    assert.equal(hasZzz(c), true, c);
+  for (const alias of ['in', 'ins', 'inst', 'insta', 'instal', 'isnt', 'isntall', 'it'])
+    assert.equal(hasZzz(`npm ${alias} zzz-pkg`), true, `npm ${alias} zzz-pkg`);
+});
+
+test('3.49.8: package gate: npm info, npm init, npm test and npm run build stay free', () => {
+  for (const c of ['npm info zzz-pkg', 'npm init', 'npm test', 'npm run build']) assert.deepEqual(findPackages(c), [], c);
+});
+
+// Runs the package gate as Claude Code does, with fetch replaced (no network): returns { r, ms, decision }
+const gateRun = (command, fetchStub, timeout) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pkg-gate-'));
+  try {
+    const start = Date.now();
+    const r = spawnSync(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(fetchStub)}`, path.join(HOOKS, 'package-gate.mjs')], {
+      input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }), encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PROJECT_DIR: root }, timeout,
+    });
+    const ms = Date.now() - start;
+    const decision = r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput.permissionDecision : null;
+    return { r, ms, decision };
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+};
+const FETCH_FAILS = 'globalThis.fetch = async () => { throw new Error("offline (test)"); };';
+const FETCH_HANGS = 'globalThis.fetch = () => { process.stderr.write("FETCH-CALLED\\n"); return new Promise((ok) => setTimeout(ok, 60000)); };';
+
+test('3.49.8: ATTACK package gate: a command that crashes the parser (50000 nested npm: aliases) fails open to a decision, exit 0', () => {
+  const { r, decision } = gateRun(`npm i ${'a@npm:'.repeat(50000)}zzz`, FETCH_FAILS, 20000);
+  assert.equal(r.error, undefined, `spawn error: ${r.error && r.error.code}`);
+  assert.equal(r.status, 0, r.stderr.slice(0, 300));
+  assert.ok(decision === 'ask' || decision === 'deny', `got ${JSON.stringify(decision)}`);
+});
+
+test('3.49.8: ATTACK package gate: 60 package names are asked at once, before any registry call, in under 5000 ms', () => {
+  const names = Array.from({ length: 60 }, (_, i) => `zzz-gate-cap-${i}`).join(' ');
+  const { r, ms, decision } = gateRun(`npm i ${names}`, FETCH_HANGS, 5000);
+  assert.equal(r.error, undefined, `spawn error: ${r.error && r.error.code} after ${ms} ms`);
+  assert.equal(r.status, 0, r.stderr.slice(0, 300));
+  assert.equal(decision, 'ask');
+  assert.doesNotMatch(r.stderr, /FETCH-CALLED/, 'the cap decides before any fetch');
+  assert.ok(ms < 5000, `took ${ms} ms`);
+});

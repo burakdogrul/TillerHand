@@ -24,19 +24,20 @@ const POPULAR = {
     'langchain', 'transformers', 'torch', 'scikit-learn', 'aiohttp', 'tenacity', 'ruff', 'black', 'mypy'],
 };
 
+// Case-insensitive (the Windows shell is); npm's install aliases (in, ins, isntall, it…) count as install
 const COMMANDS = [
-  [/^(npm|pnpm|bun)\s+(i|install|add)\b/, 'npm'], [/^yarn\s+(global\s+)?add\b/, 'npm'], [/^npx\s+expo\s+install\b/, 'npm'],
-  [/^uv\s+(add|pip\s+install)\b/, 'pypi'], [/^(python3?\s+-m\s+)?pip3?\s+install\b/, 'pypi'], [/^poetry\s+add\b/, 'pypi'],
+  [/^(npm|pnpm|bun)\s+(i|in|ins|inst|insta|instal|install|isnt|isnta|isntal|isntall|it|add)\b/i, 'npm'], [/^yarn\s+(global\s+)?add\b/i, 'npm'], [/^npx\s+expo\s+install\b/i, 'npm'],
+  [/^uv\s+(add|pip\s+install)\b/i, 'pypi'], [/^(python3?\s+-m\s+)?pip3?\s+install\b/i, 'pypi'], [/^poetry\s+add\b/i, 'pypi'],
 ];
 
 // Download-and-run: the first positional is the package (the rest are its arguments), or the values of the package flags.
 // local: the runner uses a bin the project already has before downloading (npx, npm exec, bunx); pnpm/yarn dlx always download.
 // positional: false for uv run (its positional is a script; only --with names packages).
 const EXEC = [
-  { re: /^(npx|npm\s+(exec|x)|bunx|bun\s+x)\b/, eco: 'npm', local: true, positional: true },
-  { re: /^(pnpx|pnpm\s+dlx|yarn\s+dlx)\b/, eco: 'npm', local: false, positional: true },
-  { re: /^(uvx|uv\s+tool\s+run|pipx\s+run)\b/, eco: 'pypi', local: false, positional: true },
-  { re: /^uv\s+run\b/, eco: 'pypi', local: false, positional: false },
+  { re: /^(npx|npm\s+(exec|x)|bunx|bun\s+x)\b/i, eco: 'npm', local: true, positional: true },
+  { re: /^(pnpx|pnpm\s+dlx|yarn\s+dlx)\b/i, eco: 'npm', local: false, positional: true },
+  { re: /^(uvx|uv\s+tool\s+run|pipx\s+run)\b/i, eco: 'pypi', local: false, positional: true },
+  { re: /^uv\s+run\b/i, eco: 'pypi', local: false, positional: false },
 ];
 const FLAGS = {
   npm: { pkg: /^(-p|--package)$/, value: /^(-p|--package|-c|--call|--registry|--prefix|--cache|--userconfig|--globalconfig|-w|--workspace|--node-options|--script-shell|--shell|--loglevel|-C|--dir|--filter)$/ },
@@ -68,14 +69,17 @@ function execArgs(args, eco, positional) {
 
 // What runs a segment: wrappers, VAR=x, a path or .cmd/.exe on the tool, and the manager's own flags before its subcommand are
 // dropped (FOO=1 npx x, cmd /c npx x, bash -c "npx x", /usr/bin/npx x, npx.cmd x, pnpm -C . dlx x, npm --silent exec x).
-const WRAPPER = /^(?:\(|[A-Za-z_]\w*=\S*\s+|(?:sudo|env|time|nohup|exec|command|xargs|corepack|call|start)\s+|(?:bash|sh|zsh|dash|cmd|pwsh|powershell)(?:\.exe)?\s+(?:-c|\/c|\/k|-Command)\s+["']?)/i;
+// Also timeout/nice/stdbuf, shell keywords (then, do, else, !) and combined shell flags (bash -lc).
+const WRAPPER = /^(?:\(|\{|!\s*|[A-Za-z_]\w*=\S*\s+|(?:sudo|env|time|nohup|exec|command|xargs|corepack|call|start|then|do|else|ionice|stdbuf)\s+|timeout\s+(?:-\S+\s+)*\S+\s+|nice\s+(?:-n\s*\S+\s+|-\d+\s+)?|(?:bash|sh|zsh|dash|cmd|pwsh|powershell)(?:\.exe)?\s+(?:-\w*c|\/c|\/k|-Command)\s+["']?)/i;
 const SUBCOMMAND = /^(install|i|add|exec|x|dlx|tool|pip|run|global)$/;
 export function normalize(part) {
   let s = part.trim(), prev;
   do { prev = s; s = s.replace(WRAPPER, '').trim(); } while (s !== prev);
-  s = s.replace(/^["']?(?:[^\s"']*[\/])?([\w.-]+?)(?:\.cmd|\.exe|\.ps1)?["']?(?=\s|$)/i, '$1');
+  // A path (Windows \ too, quoted with spaces) and .cmd/.exe on the tool: "C:\Program Files\nodejs\npm.cmd" i x → npm i x
+  s = s.replace(/^"(?:[^"]*[\\/])?([\w.-]+?)(?:\.cmd|\.exe|\.ps1)?"(?=\s|$)/i, '$1')
+    .replace(/^["']?(?:[^\s"']*[\\/])?([\w.-]+?)(?:\.cmd|\.exe|\.ps1)?["']?(?=\s|$)/i, '$1');
   const t = s.split(/\s+/);
-  if (/^(npm|pnpm|yarn|bun|uv)$/.test(t[0])) {
+  if (/^(npm|pnpm|yarn|bun|uv)$/i.test(t[0])) {
     let i = 1;
     while (i < t.length && t[i].startsWith('-')) i += !t[i].includes('=') && t[i + 1] && !t[i + 1].startsWith('-') && !SUBCOMMAND.test(t[i + 1]) ? 2 : 1;
     s = [t[0], ...t.slice(i)].join(' ');
@@ -85,13 +89,15 @@ export function normalize(part) {
 
 const NOT_REGISTRY = /^(\.|\/|file:|link:|git\+|git:|https?:|github:|workspace:)/;
 function npmName(arg) {
-  if (NOT_REGISTRY.test(arg)) return null;
-  const at = arg.indexOf('@', 1), spec = at > 0 ? arg.slice(at + 1) : '';
-  // name@npm:other installs "other": the alias target is checked. name@github:x/y, @https:… are not from the registry
-  // (like a bare URL, not checked here); the name in front is not what gets installed.
-  if (spec.startsWith('npm:')) return npmName(spec.slice(4));
-  if (/[:/]/.test(spec)) return null;
-  return (at > 0 ? arg.slice(0, at) : arg) || null;
+  // name@npm:other installs "other": the alias target is checked (a loop: a deep a@npm:a@npm:… chain must not overflow
+  // the stack). name@github:x/y, @https:… are not from the registry (like a bare URL, not checked here).
+  for (;;) {
+    if (NOT_REGISTRY.test(arg)) return null;
+    const at = arg.indexOf('@', 1), spec = at > 0 ? arg.slice(at + 1) : '';
+    if (spec.startsWith('npm:')) { arg = spec.slice(4); continue; }
+    if (/[:/]/.test(spec)) return null;
+    return (at > 0 ? arg.slice(0, at) : arg) || null;
+  }
 }
 
 function pypiName(arg) {
@@ -101,7 +107,9 @@ function pypiName(arg) {
 
 export function findPackages(command) {
   const result = [];
-  for (const part of command.split(/&&|\|\||;|\|/)) {
+  // Every place a new command can start: chains, a newline, a background &, $( ), backticks, ( ) and { } groups.
+  // A redirect's & (2>&1, &>) is not a separator.
+  for (const part of command.split(/\n|&&|\|\||;|\||(?<![>&])&(?![>&])|\$\(|`|[(){}]/)) {
     const s = normalize(part);
     const match = COMMANDS.find(([re]) => re.test(s));
     const exec = match ? null : EXEC.find((e) => e.re.test(s));
@@ -182,15 +190,23 @@ export async function check({ eco, name }, get = fetch, now = Date.now()) {
   }
 }
 
+// More names than this in one command are asked without checking each one (unbounded fetches would hit the hook timeout)
+const MAX_PACKAGES = 50;
 async function hook() {
   const g = readInput();
   if (!g) process.exit(0);
+  // A gate that throws or times out lets the command run: any error asks instead
+  try { await gate(g); } catch (e) { decide(g.tool, 'ask', t(g.root, 'guard.package.error', { error: String(e?.message ?? e).slice(0, 200) })); }
+  process.exit(0);
+}
+async function gate(g) {
   // npx/bunx run a bin the project already installed without downloading: a local bin (tsc, eas) is not a package name
   const bin = (name) => /^\w[\w.-]*$/.test(name) && [g.dir, g.root].some((d) => fs.existsSync(path.join(d, 'node_modules', '.bin', name)));
   // The kit's own package (/start and /adopt run npx -y tillerhand@<version> install): the kit already trusts itself
   // Both only for the plain spelling: name@1.2 or name@npm:other downloads, it does not run the local bin or the kit's release
   const packages = findPackages(g.command).filter((p) => !(p.local && p.spec === p.name && bin(p.name)) && !(p.eco === 'npm' && /^tillerhand(@\d+\.\d+\.\d+)?$/.test(p.spec ?? '')));
-  if (!packages.length) process.exit(0);
+  if (!packages.length) return;
+  if (packages.length > MAX_PACKAGES) decide(g.tool, 'ask', t(g.root, 'guard.package.tooMany', { count: packages.length, max: MAX_PACKAGES }));
   const results = await Promise.all(packages.map(async (p) => ({ ...p, ...(await check(p)) })));
   const missing = results.filter((s) => s.status === 'missing' && !s.unsure);
   if (missing.length) {
