@@ -736,6 +736,109 @@ test('3.49.10: ATTACK package gate: npm/pnpm/yarn/bun create and npm init <name>
   for (const c of ['npm init', 'npm init -y']) assert.deepEqual(findPackages(c), [], c);
 });
 
+// ---------- 3.49.11: dependency names added through a file tool are checked like an install ----------
+
+// Loaded at run time so a missing export fails these tests only, not the whole file
+const loadAdded = async () => {
+  const m = await import('../../.claude/hooks/package-gate.mjs');
+  assert.equal(typeof m.addedDependencies, 'function', 'package-gate.mjs exports addedDependencies(file, before, after)');
+  return m.addedDependencies;
+};
+// Sorted "eco:name" ids of what a write adds (order is not part of the contract)
+const addedIds = (fn, file, before, after) => {
+  const r = fn(file, before, after);
+  assert.ok(Array.isArray(r), `${file}: expected an array, got ${JSON.stringify(r)}`);
+  return r.map((p) => `${p.eco}:${p.name}`).sort();
+};
+const pkgJson = (o) => JSON.stringify({ name: 'app', version: '1.0.0', ...o }, null, 2);
+
+test('3.49.11: package gate: a new package.json adds the names in dependencies, devDependencies, optionalDependencies and peerDependencies', async () => {
+  const added = await loadAdded();
+  assert.deepEqual(added('package.json', '', pkgJson({ dependencies: { zod: '^3' } })), [{ eco: 'npm', name: 'zod' }]);
+  const after = pkgJson({
+    scripts: { build: 'vite build' },
+    dependencies: { react: '^18', '@scope/ui': '1.0.0' },
+    devDependencies: { vitest: '^2' },
+    optionalDependencies: { fsevents: '^2' },
+    peerDependencies: { 'react-dom': '^18' },
+  });
+  assert.deepEqual(addedIds(added, 'package.json', '', after), ['npm:@scope/ui', 'npm:fsevents', 'npm:react', 'npm:react-dom', 'npm:vitest']);
+  for (const f of ['web/package.json', 'apps/api/package.json'])
+    assert.deepEqual(addedIds(added, f, '', after), ['npm:@scope/ui', 'npm:fsevents', 'npm:react', 'npm:react-dom', 'npm:vitest'], f);
+});
+
+test('3.49.11: package gate: package.json edits add only new names; version, section-move, script and other field changes add nothing', async () => {
+  const added = await loadAdded();
+  const before = pkgJson({ scripts: { dev: 'vite' }, dependencies: { react: '^18', zod: '^3' }, devDependencies: { vitest: '^2' } });
+  assert.deepEqual(addedIds(added, 'package.json', before, pkgJson({ scripts: { dev: 'vite' }, dependencies: { react: '^19', zod: '^3' }, devDependencies: { vitest: '^2' } })), [], 'version change');
+  assert.deepEqual(addedIds(added, 'package.json', before, pkgJson({ scripts: { dev: 'vite --host', lint: 'eslint .' }, description: 'x', dependencies: { react: '^18', zod: '^3' }, devDependencies: { vitest: '^2' } })), [], 'scripts and other fields');
+  assert.deepEqual(addedIds(added, 'package.json', before, pkgJson({ dependencies: { react: '^18' }, devDependencies: { vitest: '^2', zod: '^3' } })), [], 'zod moved from dependencies to devDependencies');
+  assert.deepEqual(addedIds(added, 'package.json', before, pkgJson({ dependencies: { react: '^18', zod: '^3', 'zzz-new': '1.0.0' }, devDependencies: { vitest: '^2' } })), ['npm:zzz-new']);
+  assert.deepEqual(addedIds(added, 'package.json', before, pkgJson({ dependencies: { react: '^18' } })), [], 'removing names adds nothing');
+});
+
+test('3.49.11: ATTACK package gate: an npm: alias in package.json adds its target, even for a key that already existed', async () => {
+  const added = await loadAdded();
+  assert.deepEqual(addedIds(added, 'package.json', '', pkgJson({ dependencies: { x: 'npm:evil@1' } })), ['npm:evil'], 'new alias key');
+  assert.deepEqual(addedIds(added, 'package.json', pkgJson({ dependencies: { x: '^1' } }), pkgJson({ dependencies: { x: 'npm:evil@1' } })), ['npm:evil'], 'existing key turned into an alias');
+  assert.deepEqual(addedIds(added, 'package.json', pkgJson({ devDependencies: { y: '^2' } }), pkgJson({ devDependencies: { y: 'npm:@evil/y@2' } })), ['npm:@evil/y'], 'scoped alias target');
+});
+
+test('3.49.11: ATTACK package gate: package.json that does not parse after the write returns null (the caller asks)', async () => {
+  const added = await loadAdded();
+  assert.equal(added('package.json', pkgJson({ dependencies: { react: '^18' } }), '{ "dependencies": { "react": "^18", "evil": '), null);
+  assert.equal(added('web/package.json', '', 'not json at all'), null);
+});
+
+test('3.49.11: package gate: added requirements lines add normalized pypi names; comments, blanks, -r, -e and version changes add nothing', async () => {
+  const added = await loadAdded();
+  const after = 'Django>=4\n# a comment\n\nuvicorn[standard]==0.30\n-r other.txt\n-e .\nrequests\n';
+  for (const f of ['requirements.txt', 'requirements-dev.txt', 'requirements/base.txt'])
+    assert.deepEqual(addedIds(added, f, '', after), ['pypi:django', 'pypi:requests', 'pypi:uvicorn'], f);
+  assert.deepEqual(addedIds(added, 'requirements.txt', 'Django>=4\nrequests==2.31\n', 'Django>=5\nrequests==2.32\nflask\n'), ['pypi:flask'], 'version changes add nothing');
+  assert.deepEqual(addedIds(added, 'requirements.txt', 'django==4\n', 'Django==5\n'), [], 'same name in another case');
+  assert.deepEqual(addedIds(added, 'requirements.txt', 'requests\n', 'requests\n# new comment\n\n-r dev.txt\n-e .\n'), []);
+});
+
+test('3.49.11: package gate: pyproject.toml adds [project] dependencies and poetry dependency keys, not python or other sections', async () => {
+  const added = await loadAdded();
+  const after = [
+    '[project]', 'name = "app"', 'version = "1"', 'dependencies = [', '  "httpx>=0.27",', '  "fastapi",', ']', '',
+    '[tool.poetry.dependencies]', 'python = "^3.11"', 'requests = "^2"', '',
+    '[tool.poetry.group.dev.dependencies]', 'pytest = "^8"', '',
+    '[tool.ruff]', 'line-length = 100', '',
+  ].join('\n');
+  assert.deepEqual(addedIds(added, 'pyproject.toml', '', after), ['pypi:fastapi', 'pypi:httpx', 'pypi:pytest', 'pypi:requests']);
+  assert.deepEqual(addedIds(added, 'pyproject.toml', '[project]\nname = "app"\nversion = "1"\n', '[project]\nname = "app2"\nversion = "2"\ndescription = "x"\n'), [], 'other [project] keys');
+  assert.deepEqual(addedIds(added, 'pyproject.toml',
+    '[project]\ndependencies = ["httpx>=0.27"]\n\n[tool.poetry.dependencies]\npython = "^3.11"\nrequests = "^2"\n',
+    '[project]\ndependencies = ["httpx>=0.28", "rich"]\n\n[tool.poetry.dependencies]\npython = "^3.12"\nrequests = "^3"\nclick = "^8"\n'),
+  ['pypi:click', 'pypi:rich'], 'only new names; version and python changes add nothing');
+});
+
+test('3.49.11: package gate: any other file adds nothing, even when it lists dependencies', async () => {
+  const added = await loadAdded();
+  const deps = pkgJson({ dependencies: { evil: '1.0.0' } });
+  for (const f of ['package-lock.json', 'src/package.ts', 'README.md', 'tsconfig.json', 'requirements.md', 'src/index.js'])
+    assert.deepEqual(added(f, '', f.endsWith('.json') ? deps : 'evil\nDjango>=4\n'), [], f);
+});
+
+test('3.49.11: wiring: file-write tools run the package gate on Claude Code, Codex and Antigravity', () => {
+  const ROOT = path.resolve(HOOKS, '..', '..');
+  const json = (rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+  const runsGate = (h) => /package-gate\.mjs/.test(h.command);
+  const cc = json('.claude/settings.json').hooks.PreToolUse.find((b) => b.matcher === 'Write|Edit|MultiEdit|NotebookEdit');
+  assert.notEqual(cc, undefined, 'settings.json has the Write|Edit|MultiEdit|NotebookEdit PreToolUse block');
+  const ccGate = cc.hooks.find(runsGate);
+  assert.notEqual(ccGate, undefined, 'Claude Code: the file-write block runs package-gate.mjs');
+  assert.equal(typeof ccGate.timeout, 'number', 'Claude Code: the package gate on file writes has a timeout');
+  assert.ok(ccGate.timeout > 0, `timeout ${ccGate.timeout}`);
+  const cx = json('kit/tools/codex/.codex/hooks.json').hooks.PreToolUse.find((b) => b.matcher === 'apply_patch');
+  assert.equal(cx.hooks.some(runsGate), true, 'Codex: the apply_patch block runs package-gate.mjs');
+  const ag = json('kit/tools/antigravity/.agents/hooks.json')['kit-file-guards'].PreToolUse;
+  assert.equal(ag.some((b) => b.hooks.some(runsGate)), true, 'Antigravity: kit-file-guards runs package-gate.mjs');
+});
+
 // ---------- 3.49.9: deploy and data-deletion commands, git push on Codex, clutter names ----------
 
 // Runs every command through the shield and returns the ones whose decision is not in `want` (with what they got)

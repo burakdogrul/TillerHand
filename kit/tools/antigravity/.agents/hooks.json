@@ -12,7 +12,8 @@
           { "type": "command", "command": "node .claude/hooks/guard-secrets.mjs" },
           { "type": "command", "command": "node .claude/hooks/freeze-guard.mjs" },
           { "type": "command", "command": "node .claude/hooks/structure-guard.mjs" },
-          { "type": "command", "command": "node .claude/hooks/test-guard.mjs" }
+          { "type": "command", "command": "node .claude/hooks/test-guard.mjs" },
+          { "type": "command", "command": "node .claude/hooks/package-gate.mjs", "timeout": 30 }
         ]
       }
     ]

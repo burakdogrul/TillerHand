@@ -446,6 +446,7 @@ export const MESSAGES = {
   'guard.package.timeout': { en: 'could not be verified (timeout)' },
   'guard.package.network': { en: 'could not be verified (network error)' },
   'guard.package.tooMany': { en: 'Package gate: {count} packages in one command (more than {max}) are not checked one by one. User approval required.' },
+  'guard.package.depFileUnclear': { en: 'Package gate: the new dependencies in {path} could not be read (the file does not parse or the edit cannot be placed). User approval required.' },
   'guard.package.error': { en: 'The package gate could not check this command ({error}). User approval required.' },
   'guard.package.ask': { en: 'Package gate warning: {list}. Before installing, make sure the package is really the one you want.' },
   'guard.structure.offMap': { en: '"{rel}" is not in the structure map (.claude/structure.json). The right place is probably one of: {top}. If it is temporary or a trial, write it under sandbox/. If a new permanent place is needed, ask it as a technical decision and update the map (docs/architecture/structure.md).' },

@@ -443,6 +443,7 @@
   "guard.package.timeout": "doğrulanamadı (zaman aşımı)",
   "guard.package.network": "doğrulanamadı (ağ hatası)",
   "guard.package.tooMany": "Paket kapısı: tek komutta {count} paket var ({max} sınırının üstünde), tek tek denetlenmiyor. Kullanıcı onayı gerekli.",
+  "guard.package.depFileUnclear": "Paket kapısı: {path} içindeki yeni bağımlılıklar okunamadı (dosya ayrıştırılamıyor ya da düzenleme yerleştirilemiyor). Kullanıcı onayı gerekli.",
   "guard.package.error": "Paket kapısı bu komutu denetleyemedi ({error}). Kullanıcı onayı gerekli.",
   "guard.package.ask": "Paket kapısı uyarısı: {list}. Kurmadan önce paketin gerçekten istenen paket olduğundan emin ol.",
   "guard.structure.offMap": "\"{rel}\" yapı haritasında yok (.claude/structure.json). Doğru yer muhtemelen şunlardan biri: {top}. Geçici veya deneme ise sandbox/ altına yaz. Kalıcı yeni bir yer gerekiyorsa bunu teknik karar olarak sor ve haritayı güncelle (docs/architecture/structure.md).",

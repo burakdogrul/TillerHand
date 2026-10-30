@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readInput, decide, isMain, findRoot } from './shared.mjs';
+import { boardAfter } from './freeze-guard.mjs';
 import { t } from './lang.mjs';
 
 export const THRESHOLD = { newDays: 30, npmWeeklyDownloads: 500 };
@@ -161,6 +162,48 @@ export function findPackages(command) {
   return result;
 }
 
+// Dependency files written with a file tool: the names the write ADDS are checked like an install (user decision
+// 2026-10-30), so "edit package.json, then a bare npm ci" cannot skip the gate. null: the result does not parse (asked).
+const DEP_FILE = /(^|\/)(package\.json|pyproject\.toml|requirements[^/]*\.txt|requirements\/[^/]+\.txt)$/i;
+const NPM_SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
+// An npm: alias installs its target: "x": "npm:evil@1" adds evil
+const npmDeps = (j) => new Set(NPM_SECTIONS.flatMap((k) => Object.entries(j?.[k] && typeof j[k] === 'object' ? j[k] : {})
+  .map(([n, v]) => (typeof v === 'string' && /^npm:/i.test(v) ? npmName(v.slice(4)) : n))).filter(Boolean));
+const requirementNames = (text) => new Set(text.split(/\r?\n/).map((s) => s.trim())
+  .filter((s) => s && !s.startsWith('#') && !s.startsWith('-')).map(pypiName).filter(Boolean));
+function pyprojectNames(text) {
+  const names = new Set();
+  let section = '', inArray = false;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    const head = line.match(/^\[([^\]"']+)\]$/);
+    if (head) { section = head[1].trim(); inArray = false; continue; }
+    if (section === 'project') {
+      if (/^dependencies\s*=\s*\[/.test(line)) inArray = true;
+      if (!inArray) continue;
+      for (const m of line.matchAll(/["']([^"']+)["']/g)) { const n = pypiName(m[1]); if (n) names.add(n); }
+      if (line.includes(']')) inArray = false;
+    } else if (/^tool\.poetry(\.group\.[\w-]+)?\.(dev-)?dependencies$/.test(section)) {
+      const k = line.match(/^["']?([A-Za-z0-9][\w.-]*)["']?\s*=/);
+      if (k && k[1].toLowerCase() !== 'python') names.add(k[1].toLowerCase());
+    }
+  }
+  return names;
+}
+export function addedDependencies(file, before, after) {
+  const rel = file.replace(/\\/g, '/');
+  const added = (eco, a, b) => [...a].filter((n) => !b.has(n)).map((name) => ({ eco, name }));
+  if (/(^|\/)package\.json$/i.test(rel)) {
+    let a, b = {};
+    try { a = JSON.parse(after); } catch { return null; }
+    try { b = JSON.parse(before || '{}'); } catch { /* a broken file before: every name counts as added */ }
+    return added('npm', npmDeps(a), npmDeps(b));
+  }
+  if (/(^|\/)requirements[^/]*\.txt$|(^|\/)requirements\/[^/]+\.txt$/i.test(rel)) return added('pypi', requirementNames(after), requirementNames(before));
+  if (/(^|\/)pyproject\.toml$/i.test(rel)) return added('pypi', pyprojectNames(after), pyprojectNames(before));
+  return [];
+}
+
 function distance(a, b) {
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
   for (let j = 1; j <= b.length; j++) d[0][j] = j;
@@ -229,6 +272,15 @@ async function gate(g) {
   // The kit's own package (/start and /adopt run npx -y tillerhand@<version> install): the kit already trusts itself
   // Both only for the plain spelling: name@1.2 or name@npm:other downloads, it does not run the local bin or the kit's release
   const packages = findPackages(g.command).filter((p) => !(p.local && p.spec === p.name && bin(p.name)) && !(p.eco === 'npm' && /^tillerhand(@\d+\.\d+\.\d+)?$/.test(p.spec ?? '')));
+  for (const f of g.files) {
+    if (!DEP_FILE.test(String(f.path).replace(/\\/g, '/'))) continue;
+    const full = path.resolve(g.dir, f.path);
+    let disk = ''; try { disk = fs.readFileSync(full, 'utf8'); } catch { /* new file */ }
+    const after = boardAfter(disk, f);
+    const added = after === null ? null : addedDependencies(f.path, disk, after);
+    if (added === null) decide(g.tool, 'ask', t(g.root, 'guard.package.depFileUnclear', { path: f.path }));
+    packages.push(...added);
+  }
   if (!packages.length) return;
   if (packages.length > MAX_PACKAGES) decide(g.tool, 'ask', t(g.root, 'guard.package.tooMany', { count: packages.length, max: MAX_PACKAGES }));
   const results = await Promise.all(packages.map(async (p) => ({ ...p, ...(await check(p)) })));

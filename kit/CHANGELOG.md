@@ -3,6 +3,11 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.11] - 2026-10-30
+
+### Security
+- **The package gate also checks dependency files.** When the AI adds a dependency to `package.json` (any section, an `npm:` alias's target too), `requirements*.txt` or `pyproject.toml` (`[project] dependencies`, Poetry dependency tables) with a file tool, the new names are checked like an install: a missing package is blocked, a new, rarely downloaded or look-alike one is asked. Before, editing `package.json` and then running a bare `npm ci` skipped the gate. Version changes and other fields are not checked. Runs on Claude Code, Codex and Antigravity; a file that does not parse after the write asks.
+
 ## [3.49.10] - 2026-10-30
 
 ### Security
