@@ -88,7 +88,7 @@ app.config.ts  eas.json
 - **Everything in the app bundle is public.** Do not put a secret, service key or admin key into the app; secret operations run on the server.
 - Variables with the `EXPO_PUBLIC_` prefix are embedded in the bundle; only public values.
 - Use `npx expo install` when adding a package.
-- If Supabase is chosen, DB schema changes go only through a migration file: `npx -y supabase@2.120.0 migration new [ad]` (`supabase/migrations/`). No manual DDL from the dashboard or MCP.
+- If Supabase is chosen, DB schema changes go only through a migration file: `npx -y supabase@2.120.0 migration new [name]` (`supabase/migrations/`). No manual DDL from the dashboard or MCP.
 - If Supabase is chosen, every new table has RLS on, a written policy, and an entry in the `TABLES` list of `tests/security/rls.mjs` (the `rls` job in CI attacks as anonymous and as a second user; an unregistered table turns it red).
 - Every screen has: loading, empty, error and **offline** states.
 - Before asking for a permission, show the user why it is needed; permission texts (`infoPlist`) are in the app's main language and explanatory.

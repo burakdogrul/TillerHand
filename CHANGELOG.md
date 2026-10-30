@@ -13,7 +13,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: `M
 ### Fixed
 - 
 
-## [0.1.0] - YYYY-AA-GG
+## [0.1.0] - YYYY-MM-DD
 
 ### Added
 - Project skeleton

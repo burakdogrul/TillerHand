@@ -363,3 +363,113 @@ test('test-writer K9g test-writer.md says to write tests with Write/Edit (a test
   const matcher = new RegExp(`^(?:${groups[0].matcher})$`);
   for (const tool of ['Write', 'Edit', 'MultiEdit']) assert.match(tool, matcher, `the matcher covers ${tool}`);
 });
+
+// ---------- 3.49.2 ----------
+
+test('3.49.2: test file detection: Maestro flows, XCTest files, .e2e. files, snapshots and test setup files are test files', () => {
+  for (const f of ['.maestro/login.yaml', '.maestro/flows/signup.yml', 'ios/AppTests/LoginTests.swift', 'src/a.e2e.ts',
+    'src/__snapshots__/a.test.ts.snap', 'vitest.setup.ts', 'jest.setup.js', 'src/setupTests.ts'])
+    assert.equal(isTestFile(f), true, f);
+  for (const f of ['src/maestro.ts', 'src/setup.ts', 'docs/tests.md']) assert.equal(isTestFile(f), false, f);
+});
+
+test('3.49.2: ATTACK test separation: in Claude the main session cannot write a Maestro flow or an XCTest file', () => {
+  for (const f of ['.maestro/login.yaml', 'ios/AppTests/LoginTests.swift']) {
+    const out = run({ hook_event_name: 'PreToolUse', tool_name: 'Write', cwd: p, tool_input: { file_path: path.join(p, f), content: 'x\n' } })?.hookSpecificOutput;
+    assert.equal(out?.permissionDecision, 'deny', f);
+    assert.match(out.permissionDecisionReason, /test-writer/, f);
+  }
+});
+
+// A fresh project per case: package.json and configs are compared with the disk
+const fresh = (files = {}) => {
+  const q = fs.mkdtempSync(path.join(os.tmpdir(), 'test-guard-3492-'));
+  fs.writeFileSync(path.join(q, '.kit.json'), JSON.stringify({ lang: 'en' }));
+  for (const [f, s] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(q, f)), { recursive: true });
+    fs.writeFileSync(path.join(q, f), s);
+  }
+  return q;
+};
+const decisionIn = (q, tool_name, tool_input) =>
+  run({ hook_event_name: 'PreToolUse', tool_name, cwd: q, tool_input }, { CLAUDE_PROJECT_DIR: q })?.hookSpecificOutput?.permissionDecision ?? null;
+const NPM_PLACEHOLDER = 'echo "Error: no test specified" && exit 1';
+const pkg = (scripts) => `${JSON.stringify({ name: 'app', version: '1.0.0', scripts }, null, 2)}\n`;
+const BASE = { dev: 'vite', build: 'vite build' };
+const RUNNERS = ['vitest run', 'vitest', 'jest', 'playwright test', 'pytest', 'node --test'];
+
+test('3.49.2: package.json: replacing the npm placeholder (or no test script) with exactly one plain runner is not asked', () => {
+  for (const runner of RUNNERS) {
+    for (const [label, before] of [['placeholder', { ...BASE, test: NPM_PLACEHOLDER }], ['no test script', BASE]]) {
+      const q = fresh({ 'package.json': pkg(before) });
+      try {
+        assert.equal(decisionIn(q, 'Write', { file_path: path.join(q, 'package.json'), content: pkg({ ...BASE, test: runner }) }), null, `Write, ${label} -> ${runner}`);
+      } finally { fs.rmSync(q, { recursive: true, force: true }); }
+    }
+    const q = fresh({ 'package.json': pkg({ ...BASE, test: NPM_PLACEHOLDER }) });
+    try {
+      const edit = { file_path: path.join(q, 'package.json'), old_string: `"test": ${JSON.stringify(NPM_PLACEHOLDER)}`, new_string: `"test": ${JSON.stringify(runner)}` };
+      assert.equal(decisionIn(q, 'Edit', edit), null, `Edit, placeholder -> ${runner}`);
+    } finally { fs.rmSync(q, { recursive: true, force: true }); }
+  }
+});
+
+test('3.49.2: ATTACK package.json: a test script that cannot fail, narrows the run or removes it is still asked; so is a placeholder change that also touches another test script', () => {
+  const after = ['exit 0', 'true', 'echo ok', 'vitest run || true', 'vitest run; exit 0', 'vitest run --passWithNoTests', 'vitest run -t foo',
+    'jest --bail', 'playwright test --grep x', 'vitest run tests/only'];
+  const ask = (before, next, label) => {
+    const q = fresh({ 'package.json': pkg(before) });
+    try {
+      assert.equal(decisionIn(q, 'Write', { file_path: path.join(q, 'package.json'), content: pkg(next) }), 'ask', label);
+    } finally { fs.rmSync(q, { recursive: true, force: true }); }
+  };
+  for (const a of after) {
+    ask({ ...BASE, test: NPM_PLACEHOLDER }, { ...BASE, test: a }, `placeholder -> ${a}`);
+    ask(BASE, { ...BASE, test: a }, `no test script -> ${a}`);
+  }
+  ask({ ...BASE, test: NPM_PLACEHOLDER }, BASE, 'the test script is removed');
+  for (const other of ['pretest', 'posttest', 'test:unit', 'ci', 'e2e'])
+    ask({ ...BASE, test: NPM_PLACEHOLDER }, { ...BASE, test: 'vitest run', [other]: 'echo changed' }, `placeholder -> vitest run, and ${other} changes`);
+  ask({ ...BASE, test: 'jest' }, { ...BASE, test: 'vitest run' }, 'a real runner is replaced');
+  // The Edit spelling of the same weak change
+  const q = fresh({ 'package.json': pkg({ ...BASE, test: NPM_PLACEHOLDER }) });
+  try {
+    assert.equal(decisionIn(q, 'Edit', { file_path: path.join(q, 'package.json'), old_string: `"test": ${JSON.stringify(NPM_PLACEHOLDER)}`, new_string: '"test": "exit 0"' }), 'ask', 'Edit placeholder -> exit 0');
+  } finally { fs.rmSync(q, { recursive: true, force: true }); }
+});
+
+const PW = ({ testDir = './tests/e2e', extra = '' } = {}) =>
+  `import { defineConfig } from '@playwright/test';\n\nexport default defineConfig({\n  testDir: '${testDir}',\n${extra}  use: { baseURL: 'http://localhost:3000' },\n});\n`;
+const VT = ({ include = "['tests/**/*.test.ts']", extra = '' } = {}) =>
+  `import { defineConfig } from 'vitest/config';\n\nexport default defineConfig({\n  test: {\n    include: ${include},\n    environment: 'node',\n${extra}  },\n});\n`;
+const E2E = { 'tests/e2e/a.spec.ts': "test('a', async () => { expect(1).toBe(1); });\n" };
+const UNIT = { 'tests/unit/b.test.ts': "test('b', () => { expect(1).toBe(1); });\n" };
+const newConfig = (files, file, content) => {
+  const q = fresh(files);
+  try { return decisionIn(q, 'Write', { file_path: path.join(q, file), content }); } finally { fs.rmSync(q, { recursive: true, force: true }); }
+};
+
+test('3.49.2: a first test config whose testDir/include covers every existing test file is not asked', () => {
+  assert.equal(newConfig(E2E, 'playwright.config.ts', PW()), null, 'playwright, testDir covers tests/e2e/a.spec.ts');
+  assert.equal(newConfig(UNIT, 'vitest.config.ts', VT()), null, 'vitest, include covers tests/unit/b.test.ts');
+  assert.equal(newConfig({ ...UNIT, 'vite.config.ts': "export default { plugins: [] };\n" }, 'vitest.config.ts', VT()), null, 'a vite.config without a test block is not a vitest config');
+});
+
+test('3.49.2: ATTACK a first test config is still asked when it narrows or loosens the run, leaves a test out, or another config of the runner exists', () => {
+  for (const extra of ["    exclude: ['tests/unit/slow/**'],\n", '    passWithNoTests: true,\n', '    bail: 1,\n', '    retries: 2,\n',
+    '    coverage: { thresholds: { lines: 80 } },\n', "    setupFiles: ['./tests/setup.ts'],\n", "    globalSetup: './tests/global-setup.ts',\n"])
+    assert.equal(newConfig(UNIT, 'vitest.config.ts', VT({ extra })), 'ask', `vitest: ${extra.trim()}`);
+  for (const extra of ["  testIgnore: '**/slow/**',\n", '  grep: /@smoke/,\n', '  grepInvert: /@slow/,\n', '  retries: 2,\n',
+    '  forbidOnly: false,\n', "  globalSetup: './tests/global-setup.ts',\n"])
+    assert.equal(newConfig(E2E, 'playwright.config.ts', PW({ extra })), 'ask', `playwright: ${extra.trim()}`);
+  assert.equal(newConfig(UNIT, 'vitest.config.ts', VT({ include: "['tests/e2e/**/*.test.ts']" })), 'ask', 'include leaves tests/unit/b.test.ts out');
+  assert.equal(newConfig({ ...UNIT, 'src/c.test.ts': "test('c', () => { expect(1).toBe(1); });\n" }, 'vitest.config.ts', VT()), 'ask', 'include leaves src/c.test.ts out');
+  assert.equal(newConfig(E2E, 'playwright.config.ts', PW({ testDir: './tests/smoke' })), 'ask', 'testDir leaves tests/e2e/a.spec.ts out');
+  assert.equal(newConfig({ ...UNIT, 'vitest.config.ts': VT() }, 'vitest.config.mts', VT()), 'ask', 'vitest.config.ts already exists');
+  assert.equal(newConfig({ ...UNIT, 'vite.config.ts': "export default { test: { include: ['tests/**/*.test.ts'] } };\n" }, 'vitest.config.ts', VT()), 'ask', 'vite.config.ts has a test block');
+  assert.equal(newConfig({ ...UNIT, 'vitest.workspace.ts': "export default ['tests'];\n" }, 'vitest.config.ts', VT()), 'ask', 'vitest.workspace.ts exists');
+  assert.equal(newConfig({ ...E2E, 'playwright.config.js': PW() }, 'playwright.config.ts', PW()), 'ask', 'playwright.config.js exists');
+  assert.equal(newConfig({ 'tests/b.test.js': "test('b', () => { expect(1).toBe(1); });\n", 'package.json': pkg({ test: 'jest' }).replace('"scripts"', '"jest": { "testEnvironment": "node" },\n  "scripts"') },
+    'jest.config.js', "module.exports = { testMatch: ['**/tests/**/*.test.js'] };\n"), 'ask', 'package.json has a jest field');
+  assert.equal(newConfig({ ...UNIT, 'vitest.config.ts': VT({ include: "['src/**/*.test.ts', 'tests/**/*.test.ts']" }) }, 'vitest.config.ts', VT()), 'ask', 'overwriting an existing config');
+});

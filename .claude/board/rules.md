@@ -73,7 +73,7 @@ If the user wants to skip commit review for now, they must say so explicitly. Th
 2. Ask the user as a **multi-select** (recommended ones marked). With "Other" they can ask for a new expert, for example "Accessibility expert", "Game designer" or "Fintech compliance expert". In that case, write a new `board-<name>.md` using the existing template structure.
 3. Do not ask for a model: members work with the model and effort of the review role (`docs/workflow/models.md`).
 4. For each selected member, copy `.claude/board/board-<role>.md` to `.claude/agents/board-<role>.md` and **fill in the "This project" section**: product summary, chosen stack, critical flows, risks specific to this role. `security-auditor` is already under `.claude/agents/`.
-5. In `docs/workflow/board.md`, fill in the status, the member table (write "review role" in the Model column) and the commit review line.
+5. In `docs/workflow/board.md`, fill in the status (`set up (YYYY-MM-DD)`; English in every language), the member table (write "review role" in the Model column) and the commit review line.
 6. Introduce the board to the user: what each member does, when it steps in, the estimated cost (one line).
 7. New agents load when the session restarts. Tell the user this. In this session, if needed, run the member as a general-purpose subagent by giving it the content of the role file.
 

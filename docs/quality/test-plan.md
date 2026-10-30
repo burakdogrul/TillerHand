@@ -6,6 +6,7 @@
 ## 1. Critical flows (automatic test REQUIRED)
 
 Every change that touches one of these flows comes with a test. If a test is red, there is no merge/deploy.
+Status column (the dashboard reads it; English in every language): `✅` when the test file exists and passes, `⬜` when it does not yet.
 
 | # | Flow | Why critical | Test type | Test file | Status |
 |---|---|---|---|---|---|

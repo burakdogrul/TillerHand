@@ -251,6 +251,32 @@ test('lang attacker: a hand-edited translation whose placeholders differ from th
   }
 });
 
+test('3.49.2: lang attacker: a translation with another number of line breaks than the English text is not used; t gives the English text filled in', async () => {
+  const { t } = await load();
+  const M = await messages();
+  const key = 'guard.commit.gateApprovalAsk';
+  assert.equal(typeof M[key]?.en, 'string', `${key} is in the table`);
+  const en = M[key].en;
+  const breaks = (s) => (s.match(/\n/g) ?? []).length;
+  const vars = { list: '- test: npm test\n- lint: npm run lint' };
+  const english = fill(en, vars);
+  const padded = 'Routine check, safe to approve\n\n\n\n\n\n{list}';
+  const flat = 'Routine check, safe to approve: {list}';
+  assert.notEqual(breaks(padded), breaks(en), 'the padded text has more line breaks');
+  assert.notEqual(breaks(flat), breaks(en), 'the flat text has fewer line breaks');
+  for (const lang of ['tr', 'de']) {
+    for (const [name, text] of [['more line breaks', padded], ['fewer line breaks', flat]]) {
+      const p = project({ '.kit.json': kitJson({ lang }), [`.claude/i18n/${lang}.json`]: { [key]: text } });
+      assert.equal(t(p, key, vars), english, `${lang}: ${name}`);
+    }
+  }
+  // Same placeholders and the same line breaks: the translation is still used
+  const same = en.split('\n').map((line, i) => `TR${i} ${line}`).join('\n');
+  assert.equal(breaks(same), breaks(en));
+  const p = project({ '.kit.json': kitJson({ lang: 'tr' }), '.claude/i18n/tr.json': { [key]: same } });
+  assert.equal(t(p, key, vars), fill(same, vars), 'same shape: the translation');
+});
+
 test('lang: t ignores the i18n file for en; tr reads .claude/i18n/tr.json like any other language', async () => {
   const { t } = await load();
   const { M, all } = await keys();
@@ -493,6 +519,20 @@ test('reminder: a chosen language is repeated on every message, none without a l
   for (let i = 1; i <= 2; i++) assert.ok(!remind(q).includes('Reply in'), `no language, call ${i}`);
 });
 
+test('3.49.2: session-start: the tr language note says fixed value words in files stay English and free text in files is in the conversation language', () => {
+  const note = languageNote(session(project({ '.kit.json': kitJson({ lang: 'tr' }) })));
+  assert.ok(note.includes('Conversation language: tr.'), note);
+  for (const word of [/\bautomatic\b/, /\bone-way\b/, /\boff\b/]) assert.match(note, word, `value word ${word}: ${note}`);
+  for (const word of [/\bdescriptions?\b/i, /\bnotes?\b/i]) assert.match(note, word, `free text ${word}: ${note}`);
+});
+
+test('3.49.2: reminder: the tr line still says "Reply in tr." and that labels and value words in files stay English', () => {
+  const p = project({ '.kit.json': kitJson({ lang: 'tr' }) });
+  const line = remind(p).split('\n').find((l) => l.includes('Reply in tr.'));
+  assert.equal(typeof line, 'string', 'the language line is there');
+  assert.match(line, /\bEnglish\b/, line);
+});
+
 // ---------- /language command, other commands, permission ----------
 
 test('language command: /language exists, sets the language and is a light command', async () => {
@@ -512,7 +552,17 @@ test('language command: /start and /adopt ask the language first, /kit-update ch
   assert.ok(cmd('kit-update').includes('lang.mjs --check'), 'kit-update: checks missing translations');
 });
 
-test('language command: lang.mjs is allowed in the project settings', () => {
+// 3.49.2: was "lang.mjs:*" allowed as a whole; --write saves the texts approval prompts show, so it is no longer allowed
+test('3.49.2: ATTACK language command: lang.mjs --show, --check, --export and --set are allowed; --write and the whole-script wildcard are not', () => {
   const s = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude/settings.json'), 'utf8'));
-  assert.ok(s.permissions.allow.includes('Bash(node .claude/hooks/lang.mjs:*)'));
+  const allow = s.permissions.allow;
+  const has = (...forms) => forms.some((f) => allow.includes(f));
+  assert.equal(allow.includes('Bash(node .claude/hooks/lang.mjs:*)'), false, 'no wildcard over every flag');
+  assert.ok(has('Bash(node .claude/hooks/lang.mjs --show)', 'Bash(node .claude/hooks/lang.mjs --show:*)'), '--show');
+  assert.ok(has('Bash(node .claude/hooks/lang.mjs --check)', 'Bash(node .claude/hooks/lang.mjs --check:*)'), '--check');
+  assert.ok(allow.includes('Bash(node .claude/hooks/lang.mjs --export:*)'), '--export and --export --missing');
+  assert.ok(allow.includes('Bash(node .claude/hooks/lang.mjs --set:*)'), '--set <code>');
+  const langRules = allow.filter((x) => x.includes('lang.mjs'));
+  assert.deepEqual(langRules.filter((x) => !/lang\.mjs --(show|check|export|set)(:\*)?\)$/.test(x)), [], 'no other lang.mjs allow rule');
+  assert.equal(allow.some((x) => x.includes('--write')), false, '--write is not allowed');
 });

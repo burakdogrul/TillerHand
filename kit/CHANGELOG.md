@@ -3,6 +3,22 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.2] - 2026-10-30
+
+### Security
+- **git can no longer write a file of its choosing unasked.** `git diff/log/show --output` and `git format-patch -o` are asked: through the allowed `git diff` and `git log` they could overwrite a guard script, a test or the settings.
+- **A shell command that names a `.env` file is asked in Claude Code too** (`git diff --no-index … .env`, `git show :.env`, `cat apps/web/.env.local`). The permission list covered only the Read tool. `.env.example` and `vercel env pull` (dev values) stay free.
+- **A line continuation no longer hides a commit**: `git commit\` + newline is checked like `git commit`.
+- **Turning the commit review off asks you.** Changing `**Commit review:**` in `docs/workflow/board.md` (file tools) or writing that file from the shell needs your approval; adding meeting log rows does not.
+- **Saving a translation asks you.** `lang.mjs --write` is no longer allowed without a prompt (`--show`, `--check`, `--export` and `--set` still are), a heredoc or `<<<` into a guard script is asked, and a translation whose line breaks differ from the English text is not shown. `/kit-update` removes the old `lang.mjs:*` allow rule.
+
+### Fixed
+- The guard-script check looks only at the part of a chain that runs the script: `node .claude/hooks/progress.mjs --check; wc -l < docs/workflow/progress.md` no longer asks.
+- Setting up tests is no longer treated as weakening them: the first `"test"` script (none yet, or npm's placeholder) set to one plain runner (`vitest run`, `jest`, `playwright test`, `pytest`, `node --test`) and a first `vitest`/`playwright`/`jest` config whose `include`/`testDir` covers the existing tests are not asked. Flags, `|| true`, `exit 0`, exclusions, retries, thresholds and setup files still are.
+- Maestro flows (`.maestro/*.yaml`), XCTest files (`*Tests.swift`), `*.e2e.ts`, snapshots and test setup files (`vitest.setup.ts`, `setupTests.ts`) count as test files: only test-writer writes them.
+- In a Turkish (or any non-English) project the session note names the fixed value words that stay English (`automatic`, `one-way`, `on`/`off`, `Setup`, `Phase N`…) and asks for free text in your language; `/start` follows closed question-mode topics; the templates say which values the dashboard reads (`test-plan.md` Status, flag table, board status, feedback `new`).
+- `AGENTS.md` states the Codex and Antigravity limit: the commit gate does not run there, so run the gate and the board before committing.
+
 ## [3.49.1] - 2026-10-29
 
 ### Fixed

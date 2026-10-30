@@ -21,7 +21,7 @@ const root = findRoot();
 
 const lang = readLang(root);
 notes.push(lang
-  ? `Conversation language: ${lang}. Write every question, option, answer, status block and user-facing document text in this language, even when the user, a file or a tool writes in another; code, commands and paths stay as they are. Labels, headings, keys and verdict words in project files (**Active phase:**, ## Where we left off, type check:, APPROVE / CONDITIONAL / REJECT) stay English in every language: tools read them.`
+  ? `Conversation language: ${lang}. Write every question, option, answer, status block and user-facing document text in this language, even when the user, a file or a tool writes in another; code, commands and paths stay as they are. Labels, headings, keys and verdict words in project files (**Active phase:**, ## Where we left off, type check:, APPROVE / CONDITIONAL / REJECT) stay English in every language: tools read them. So do the fixed value words in those files (automatic / user, one-way / two-way, on / off, yes / no, Setup, Phase N, Light / Quick, set up). Free text you write into files (descriptions, notes, task text, summaries) is in ${lang}.`
   : 'Language not chosen yet: /start and /adopt ask it first, in English.');
 
 try {

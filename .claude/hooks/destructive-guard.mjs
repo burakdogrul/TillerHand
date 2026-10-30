@@ -222,6 +222,8 @@ export function scopeIssue(command, dir, root) {
       ? t(root, 'guard.destructive.prefsFile', { path: h })
       : t(root, 'guard.destructive.gateApproval', { path: h }) };
     const rel = relPath(realPath(h), groot);
+    // board.md holds the commit review switch; the file tools ask only when that line changes (freeze-guard)
+    if (/^docs\/workflow\/board\.md$/i.test(rel)) return { decision: 'ask', reason: t(root, 'guard.destructive.boardShell') };
     const k = protectedRule(rel, root) ?? protectedRule(`${rel}/`, root);
     if (k) return { decision: k[0], reason: k[0] === 'deny' ? `${rel}: ${k[2]}` : t(root, 'guard.destructive.protectedShell', { rel, text: k[2] }) };
   }
@@ -254,12 +256,14 @@ export function scopeIssue(command, dir, root) {
 // list; this is its counterpart (applied only on those tools, Claude's behavior does not change).
 // Only the real .claude/hooks/commit-gate.mjs --approve is kept out of the gate rule (separators optional: unquote drops backslashes;
 // anchored at the start of the path, so sandbox/.claude/hooks/commit-gate.mjs, a renamed gate.mjs, is not exempt).
+// .env in a shell command (git show :.env, git diff --no-index … .env, cat apps/web/.env.local); .env.example is free
+const ENV_ACCESS = /(^|[\s'"=<>/\\:])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i;
 const PERMISSION_EQUIVALENT = [
   ['deny', /\brm\b(?=[^;&|]*\s--?[a-z]*r)(?=[^;&|]*\s--?[a-z]*f)/i, 'Bulk deletion with rm -rf'],
   ['deny', /\b(Remove-Item|rm|ri|del|erase)\b[^;&|]*\s-Recurse\b|\b(rmdir|rd|del)\s+[^;&|]*\/s\b/i, 'A folder is being bulk deleted'],
   ['deny', /\bgit\s+reset\s+[^;&|]*--hard\b/i, 'git reset --hard deletes uncommitted work'],
   ['deny', /\bgit\s+push\b[^;&|]*\s(--force\S*|-\w*f\w*|\+\S+)(?=\s|$)/i, 'git push --force overwrites the remote history'],
-  ['deny', /(^|[\s'"=<>/\\])\.env(?!\.example\b)(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i, 'Access to .env or secrets/ (the AI does not read or write them)'],
+  ['deny', ENV_ACCESS, 'Access to .env or secrets/ (the AI does not read or write them)'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'guard.destructive.perm.freezeOff'],
   ['ask', /tools\.mjs['"]?\s+['"]?--commands\b/i, 'guard.destructive.perm.toolsCommands'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-add\b/i, 'guard.destructive.perm.planAdd'],
@@ -322,12 +326,16 @@ function obfuscationOne(command) {
 // A kit guard script (.claude/hooks) run with an indirect spelling: $VAR, $(..), `..`, ${..}, $'..', a glob * ?, xargs, a pipe or < (commit-gate.mjs $S,
 // --sk$()ip, commit-*.mjs). The text rules for --skip, --approve and --plan-* cannot see through them: asked (user decision 2026-10-25).
 // Heredocs and single-quoted text are not expanded; $CLAUDE_PROJECT_DIR is the documented way to name the folder.
+// Only the parts of a chain (; && || newline) that run node are checked: "progress.mjs --check; wc -l < f" is not indirect.
+// A heredoc body is data, but feeding it (or <<<, <, a pipe) to a guard script is asked; a line continuation is asked.
+// cmd.exe %VAR% and !VAR! expand too.
+const INDIRECT = /\$\(|`|\$\{|\$'|\$[A-Za-z_]|%\w+%|![A-Za-z_]\w*!|[*?]|\bxargs\b|\|[^|;&]*\bnode\b|</;
 export function hookScriptIssue(command) {
-  const k = command.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, '').replace(/'[^']*'/g, "''")
-    .replace(/"(?:[^"\\]|\\.)*"/g, (q) => q.replace(/[*?]/g, '')).replace(/\$\{?CLAUDE_PROJECT_DIR\}?|\$env:CLAUDE_PROJECT_DIR/gi, '');
+  const k = command.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, '<<HEREDOC').replace(/'[^']*'/g, "''")
+    .replace(/"(?:[^"\\]|\\.)*"/g, (q) => q.replace(/[*?]/g, '').replace(/[;&|\n]/g, ' ')).replace(/\$\{?CLAUDE_PROJECT_DIR\}?|\$env:CLAUDE_PROJECT_DIR/gi, '');
   if (!/\bnode\b/i.test(k) || !/\.claude|hooks|commit-|gate|freeze/i.test(command)) return null;
-  // Arguments from elsewhere count too: xargs, a pipe into node, an input redirect or <(...)
-  return /\$\(|`|\$\{|\$'|\$[A-Za-z_]|[*?]|\bxargs\b|\|[^|;&]*\bnode\b|<(?!<)/.test(k)
+  const parts = k.split(/;|&&|\|\||\n/).filter((s) => /\bnode\b/i.test(s));
+  return /\\\r?\n/.test(command) || parts.some((s) => INDIRECT.test(s))
     ? { decision: 'ask', reason: tr('guard.destructive.indirectHook') } : null;
 }
 
@@ -366,6 +374,11 @@ function evaluateOne(command) {
         : { decision: 'ask', reason: tr('guard.destructive.approvalSuffix', { reason: tr(key) }) };
     }
   }
+  // Claude Code's Read(./.env) deny does not cover the shell (Codex and Antigravity deny it in permissionEquivalent)
+  // vercel env pull writes the dev values into .env.local without showing them (a prod pull is denied above)
+  if (ENV_ACCESS.test(k) && !/\b(vercel|vc)\b[^;&|]*\bpull\b/i.test(k)) return { decision: 'ask', reason: tr('guard.destructive.envShell') };
+  // git diff/log/show --output and format-patch -o write a file of the AI's choosing (a hook, a test, settings)
+  if (/\bgit\b[^;&|]*\s--output(?=[=\s]|$)|\bgit\b[^;&|]*\bformat-patch\b[^;&|]*\s-o\b/i.test(k)) return { decision: 'ask', reason: tr('guard.destructive.gitOutput') };
   if (prodDb && /\b(psql|mysql|mongosh|redis-cli|prisma|drizzle-kit|alembic|supabase)\b/i.test(k)) {
     return { decision: 'ask', reason: tr('guard.destructive.remoteDb') };
   }

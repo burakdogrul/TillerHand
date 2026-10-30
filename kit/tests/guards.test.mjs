@@ -352,3 +352,106 @@ test('test-writer K8c shield: a path that stays inside a dependency or git folde
   assert.equal(r?.decision, 'deny');
   assert.match(r.reason, /test-writer/);
 });
+
+// ---------- 3.49.2: the shield hook as Claude Code runs it ----------
+
+// A set-up project (English) with a board; no lock, no plan
+const shieldProject = () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shield-3492-'));
+  fs.writeFileSync(path.join(root, '.kit.json'), JSON.stringify({ lang: 'en' }));
+  fs.mkdirSync(path.join(root, 'docs', 'workflow'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'docs', 'workflow', 'board.md'), '**Status:** set up\n**Commit review:** on\n');
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'src', 'a.ts'), 'export const a = 1;\n');
+  return root;
+};
+// Claude Code PreToolUse input on stdin; returns the hook's permissionDecision or null (no output)
+const shield = (root, command) => {
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'destructive-guard.mjs')], {
+    input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command }, cwd: root }),
+    encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+  });
+  assert.equal(r.status, 0, r.stderr);
+  return r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput.permissionDecision : null;
+};
+
+test('3.49.2: ATTACK shield: a git command that writes its output to a file (--output, -o) is asked; git log, git diff --stat and git commit -o are not', () => {
+  const root = shieldProject();
+  try {
+    for (const c of ['git log -1 --format=x --output=.claude/hooks/commit-gate.mjs', 'git diff --output=AGENTS.md',
+      'git show HEAD --output x.txt', 'git format-patch -o out HEAD~1'])
+      assert.equal(shield(root, c), 'ask', c);
+    for (const c of ['git log --oneline -5', 'git diff --stat', 'git commit -o src/a.ts -m x'])
+      assert.equal(shield(root, c), null, `no output file (commit -o is --only): ${c}`);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.2: ATTACK shield: in Claude a shell command that reads a .env file is asked or denied; .env.example stays free', () => {
+  const root = shieldProject();
+  try {
+    for (const c of ['git diff --no-index -- /dev/null .env', 'cat .env.local', 'type .env', 'git show :.env',
+      'cat apps/web/.env.development', 'Get-Content .env.staging']) {
+      const d = shield(root, c);
+      assert.ok(d === 'ask' || d === 'deny', `${c}: got ${d}`);
+    }
+    for (const c of ['cat .env.example', 'grep -n API .env.example']) assert.equal(shield(root, c), null, c);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.2: shield: a plain guard script call is not asked because another command in the chain has a glob or an input redirect', () => {
+  const root = shieldProject();
+  try {
+    for (const c of ['node .claude/hooks/progress.mjs --check; wc -l < docs/workflow/progress.md', 'ls *.md && node .claude/hooks/dashboard.mjs',
+      'node .claude/hooks/gate.mjs --run 2>&1 | tail -25', 'git status --short; node .claude/hooks/progress.mjs --check'])
+      assert.equal(shield(root, c), null, c);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.2: ATTACK shield: a guard script fed through a variable, glob, heredoc, here-string, pipe, redirect, substitution, line continuation or cmd %VAR% is still asked', () => {
+  const root = shieldProject();
+  try {
+    for (const c of ['H=.claude/hooks/commit-gate.mjs; node $H --skip x', 'cd .claude/hooks && node c*.mjs --skip x',
+      'node .claude/hooks/commit-gate.mjs "a;b" $S', "node .claude/hooks/lang.mjs --write <<'EOF'\n{}\nEOF",
+      "node .claude/hooks/lang.mjs --write <<< '{}'", 'cat x.json | node .claude/hooks/lang.mjs --write',
+      'node .claude/hooks/lang.mjs --write < x.json', 'echo $(node .claude/hooks/commit-gate.mjs --skip x)',
+      'node .claude/hooks/freeze-guard.mjs\\\n --off', 'cmd /c "set S=--skip&& node .claude/hooks/commit-gate.mjs %S%"'])
+      assert.equal(shield(root, c), 'ask', JSON.stringify(c));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.2: ATTACK shield: a shell write to docs/workflow/board.md (the commit review switch) is asked', () => {
+  const root = shieldProject();
+  try {
+    for (const c of ["sed -i 's/on/off/' docs/workflow/board.md", 'echo x > docs/workflow/board.md'])
+      assert.equal(shield(root, c), 'ask', c);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.2: ATTACK freeze guard: switching **Commit review:** to off in board.md with a file tool is asked; other board.md edits are free', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'board-review-'));
+  try {
+    fs.writeFileSync(path.join(root, '.kit.json'), JSON.stringify({ lang: 'en' }));
+    const row1 = '| 1 | 2026-10-20 | task | G-001 | QA | APPROVE | - | - |\n';
+    const row2 = '| 2 | 2026-10-21 | commit | G-002 | QA | APPROVE | - | - |\n';
+    const board = '# Expert Board\n\n**Status:** set up\n**Commit review:** on\n\n## Meeting log\n\n' +
+      '| # | Date | Kind | Scope | Attendees | Result | Critical | Decision |\n|---|---|---|---|---|---|---|---|\n' + row1;
+    const file = path.join(root, 'docs', 'workflow', 'board.md');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, board);
+    const hook = (tool_name, tool_input) => {
+      const r = spawnSync(process.execPath, [path.join(HOOKS, 'freeze-guard.mjs')], {
+        input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name, tool_input: { file_path: file, ...tool_input }, cwd: root }),
+        encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+      });
+      assert.equal(r.status, 0, r.stderr);
+      return r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput.permissionDecision : null;
+    };
+    assert.equal(hook('Edit', { old_string: '**Commit review:** on', new_string: '**Commit review:** off' }), 'ask', 'Edit on -> off');
+    assert.equal(hook('Edit', { old_string: '**Commit review:** on', new_string: '**Commit review:** off (solo)' }), 'ask', 'Edit on -> off (solo)');
+    assert.equal(hook('Write', { content: board.replace('**Commit review:** on', '**Commit review:** off') }), 'ask', 'Write with off');
+    assert.equal(hook('MultiEdit', { edits: [{ old_string: '**Commit review:** on', new_string: '**Commit review:** off' }] }), 'ask', 'MultiEdit on -> off');
+    assert.equal(hook('Edit', { old_string: row1, new_string: row1 + row2 }), null, 'a meeting-log row does not touch the switch');
+    assert.equal(hook('Write', { content: board + row2 }), null, 'a Write that keeps on');
+    assert.equal(fs.readFileSync(file, 'utf8'), board, 'the hook does not change the file');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

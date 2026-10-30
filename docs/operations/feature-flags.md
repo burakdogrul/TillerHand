@@ -14,7 +14,7 @@
 
 ## Flags
 
-The `/dashboard` dashboard reads this table. Date format `YYYY-MM-DD`, status `on` / `off` / `gradual %N`.
+The `/dashboard` dashboard reads this table. Date format `YYYY-MM-DD`, status `on` / `off` / `gradual %N`, kill switch tested `yes` / `no` (English in every language).
 
 | Flag | Purpose | Status | Owner | Added | Removal date | Kill switch tested |
 |---|---|---|---|---|---|---|

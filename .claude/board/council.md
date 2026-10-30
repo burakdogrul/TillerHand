@@ -15,7 +15,7 @@ The project profile decides which meetings and decisions go to the council (`doc
 |---|---|---|---|
 | Add-ons | Core: ponytail, caveman, mattpocock-skills, impeccable, humanizer, security-guidance (+ the type's LSP and stack skills). The others are turned off at project scope | All on | All on |
 | Commit review (haiku board on every commit) | Off | On | On |
-| Command list (descriptions in the skill list) | 10 core commands with descriptions, 18 by name only | Like Light | All with descriptions |
+| Command list (descriptions in the skill list) | 10 core commands with descriptions, 20 by name only | Like Light | All with descriptions |
 | Meeting council (3 stages) | None; meetings are single-stage | Phase end, go-live | Plan, phase end, go-live, REJECT |
 | Decision council | Database and auth decision | Database and auth decision | All one-way decisions |
 

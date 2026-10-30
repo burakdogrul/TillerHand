@@ -121,7 +121,9 @@ const OLD_RULES = {
     // 3.28.0: --plan-end + --plan-save widened or dropped the scope shield unasked; both are asked now
     'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-end)',
     // 3.10.0 allowed every tools.mjs flag; --enable and --commands are asked since 3.10.1, the broad rule skipped that
-    'Bash(node .claude/hooks/tools.mjs:*)'],
+    'Bash(node .claude/hooks/tools.mjs:*)',
+    // 3.49.2: lang.mjs --write saves the texts approval prompts show; only --show, --check, --export and --set stay allowed
+    'Bash(node .claude/hooks/lang.mjs:*)'],
   ask: [],
 };
 

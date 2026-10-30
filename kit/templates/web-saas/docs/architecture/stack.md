@@ -50,7 +50,7 @@ npm run lint
 npx tsc --noEmit       # type check
 npm run test           # vitest
 npx playwright test    # e2e
-npx supabase migration new [ad]   # new migration
+npx supabase migration new [name]   # new migration
 ```
 
 ## Folder structure
@@ -94,7 +94,7 @@ supabase/migrations/            # database changes ONLY here
 - Writing data: Server Action or route handler. In each: Zod validation → session check → permission check → operation.
 - Variables with the `NEXT_PUBLIC_` prefix go to the browser. A secret is never `NEXT_PUBLIC_`.
 - The Supabase secret key (`SUPABASE_SECRET_KEY`, `sb_secret_…`; old name `service_role`) only on the server and only when really needed (it bypasses RLS).
-- DB schema changes only through a migration file (`npx supabase migration new [ad]`). No manual DDL from the dashboard or MCP; the `supabase-dev` MCP is for trying data in dev.
+- DB schema changes only through a migration file (`npx supabase migration new [name]`). No manual DDL from the dashboard or MCP; the `supabase-dev` MCP is for trying data in dev.
 - Every new table has RLS on, a written policy, and an entry in the `tests/security/rls.mjs` → `TABLES` list (the `rls` job in CI turns red on an unregistered table).
 - On every page, think about `loading.tsx` / empty state / `error.tsx`.
 - Images with `next/image`, links with `next/link`.

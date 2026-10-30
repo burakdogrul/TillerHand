@@ -179,7 +179,8 @@ async function hook() {
   let command = '', dir = root;
   try {
     const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-    command = input.tool_input?.command ?? '';
+    // A backslash-newline is a line continuation to the shell: "git commit\<newline> -m x" is a commit
+    command = String(input.tool_input?.command ?? '').replace(/\\\r?\n/g, ' ');
     if (typeof input.cwd === 'string' && input.cwd) dir = input.cwd;
   } catch {
     process.exit(0);

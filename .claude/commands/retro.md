@@ -23,7 +23,7 @@ Goal: Keep what you learned in this project and improve the kit (the template fo
    - **Specific to this project** → add as a rule to `AGENTS.md` (to `CLAUDE.md` only if specific to Claude Code), `docs/architecture/stack.md` or the relevant doc. First check that CLAUDE.md is current with `claude-md-improver`. A mechanically checkable rule ("do not write Y in file X") becomes a hook rule with `/hookify` instead of text. The rule goes to the "Learned rules" section of `AGENTS.md`; write source and date in the format of `/fix-bug` step 8. If the dashboard shows a "Same bug class" warning, propose a rule for that class too; write the answer (added or not needed) into the specs as a `**Rule:**` line so the warning closes and is not asked again.
    - **General to all projects** → propose to the kit.
 5. **Kit proposals:** For each proposal:
-   - Which kit file: shared files are in the kit repo root (`AGENTS.md`, `CLAUDE.md`, `docs/...`, `.claude/...`), project-type-specific ones in `kit/templates/<tip>/...`, add-ons in `kit/templates/addons/<ek>/...`.
+   - Which kit file: shared files are in the kit repo root (`AGENTS.md`, `CLAUDE.md`, `docs/...`, `.claude/...`), project-type-specific ones in `kit/templates/<type>/...`, add-ons in `kit/templates/addons/<addon>/...`.
    - The text to add/change (as a diff) and why (which event it came from).
    - Prefer in this order: add a rule > change a rule > delete a rule; do not bloat the kit. If a rule with the same purpose exists, strengthen it. Write the text by the principles of `mattpocock-skills:writing-for-agents`.
    - Get the proposals approved with **multi-select**.

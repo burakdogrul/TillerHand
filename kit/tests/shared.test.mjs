@@ -234,7 +234,9 @@ test('attacker: commands forbidden in the Claude permission list are also denied
   for (const c of ['rm -rf .', 'git reset --hard HEAD~3', 'git push --force origin x', 'cat .env', 'Remove-Item -Recurse -Force src']) {
     assert.equal(run('destructive-guard.mjs', 'codex', root, command('codex', root, c)), 'deny', `codex: ${c}`);
     assert.equal(run('destructive-guard.mjs', 'antigravity', root, command('antigravity', root, c)), 'deny', `antigravity: ${c}`);
-    assert.equal(run('destructive-guard.mjs', 'claude', root, command('claude', root, c)), null, `claude: ${c} (in settings.json deny)`);
+    // 3.49.2: settings.json denies Read(./.env), not a Bash read of it: the hook asks for cat .env in Claude
+    if (c === 'cat .env') assert.equal(run('destructive-guard.mjs', 'claude', root, command('claude', root, c)), 'ask', `claude: ${c} (Read deny does not cover Bash)`);
+    else assert.equal(run('destructive-guard.mjs', 'claude', root, command('claude', root, c)), null, `claude: ${c} (in settings.json deny)`);
   }
   for (const c of ['rm .claude/state/freeze.json', 'sed -i s/deny/x/ .claude/hooks/destructive-guard.mjs', 'echo {} > .agents/hooks.json', 'cp x AGENTS.md']) {
     assert.equal(run('destructive-guard.mjs', 'codex', root, command('codex', root, c)), 'deny', `codex shell: ${c}`);

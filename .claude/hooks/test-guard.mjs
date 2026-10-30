@@ -13,8 +13,10 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { readInput, decide, isMain, findRoot } from './shared.mjs';
 import { t } from './lang.mjs';
+import { globRegex } from './structure-guard.mjs';
 
-const TEST = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec|e2e-spec)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$|_test\.(py|go)$/i;
+// Also mobile flows (Maestro, XCTest), snapshots and test setup files: they decide what a test sees
+const TEST = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec|e2e-spec|e2e)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$|_test\.(py|go)$|(^|\/)\.maestro\/.*\.ya?ml$|Tests?\.swift$|\.snap$|(^|\/)((vitest|jest)\.setup|setupTests)\.[cm]?[jt]sx?$/i;
 // Windows resolves "a.test.ts.", "a.test.ts " and "a.test.ts::$DATA" (alternate stream) to the same file
 const plain = (file) => file.replace(/\\/g, '/').replace(/:[^/]*$/, '').replace(/[. ]+(?=\/|$)/g, '');
 export const isTestFile = (file) => TEST.test(plain(file));
@@ -49,6 +51,60 @@ export function configRisk(before, after) {
   const a = new Set(before.split('\n')), b = new Set(after.split('\n'));
   const changed = [...a].filter((s) => !b.has(s)).concat([...b].filter((s) => !a.has(s)));
   return changed.some((s) => RISKY.test(s)) ? t(findRoot(), 'guard.test.configRisk') : null;
+}
+
+// package.json: the first test script (none yet, or npm's placeholder) set to one plain runner is not a weakening.
+// Every other field is compared as before; a flag, "|| true", "exit 0" or a changed pre/post/ci script stays asked.
+const NPM_PLACEHOLDER = 'echo "Error: no test specified" && exit 1';
+const PLAIN_RUNNER = /^(vitest run|vitest|jest|playwright test|pytest|node --test)$/;
+export function packageRisk(before, after) {
+  let b, a;
+  try { b = JSON.parse(before || '{}'); a = JSON.parse(after); } catch { return configRisk(before, after); }
+  const bs = b?.scripts ?? {}, as = a?.scripts ?? {};
+  const first = (bs.test === undefined || bs.test === NPM_PLACEHOLDER) && PLAIN_RUNNER.test(as.test ?? '');
+  if (!first) return configRisk(before, after);
+  const rest = { ...a, scripts: { ...as, test: bs.test } };
+  if (bs.test === undefined) delete rest.scripts.test;
+  return configRisk(JSON.stringify(b, null, 2), JSON.stringify(rest, null, 2));
+}
+
+// A first config (no file yet, no other config of the same runner): only the fields that drop or soften tests are asked,
+// and include/testDir must cover every test file already in the project
+const NEW_RISKY = /\b(exclude|testPathIgnorePatterns|testIgnore|passWithNoTests|bail|retries|thresholds?|coverageThreshold|grep|grepInvert|skip\w*|only|forbidOnly|setupFiles|globalSetup|fail_under)\b/i;
+const RUNNER_OF = [[/^(vitest|vite)(\.[\w-]+)?\.config\.|^vitest\.workspace\./i, 'vitest'], [/^playwright(\.[\w-]+)?\.config\./i, 'playwright'], [/^jest(\.[\w-]+)?\.config\./i, 'jest'], [/^cypress(\.[\w-]+)?\.config\./i, 'cypress']];
+const runnerOf = (base) => RUNNER_OF.find(([re]) => re.test(base))?.[1];
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
+function testFiles(root, dir = root, out = []) {
+  let entries = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) testFiles(root, full, out); continue; }
+    const rel = path.relative(root, full).split(path.sep).join('/');
+    if (TEST_NAME.test(e.name) && isTestFile(rel)) out.push(rel);
+  }
+  return out;
+}
+export function newConfigRisk(root, full, after) {
+  const base = path.basename(full), runner = runnerOf(base);
+  if (!runner || fs.existsSync(full)) return null; // not a first config: the normal comparison applies
+  const dir = path.dirname(full);
+  let siblings = [];
+  try { siblings = fs.readdirSync(dir).filter((n) => n !== base && runnerOf(n) === runner && (!/^vite\./i.test(n) || /\btest\s*:/.test(fs.readFileSync(path.join(dir, n), 'utf8')))); } catch { /* no folder */ }
+  let pkg = {};
+  try { pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')); } catch { /* none */ }
+  if (siblings.length || (runner === 'jest' && pkg.jest)) return t(findRoot(), 'guard.test.configRisk');
+  if (after.split('\n').some((s) => NEW_RISKY.test(s))) return t(findRoot(), 'guard.test.configRisk');
+  const strings = (re) => [...after.matchAll(re)].flatMap((m) => [...m[1].matchAll(/['"`]([^'"`]+)['"`]/g)].map((x) => x[1]));
+  const include = strings(/\b(?:include|testMatch)\s*:\s*\[([^\]]*)\]/g).map((p) => globRegex(p.replace(/^\.\//, '')));
+  const testDir = strings(/\b(?:testDir|roots)\s*:\s*(['"`][^'"`]+['"`]|\[[^\]]*\])/g).map((p) => p.replace(/^\.\//, '').replace(/\/$/, ''));
+  if (!include.length && !testDir.length) return null; // the runner's default finds every test file
+  const relDir = path.relative(root, dir).split(path.sep).join('/');
+  const covered = (f) => {
+    const own = relDir ? f.slice(relDir.length + 1) : f;
+    return (!include.length || include.some((re) => re.test(own))) && (!testDir.length || testDir.some((d) => own === d || own.startsWith(`${d}/`)));
+  };
+  return testFiles(root).every(covered) ? null : t(findRoot(), 'guard.test.configRisk');
 }
 
 // The real path too: a link or junction into the test folder, a Windows short name (TESTS~1)
@@ -88,6 +144,13 @@ function hook() {
     // Codex Move: a test moved to a path that does not run is as good as deleted; moving onto an existing file overwrites it
     else if (source && (!isTestFile(name) || (TEST_NAME.test(path.basename(source)) && !TEST_NAME.test(path.basename(name))))) reason = t(g.root, 'guard.test.movedAway', { source: f.source });
     else if (f.source && fs.existsSync(full)) reason = t(g.root, 'guard.test.moveOverwrite', { source: f.source, path: f.path });
+    else if (config && /(^|[\\/])package\.json$/i.test(name)) {
+      // An Edit carries only the changed piece: compare whole files
+      let disk = '';
+      try { disk = fs.readFileSync(full, 'utf8'); } catch { /* new file */ }
+      const whole = f.before !== undefined && f.before !== '' && disk.includes(f.before) ? disk.replace(f.before, () => after) : after;
+      reason = packageRisk(disk || before, whole);
+    } else if (config && f.before === undefined && !fs.existsSync(full) && runnerOf(path.basename(full))) reason = newConfigRisk(g.root, full, after); // a whole new file only
     else reason = config ? configRisk(before, after) : weakening(before, after);
     if (reason) {
       decide(g.tool, 'ask', t(g.root, 'guard.test.ask', { name: name.split(path.sep).join('/'), reason }));

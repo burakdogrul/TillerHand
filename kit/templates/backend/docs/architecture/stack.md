@@ -49,10 +49,10 @@ uv run fastapi dev app/main.py           # development
 uv run pytest                            # test
 uv run ruff check .                      # lint
 uv run ruff format .                     # format
-uv run alembic revision --autogenerate -m "[ad]"   # create a migration (always read the output)
+uv run alembic revision --autogenerate -m "[name]"   # create a migration (always read the output)
 uv run alembic upgrade head              # apply migrations
 uv run --with pip-audit pip-audit                            # dependency vulnerabilities
-docker build -t [ad] . && docker run --env-file .env -p 8000:8000 [ad]
+docker build -t [name] . && docker run --env-file .env -p 8000:8000 [name]
 ```
 
 ## Folder structure

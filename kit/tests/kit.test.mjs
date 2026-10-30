@@ -349,6 +349,21 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   assert.deepEqual(old.hooks, stop('--sessiz'), 'the input is not mutated');
 });
 
+test('3.49.2: ATTACK update removes the whole-script lang.mjs allow rule (it allowed --write); the four narrow rules arrive, the user\'s own rules stay', () => {
+  const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
+  const broad = 'Bash(node .claude/hooks/lang.mjs:*)';
+  const narrow = ['Bash(node .claude/hooks/lang.mjs --show)', 'Bash(node .claude/hooks/lang.mjs --check)',
+    'Bash(node .claude/hooks/lang.mjs --export:*)', 'Bash(node .claude/hooks/lang.mjs --set:*)'];
+  const own = ['Bash(npm test)', 'Bash(node scripts/lang.mjs:*)'];
+  const { settings: s, removed } = migrateSettings({ permissions: { allow: [own[0], broad, own[1]] } }, kit);
+  assert.equal(s.permissions.allow.includes(broad), false, 'the 3.49.1 wildcard is gone');
+  assert.deepEqual(removed, [`allow: ${broad}`], 'the removal is listed for the report');
+  for (const r of narrow) assert.ok(s.permissions.allow.includes(r), r);
+  assert.equal(s.permissions.allow.some((r) => r.includes('lang.mjs --write')), false, '--write is not allowed');
+  assert.deepEqual(s.permissions.allow.slice(0, 2), own, 'the project\'s own rules stay, in order');
+  assert.deepEqual(migrateSettings(s, kit), { settings: s, added: [], removed: [] }, 'running again changes nothing');
+});
+
 test('F-10 update settings migration: the kit command list is added when the project has none, a Full profile ({}) is kept', () => {
   const kit = JSON.parse(read(path.join(REPO, '.claude', 'settings.json')));
   const { settings: s, added } = migrateSettings({ permissions: {} }, kit);

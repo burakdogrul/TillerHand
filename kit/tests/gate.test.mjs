@@ -876,3 +876,20 @@ test('3.49.1 gate --run before approval: "command approval needed" also names an
     agents('node -e "process.exit(0)"');
   }
 });
+
+test('3.49.2: ATTACK commit gate: a backslash-newline after "commit" is still a commit; without a gate it is stopped exactly like git commit -m x', () => {
+  agents('node -e "process.exit(0)"');
+  sh('git add -A && git commit -qm step3492 --allow-empty');
+  write('continued.js', 'not reviewed');
+  try {
+    const plain = commit('git commit -m x');
+    assert.equal(plain.status, 2, 'the plain spelling is stopped: no gate run, no board approval');
+    for (const c of ['git commit\\\n -m x', 'git commit\\\r\n -m x']) {
+      const r = commit(c);
+      assert.equal(r.status, plain.status, `${JSON.stringify(c)}: same exit code as the plain spelling`);
+      assert.equal(r.stderr, plain.stderr, `${JSON.stringify(c)}: same reason as the plain spelling`);
+    }
+  } finally {
+    fs.rmSync(path.join(p, 'continued.js'), { force: true });
+  }
+});

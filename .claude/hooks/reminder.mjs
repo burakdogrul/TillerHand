@@ -22,7 +22,7 @@ try { fs.mkdirSync(path.dirname(counterFile), { recursive: true }); fs.writeFile
 
 const notes = [];
 const lang = readLang(root);
-if (lang) notes.push(`[Kit] Reply in ${lang}.`); // every message: the language rule must not fade in long sessions
+if (lang) notes.push(`[Kit] Reply in ${lang}. Labels and fixed value words in project files stay English.`); // every message: the language rule must not fade in long sessions
 if (data.count % INTERVAL === 0) {
   notes.push('[Kit reminder] Ask decisions with AskUserQuestion (recommended option first). Do not widen the scope. Follow the board and limit rules. End every answer with the status block.');
 }

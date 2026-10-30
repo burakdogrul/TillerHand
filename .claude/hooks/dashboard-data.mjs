@@ -221,7 +221,7 @@ export function unitEconomics(text) {
 // ---------- feedback and metrics ----------
 const FEEDBACK_KINDS = ['bug', 'request', 'complaint', 'praise', 'question'];
 const FEEDBACK_STATES = ['new', 'planned', 'done', 'rejected', 'merged'];
-// A known value in either language becomes the English one; anything else stays as written
+// A known value becomes its English form; anything else stays as written
 const inEnglish = (v, keys) => VALUES[keys.find((k) => isValue(v, k))]?? v;
 export function feedback(text) {
   const b = sections(text);

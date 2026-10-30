@@ -149,8 +149,16 @@ function hook() {
       if (k?.[0] === 'deny') decide(g.tool, 'deny', `${rel}: ${k[2]}`);
     }
   }
+  // "**Commit review:** off" in board.md turns the commit review off: changing that value is the user's call
+  for (const [i, p] of paths.entries()) {
+    if (relPath(p, groot) !== 'docs/workflow/board.md') continue;
+    const review = (s) => s?.match(/\*\*Commit review:\*\*[ \t]*([^\r\n]*)/i)?.[1].trim().toLowerCase();
+    let now; try { now = review(fs.readFileSync(p, 'utf8')); } catch { /* new file */ }
+    const next = review(g.files[i].after);
+    if (next !== undefined && next !== now) decide(g.tool, 'ask', t(g.root, 'guard.freeze.commitReview', { value: next }));
+  }
   const lock = readLock(g.root);
-  const outside = lock && paths.find((p) => !allowedInLock(p, lock, groot));
+  const outside =lock && paths.find((p) => !allowedInLock(p, lock, groot));
   if (outside) decide(g.tool, 'deny', `Edit lock: only ${lock}/ may be changed. If you need this file, ask the user; to remove the lock use /freeze off.`);
   const plan = readPlan(g.root);
   for (const [i, p] of (plan ? paths : []).entries()) {

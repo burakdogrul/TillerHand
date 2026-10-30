@@ -69,8 +69,9 @@ export function t(root, key, vars = {}) {
   const lang = readLang(root) ?? 'en';
   const own = lang === 'en' ? {} : cachedTranslation(root, lang);
   const en = MESSAGES[key].en;
-  // A hand-edited text that drops or adds a placeholder could hide what an approval dialog asks: English instead
-  const text = Object.hasOwn(own, key) && typeof own[key] === 'string' && placeholders(own[key]) === placeholders(en) ? own[key] : en;
+  // A hand-edited text that drops or adds a placeholder, or pushes it away with extra lines, could hide what an approval dialog asks: English instead
+  const lines = (s) => s.split('\n').length;
+  const text = Object.hasOwn(own, key) && typeof own[key] === 'string' && placeholders(own[key]) === placeholders(en) && lines(own[key]) === lines(en) ? own[key] : en;
   return text.replace(PLACEHOLDER, (m, name) => Object.hasOwn(vars, name) ? String(vars[name]) : m);
 }
 
