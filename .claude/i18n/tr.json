@@ -397,6 +397,7 @@
   "guard.destructive.envShell": "Komut bir .env dosyasını (sırlar) anıyor. AI onu okumaz, yazmaz; gerekirse kullanıcı yapar. Kullanıcı onayı gerekli.",
   "guard.destructive.gitOutput": "git çıktısını komutun seçtiği bir dosyaya yazıyor (--output / format-patch -o); bir koruma, test ya da ayar dosyasını ezebilir. Kullanıcı onayı gerekli.",
   "guard.destructive.boardShell": "docs/workflow/board.md (kurul üyeleri, commit incelemesi anahtarı) kabuktan değiştiriliyor. Dosya araçlarını kullan; yoksa kullanıcı onayı gerekli.",
+  "guard.destructive.perm.push": "Uzak depoya gönderiliyor (gönderilen dal yayına çıkabilir)",
   "guard.destructive.perm.freezeOff": "Düzenleme kilidi kaldırılıyor",
   "guard.destructive.perm.toolsCommands": "Paylaşılan .claude/settings.json → skillOverrides değişiyor (komut listesi)",
   "guard.destructive.perm.planAdd": "Onaylı planın dosya listesi genişliyor (kapsam kalkanı)",

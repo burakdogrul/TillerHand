@@ -3,6 +3,14 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.9] - 2026-10-30
+
+### Security
+- **More production deploys ask you:** `firebase deploy`, `wrangler deploy`/`publish`/`pages deploy`, `gcloud app deploy`, `serverless deploy`, `cdk deploy`, `pulumi up`, `amplify push`, `terraform apply`, `expo publish`, `eas build --auto-submit`, and `netlify deploy --prod` through `npx netlify-cli`.
+- **More data deletion is blocked:** `heroku pg:reset`, MongoDB `dropDatabase()`/`dropCollection()`/`deleteMany({})`, Laravel `migrate:fresh`/`refresh`/`reset`, TypeORM `schema:drop`, Knex `migrate:rollback --all`, `prisma db push --accept-data-loss`, and `terraform`/`tofu`/`pulumi destroy`.
+- On Codex and Antigravity every `git push` asks, as it already did in Claude Code: a pushed branch can deploy.
+- The structure guard blocks more clutter names in new projects: `a.old.ts`, `a.bak.ts`, `a.backup.ts`, `a-copy.ts`, `a (1).ts`, `Copy of a.ts`, `old/`, `backup/`, editor swap files (`.swp`, `.rej`, `.sav`) and OS files (`.DS_Store`, `Thumbs.db`).
+
 ## [3.49.8] - 2026-10-30
 
 ### Security

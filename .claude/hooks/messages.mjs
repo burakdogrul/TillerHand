@@ -400,6 +400,7 @@ export const MESSAGES = {
   'guard.destructive.envShell': { en: 'The command names a .env file (secrets). The AI does not read or write it; if needed, the user does it. User approval required.' },
   'guard.destructive.gitOutput': { en: 'git writes its output to a file the command chooses (--output / format-patch -o); it can overwrite a guard, test or settings file. User approval required.' },
   'guard.destructive.boardShell': { en: 'docs/workflow/board.md (board members, commit review switch) is changed from the shell. Use the file tools; otherwise user approval required.' },
+  'guard.destructive.perm.push': { en: 'Pushing to the remote repository (a pushed branch can deploy)' },
   'guard.destructive.perm.freezeOff': { en: 'The edit lock is being removed' },
   'guard.destructive.perm.toolsCommands': { en: 'The shared .claude/settings.json → skillOverrides is changing (command list)' },
   'guard.destructive.perm.planAdd': { en: 'The approved plan\'s file list is widening (scope shield)' },

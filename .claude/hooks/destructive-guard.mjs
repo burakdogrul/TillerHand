@@ -27,6 +27,8 @@ const DESTRUCTIVE = [
   [/\bgit\s+clean\b(?=[^;]*\s--?[a-z]*f)(?=[^;]*\s-[a-z]*d)/i, 'git clean permanently deletes untracked files'],
   [/\bredis-cli\b[^;]*\b(flushall|flushdb)\b/i, 'Redis data is being deleted'],
   [/\bfirebase\s+firestore:delete\b/i, 'Firestore data is being deleted'],
+  [/\bheroku\s+pg:reset\b|\bdrop(Database|Collection)\s*\(|\bdeleteMany\s*\(\s*\{\s*\}\s*\)|\bartisan\s+migrate:(fresh|refresh|reset)\b|\btypeorm\b[^;]*\bschema:drop\b|\bknex\b[^;]*\bmigrate:rollback\b[^;]*--all\b|\bprisma\s+db\s+push\b[^;]*--accept-data-loss\b/i, 'Database data is being deleted or reset'],
+  [/\b(terraform|tofu|pulumi)\s+destroy\b/i, 'Cloud infrastructure is being destroyed'],
 ];
 
 // Database addresses other than localhost count as prod (or a shared environment)
@@ -45,8 +47,9 @@ const NEEDS_APPROVAL = [
   // The subcommand can also come after flags: vercel --scope team promote <url>
   [/\b(vercel|vc)(@[\w.-]+)?\b[^;&|]*\s(promote|rollback)\b/i, 'guard.destructive.promoteRollback'],
   [UNCLEAR_ENV, 'guard.destructive.unclearEnv'],
-  [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify\s+deploy\b[^;]*--prod/i, 'guard.destructive.serverDeploy'],
-  [/\beas(-cli(@[\w.-]+)?)?\s+(submit\b|update:(rollback|republish)\b|update\b(?=[^;\n]*--(branch|channel|environment)(=|\s+)['"]?prod(uction)?\b)|deploy\b(?=[^;\n]*--prod\b))/i, 'guard.destructive.storeSubmit'],
+  // A package spelling (npx netlify-cli, firebase-tools, wrangler@3) deploys the same way
+  [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify(-cli)?(@[\w.-]+)?\s+deploy\b[^;]*--prod|\bfirebase(-tools)?(@[\w.-]+)?\s+deploy\b|\bwrangler(@[\w.-]+)?\s+(deploy|publish|pages\s+deploy)\b|\bgcloud\s+app\s+deploy\b|\b(serverless|sls)\s+deploy\b|\bcdk\s+deploy\b|\bpulumi\s+up\b|\bamplify\s+(push|publish)\b|\b(terraform|tofu)\s+apply\b|\bexpo\s+publish\b/i, 'guard.destructive.serverDeploy'],
+  [/\beas(-cli(@[\w.-]+)?)?\s+(submit\b|build\b(?=[^;\n]*--auto-submit\b)|update:(rollback|republish)\b|update\b(?=[^;\n]*--(branch|channel|environment)(=|\s+)['"]?prod(uction)?\b)|deploy\b(?=[^;\n]*--prod\b))/i, 'guard.destructive.storeSubmit'],
   [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'guard.destructive.pushMain'],
   [/\bgit\s+(rebase|filter-branch|filter-repo)\b/i, 'guard.destructive.rewriteHistory'],
   [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'guard.destructive.migration'],
@@ -304,6 +307,8 @@ const PERMISSION_EQUIVALENT = [
   ['deny', /\bgit\s+reset\s+[^;&|]*--hard\b/i, 'git reset --hard deletes uncommitted work'],
   ['deny', /\bgit\s+push\b[^;&|]*\s(--force\S*|-\w*f\w*|\+\S+)(?=\s|$)/i, 'git push --force overwrites the remote history'],
   ['deny', ENV_ACCESS, 'Access to .env or secrets/ (the AI does not read or write them)'],
+  // Claude asks every push through settings.json (Bash(git push:*)); a push to any branch can deploy (Vercel's prod branch)
+  ['ask', /\bgit\s+push\b/i, 'guard.destructive.perm.push'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'guard.destructive.perm.freezeOff'],
   ['ask', /tools\.mjs['"]?\s+['"]?--commands\b/i, 'guard.destructive.perm.toolsCommands'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-add\b/i, 'guard.destructive.perm.planAdd'],

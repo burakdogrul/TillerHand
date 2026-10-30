@@ -697,3 +697,79 @@ test('3.49.8: ATTACK package gate: 60 package names are asked at once, before an
   assert.doesNotMatch(r.stderr, /FETCH-CALLED/, 'the cap decides before any fetch');
   assert.ok(ms < 5000, `took ${ms} ms`);
 });
+
+// ---------- 3.49.9: deploy and data-deletion commands, git push on Codex, clutter names ----------
+
+// Runs every command through the shield and returns the ones whose decision is not in `want` (with what they got)
+const shieldMisses = (decide, commands, want) =>
+  commands.map((c) => [c, decide(c)]).filter(([, d]) => !want.includes(d)).map(([c, d]) => `${c} -> ${d}`);
+
+test('3.49.9: ATTACK shield: deploy commands (netlify, firebase, wrangler, gcloud, serverless, cdk, pulumi, amplify, terraform apply, expo, eas submit) are asked or denied', () => {
+  const root = shieldProject();
+  try {
+    const deploys = ['npx netlify-cli deploy --prod', 'firebase deploy', 'wrangler deploy', 'wrangler publish',
+      'npx wrangler pages deploy ./dist', 'gcloud app deploy', 'serverless deploy --stage prod', 'cdk deploy', 'pulumi up',
+      'amplify push', 'terraform apply -auto-approve', 'expo publish', 'eas build --profile production --auto-submit'];
+    assert.deepEqual(shieldMisses((c) => shield(root, c), deploys, ['ask', 'deny']), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.9: ATTACK shield: data-deletion commands (heroku pg:reset, mongosh drop/deleteMany, artisan migrate:fresh/refresh, typeorm schema:drop, knex rollback --all, prisma --accept-data-loss, terraform/tofu/pulumi destroy) are asked or denied', () => {
+  const root = shieldProject();
+  try {
+    const wipes = ['heroku pg:reset DATABASE --confirm app', 'mongosh --eval "db.dropDatabase()"',
+      'mongosh --eval "db.users.deleteMany({})"', 'php artisan migrate:fresh', 'php artisan migrate:refresh',
+      'npx typeorm schema:drop', 'npx knex migrate:rollback --all', 'npx prisma db push --accept-data-loss',
+      'terraform destroy', 'tofu destroy', 'pulumi destroy'];
+    assert.deepEqual(shieldMisses((c) => shield(root, c), wipes, ['ask', 'deny']), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.9: shield: local, preview and non-destructive neighbours of deploy and deletion commands stay free', () => {
+  const root = shieldProject();
+  try {
+    const free = ['firebase emulators:start', 'wrangler dev', 'terraform plan', 'pulumi preview', 'cdk diff',
+      'npx prisma db push', 'php artisan migrate', 'npx knex migrate:latest', 'mongosh --eval "db.users.find({})"'];
+    assert.deepEqual(shieldMisses((c) => shield(root, c), free, [null]), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.9: ATTACK shield: on Codex a plain git push, a push to another ref and git push --mirror are stopped; git status stays free', () => {
+  const root = shieldProject();
+  try {
+    const pushes = ['git push', 'git push origin HEAD:release', 'git push --mirror'];
+    assert.deepEqual(shieldMisses((c) => shieldOn('codex', root, c), pushes, ['ask', 'deny']), []);
+    assert.equal(shieldOn('codex', root, 'git status'), null, 'git status');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+const TEMPLATES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates');
+
+test('3.49.9: ATTACK structure guard: backup, old-version, copy, editor-swap and OS clutter names inside src/lib/ are denied by the web-saas map', async () => {
+  const { readMap, check: checkPath } = await import('../../.claude/hooks/structure-guard.mjs');
+  const map = readMap(path.join(TEMPLATES, 'web-saas'));
+  assert.notEqual(map, null, 'web-saas structure.json loads');
+  const clutter = ['a.old.ts', 'a.bak.ts', 'a.backup.ts', 'a.ts.bak2', 'a.ts.old', 'a_bak.ts', 'a-copy.ts', 'a_copy.ts',
+    'a (1).ts', 'Copy of a.ts', 'a-backup.ts', 'a_backup.ts', 'old/a.ts', 'backup/a.ts', 'a.sav', '.DS_Store',
+    'Thumbs.db', 'a.swp', 'a.rej'].map((f) => `src/lib/${f}`);
+  const missed = clutter.map((f) => [f, checkPath(f, map)?.decision ?? null]).filter(([, d]) => d !== 'deny').map(([f, d]) => `${f} -> ${d}`);
+  assert.deepEqual(missed, []);
+});
+
+test('3.49.9: structure guard: real names that only look like clutter (bold, copy-to-clipboard, backup-service, old-api) stay allowed in src/lib/', async () => {
+  const { readMap, check: checkPath } = await import('../../.claude/hooks/structure-guard.mjs');
+  const map = readMap(path.join(TEMPLATES, 'web-saas'));
+  assert.notEqual(map, null, 'web-saas structure.json loads');
+  const real = ['src/lib/a.ts', 'src/lib/bold.ts', 'src/lib/copy-to-clipboard.ts', 'src/lib/backup-service.ts', 'src/lib/folder/old-api.ts'];
+  // Name the deny pattern that catches a real name, so a too-wide glob shows itself
+  const blocked = real.filter((f) => checkPath(f, map) !== null)
+    .map((f) => `${f} -> ${checkPath(f, map).decision} (${map.raw.deny.filter((_, i) => map.deny[i].test(f)).join(', ') || 'off map'})`);
+  assert.deepEqual(blocked, []);
+});
+
+test('3.49.9: structure guard: web-saas, mobile and backend templates carry the same clutter deny list', () => {
+  const deny = (type) => JSON.parse(fs.readFileSync(path.join(TEMPLATES, type, '.claude', 'structure.json'), 'utf8')).deny;
+  const web = deny('web-saas');
+  assert.ok(Array.isArray(web) && web.length > 0, 'web-saas has a deny list');
+  for (const type of ['mobile', 'backend']) assert.deepEqual(deny(type), web, type);
+});

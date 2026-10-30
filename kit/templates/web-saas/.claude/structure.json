@@ -71,7 +71,6 @@
     "CLAUDE-SECURITY-*/**"
   ],
   "deny": [
-    "**/*.bak",
     "**/*.orig",
     "**/*.tmp",
     "**/*~",
@@ -85,6 +84,25 @@
     "**/tmp/**",
     "**/untitled*",
     "**/test.*",
-    "**/deneme*"
+    "**/deneme*",
+    "**/*.bak*",
+    "**/*.old",
+    "**/*.old.*",
+    "**/*_bak.*",
+    "**/*.backup.*",
+    "**/*-backup.*",
+    "**/*_backup.*",
+    "**/*-copy.*",
+    "**/*-copy?.*",
+    "**/*_copy.*",
+    "**/* (?).*",
+    "**/Copy of *",
+    "**/old/**",
+    "**/backup/**",
+    "**/*.sav",
+    "**/*.swp",
+    "**/*.rej",
+    "**/.DS_Store",
+    "**/Thumbs.db"
   ]
 }
