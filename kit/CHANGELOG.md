@@ -3,6 +3,11 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.4] - 2026-10-30
+
+### Security
+- A `.env` glob with a bracket range or POSIX class (`cat .e[a-z]v`, `.e[[:alpha:]]v`, `.env.[a-z]*`) is asked. The 3.49.3 glob matcher read `[a-z]` as the three characters `a`, `-`, `z`, so the read went through unasked.
+
 ## [3.49.3] - 2026-10-30
 
 ### Security

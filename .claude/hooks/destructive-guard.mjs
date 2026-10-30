@@ -267,12 +267,16 @@ const ENV_NAMES = ['.env', '.env.local', '.env.production', '.env.development', 
 export function globMatch(glob, name) {
   const tokens = [];
   for (let i = 0; i < glob.length; i++) {
-    const c = glob[i], end = c === '[' ? glob.indexOf(']', i + 2) : -1;
+    const c = glob[i];
+    let end = c === '[' ? glob.indexOf(']', i + 2) : -1;
+    // [[:alpha:]]: the class's own ] does not close the set
+    if (end > -1 && glob.slice(i + 1, end).includes('[:')) end = glob.indexOf(']', end + 1);
     if (c === '*') { if (tokens.at(-1) !== '*') tokens.push('*'); }
     else if (c === '?') tokens.push((x) => true);
     else if (end > -1) {
       const body = glob.slice(i + 1, end).toLowerCase(), neg = /^[!^]/.test(body), set = neg ? body.slice(1) : body;
-      tokens.push((x) => set.includes(x) !== neg);
+      // A range (a-z), a POSIX class ([:alpha:]) or an escape is not parsed: it counts as any character (asked)
+      tokens.push(/[-\\]|\[:/.test(set) ? () => true : (x) => set.includes(x) !== neg);
       i = end;
     } else tokens.push((x) => x === c.toLowerCase());
   }

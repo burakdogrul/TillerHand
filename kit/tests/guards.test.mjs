@@ -603,3 +603,12 @@ test('3.49.3: ATTACK shield: globs that can match .env.staging, .env.test or .en
     for (const c of ['cat .env.example', 'git log --oneline -5']) assert.equal(shield(root, c), null, c);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('3.49.4: ATTACK shield: a .env glob with a bracket range or POSIX class (.e[a-z]v, .e[[:alpha:]]v, .e[m-o]v, .env.[a-z]*) is asked', () => {
+  const root = shieldProject();
+  try {
+    for (const c of ['cat .e[a-z]v', 'cat .e[[:alpha:]]v', 'cat .e[m-o]v', 'cat .env.[a-z]*'])
+      assert.equal(shield(root, c), 'ask', c);
+    assert.equal(shield(root, 'cat .e[x]v'), null, 'cat .e[x]v');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
