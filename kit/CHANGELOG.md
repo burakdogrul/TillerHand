@@ -3,6 +3,12 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.3] - 2026-10-30
+
+### Security
+- **The shell guard no longer crashes on a glob with an unclosed `[`** (`…; echo .[`, `jq '.["a"]'`). The 3.49.2 `.env` glob check threw there, and a crashed hook lets the command run. Globs are now matched without regular expressions, so `.**********z` cannot stall the hook either, and any unexpected error in the shell guard asks you instead of passing.
+- `.env` globs also cover `.env.staging`, `.env.test` and `.env.preview` (`cat .env.st*`).
+
 ## [3.49.2] - 2026-10-30
 
 ### Security

@@ -391,6 +391,7 @@
   "guard.destructive.remoteDb": "Komut localhost dışındaki bir veritabanına bağlanıyor (prod olabilir). Kullanıcı onayı gerekli; AI prod erişim bilgisi kullanmamalı.",
   "guard.destructive.testShell": "Test dosyası kabuk komutuyla değiştiriliyor, taşınıyor veya siliniyor. Testi geçirmek için testi zayıflatmak yasak (AGENTS.md kural 7); test düzenlemesini dosya aracıyla yap. Kullanıcı onayı gerekli.",
   "guard.destructive.inlineTest": "Satır içi betik bir test yolunu anıyor; test dosyasına yazıyor olabilir. Test dosyasına yalnız test-writer ajanı yazar (AGENTS.md kural 7). Kullanıcı onayı gerekli.",
+  "guard.destructive.internalError": "Kabuk kalkanı bu komutu denetleyemedi ({error}). Kullanıcı onayı gerekli.",
   "guard.destructive.obfuscated": "Komut gizlenmiş görünüyor (satır sonu \\, $'..', $(...), `...` veya ${...}) ve korunan bir işlem içeriyor. Kullanıcı onayı gerekli.",
   "guard.destructive.indirectHook": "Kitin koruma betiği dolaylı yazımla çalıştırılıyor ($DEĞİŞKEN, $(...), `...`, ${...} veya * ?); kural metni bunun içini göremez. Kullanıcı onayı gerekli.",
   "guard.destructive.envShell": "Komut bir .env dosyasını (sırlar) anıyor. AI onu okumaz, yazmaz; gerekirse kullanıcı yapar. Kullanıcı onayı gerekli.",

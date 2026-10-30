@@ -394,6 +394,7 @@ export const MESSAGES = {
   'guard.destructive.remoteDb': { en: 'The command connects to a database other than localhost (could be prod). User approval required; the AI must not use prod access credentials.' },
   'guard.destructive.testShell': { en: 'A test file is being changed, moved or deleted with a shell command. Weakening a test to make it pass is forbidden (AGENTS.md rule 7); edit tests with a file tool. User approval required.' },
   'guard.destructive.inlineTest': { en: 'An inline script names a test path; it may write to a test file. Only the test-writer agent writes to test files (AGENTS.md rule 7). User approval required.' },
+  'guard.destructive.internalError': { en: 'The shell guard could not check this command ({error}). User approval required.' },
   'guard.destructive.obfuscated': { en: 'The command looks obfuscated (line ending \\, $\'..\', $(...), `...` or ${...}) and contains a guarded operation. User approval required.' },
   'guard.destructive.indirectHook': { en: 'A kit guard script is run with an indirect spelling ($VARIABLE, $(...), `...`, ${...} or * ?); the rule text cannot see inside it. User approval required.' },
   'guard.destructive.envShell': { en: 'The command names a .env file (secrets). The AI does not read or write it; if needed, the user does it. User approval required.' },

@@ -261,11 +261,32 @@ export function scopeIssue(command, dir, root) {
 // .env in a shell command (git show :.env, curl -d @.env, cat apps/web/.env.local); .env.example, .env.sample (any middle part) are free
 const ENV_ACCESS = /(?<![\w.-])\.env(?![\w.-]*\.(example|sample)(?![\w.-]))(\.[\w.-]+|\*)?(?=$|[\s'";|&)<>])|(^|[\s'"/\\])secrets[/\\]/i;
 // A glob that can match .env (.e*, .en?, .e[n]v): the shell expands it to the file
-const ENV_NAMES = ['.env', '.env.local', '.env.production', '.env.development'];
-const envGlob = (s) => [...s.matchAll(/(?<![\w.-])\.[^\s'";|&)<>/\\]*[*?[][^\s'";|&)<>/\\]*/g)].some(([g]) => {
-  const re = new RegExp(`^${g.replace(/[.+^${}()|\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')}$`, 'i');
-  try { return ENV_NAMES.some((n) => re.test(n)); } catch { return true; } // an unclosed [ : asked
-});
+const ENV_NAMES = ['.env', '.env.local', '.env.production', '.env.development', '.env.staging', '.env.test', '.env.preview'];
+// Glob match (* ? [..] [!..]) by dynamic programming, not a regex: no throw on an unclosed [ (bash reads it as a
+// plain [) and no backtracking blow-up on ********. Case-insensitive, like the Windows file system.
+export function globMatch(glob, name) {
+  const tokens = [];
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i], end = c === '[' ? glob.indexOf(']', i + 2) : -1;
+    if (c === '*') { if (tokens.at(-1) !== '*') tokens.push('*'); }
+    else if (c === '?') tokens.push((x) => true);
+    else if (end > -1) {
+      const body = glob.slice(i + 1, end).toLowerCase(), neg = /^[!^]/.test(body), set = neg ? body.slice(1) : body;
+      tokens.push((x) => set.includes(x) !== neg);
+      i = end;
+    } else tokens.push((x) => x === c.toLowerCase());
+  }
+  const s = name.toLowerCase();
+  let row = [true, ...Array(s.length).fill(false)];
+  for (const k of tokens) {
+    const next = [k === '*' && row[0], ...Array(s.length).fill(false)];
+    for (let j = 1; j <= s.length; j++) next[j] = k === '*' ? row[j] || next[j - 1] : row[j - 1] && k(s[j - 1]);
+    row = next;
+  }
+  return row[s.length];
+}
+const envGlob = (s) => [...s.matchAll(/(?<![\w.-])\.[^\s'";|&)<>/\\]*[*?[][^\s'";|&)<>/\\]*/g)]
+  .some(([g]) => ENV_NAMES.some((n) => globMatch(g, n)));
 // vercel env pull writes the dev values into .env.local without showing them (a prod pull is denied above). Only the
 // pull's own part of the chain is free; a comment (#) after it is not.
 const envIssue = (k) => k.split(/;|&&|\|\||[|&\n]/).some((s) =>
@@ -406,8 +427,13 @@ function evaluateOne(command) {
 
 if (isMain(import.meta.url)) {
   const g = readInput();
-  // Of the lists, the stricter wins (deny > ask)
-  const results = g ? [evaluate(g.command, g), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root)].filter(Boolean) : [];
+  // Of the lists, the stricter wins (deny > ask). A guard that throws would let the command run: asked instead
+  let results;
+  try {
+    results = g ? [evaluate(g.command, g), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root)].filter(Boolean) : [];
+  } catch (e) {
+    results = [{ decision: 'ask', reason: tr('guard.destructive.internalError', { error: String(e?.message ?? e).slice(0, 200) }) }];
+  }
   const s = results.find((x) => x.decision === 'deny') ?? results[0];
   if (s) decide(g.tool, s.decision, s.decision === 'ask' ? tr('guard.destructive.prefix', { reason: s.reason }) : `Shield: ${s.reason}`);
   process.exit(0);

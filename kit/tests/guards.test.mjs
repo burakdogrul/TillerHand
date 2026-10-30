@@ -533,3 +533,73 @@ test('3.49.2b: ATTACK shield: a shell write that reaches docs/workflow/board.md 
       assert.equal(shield(root, c), 'ask', c);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+// ---------- 3.49.3: glob tokens that crash or stall the shield ----------
+
+// Same hook as Codex / Antigravity run it (no CLAUDE_PROJECT_DIR; the permission-list counterpart applies); returns deny | ask | null
+const shieldOn = (tool, root, command) => {
+  const input = tool === 'codex' ? { tool_name: 'Bash', turn_id: 't1', cwd: root, tool_input: { command } }
+    : { toolCall: { name: 'run_command', args: { CommandLine: command, Cwd: root } }, workspacePaths: [root] };
+  const env = { ...process.env };
+  delete env.CLAUDE_PROJECT_DIR;
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'destructive-guard.mjs')], { input: JSON.stringify(input), encoding: 'utf8', env });
+  assert.equal(r.status, 0, r.stderr);
+  if (!r.stdout.trim()) return null;
+  const j = JSON.parse(r.stdout);
+  return tool === 'antigravity' ? j.decision : j.hookSpecificOutput.permissionDecision;
+};
+
+test('3.49.3: ATTACK shield: an unclosed [ in a later glob does not crash the hook; rm -rf / and git push --force stay denied on Codex and Antigravity', () => {
+  const root = shieldProject();
+  try {
+    for (const tool of ['codex', 'antigravity']) {
+      assert.equal(shieldOn(tool, root, 'rm -rf /'), 'deny', `${tool} baseline rm -rf /`);
+      assert.equal(shieldOn(tool, root, 'rm -rf / ; echo .['), 'deny', `${tool}: rm -rf / ; echo .[`);
+      assert.equal(shieldOn(tool, root, 'git push --force ; echo .['), 'deny', `${tool}: git push --force ; echo .[`);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.3: ATTACK shield: on Claude Code an unclosed [ after rm -rf / or git push --force exits 0 with the same decision as the command alone', () => {
+  const root = shieldProject();
+  try {
+    assert.equal(shield(root, 'rm -rf / ; echo .['), shield(root, 'rm -rf /'), 'rm -rf / ; echo .[');
+    assert.equal(shield(root, 'git push --force ; echo .['), shield(root, 'git push --force'), 'git push --force ; echo .[');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.3: ATTACK shield: a jq filter with .[ exits 0 with a decision or none', () => {
+  const root = shieldProject();
+  try {
+    const c = `jq '.["a"]' f.json`;
+    for (const d of [shield(root, c), shieldOn('antigravity', root, c)]) // both assert exit status 0
+      assert.ok(d === 'ask' || d === null, `got ${JSON.stringify(d)}`);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.3: ATTACK shield: a dot-glob with 22 stars is decided in under 2000 ms (no ReDoS)', () => {
+  const root = shieldProject();
+  try {
+    const command = `ls .${'*'.repeat(22)}z`;
+    const start = Date.now();
+    const r = spawnSync(process.execPath, [path.join(HOOKS, 'destructive-guard.mjs')], {
+      input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command }, cwd: root }),
+      encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root }, timeout: 10000,
+    });
+    const ms = Date.now() - start;
+    assert.equal(r.error, undefined, `spawn error: ${r.error && r.error.code}`);
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(ms < 2000, `took ${ms} ms`);
+    const d = r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput.permissionDecision : null;
+    assert.ok(d === 'ask' || d === null, `got ${JSON.stringify(d)}`);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.3: ATTACK shield: globs that can match .env.staging, .env.test or .env.preview are asked; .env.example and git log stay free', () => {
+  const root = shieldProject();
+  try {
+    for (const c of ['cat .env.st*', 'cat .env.sta*ing', 'cat .env.te?t', 'cat .env.pre*'])
+      assert.equal(shield(root, c), 'ask', c);
+    for (const c of ['cat .env.example', 'git log --oneline -5']) assert.equal(shield(root, c), null, c);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
