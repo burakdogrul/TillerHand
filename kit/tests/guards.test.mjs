@@ -698,6 +698,44 @@ test('3.49.8: ATTACK package gate: 60 package names are asked at once, before an
   assert.ok(ms < 5000, `took ${ms} ms`);
 });
 
+// ---------- 3.49.10: package gate flag values, launchers, missing installers, create/init ----------
+
+const hasPkg = (c, eco, name) => findPackages(c).some((p) => p.eco === eco && p.name === name);
+const pkgIds = (c) => findPackages(c).map((p) => `${p.eco}:${p.name}`);
+
+test('3.49.10: ATTACK package gate: a flag value before the subcommand (npm --prefix, pnpm -C/--dir, yarn --cwd) does not hide the install', () => {
+  for (const c of ['npm --prefix x i zzz-pkg', 'pnpm -C x add zzz-pkg', 'pnpm --dir x add zzz-pkg', 'yarn --cwd x add zzz-pkg']) {
+    assert.equal(hasPkg(c, 'npm', 'zzz-pkg'), true, c);
+    for (const wrong of ['i', 'x', 'add']) assert.equal(findPackages(c).some((p) => p.name === wrong), false, `${c}: ${wrong} is not a package`);
+  }
+});
+
+test('3.49.10: ATTACK package gate: flags or a python launcher before pip install, and yarn workspace add, are found', () => {
+  for (const c of ['pip --quiet install zzz-pkg', 'python -m pip --disable-pip-version-check install zzz-pkg',
+    'py -m pip install zzz-pkg', 'python3.12 -m pip install zzz-pkg'])
+    assert.equal(hasPkg(c, 'pypi', 'zzz-pkg'), true, c);
+  const ws = 'yarn workspace web add zzz-pkg';
+  assert.equal(hasPkg(ws, 'npm', 'zzz-pkg'), true, ws);
+  assert.equal(findPackages(ws).some((p) => p.name === 'web'), false, `${ws}: web is a workspace, not a package`);
+});
+
+test('3.49.10: ATTACK package gate: pipx, uv tool, pdm, pipenv, bare expo and deno npm: specifiers are found', () => {
+  for (const c of ['pipx install zzz-pkg', 'uv tool install zzz-pkg', 'pdm add zzz-pkg', 'pipenv install zzz-pkg'])
+    assert.equal(hasPkg(c, 'pypi', 'zzz-pkg'), true, c);
+  for (const c of ['expo install zzz-pkg', 'deno add npm:zzz-pkg', 'deno run npm:zzz-pkg'])
+    assert.equal(hasPkg(c, 'npm', 'zzz-pkg'), true, c);
+  assert.deepEqual(findPackages('deno run main.ts'), [], 'a local deno script is not a package');
+});
+
+test('3.49.10: ATTACK package gate: npm/pnpm/yarn/bun create and npm init <name> run the create- package', () => {
+  for (const c of ['npm create zzz', 'npm init zzz', 'pnpm create zzz', 'yarn create zzz', 'bun create zzz'])
+    assert.equal(hasPkg(c, 'npm', 'create-zzz'), true, c);
+  assert.deepEqual(pkgIds('npm create zzz@latest my-app'), ['npm:create-zzz'], 'my-app is the target folder, not a package');
+  assert.equal(hasPkg('npm init @scope', 'npm', '@scope/create'), true, 'npm init @scope');
+  assert.equal(hasPkg('npm init @scope/zzz', 'npm', '@scope/create-zzz'), true, 'npm init @scope/zzz');
+  for (const c of ['npm init', 'npm init -y']) assert.deepEqual(findPackages(c), [], c);
+});
+
 // ---------- 3.49.9: deploy and data-deletion commands, git push on Codex, clutter names ----------
 
 // Runs every command through the shield and returns the ones whose decision is not in `want` (with what they got)

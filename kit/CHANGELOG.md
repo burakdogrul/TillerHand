@@ -3,6 +3,12 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.10] - 2026-10-30
+
+### Security
+- **The package gate checks more install commands:** `npm create <x>` / `npm init <x>` (and the pnpm, yarn, bun versions) check the `create-<x>` package they download and run; `pipx install`, `uv tool install`, `pdm add`, `pipenv install`, a bare `expo install` and Deno `npm:` specifiers are checked too.
+- Flags before the subcommand no longer hide the package: `npm --prefix x i`, `pnpm -C x add`, `yarn --cwd x add`, `yarn workspace web add`, `pip --quiet install`, `py -m pip install`, `python3.12 -m pip install`.
+
 ## [3.49.9] - 2026-10-30
 
 ### Security

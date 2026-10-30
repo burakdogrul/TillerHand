@@ -26,9 +26,20 @@ const POPULAR = {
 
 // Case-insensitive (the Windows shell is); npm's install aliases (in, ins, isntall, it…) count as install
 const COMMANDS = [
-  [/^(npm|pnpm|bun)\s+(i|in|ins|inst|insta|instal|install|isnt|isnta|isntal|isntall|it|add)\b/i, 'npm'], [/^yarn\s+(global\s+)?add\b/i, 'npm'], [/^npx\s+expo\s+install\b/i, 'npm'],
-  [/^uv\s+(add|pip\s+install)\b/i, 'pypi'], [/^(python3?\s+-m\s+)?pip3?\s+install\b/i, 'pypi'], [/^poetry\s+add\b/i, 'pypi'],
+  [/^(npm|pnpm|bun)\s+(i|in|ins|inst|insta|instal|install|isnt|isnta|isntal|isntall|it|add)\b/i, 'npm'], [/^yarn\s+(global\s+)?add\b/i, 'npm'], [/^(npx\s+)?expo\s+install\b/i, 'npm'],
+  // create/init <name> downloads and runs create-<name>; deno takes npm:<name> specifiers
+  [/^(npm|pnpm|yarn|bun)\s+(create|init)\b/i, 'npm', 'create'], [/^deno\s+(add|install|run|x)\b/i, 'npm', 'deno'],
+  [/^uv\s+(add|pip\s+install|tool\s+install)\b/i, 'pypi'], [/^((python[\d.]*|py)(\s+-\d[\d.]*)?\s+-m\s+)?pip[\d.]*(\s+-\S+)*\s+install\b/i, 'pypi'],
+  [/^(poetry|pdm)\s+add\b|^(pipenv|pipx)\s+install\b/i, 'pypi'],
 ];
+// create-vite for vite, @scope/create for @scope, @scope/create-x for @scope/x (npm's own mapping)
+function createName(arg) {
+  const n = npmName(arg);
+  if (!n) return null;
+  if (!n.startsWith('@')) return `create-${n}`;
+  const [scope, rest] = n.split('/');
+  return rest ? `${scope}/create-${rest}` : `${scope}/create`;
+}
 
 // Download-and-run: the first positional is the package (the rest are its arguments), or the values of the package flags.
 // local: the runner uses a bin the project already has before downloading (npx, npm exec, bunx); pnpm/yarn dlx always download.
@@ -72,6 +83,7 @@ function execArgs(args, eco, positional) {
 // Also timeout/nice/stdbuf, shell keywords (then, do, else, !) and combined shell flags (bash -lc).
 const WRAPPER = /^(?:\(|\{|!\s*|[A-Za-z_]\w*=\S*\s+|(?:sudo|env|time|nohup|exec|command|xargs|corepack|call|start|then|do|else|ionice|stdbuf)\s+|timeout\s+(?:-\S+\s+)*\S+\s+|nice\s+(?:-n\s*\S+\s+|-\d+\s+)?|(?:bash|sh|zsh|dash|cmd|pwsh|powershell)(?:\.exe)?\s+(?:-\w*c|\/c|\/k|-Command)\s+["']?)/i;
 const SUBCOMMAND = /^(install|i|add|exec|x|dlx|tool|pip|run|global)$/;
+const VALUE_FLAG = /^(--prefix|-C|--dir|--cwd|--workspace|--filter|--registry|--cache|--userconfig)$/i;
 export function normalize(part) {
   let s = part.trim(), prev;
   do { prev = s; s = s.replace(WRAPPER, '').trim(); } while (s !== prev);
@@ -81,7 +93,10 @@ export function normalize(part) {
   const t = s.split(/\s+/);
   if (/^(npm|pnpm|yarn|bun|uv)$/i.test(t[0])) {
     let i = 1;
-    while (i < t.length && t[i].startsWith('-')) i += !t[i].includes('=') && t[i + 1] && !t[i + 1].startsWith('-') && !SUBCOMMAND.test(t[i + 1]) ? 2 : 1;
+    // A flag known to take a value always skips it (npm --prefix x i: x is a folder, not the exec subcommand)
+    while (i < t.length && t[i].startsWith('-')) i += VALUE_FLAG.test(t[i]) || (!t[i].includes('=') && t[i + 1] && !t[i + 1].startsWith('-') && !SUBCOMMAND.test(t[i + 1])) ? 2 : 1;
+    // yarn workspace <name> add x: the workspace name is not the subcommand
+    if (/^yarn$/i.test(t[0]) && /^workspace$/i.test(t[i] ?? '')) i += 2;
     s = [t[0], ...t.slice(i)].join(' ');
   }
   return s;
@@ -122,6 +137,15 @@ export function findPackages(command) {
         const name = eco === 'npm' ? npmName(arg) : pypiName(arg);
         if (name) result.push({ eco, name, exec: true, spec: arg, ...(exec.local && !fromFlag && { local: true }), ...(unsure && { unsure: true }) });
       }
+      continue;
+    }
+    if (match[2] === 'create') {
+      const name = createName(args.find((a) => !a.startsWith('-')) ?? '');
+      if (name) result.push({ eco, name });
+      continue;
+    }
+    if (match[2] === 'deno') {
+      for (const a of args) if (/^npm:/i.test(a)) { const name = npmName(a.slice(4)); if (name) result.push({ eco, name }); }
       continue;
     }
     for (let i = 0; i < args.length; i++) {
