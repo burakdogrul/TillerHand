@@ -54,7 +54,8 @@ const NEEDS_APPROVAL = [
 
 // The test guard runs on file tools; changing a test or test config file from the shell (sed -i, rm, >, mv, git checkout) is asked.
 // Each part of a command chain is checked alone: "rm -r node_modules && npx vitest run a.test.ts" does not change a test.
-const WRITER = /\b(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|touch|ln|dd|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bcurl\b[^;&|]*\s(-o|--output)\b|\bwget\b[^;&|]*\s(-O|--output-document)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
+// A flag is not a command name: grep -ln, ls -rd, tar -rm are not writers
+const WRITER = /(?<![\w-])(rm|del|erase|rmdir|rd|unlink|mv|move|cp|copy|tee|truncate|touch|ln|dd|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b|\bcurl\b[^;&|]*\s(-o|--output)\b|\bwget\b[^;&|]*\s(-O|--output-document)\b|\bsed\b[^;&|]*\s(-[a-zA-Z]*i\S*|--in-place\b)|\bperl\b[^;&|]*\s-[a-zA-Z]*i|\bgit\s+(checkout|restore|rm|mv)\b/i;
 // Dependency and git internals are not the project's tests; a URL (curl … https://x/tests/a) or a dd input is not a target
 // Normalized first: node_modules/../tests/a.test.ts is a test path; only a path that stays under them is skipped
 const isTestCode = (t) => {

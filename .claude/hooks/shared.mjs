@@ -104,7 +104,8 @@ export function parseInput(g) {
     const text = isText(t.content) ? t.content
       : isText(t.new_string) ? t.new_string
       : Array.isArray(t.edits) ? t.edits.map((e) => e?.new_string ?? '').join('\n')
-      : isText(t.new_source) ? t.new_source : '';
+      : isText(t.new_source) ? t.new_source
+      : JSON.stringify(t); // an unexpected shape (content or new_source as an array): every argument is scanned
     const before = isText(t.old_string) ? t.old_string
       : Array.isArray(t.edits) ? t.edits.map((e) => e?.old_string ?? '').join('\n') : undefined;
     const edits = isText(t.old_string) ? [{ old: t.old_string, new: isText(t.new_string) ? t.new_string : '', all: t.replace_all === true }]

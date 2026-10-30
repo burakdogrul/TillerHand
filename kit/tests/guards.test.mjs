@@ -613,6 +613,21 @@ test('3.49.4: ATTACK shield: a .env glob with a bracket range or POSIX class (.e
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test('3.49.7: shield: grep -l / -ln on test files is a read, not a test write; ln -s onto a test path is still caught', () => {
+  const root = shieldProject();
+  try {
+    const reads = ['grep -ln foo kit/tests/*.mjs', 'grep -rln x src/a.test.ts'];
+    for (const c of reads) {
+      assert.equal(shield(root, c), null, `Claude Code main session: ${c}`);
+      assert.equal(evaluate(c, { tool: 'claude', agent: 'general-purpose' }), null, `non-test-writer agent: ${c}`);
+    }
+    const link = 'ln -s x tests/a.test.ts';
+    const d = shield(root, link);
+    assert.ok(d === 'deny' || d === 'ask', `${link}: got ${d}`);
+    assert.ok(['deny', 'ask'].includes(evaluate(link, { tool: 'claude', agent: 'general-purpose' })?.decision), `agent: ${link}`);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test('3.49.5: ATTACK shield: a .env glob with an equivalence class, collating symbol, nested or empty bracket (.e[[=n=]]v, .e[[.n.]]v, .e[]n]v, .e[n[]v) is asked', () => {
   const root = shieldProject();
   try {

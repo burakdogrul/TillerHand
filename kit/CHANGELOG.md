@@ -3,6 +3,17 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.7] - 2026-10-30
+
+### Security
+- **The secret guard can no longer be timed out.** A long run of `-sb_secret_` made one pattern quadratic; a hook that times out lets the write through. The patterns are bounded now.
+- **More key formats are stopped:** Google API keys (`AIza…`), GitLab (`glpat-`), Hugging Face (`hf_`), npm (`npm_`), SendGrid (`SG.…`), Stripe webhook secrets (`whsec_`), Slack app and refresh tokens (`xapp-`, `xoxe-`) and PGP private key blocks. A key right after `_` or a letter (`OPENAI_sk-…`, `prod_sk_live_…`) is found too. JWTs and database URLs with a password are still not matched: local dev values would raise false alarms.
+- A write whose content is not plain text (a `content` or notebook `new_source` array) is scanned as a whole instead of skipped.
+- The pre-commit scan (`guard-secrets.mjs --staged`) also checks added lines that start with `++`.
+
+### Fixed
+- `grep -ln`, `ls -rd` and other commands with a flag that spells a file command no longer count as writing a test file.
+
 ## [3.49.6] - 2026-10-30
 
 ### Fixed

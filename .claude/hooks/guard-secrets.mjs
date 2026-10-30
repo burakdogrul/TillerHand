@@ -7,15 +7,24 @@
 import { execSync } from 'node:child_process';
 import { readInput, decide, isMain } from './shared.mjs';
 
+// (?<![A-Za-z0-9]) instead of \b: a key right after _ (OPENAI_sk-…, prod_sk_live_…) is found too.
+// Lookaheads and runs are bounded: an unbounded one is quadratic on a long run (-sb_secret_ × 50 000) and a hook
+// that times out lets the write through.
 export const PATTERNS = [
-  ['Anthropic/OpenAI key', /\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}/],
-  ['Stripe secret key', /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,}/],
-  ['AWS access key', /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
-  ['GitHub token', /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}|\bgithub_pat_[A-Za-z0-9_]{50,}/],
-  ['Slack token', /\bxox[abprs]-[A-Za-z0-9-]{10,}/],
-  ['Private key', /-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----/],
-  ['Resend key', /\bre_[A-Za-z0-9]{8,}_[A-Za-z0-9]{16,}/],
-  ['Supabase secret key', /\bsb_secret_(?=[\w-]*\d)[\w-]{16,}/],
+  ['Anthropic/OpenAI key', /(?<![A-Za-z0-9])sk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}/],
+  ['Stripe secret key', /(?<![A-Za-z0-9])(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,}/],
+  ['Stripe webhook secret', /(?<![A-Za-z0-9])whsec_[A-Za-z0-9+/]{24,}/],
+  ['AWS access key', /(?<![A-Za-z0-9])(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
+  ['GitHub token', /(?<![A-Za-z0-9])(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}|(?<![A-Za-z0-9])github_pat_[A-Za-z0-9_]{50,}/],
+  ['GitLab token', /(?<![A-Za-z0-9])glpat-[\w-]{20,}/],
+  ['Google API key', /(?<![A-Za-z0-9])AIza[0-9A-Za-z_-]{35}/],
+  ['Hugging Face token', /(?<![A-Za-z0-9])hf_[A-Za-z0-9]{34,}/],
+  ['npm token', /(?<![A-Za-z0-9])npm_[A-Za-z0-9]{36,}/],
+  ['SendGrid key', /(?<![A-Za-z0-9])SG\.[\w-]{22}\.[\w-]{43}/],
+  ['Slack token', /(?<![A-Za-z0-9])(?:xox[abprse]|xapp)-[A-Za-z0-9-]{10,}/],
+  ['Private key', /-----BEGIN (?:[A-Z]+ ){0,4}PRIVATE KEY(?: BLOCK)?-----/],
+  ['Resend key', /(?<![A-Za-z0-9])re_[A-Za-z0-9]{8,}_[A-Za-z0-9]{16,}/],
+  ['Supabase secret key', /(?<![A-Za-z0-9])sb_secret_(?=[\w-]{0,100}\d)[\w-]{16,}/],
 ];
 
 export function findSecrets(text) {
@@ -41,11 +50,14 @@ function hookMode() {
 
 function stagedMode() {
   const diff = execSync('git diff --cached -U0 --no-color', { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  let file = '';
+  let file = '', hunk = false;
   const findings = [];
+  // Inside a hunk every + line is content, "+++ …" included (a line starting with ++); headers come before the first @@
   for (const line of diff.split('\n')) {
-    if (line.startsWith('+++ ')) file = line.slice(6);
-    else if (line.startsWith('+') && !line.startsWith('+++')) {
+    if (line.startsWith('diff --git ')) hunk = false;
+    else if (!hunk && line.startsWith('+++ ')) file = line.slice(6);
+    else if (line.startsWith('@@')) hunk = true;
+    else if (hunk && line.startsWith('+')) {
       const f = findSecrets(line);
       if (f.length) findings.push(`${file}: ${f.join(', ')}`);
     }
