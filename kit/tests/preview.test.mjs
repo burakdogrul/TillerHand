@@ -219,3 +219,18 @@ test('AC-48.2 preview: an English Commands block (dev / preview) starts the serv
   assert.match(calls(), new RegExp(`open http://127\\.0\\.0\\.1:${port}`));
   assert.ok(await gone(pid()), 'the server it started is stopped');
 });
+
+test('3.49.6: preview before approval names an unknown Commands key (deploy) with the same text as gate --run', () => {
+  reset();
+  fs.rmSync(approvalPath(p), { force: true });
+  write('AGENTS.md', '# X\n\n## Commands\n\n```bash\ndeploy:  npm run deploy\npreview: http://localhost:3000\n```\n');
+  const r = preview();
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /^Preview · command approval needed/);
+  const g = spawnSync(process.execPath, [path.join(HOOKS, 'gate.mjs'), '--run'], { cwd: p, encoding: 'utf8', env: env() });
+  assert.equal(g.status, 1, g.stdout + g.stderr);
+  assert.match(g.stdout, /^## Gate · command approval needed[\s\S]*deploy/, 'control: the gate names deploy');
+  assert.equal(r.stdout.replace(/^Preview · /, ''), g.stdout.replace(/^## Gate · /, ''), 'preview names deploy exactly like the gate does');
+  assert.doesNotMatch(r.stdout, /- deploy: npm run deploy/, 'deploy is not listed as a command to approve');
+  assert.equal(calls(), '', 'no browser call');
+});

@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import { approvedCommands, approvalNeeded, isApproved } from './gate.mjs';
+import { approvedCommands, approvalNeeded, isApproved, unknownCommandKeys, readAgents } from './gate.mjs';
 import { findRoot, isMain } from './shared.mjs';
 
 const CLI = 'npx -y @playwright/cli@0.1.22';
@@ -56,7 +56,7 @@ export async function preview(root, task) {
   const url = command('preview'), dev = command('dev');
   if (!url) return fail('AGENTS.md → Commands has no `preview:` line, or it is empty. Add it (example: `preview:     http://localhost:3000`) or produce the evidence by hand in this task.');
   if (!LOCAL.test(url)) return fail(`the preview address must be local (http://localhost:<port>, 127.0.0.1 or [::1]). Now: ${url}`);
-  if (!isApproved(root, list)) return { code: 1, text: `Preview · ${approvalNeeded(list)}` };
+  if (!isApproved(root, list)) return { code: 1, text: `Preview · ${approvalNeeded(list, unknownCommandKeys(readAgents(root)))}` };
   const dir = `.previews/${String(task || 'latest').replace(/[^\w-]/g, '-')}`;
   // A linked folder from the repo would send the files elsewhere
   for (const d of ['.previews', dir]) {

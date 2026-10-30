@@ -3,6 +3,11 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.49.6] - 2026-10-30
+
+### Fixed
+- `/preview` before the command approval names the `## Commands` keys the gate does not read (`deploy:`…), like the gate run and the approval prompt already do.
+
 ## [3.49.5] - 2026-10-30
 
 ### Security
