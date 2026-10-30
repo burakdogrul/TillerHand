@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.49.11</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.49.12</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -941,9 +941,9 @@ npx tillerhand init
     <thead><tr><th>Layer</th><th>What it does</th></tr></thead>
     <tbody>
       <tr><td>Secret block</td><td>Blocks API keys (Anthropic, OpenAI, Stripe, AWS, GitHub, Supabase…) written to code or docs; also scans before a commit</td></tr>
-      <tr><td>Destructive command shield</td><td><code>DROP</code>, <code>TRUNCATE</code>, unconditional <code>DELETE</code>, <code>db reset</code> and pulling prod environment variables onto the machine are blocked; prod deploy, rollback, store submission and migrations are asked</td></tr>
-      <tr><td>Package gate</td><td>A package that is installed, or downloaded and run with <code>npx</code> or <code>uvx</code>, is checked against the registry: if it doesn't exist it is blocked; if it is very new, rarely downloaded or looks like a popular package, it is asked</td></tr>
-      <tr><td>Structure guard</td><td>A new file outside the map is asked; clutter such as <code>*.bak</code>, <code>*-old.*</code>, copies and <code>temp/</code> is blocked</td></tr>
+      <tr><td>Destructive command shield</td><td><code>DROP</code>, <code>TRUNCATE</code>, unconditional <code>DELETE</code>, <code>db reset</code> pulling prod environment variables onto the machine and deleting cloud data (S3 buckets, databases, resource groups, apps, repositories) are blocked; prod deploy, rollback, store submission, migrations, cluster and hosting deletes, package and release publishing and deleting the main branch are asked</td></tr>
+      <tr><td>Package gate</td><td>A package that is installed, or downloaded and run with <code>npx</code> or <code>uvx</code>, is checked against the registry: if it doesn't exist it is blocked; if it is very new, rarely downloaded or looks like a popular package, it is asked. A git or URL source, another registry or index, and cargo, go, gem and composer installs are asked, since they cannot be checked. Dependencies the AI adds to <code>package.json</code>, <code>requirements.txt</code> or <code>pyproject.toml</code> go through the same check</td></tr>
+      <tr><td>Structure guard</td><td>A new file outside the map is asked; clutter such as <code>*.bak</code>, <code>*-old.*</code>, copies and <code>temp/</code> is blocked; made from the shell (<code>cp a.ts a.bak</code>) it is asked</td></tr>
       <tr><td>Config approval</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> and workflow files don't change without your approval</td></tr>
       <tr><td>Test separation</td><td>The tests are written before the code by a separate agent (<code>test-writer</code>, a different model is recommended), not by whoever writes the code. Nobody but this agent can write to a test file: the main session and the code agent are blocked if they try. A test file changed indirectly by a patch or script also stops at the commit gate. So whoever writes the code can't shape the test to fit their own code</td></tr>
       <tr><td>Test protection</td><td>Deleting or commenting out an assertion, <code>.skip</code>/<code>.only</code>, a loosened assertion, deleting or moving a test file, and narrowing coverage in the test config are asked; so is writing to a test file through the shell</td></tr>
@@ -1241,7 +1241,7 @@ Next: G-013 password reset · pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.49.11 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.49.12 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

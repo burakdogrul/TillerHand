@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.49.11</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.49.12</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -944,9 +944,9 @@ npx tillerhand init
     <thead><tr><th>Katman</th><th>Ne yapar</th></tr></thead>
     <tbody>
       <tr><td>Sır engeli</td><td>Koda veya dokümana yazılan API anahtarını (Anthropic, OpenAI, Stripe, AWS, GitHub, Supabase…) engeller; commit öncesi de tarar</td></tr>
-      <tr><td>Yıkıcı komut kalkanı</td><td><code>DROP</code>, <code>TRUNCATE</code>, koşulsuz <code>DELETE</code>, <code>db reset</code> ve prod ortam değişkenlerini makineye çekmek engellenir; prod deploy, geri alma, mağazaya gönderim ve migration sorulur</td></tr>
-      <tr><td>Paket kapısı</td><td>Kurulan ya da <code>npx</code>, <code>uvx</code> ile indirilip çalıştırılan paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur</td></tr>
-      <tr><td>Yapı koruyucu</td><td>Harita dışı yeni dosya sorulur; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir</td></tr>
+      <tr><td>Yıkıcı komut kalkanı</td><td><code>DROP</code>, <code>TRUNCATE</code>, koşulsuz <code>DELETE</code>, <code>db reset</code> , prod ortam değişkenlerini makineye çekmek ve bulut verisini silmek (S3 kovası, veritabanı, kaynak grubu, uygulama, depo) engellenir; prod deploy, geri alma, mağazaya gönderim, migration, küme ve barındırma silmeleri, paket ve sürüm yayımlama ve ana dalı silmek sorulur</td></tr>
+      <tr><td>Paket kapısı</td><td>Kurulan ya da <code>npx</code>, <code>uvx</code> ile indirilip çalıştırılan paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur. Git ya da URL kaynağı, başka bir kayıt ya da dizin ve cargo, go, gem, composer kurulumları denetlenemediği için sorulur. AI'nın <code>package.json</code>, <code>requirements.txt</code> ya da <code>pyproject.toml</code>'a eklediği bağımlılıklar da aynı denetimden geçer</td></tr>
+      <tr><td>Yapı koruyucu</td><td>Harita dışı yeni dosya sorulur; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir; kabukta oluşturulursa (<code>cp a.ts a.bak</code>) sorulur</td></tr>
       <tr><td>Yapılandırma onayı</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> ve iş akışı dosyaları onayın olmadan değişmez</td></tr>
       <tr><td>Test ayrımı</td><td>Testleri kodu yazan değil, ayrı bir ajan (<code>test-writer</code>, farklı model önerilir) koddan önce yazar. Test dosyasına bu ajan dışında kimse yazamaz: ana oturum ve kod ajanı denerse engellenir. Patch veya betikle dolaylı değişen test dosyası da commit kapısında durur. Böylece kodu yazan testi kendi koduna göre şekillendiremez</td></tr>
       <tr><td>Test koruması</td><td>Beklenti silmek veya yoruma almak, <code>.skip</code>/<code>.only</code>, gevşek beklenti, test dosyasını silmek veya taşımak ve test ayarında kapsamı daraltmak sorulur; kabukla test dosyasına yazmak da</td></tr>
@@ -1245,7 +1245,7 @@ Sıradaki: G-013 şifre sıfırlama · bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.49.11 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.49.12 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

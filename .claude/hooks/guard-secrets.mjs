@@ -5,7 +5,10 @@
 //   2) Git pre-commit: `node .claude/hooks/guard-secrets.mjs --staged` scans the staged changes.
 // High-confidence patterns only; no generic "password=" search, to avoid false alarms.
 import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { readInput, decide, isMain } from './shared.mjs';
+import { boardAfter } from './freeze-guard.mjs';
 
 // (?<![A-Za-z0-9]) instead of \b: a key right after _ (OPENAI_sk-…, prod_sk_live_…) is found too.
 // Lookaheads and runs are bounded: an unbounded one is quadratic on a long run (-sb_secret_ × 50 000) and a hook
@@ -31,6 +34,19 @@ export function findSecrets(text) {
   return PATTERNS.filter(([, re]) => re.test(text)).map(([name]) => name);
 }
 
+// A key split across edits (MultiEdit, Antigravity chunks) or joined to the text around an edit only exists in the file
+// after the write: the result is rebuilt and the keys it has that the file on disk did not have are returned.
+function addedSecrets(f, dir) {
+  if (!f.edits) return [];
+  let disk;
+  try { disk = fs.readFileSync(path.resolve(dir, f.path), 'utf8'); } catch { return []; }
+  const after = boardAfter(disk, f);
+  if (after === null) return [];
+  const all = (s) => new Set(PATTERNS.flatMap(([name, re]) => [...s.matchAll(new RegExp(re.source, re.flags.replace('g', '') + 'g'))].map(([m]) => `${name}\0${m}`)));
+  const before = all(disk);
+  return [...all(after)].filter((k) => !before.has(k)).map((k) => k.split('\0')[0]);
+}
+
 function hookMode() {
   const g = readInput();
   if (!g) process.exit(0); // unreadable input: do not block the work
@@ -38,11 +54,16 @@ function hookMode() {
   if (g.tool !== 'claude' && findSecrets(g.command).length) {
     decide(g.tool, 'deny', `BLOCKED: the command contains a secret (${findSecrets(g.command).join(', ')}). Do not write the secret into a command or a file; read it from an environment variable.`);
   }
-  for (const { path, text } of g.files) {
-    const found = findSecrets(text);
+  // Antigravity: every tool's string arguments, so a write tool the parser does not know (create_file…) is scanned too
+  if (g.tool === 'antigravity' && findSecrets(g.reads.join('\n')).length) {
+    decide(g.tool, 'deny', `BLOCKED: the tool call contains a secret (${findSecrets(g.reads.join('\n')).join(', ')}). Do not write the secret into a file; read it from an environment variable.`);
+  }
+  for (const f of g.files) {
+    const { path: file, text } = f;
+    const found = [...new Set([...findSecrets(text), ...addedSecrets(f, g.dir)])];
     if (found.length) {
       decide(g.tool, 'deny',
-        `BLOCKED: a secret is being written to ${path} (${found.join(', ')}). ` +
+        `BLOCKED: a secret is being written to ${file} (${found.join(', ')}). ` +
           'Do not put the secret in code; read it from an environment variable and add the variable name to .env.example with an empty value.');
     }
   }

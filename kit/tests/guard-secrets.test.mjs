@@ -160,6 +160,103 @@ test('3.49.7: ATTACK --staged: an added line that starts with "++ " and holds a 
   } finally { fs.rmSync(repo, { recursive: true, force: true }); }
 });
 
+// ---------- 3.49.12: secrets split across edits, unknown Antigravity tools, Codex patch in tool_input.input ----------
+
+// Two halves of one Stripe key: neither half alone matches, the joined key does
+const HALF_A = 'sk_' + 'live_' + 'abcdefghij', HALF_B = 'klmnopqrstuvwxyz12';
+// Temp project holding a.ts with the given text; returns its root
+const projectWithFile = (text) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'secrets-34912-'));
+  fs.writeFileSync(path.join(root, 'a.ts'), text);
+  return root;
+};
+// Runs the hook as tool (claude | codex | antigravity) from root; returns deny | ask | null
+const hookDecision = (tool, root, input) => {
+  const env = { ...process.env };
+  delete env.CLAUDE_PROJECT_DIR;
+  if (tool === 'claude') env.CLAUDE_PROJECT_DIR = root;
+  const r = spawnSync(process.execPath, [HOOK], { input: JSON.stringify(input), encoding: 'utf8', env, timeout: 20000 });
+  assert.equal(r.status, 0, r.stderr);
+  if (!r.stdout.trim()) return null;
+  const j = JSON.parse(r.stdout);
+  return tool === 'antigravity' ? j.decision : j.hookSpecificOutput.permissionDecision;
+};
+
+test('3.49.12: precondition: neither half of the split key is a secret, the joined key is', () => {
+  assert.deepEqual(findSecrets(`const a = "${HALF_A}HOLDER";`), []);
+  assert.deepEqual(findSecrets(`const a = "PLACE${HALF_B}";`), []);
+  assert.deepEqual(findSecrets(`${HALF_A}\n${HALF_B}`), []);
+  assert.deepEqual(findSecrets(`const a = "${HALF_A}${HALF_B}";`), ['Stripe secret key']);
+});
+
+test('3.49.12: ATTACK a key split across MultiEdit edits is denied (the file after the edit holds it)', () => {
+  const root = projectWithFile('const a = "PLACEHOLDER";\n');
+  try {
+    const input = { hook_event_name: 'PreToolUse', tool_name: 'MultiEdit', cwd: root, tool_input: { file_path: path.join(root, 'a.ts'),
+      edits: [{ old_string: 'PLACE', new_string: HALF_A }, { old_string: 'HOLDER', new_string: HALF_B }] } };
+    assert.equal(hookDecision('claude', root, input), 'deny');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12: ATTACK a key split across Antigravity ReplacementChunks (replace_file_content, multi_replace_file_content) is denied', () => {
+  const root = projectWithFile('const a = "PLACEHOLDER";\n');
+  try {
+    for (const name of ['replace_file_content', 'multi_replace_file_content']) {
+      const input = { toolCall: { name, args: { TargetFile: path.join(root, 'a.ts'),
+        ReplacementChunks: [{ TargetContent: 'PLACE', ReplacementContent: HALF_A }, { TargetContent: 'HOLDER', ReplacementContent: HALF_B }] } }, workspacePaths: [root] };
+      assert.equal(hookDecision('antigravity', root, input), 'deny', name);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12: a key already in the file on disk is not denied for an unrelated edit elsewhere (only added secrets count)', () => {
+  const root = projectWithFile(`const k = "${HALF_A}${HALF_B}";\nconst a = 1;\nconst b = 2;\n`);
+  try {
+    const file = path.join(root, 'a.ts');
+    assert.equal(hookDecision('claude', root, { hook_event_name: 'PreToolUse', tool_name: 'Edit', cwd: root,
+      tool_input: { file_path: file, old_string: 'const a = 1;', new_string: 'const a = 3;' } }), null, 'Edit');
+    assert.equal(hookDecision('claude', root, { hook_event_name: 'PreToolUse', tool_name: 'MultiEdit', cwd: root,
+      tool_input: { file_path: file, edits: [{ old_string: 'const a = 1;', new_string: 'const a = 3;' }, { old_string: 'const b = 2;', new_string: 'const b = 4;' }] } }), null, 'MultiEdit');
+    assert.equal(hookDecision('antigravity', root, { toolCall: { name: 'multi_replace_file_content', args: { TargetFile: file,
+      ReplacementChunks: [{ TargetContent: 'const a = 1;', ReplacementContent: 'const a = 3;' }] } }, workspacePaths: [root] }), null, 'Antigravity chunks');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12: ATTACK an unknown Antigravity write tool (create_file) with a key in its arguments is denied', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'secrets-34912-'));
+  try {
+    const input = { toolCall: { name: 'create_file', args: { path: 'a.ts', content: `const k = "${FAKE.anthropic}";` } }, workspacePaths: [root] };
+    assert.equal(hookDecision('antigravity', root, input), 'deny');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12: ATTACK a Codex apply_patch whose patch text is in tool_input.input (no command) is scanned: a key in an added line is denied', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'secrets-34912-'));
+  try {
+    const input = { tool_name: 'apply_patch', turn_id: 't1', cwd: root,
+      tool_input: { input: `*** Begin Patch\n*** Add File: a.ts\n+const k = "${FAKE.anthropic}";\n*** End Patch\n` } };
+    assert.equal(hookDecision('codex', root, input), 'deny');
+    const clean = { ...input, tool_input: { input: '*** Begin Patch\n*** Add File: a.ts\n+const k = process.env.K;\n*** End Patch\n' } };
+    assert.equal(hookDecision('codex', root, clean), null, 'a clean patch passes');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('3.49.12b: ATTACK a key split across MultiEdit edits is denied for several key formats (Anthropic, AWS, GitHub, Stripe)', () => {
+  const keys = { anthropic: FAKE.anthropic, aws: FAKE.aws, github: 'gh' + 'p_' + alnum(36), stripe: HALF_A + HALF_B };
+  const missed = [];
+  for (const [name, key] of Object.entries(keys)) {
+    const cut = Math.floor(key.length / 2), a = key.slice(0, cut), b = key.slice(cut);
+    assert.deepEqual([findSecrets(`"${a}HOLDER"`), findSecrets(`"PLACE${b}"`)], [[], []], `${name}: neither half alone is a secret`);
+    const root = projectWithFile('const a = "PLACEHOLDER";\n');
+    try {
+      const d = hookDecision('claude', root, { hook_event_name: 'PreToolUse', tool_name: 'MultiEdit', cwd: root, tool_input: { file_path: path.join(root, 'a.ts'),
+        edits: [{ old_string: 'PLACE', new_string: a }, { old_string: 'HOLDER', new_string: b }] } });
+      if (d !== 'deny') missed.push(`${name} -> ${d}`);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  }
+  assert.deepEqual(missed, []);
+});
+
 test('hook: also runs when the project is opened through a symlink or junction (macOS /tmp, linked folders)', (t) => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hooklink-'));
   try {

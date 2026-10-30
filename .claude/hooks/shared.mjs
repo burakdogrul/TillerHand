@@ -97,7 +97,8 @@ export function parseInput(g) {
   }
   const t = g.tool_input ?? {};
   const command = isText(t.command) ? t.command : Array.isArray(t.command) ? t.command.join(' ') : t.command == null ? '' : JSON.stringify(t.command);
-  if (g.tool_name === 'apply_patch') result.files = patchFiles(command);
+  // Codex can pass the patch text in tool_input.input instead of command
+  if (g.tool_name === 'apply_patch') result.files = patchFiles(command || (isText(t.input) ? t.input : t.input == null ? '' : JSON.stringify(t.input)));
   else result.command = command;
   const file = t.file_path ?? t.notebook_path;
   if (file) {

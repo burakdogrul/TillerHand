@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.49.11-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.49.12-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -236,8 +236,8 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 | Katman | Ne yapar |
 |---|---|
 | Sır engeli | Koda veya dokümana yazılan API anahtarını engeller |
-| Yıkıcı komut kalkanı | `DROP`, koşulsuz `DELETE`, `db reset` engellenir; prod deploy ve geri alma sorulur |
-| Paket kapısı | Var olmayan paketi engeller (kurulumda ve `npx`, `uvx` ile çalıştırmada); çok yeni veya popüler bir pakete benzeyeni sorar |
+| Yıkıcı komut kalkanı | `DROP`, koşulsuz `DELETE`, `db reset` ve bulut verisini silmek engellenir; prod deploy, geri alma ve yayımlama sorulur |
+| Paket kapısı | Var olmayan paketi engeller (kurulumda, `npx`, `uvx` ile çalıştırmada ve bağımlılık dosyalarında); çok yeni, popüler bir pakete benzeyen ve denetleyemediği kaynakları (git, URL, başka kayıt) sorar |
 | Yapı koruyucu | Harita dışı dosyayı sorar, dağınıklık dosyalarını engeller |
 | Test ayrımı | Test dosyasına yalnız `test-writer` ajanı yazar; ana oturum ve kod ajanı denerse engellenir |
 | Test koruması | Silinen, atlanan veya gevşetilen testi sorar |

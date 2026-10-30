@@ -356,3 +356,13 @@ test('3.49.2b: ATTACK on Codex and Antigravity, env files and secrets in subfold
     }
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('3.49.12: ATTACK parseInput: a Codex apply_patch whose patch text is in tool_input.input (no command) returns the patched files and their added text', () => {
+  const g = parseInput({ tool_name: 'apply_patch', turn_id: 't1', cwd: '/p', tool_input: {
+    input: '*** Begin Patch\n*** Add File: a.ts\n+hello\n*** Update File: b.ts\n@@\n-old line\n+new line\n*** End Patch\n' } });
+  assert.equal(g.tool, 'codex');
+  assert.deepEqual(g.files.map((f) => f.path), ['a.ts', 'b.ts']);
+  assert.ok(g.files[0].text.includes('hello'), `a.ts added text: ${JSON.stringify(g.files[0].text)}`);
+  assert.ok(g.files[1].text.includes('new line'), `b.ts added text: ${JSON.stringify(g.files[1].text)}`);
+  assert.equal(g.files[1].text.includes('old line'), false, 'a removed line is not added text');
+});
