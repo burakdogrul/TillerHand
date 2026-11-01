@@ -171,3 +171,64 @@ test('settings: every hook and status line command really runs (no quote, path o
     assert.equal(r.status, 0, `${k}\n${r.stderr}`);
   }
 });
+
+// 3.51.0: attribution off by default; the status block has one item per line
+const settings351 = () => JSON.parse(fs.readFileSync(path.join(ROOT, '.claude/settings.json'), 'utf8'));
+const read351 = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n/g, '\n');
+const LABELS_EN = ['Phase:', 'Task:', 'Question mode:', 'Limit:', 'Done:', 'Board:', 'Auto decisions:', 'Next:', 'Pending decision:'];
+const LABELS_TR = ['Faz:', 'Görev:', 'Soru modu:', 'Limit:', 'Biten:', 'Kurul:', 'Otomatik karar:', 'Sıradaki:', 'Bekleyen karar:'];
+const fencedStatus = (p) => [...read351(p).matchAll(/^```[^\n]*\n(── Status[\s\S]*?)\n```$/gm)].map((m) => m[1]);
+const preStatus = (p, word) => [...read351(p).matchAll(new RegExp(`<pre class="term">(── ${word}[\\s\\S]*?)</pre>`, 'g'))].map((m) => m[1]);
+// Lines under the header. Markup goes: a span around a value or a label does not change the format.
+const statusLines = (block) => block.replace(/<[^>]+>/g, '').split('\n').slice(1).filter((l) => l.trim() !== '');
+const labelsAtLineStart = (lines, labels) => lines.map((l) => labels.find((label) => l.startsWith(label)) ?? `no label: ${l}`);
+
+test('3.51.0 AC-1: attribution deep-equals the empty commit and PR text with no session URL', () => {
+  assert.deepEqual(settings351().attribution, { commit: '', pr: '', sessionUrl: false });
+});
+
+test('3.51.0 AC-1: settings have no includeCoAuthoredBy key', () => {
+  assert.equal(Object.hasOwn(settings351(), 'includeCoAuthoredBy'), false);
+});
+
+test('3.51.0 AC-1: attribution is not the bare value false, older CLI versions skip such a file', () => {
+  assert.notEqual(settings351().attribution, false);
+});
+
+test('3.51.0 AC-2: AGENTS.md status block has the nine labels in order, each starting its own line', () => {
+  const blocks = fencedStatus('AGENTS.md');
+  assert.equal(blocks.length, 1, 'one fenced block starts with ── Status');
+  assert.deepEqual(labelsAtLineStart(statusLines(blocks[0]), LABELS_EN), LABELS_EN);
+});
+
+test('3.51.0 AC-2: no line of the AGENTS.md status block contains the " · " joiner', () => {
+  const blocks = fencedStatus('AGENTS.md');
+  assert.equal(blocks.length, 1, 'one fenced block starts with ── Status');
+  assert.deepEqual(blocks[0].split('\n').filter((l) => l.includes(' · ')), []);
+});
+
+test('3.51.0 AC-2: rule 8 still says the words follow the conversation language', () => {
+  const rule8 = read351('AGENTS.md').match(/^8\. [\s\S]*?(?=^9\. )/m)[0];
+  assert.match(rule8, /words[^.\n]*conversation language/i);
+});
+
+// No current example leaves out Question mode or Soru modu and the guide's windows have no fixed height, so all nine are pinned everywhere.
+// The count stops an example passing by being removed or renamed. " · " stays allowed inside a value, not in front of a label.
+for (const [file, labels, count, examples] of [
+  ['docs/workflow/decision-protocol.md', LABELS_EN, 1, () => fencedStatus('docs/workflow/decision-protocol.md')],
+  ['kit/guide.html', LABELS_EN, 2, () => preStatus('kit/guide.html', 'Status')],
+  ['kit/guide.tr.html', LABELS_TR, 2, () => preStatus('kit/guide.tr.html', 'Durum')],
+]) {
+  test(`3.51.0 AC-3: ${file} examples have the nine labels in order, each starting its own line`, () => {
+    const blocks = examples();
+    assert.equal(blocks.length, count, 'number of status examples');
+    for (const block of blocks) assert.deepEqual(labelsAtLineStart(statusLines(block), labels), labels);
+  });
+
+  test(`3.51.0 AC-3: ${file} examples have no label joined to the previous item with " · "`, () => {
+    const blocks = examples();
+    assert.equal(blocks.length, count, 'number of status examples');
+    const joined = new RegExp(` · (?:${labels.join('|')})`, 'i');
+    for (const block of blocks) assert.deepEqual(statusLines(block).filter((l) => joined.test(l)), []);
+  });
+}

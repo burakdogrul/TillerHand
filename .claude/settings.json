@@ -84,6 +84,11 @@
       "Bash(rm -rf:*)"
     ]
   },
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "env": {
     "ENABLE_STOP_REVIEW": "0"
   },

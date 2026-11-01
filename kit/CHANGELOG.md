@@ -3,6 +3,12 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.51.0] - 2026-11-01
+
+### Changed
+- **The status block has one item per line.** Phase, task, question mode, limit, done, board, auto decisions, next and pending decision each get their own line, so the block reads at a glance.
+- **Commits and pull requests carry no AI attribution by default.** `.claude/settings.json` turns off the co-author line and the session link. This applies to Claude Code; Codex has no reliable local setting for it.
+
 ## [3.50.1] - 2026-11-01
 
 ### Fixed

@@ -80,14 +80,19 @@ Every `design` decision is asked with visuals. The user chooses an image, not te
 
 ## 6. Status block (at the end of every answer)
 
-In short, compressed language (caveman), at most 4 lines:
+In short, compressed language (caveman), one item per line:
 
 ```
 ── Status ─────────────────────────────
-Phase: Phase 1 · Task: G-012 (7/23) · Question mode: open · Limit: 5h %34 weekly %5
-Done: signup form + validation, tests green · Board: APPROVE (ux, qa)
+Phase: Phase 1
+Task: G-012 (7/23)
+Question mode: open
+Limit: 5h %34 weekly %5
+Done: signup form + validation, tests green
+Board: APPROVE (ux, qa)
 Auto decisions: none
-Next: G-013 password reset · pending decision: email service
+Next: G-013 password reset
+Pending decision: email service
 ```
 
 - Phase and task come from `docs/workflow/progress.md`; the task count is checked/total in `docs/product/roadmap.md`.
