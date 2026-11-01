@@ -3,6 +3,14 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.60.0] - 2026-11-01
+
+### Added
+- **`/models`: external models for chosen roles.** The code, test and docs roles can run on a model from OpenRouter, DeepSeek or Kimi while planning and review stay on your plan. A role runs as a separate process. It never holds your key: a local proxy adds the key and sends only to the provider's fixed address.
+- **A daily spending limit per provider.** You set it, and a role does not run without one. At the limit the role stops and you are asked.
+- **Keys are entered by you.** `--set-key` in your own terminal, or a system variable with the provider's name. A key that does not match the provider is not used. A project `.env` is not used. `--remove-key` removes one.
+- The README and the guide explain adding and removing keys, what the kit does, and the remaining risk: an allowed command runs code the model wrote, and that code can read your files.
+
 ## [3.57.0] - 2026-11-01
 
 ### Changed

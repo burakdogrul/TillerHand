@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.57.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.60.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -600,6 +600,7 @@ Bekleyen karar: e-posta servisi</pre>
     <p>Araçlar</p>
     <a href="#yetenekler">Yetenek paketleri</a>
     <a href="#skiller">Hangi işte hangi skill</a>
+    <a href="#dis-modeller">Dış modeller</a>
     <a href="#araclar">Codex ve Antigravity</a>
     <p>Referans</p>
     <a href="#komutlar">Komutlar</a>
@@ -1148,6 +1149,36 @@ Bekleyen karar: e-posta servisi</pre>
   <div class="note"><b>Bilerek eklenmeyenler:</b> superpowers, gstack, spec-kit, BMAD, GSD, OpenSpec kitin soru, plan ve kurul akışının yerine geçer; iyi fikirleri kitin kendi kurallarına işlendi. claude-mem ve Serena, kitin ilerleme dosyası ve kod haritasıyla aynı işi yapar.</div>
 </section>
 
+<section id="dis-modeller">
+  <p class="path">Kendi modellerin</p>
+  <h2>Dış modeller</h2>
+  <p class="lead"><code>/models</code> ile hangi işi hangi modelin yapacağını seçersin. Dış model kullanabilirsin: kod, test ve doküman rolleri OpenRouter, DeepSeek veya Kimi'den aldığın bir modelde çalışır. Planlama ve inceleme Claude planında kalır. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.</p>
+  <h3>Anahtar ekle</h3>
+  <p>Bunu sohbette değil, kendi terminalinde çalıştır. Anahtarı göstermeden ister ve proje dışında tutar.</p>
+<pre class="term">node .claude/hooks/models.mjs --set-key openrouter</pre>
+  <p>Ya da sistem değişkeni kullan. Ad sağlayıcıyla uyuşmalı: <code>OPENROUTER_API_KEY</code>, <code>DEEPSEEK_API_KEY</code> veya <code>MOONSHOT_API_KEY</code>. Windows'ta, ardından uygulamayı yeniden başlat:</p>
+<pre class="term">setx OPENROUTER_API_KEY "&lt;anahtarın&gt;"</pre>
+  <h3>Günlük sınır koy</h3>
+  <p>Dolar olarak. Varsayılan yok, sınır olmadan rol çalışmaz. Sınırda rol durur, sana sorulur. Sağlayıcının panelinde de sert limit koy. Ardından modelleri <code>/models</code> ile seç.</p>
+<pre class="term">node .claude/hooks/models.mjs --set-limit openrouter 5</pre>
+  <h3>Anahtarı sil veya yanlış adı düzelt</h3>
+<pre class="term">node .claude/hooks/models.mjs --remove-key openrouter</pre>
+  <p>Biçimi sağlayıcıyla uyuşmayan anahtar kullanılmaz. Yanlış adla girdiysen değişkeni sil, doğru adla yeniden tanımla. Yanlış sağlayıcıya gitmiş olabilirse anahtarı panelden yenile. Windows'ta:</p>
+<pre class="term">[Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $null, 'User')</pre>
+  <p><b>Neden <code>.env</code> değil?</b> Kullanılmaz. <code>npm test</code> gibi izinli bir komut proje <code>.env</code> dosyasını kolayca yükler, bu da anahtarı modelin yazdığı koda verir. Oraya anahtar koyduysan satırı sil ve anahtarı sağlayıcının panelinden yenile.</p>
+  <h3>Kit ne yapıyor</h3>
+  <div class="table-wrap"><table>
+    <tbody>
+      <tr><td>Roller</td><td>Kod, test ve doküman dışarı verilebilir. Planlama ve inceleme (kurul, <code>security-auditor</code>) dış modele verilemez, planında kalır.</td></tr>
+      <tr><td>Proxy</td><td>Rol, geçici bir tokenla ayrı süreçte çalışır. Yerel proxy gerçek anahtarı kendisi ekler ve yalnız sağlayıcının sabit adresine gönderir.</td></tr>
+      <tr><td>Günlük sınır</td><td>Proxy harcamayı sağlayıcının yanıtlarından sayar. Fiyatı bilinmeyen model için yüksek bir varsayılan kullanılır.</td></tr>
+      <tr><td>İzinler</td><td>Her rolün dar bir listesi var: dokümanda kabuk yok, test yalnız test komutunu, kod onayladığın komutları çalıştırır. Hook'lar çalışmaya devam eder.</td></tr>
+      <tr><td>Onay</td><td>Rolü çalıştırmak ve rolü sağlayıcıya taşımak her seferinde sorulur.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note accent"><b>Önce bilmen gerekenler:</b> Sağlayıcı, rolün görebildiği her şeyi görür: kodun, proje kuralları ve notlar, izinli komutların çıktıları, kullanıcı adını içeren klasör yolu. Gönderilen geri alınamaz. <b>Kalan risk:</b> <code>npm test</code> gibi izinli bir komut modelin yazdığı kodu çalıştırır. O kod proje dosyalarını ve anahtar deposu dahil kendi dosyalarını okuyup dışarı gönderebilir; sandbox yok. Gerçek sır içeren projede kod ve test rollerini dış modele verme. Bu modeller burada Claude kadar iyi çalışmayabilir: OpenRouter bu yolda Anthropic dışı modelleri garanti etmiyor, bu yüzden <code>/models</code> modeli güvenmeden önce dener.</div>
+</section>
+
 <section id="araclar">
   <p class="path">Başka araçla</p>
   <h2>Codex ve Antigravity</h2>
@@ -1199,6 +1230,7 @@ Bekleyen karar: e-posta servisi</pre>
       <tr><td class="f">/retro</td><td>Dersleri projeye yazar; kite önerileri TillerHand reposunda bir dala</td></tr>
       <tr><td class="f">/research [konu]</td><td>Makaleler, GitHub'daki benzer projeler ve rakip ürünler; fark tablosu; seçilen özellikler PRD'ye</td></tr>
       <tr><td class="f">/handoff [take]</td><td>Projeyi başka kişiye veya hesaba devreder ya da devralır; aynı yerden devam</td></tr>
+      <tr><td class="f">/models</td><td>Hangi rolün hangi modelde çalışacağını seçer; OpenRouter, DeepSeek ve Kimi dış modelleri dahil</td></tr>
       <tr><td class="f">/tools [on|off|measure|commands]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer; komut listesini hafif veya tam yapar</td></tr>
       <tr><td class="f">/kit-update</td><td>Projeyi TillerHand'in son sürümüne çeker; çakışmaları sorar; <code>--tool</code> ile araç, <code>--addons</code> ile ek ekler</td></tr>
       <tr><td class="f">/language [dil]</td><td>Konuşma dilini değiştirir (Türkçe, İngilizce ya da başka bir dil); hook metinlerinin çevirisini ve panoyu yeniler</td></tr>
@@ -1256,7 +1288,7 @@ Bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.57.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.60.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

@@ -55,6 +55,8 @@
       "Edit(./.git/**)"
     ],
     "deny": [
+      "Read(~/.vibe-kit/**)",
+      "Edit(~/.vibe-kit/**)",
       "Read(./.env)",
       "Read(./.env.local)",
       "Read(./.env.production)",
@@ -318,6 +320,7 @@
     "remotion@remotion": false
   },
   "skillOverrides": {
+    "models": "name-only",
     "ask-mode": "name-only",
     "board": "name-only",
     "dashboard": "name-only",

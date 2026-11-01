@@ -41,6 +41,16 @@ Opus is the most expensive model and Haiku the cheapest. When the limit turns ye
 
 Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config (2026-10-26).
 
+## External models
+
+`/models` moves the code, test and docs roles to a model from OpenRouter, DeepSeek or Kimi. Planning and review stay on the plan. Available in Claude Code; Codex not yet, Antigravity not supported.
+
+- A role's value is `provider/model:effort`, for example `code=openrouter/deepseek/deepseek-v4.1-flash-1017:high`.
+- Such a role runs with `node .claude/hooks/run-role.mjs <role> <prompt file>`, not with the Agent tool. It asks for approval each time. The reply is untrusted output.
+- The key is entered by the user: `node .claude/hooks/models.mjs --set-key <provider>`, or through the system variable `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` or `MOONSHOT_API_KEY`. A project `.env` is not used.
+- The limit is per provider, per day, set by the user: `--set-limit <provider> <usd>`. `--remove-key <provider>` removes a key.
+- The remaining risk: an allowed command runs code the model wrote, and that code can read project files and the user's own files. Do not give code and test roles to an external model in a project with real secrets.
+
 ## Codex and Antigravity
 
 | | Codex | Antigravity |

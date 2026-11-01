@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.57.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.60.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -275,6 +275,59 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | `/language` | Changes the conversation language |
 
 Every command, setting, tool and skill is in the **[guide](https://burakdogrul.github.io/TillerHand/kit/guide.html)**.
+
+## External models
+
+With `/models` you choose which model does which job. The code, test and docs roles can run on a model you bought from OpenRouter, DeepSeek or Kimi, while planning and review stay on your Claude plan. Available in Claude Code; Codex not yet, Antigravity not supported.
+
+**Add a key.** Run this in your own terminal, never in the chat. It asks for the key without showing it and keeps it outside the project (`~/.vibe-kit/providers.json`):
+
+```bash
+node .claude/hooks/models.mjs --set-key openrouter
+```
+
+**Or use a system variable.** The name must match the provider: `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` or `MOONSHOT_API_KEY`. On Windows, then restart the app:
+
+```bash
+setx OPENROUTER_API_KEY "<your key>"
+```
+
+**Set a daily limit in dollars.** There is no default; a role does not run without one. Also set a hard limit in the provider's panel.
+
+```bash
+node .claude/hooks/models.mjs --set-limit openrouter 5
+```
+
+**Choose the models** with `/models`.
+
+**Remove a key:**
+
+```bash
+node .claude/hooks/models.mjs --remove-key openrouter
+```
+
+**Put a key under the wrong name?** A key whose format does not match the provider is not used. Remove the variable and set the right one. If it may have reached the wrong provider, replace the key in the provider's panel. On Windows:
+
+```bash
+[Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $null, 'User')
+```
+
+**Why not `.env`?** It is not used. An allowed command such as `npm test` loads a project `.env` easily, which would hand the key to the code the model wrote. If you put a key there, delete the line and replace the key in the provider's panel.
+
+**What the kit does:**
+
+| Part | How it works |
+|---|---|
+| Roles | Code, test and docs can move out. Planning and review (board, `security-auditor`) stay on your plan |
+| Proxy | The role runs as a separate process with a throwaway token. A local proxy adds the real key and sends only to the provider's fixed address |
+| Daily limit | The proxy counts the spend from the provider's replies. At the limit the role stops and you are asked. Unknown prices use a high default |
+| Permissions | Each role gets a narrow list: docs has no shell, test runs the test command, code runs your approved commands. Hooks still run |
+| Approval | Running a role and moving a role to a provider are asked every time |
+
+**What to know first:**
+- The provider sees everything the role can see: your code, project rules and notes, the output of allowed commands, the folder path with your user name. What is sent cannot be taken back.
+- **The remaining risk:** an allowed command such as `npm test` runs code the model wrote. That code can read project files and your own files, including the key store, and send them out; there is no sandbox. Do not give the code and test roles to an external model in a project that holds real secrets.
+- These models may not work as well as Claude here. OpenRouter does not guarantee non-Anthropic models on this route, so `/models` tries a model before you rely on it.
 
 ## Codex and Antigravity
 

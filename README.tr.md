@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.57.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.60.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -275,6 +275,59 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 | `/language` | Konuşma dilini değiştirir |
 
 Tüm komutlar, ayarlar, araçlar ve skill'ler **[rehberde](https://burakdogrul.github.io/TillerHand/kit/guide.tr.html)**.
+
+## Dış modeller
+
+`/models` ile hangi işi hangi modelin yapacağını seçersin. Dış model kullanabilirsin: kod, test ve doküman rolleri OpenRouter, DeepSeek veya Kimi'den aldığın bir modelde çalışır. Planlama ve inceleme Claude planında kalır. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.
+
+**Anahtar ekle.** Bunu sohbette değil, kendi terminalinde çalıştır. Anahtarı göstermeden ister ve proje dışında tutar (`~/.vibe-kit/providers.json`):
+
+```bash
+node .claude/hooks/models.mjs --set-key openrouter
+```
+
+**Ya da sistem değişkeni kullan.** Ad sağlayıcıyla uyuşmalı: `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` veya `MOONSHOT_API_KEY`. Windows'ta, ardından uygulamayı yeniden başlat:
+
+```bash
+setx OPENROUTER_API_KEY "<anahtarın>"
+```
+
+**Dolar olarak günlük sınır koy.** Varsayılan yok; sınır olmadan rol çalışmaz. Sağlayıcının panelinde de sert limit koy.
+
+```bash
+node .claude/hooks/models.mjs --set-limit openrouter 5
+```
+
+**Modelleri seç:** `/models`.
+
+**Anahtarı sil:**
+
+```bash
+node .claude/hooks/models.mjs --remove-key openrouter
+```
+
+**Anahtarı yanlış adla mı girdin?** Biçimi sağlayıcıyla uyuşmayan anahtar kullanılmaz. Değişkeni sil, doğru adla yeniden tanımla. Yanlış sağlayıcıya gitmiş olabilirse anahtarı panelden yenile. Windows'ta:
+
+```bash
+[Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $null, 'User')
+```
+
+**Neden `.env` değil?** Kullanılmaz. `npm test` gibi izinli bir komut proje `.env` dosyasını kolayca yükler, bu da anahtarı modelin yazdığı koda verir. Oraya anahtar koyduysan satırı sil ve anahtarı sağlayıcının panelinden yenile.
+
+**Kit ne yapıyor:**
+
+| Parça | Nasıl çalışır |
+|---|---|
+| Roller | Kod, test ve doküman dışarı verilebilir. Planlama ve inceleme (kurul, `security-auditor`) dış modele verilemez, planında kalır |
+| Proxy | Rol, geçici bir tokenla ayrı süreçte çalışır. Yerel proxy gerçek anahtarı kendisi ekler ve yalnız sağlayıcının sabit adresine gönderir |
+| Günlük sınır | Proxy harcamayı sağlayıcının yanıtlarından sayar. Sınırda rol durur, sana sorulur. Fiyatı bilinmeyen model için yüksek bir varsayılan kullanılır |
+| İzinler | Her rolün dar bir listesi var: dokümanda kabuk yok, test yalnız test komutunu, kod onayladığın komutları çalıştırır. Hook'lar çalışmaya devam eder |
+| Onay | Rolü çalıştırmak ve rolü sağlayıcıya taşımak her seferinde sorulur |
+
+**Önce bilmen gerekenler:**
+- Sağlayıcı, rolün görebildiği her şeyi görür: kodun, proje kuralları ve notlar, izinli komutların çıktıları, kullanıcı adını içeren klasör yolu. Gönderilen geri alınamaz.
+- **Kalan risk:** `npm test` gibi izinli bir komut modelin yazdığı kodu çalıştırır. O kod proje dosyalarını ve anahtar deposu dahil kendi dosyalarını okuyup dışarı gönderebilir; sandbox yok. Gerçek sır içeren projede kod ve test rollerini dış modele verme.
+- Bu modeller burada Claude kadar iyi çalışmayabilir. OpenRouter bu yolda Anthropic dışı modelleri garanti etmiyor, bu yüzden `/models` modeli güvenmeden önce dener.
 
 ## Codex ve Antigravity
 

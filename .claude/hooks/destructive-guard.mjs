@@ -48,6 +48,11 @@ const PROD_SECRET = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(
 const UNCLEAR_ENV = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(?=[^;&|]*\s--environment(=|\s+)(?!['"]?(development|preview)['"]?(\s|$))\S)/i;
 
 const NEEDS_APPROVAL = [
+  // An external model spends the user's money and sends the project out; the key store is the user's
+  [/run-role\.mjs/i, 'guard.models.run'],
+  [/models\.mjs\b[^;&|\n]*\s--(set-key|remove-key|set-limit)\b/i, 'guard.models.keys'],
+  [/models\.mjs\b[^;&|\n]*\s--set\b[^;&|\n]*=[^\s;&|]*\//i, 'guard.models.provider'],
+  [/\.vibe-kit(?![\w-])(?![\\/](?:preferences|gate-approval))|\.vib(?:e-?[\w-]{0,3})?[*?[]|\.vib[^;&|\n]{0,200}providers\.json/i, 'guard.models.store'],
   // unquote() opens quoted spellings; here only what the shell sees
   [/\b(vercel|vc)\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'guard.destructive.prodDeploy'],
   // The subcommand can also come after flags: vercel --scope team promote <url>

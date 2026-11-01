@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.57.0</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.60.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -600,6 +600,7 @@ Pending decision: email service</pre>
     <p>Tools</p>
     <a href="#capabilities">Capability packs</a>
     <a href="#skills">Which skill for which job</a>
+    <a href="#external-models">External models</a>
     <a href="#tools">Codex and Antigravity</a>
     <p>Reference</p>
     <a href="#commands">Commands</a>
@@ -1148,6 +1149,36 @@ Pending decision: email service</pre>
   <div class="note"><b>Deliberately left out:</b> superpowers, gstack, spec-kit, BMAD, GSD and OpenSpec would replace the kit's question, plan and board flow; their good ideas were worked into the kit's own rules. claude-mem and Serena do the same job as the kit's progress file and code map.</div>
 </section>
 
+<section id="external-models">
+  <p class="path">Your own models</p>
+  <h2>External models</h2>
+  <p class="lead">With <code>/models</code> you choose which model does which job. The code, test and docs roles can run on a model you bought from OpenRouter, DeepSeek or Kimi, while planning and review stay on your Claude plan. Available in Claude Code; Codex not yet, Antigravity not supported.</p>
+  <h3>Add a key</h3>
+  <p>Run this in your own terminal, never in the chat. It asks for the key without showing it and keeps it outside the project.</p>
+<pre class="term">node .claude/hooks/models.mjs --set-key openrouter</pre>
+  <p>Or use a system variable. The name must match the provider: <code>OPENROUTER_API_KEY</code>, <code>DEEPSEEK_API_KEY</code> or <code>MOONSHOT_API_KEY</code>. On Windows, then restart the app:</p>
+<pre class="term">setx OPENROUTER_API_KEY "&lt;your key&gt;"</pre>
+  <h3>Set a daily limit</h3>
+  <p>In dollars. There is no default, and a role does not run without one. At the limit the role stops and you are asked. Also set a hard limit in the provider's panel. Then choose the models with <code>/models</code>.</p>
+<pre class="term">node .claude/hooks/models.mjs --set-limit openrouter 5</pre>
+  <h3>Remove a key, or fix a wrong name</h3>
+<pre class="term">node .claude/hooks/models.mjs --remove-key openrouter</pre>
+  <p>A key whose format does not match the provider is not used. If you set it under the wrong name, remove the variable and set the right one. If it may have reached the wrong provider, replace the key in the provider's panel. On Windows:</p>
+<pre class="term">[Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $null, 'User')</pre>
+  <p><b>Why not <code>.env</code>?</b> It is not used. An allowed command such as <code>npm test</code> loads a project <code>.env</code> easily, which would hand the key to the code the model wrote. If you put a key there, delete the line and replace the key in the provider's panel.</p>
+  <h3>What the kit does</h3>
+  <div class="table-wrap"><table>
+    <tbody>
+      <tr><td>Roles</td><td>Code, test and docs can move out. Planning and review (board, <code>security-auditor</code>) stay on your plan.</td></tr>
+      <tr><td>Proxy</td><td>The role runs as a separate process with a throwaway token. A local proxy adds the real key and sends only to the provider's fixed address.</td></tr>
+      <tr><td>Daily limit</td><td>The proxy counts the spend from the provider's replies. Unknown prices use a high default.</td></tr>
+      <tr><td>Permissions</td><td>Each role gets a narrow list: docs has no shell, test runs the test command, code runs your approved commands. Hooks still run.</td></tr>
+      <tr><td>Approval</td><td>Running a role and moving a role to a provider are asked every time.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note accent"><b>What to know first:</b> The provider sees everything the role can see: your code, project rules and notes, the output of allowed commands, the folder path with your user name. What is sent cannot be taken back. <b>The remaining risk:</b> an allowed command such as <code>npm test</code> runs code the model wrote. That code can read project files and your own files, including the key store, and send them out; there is no sandbox. Do not give the code and test roles to an external model in a project that holds real secrets. These models may not work as well as Claude here: OpenRouter does not guarantee non-Anthropic models on this route, so <code>/models</code> tries a model before you rely on it.</div>
+</section>
+
 <section id="tools">
   <p class="path">With another tool</p>
   <h2>Codex and Antigravity</h2>
@@ -1199,6 +1230,7 @@ Pending decision: email service</pre>
       <tr><td class="f">/retro</td><td>Writes the lessons into the project; kit suggestions go to a branch in the TillerHand repo</td></tr>
       <tr><td class="f">/research [topic]</td><td>Articles, similar projects on GitHub and competing products; a difference table; chosen features go into the PRD</td></tr>
       <tr><td class="f">/handoff [take]</td><td>Hands the project to another person or account, or takes it over; continues from the same place</td></tr>
+      <tr><td class="f">/models</td><td>Chooses which model runs which role, including external models from OpenRouter, DeepSeek and Kimi</td></tr>
       <tr><td class="f">/tools [on|off|measure|commands]</td><td>Shows, turns on or turns off context packs; measures the skill load; makes the command list light or full</td></tr>
       <tr><td class="f">/kit-update</td><td>Brings the project to TillerHand's latest version; asks about conflicts; adds a tool with <code>--tool</code> and an add-on with <code>--addons</code></td></tr>
       <tr><td class="f">/language [language]</td><td>Changes the conversation language (Turkish, English or another language); refreshes the translation of the hook messages and the dashboard</td></tr>
@@ -1256,7 +1288,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.57.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.60.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 
