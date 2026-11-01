@@ -3,6 +3,11 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.52.0] - 2026-11-01
+
+### Changed
+- **`rea` is for understanding how a product or feature works, not for copying it.** `/research` reports how the feature works and the need it serves; the other product's code, text, images and brand stay out. If the model refuses or falls back, `/research` and `/adopt` ask which feature or part you want to understand and why, then go on according to your answer. The catalog names what the kit does not support.
+
 ## [3.51.0] - 2026-11-01
 
 ### Changed

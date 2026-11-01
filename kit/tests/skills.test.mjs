@@ -134,6 +134,116 @@ test('settings 3.12: rea, Understand-Anything, design-md, three.js pinned and wi
   for (const l of ['perf', 'ux']) assert.match(readText(`.claude/findings/lenses/${l}.md`), /WebGL/, `${l} lens: WebGL`);
 });
 
+// The rea passage: every line naming rea, plus the more indented lines under it
+const reaPassage = (rel) => {
+  const lines = fs.readFileSync(path.join(ROOT, rel), 'utf8').split(/\r?\n/);
+  const indent = (l) => l.match(/^\s*/)[0].length;
+  const out = [];
+  lines.forEach((line, i) => {
+    if (!/\brea\b/i.test(line)) return;
+    out.push(line);
+    for (let j = i + 1; j < lines.length && lines[j].trim() && indent(lines[j]) > indent(line); j++) out.push(lines[j]);
+  });
+  assert.notEqual(out.length, 0, `${rel}: no line names rea`);
+  return out.join('\n');
+};
+const reaCatalogRow = () => {
+  const row = fs.readFileSync(path.join(ROOT, 'docs/workflow/mcp-catalog.md'), 'utf8').split(/\r?\n/).find((l) => /^\|\s*rea\b/i.test(l));
+  assert.notEqual(row, undefined, 'catalog: no rea row');
+  return row;
+};
+const sentences = (text) => text.split(/(?<=[.!?])\s+|\n+/);
+// Two stable words in either order, in one sentence, at most `gap` characters apart
+const near = (a, b, gap = 40) => new RegExp(`\\b(?:${a})\\b[^.\\n]{0,${gap}}\\b(?:${b})\\b|\\b(?:${b})\\b[^.\\n]{0,${gap}}\\b(?:${a})\\b`, 'i');
+const GOES_ON = 'continues?|continuing|go on|goes on|going on|proceeds?|carry on|carries on|keep going|keeps going|keep working';
+const MODEL_REFUSES = near('model', 'refus\\w*');
+const FALLS_BACK = /\bfall(?:s|ing)?[\s-]*back\b|\bfallback\b|\bfell back\b/i;
+
+// A sentence that orders stopping because of a copy request or before any work. The model refusing and negated forms do not count.
+const upFrontRefusals = (text) => sentences(text).filter((s) => {
+  const refuses = /(?<!\b(?:not|never|don't|without|model|it)\s+(?:\w+\s+){0,2})\b(?:stop|stops|stopped|decline|declines|declined|refuse|refuses|refused|reject|rejects|rejected|abort|aborts|aborted|deny|denies|denied|turn down)\b/i.test(s)
+    || /\b(?:do not|don't|never)\s+(?:proceed|continue|go on|help|answer)\b/i.test(s);
+  return refuses && /\b(?:as soon as|up[- ]?front|immediately|right away|at once|outright|on sight|cop(?:y|ies|ying)|clone|replicate)\b/i.test(s);
+});
+
+test('3.52.0 AC-1: research rea passage states the purpose, how a feature works and the need it serves', () => {
+  const rea = reaPassage('.claude/commands/research.md');
+  assert.match(rea, /\bhow\b[^.\n]{0,40}\bworks?\b/i, 'how it works');
+  assert.match(rea, near('needs?', 'serves?|meets?|solves?|address(?:es)?|fulfils?|fulfills?|fills?', 30), 'the need it serves');
+});
+
+test('3.52.0 AC-1: research rea passage says the work goes on while the model answers', () => {
+  const modelAnswers = /\b(?:while|as long as|when|if|once)\b[^.\n]{0,20}\bmodel\b[^.\n]{0,20}\b(?:answers?|answering|responds?|responding|complies|cooperates?)\b/i;
+  const goesOn = new RegExp(`\\b(?:${GOES_ON})\\b`, 'i');
+  assert.equal(sentences(reaPassage('.claude/commands/research.md')).some((s) => modelAnswers.test(s) && goesOn.test(s)), true, 'one sentence: the model answers, the work goes on');
+});
+
+test('3.52.0 AC-1: research rea passage, on refusal or fallback ask with AskUserQuestion and continue by the answer', () => {
+  const rea = reaPassage('.claude/commands/research.md');
+  assert.match(rea, MODEL_REFUSES, 'the model refuses');
+  assert.match(rea, FALLS_BACK, 'the model falls back');
+  assert.match(rea, /\bAskUserQuestion\b/i, 'asks with AskUserQuestion');
+  assert.match(rea, /\b(?:which|what)\b[^.\n]{0,20}\bfeature\b/i, 'asks which feature');
+  assert.match(rea, /\bwhy\b[^.\n]{0,30}\bneed/i, 'asks why it is needed');
+  assert.match(rea, /\b(?:own|their|your|user's)\s+product\b/i, 'asks what their own product will do');
+  assert.match(rea, near(`${GOES_ON}|acts?`, 'answers?|repl(?:y|ies)|responses?'), 'continues according to the answer');
+});
+
+test('3.52.0 AC-1: research rea passage keeps the authorized warning and the nothing-is-taken rule', () => {
+  const rea = reaPassage('.claude/commands/research.md');
+  assert.match(rea, /\bauthorized\b/i, 'authorized warning');
+  const notTaken = sentences(rea).some((s) => [/\bcode\b/i, /\btexts?\b/i, /\bimages?\b/i, /\bbrands?\b/i, /\b(?:not|never|no)\b/i, /\b(?:taken?|copied|copy|reused?)\b/i].every((re) => re.test(s)));
+  assert.equal(notTaken, true, 'one sentence: code, text, images and brand are not taken');
+});
+
+test('3.52.0 AC-2: adopt rea passage keeps authorized', () => {
+  assert.match(reaPassage('.claude/commands/adopt.md'), /\bauthorized\b/i);
+});
+
+test('3.52.0 AC-2: adopt rea passage, on refusal or fallback ask the user', () => {
+  const rea = reaPassage('.claude/commands/adopt.md');
+  assert.match(rea, MODEL_REFUSES, 'the model refuses');
+  assert.match(rea, FALLS_BACK, 'the model falls back');
+  assert.match(rea, /\bAskUserQuestion\b|\basks?\b[^.\n]{0,20}\buser\b/i, 'asks the user');
+});
+
+test('3.52.0 AC-3: catalog rea row describes /research as how an existing product or feature works', () => {
+  const row = reaCatalogRow();
+  assert.match(row, /\/research\b[^|\n]*\bhow\b[^|\n]*\bexisting\b[^|\n]*\b(?:product|feature)\b[^|\n]*\bworks?\b/i, 'how an existing product or feature works');
+  assert.doesNotMatch(row, /\bhow\b[^|\n]{0,10}\bcompetitor(?:'s)?\s+feature\b/i, 'not: how a competitor feature works');
+});
+
+test('3.52.0 AC-3: catalog rea row states what the kit does not support', () => {
+  const row = reaCatalogRow();
+  assert.match(row, /\b(?:not|never|doesn't|don't)\b[^.|\n]{0,30}\bsupport|\bunsupported\b/i, 'says not supported');
+  for (const re of [/\bbypass/i, /\bDRM\b/i, /\blicen[sc]e checks?\b/i, /\bauthentication\b/i, /\bcop(?:y|ied|ying)\b/i, /\bprotected\b[^.|\n]{0,20}\bcode\b/i, /\bassets?\b/i]) assert.match(row, re);
+});
+
+test('3.52.0 AC-3: catalog rea row keeps the rea-agents@6.2.0 pin', () => {
+  assert.equal(reaCatalogRow().includes('rea-agents@6.2.0'), true);
+});
+
+test('3.52.0 AC-4: ATTACK the up-front refusal detector catches refusals and spares the intended wording', () => {
+  for (const bad of [
+    'Refuse up front.',
+    'Stop as soon as the user asks for a copy.',
+    'Decline any request to copy a product.',
+    'If the user asks for a clone, do not proceed.',
+    'Requests for a copy are refused immediately.',
+  ]) assert.deepEqual(upFrontRefusals(bad), [bad]);
+  for (const good of [
+    'If the model refuses or falls back, ask the user with AskUserQuestion and continue according to the answer.',
+    'The request is not stopped up front.',
+    'Do not refuse a request up front.',
+    'The purpose is understanding how a feature works, not copying a product.',
+    "The other product's code, text, images and brand are not taken.",
+  ]) assert.deepEqual(upFrontRefusals(good), []);
+});
+
+test('3.52.0 AC-4: ATTACK research and adopt rea passages hold no instruction to refuse up front', () => {
+  for (const f of ['research', 'adopt']) assert.deepEqual(upFrontRefusals(reaPassage(`.claude/commands/${f}.md`)), [], `/${f}`);
+});
+
 test('plugin sync: finds the missing and the disabled, ignores installs in another project', async () => {
   const { missingPlugins } = await import('../../.claude/hooks/plugins-sync.mjs');
   const root = path.resolve(os.tmpdir(), 'project-a');

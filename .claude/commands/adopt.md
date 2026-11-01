@@ -35,7 +35,7 @@ Do not read files in bulk: if the code map is connected, use it first; otherwise
 5. **Installability:** Setup steps in the README, `.env.example`, system dependencies.
 6. **Git history:** Summary of the last 30 commits, active branches, most changed files (risky zones).
 7. **Existing docs:** README, the old `CLAUDE.md` and `AGENTS.md` (they stay in place; the kit's versions have the `.kit-new` extension), the docs folder if any.
-8. **Parts without source:** A compiled package, minified JS, an Electron ASAR or a dependency with lost source that entered the repo. List them if present. If their inside needs to be understood, suggest the rea CLI (`docs/workflow/mcp-catalog.md` → rea): only for parts the project owner owns or is authorized to inspect, checking the license.
+8. **Parts without source:** A compiled package, minified JS, an Electron ASAR or a dependency with lost source that entered the repo. List them if present. If their inside needs to be understood, suggest the rea CLI (`docs/workflow/mcp-catalog.md` → rea): only for parts the project owner owns or is authorized to inspect, checking the license. If the model refuses or falls back, ask the user with AskUserQuestion which part must be understood and why, then continue according to the answer.
 
 Show the findings as a short table. In a quick scan do not dive into the code: only structure and summary.
 
