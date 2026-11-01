@@ -171,3 +171,77 @@ test('new module works', () => assert.equal(x, 1));
   assert.equal(caughtTests(p), 2, 'newest first + new module works; not the broken one');
   fs.rmSync(p, { recursive: true, force: true });
 });
+
+// Conditions: kit, kit-nobatch (rule 4 without the batching sentences), kit-rules (coding rules in .claude/rules/server.md), plain.
+// One --dry --keep run prepares all of them; the folders are read once and removed.
+const REPO = path.resolve(EVAL, '..', '..');
+const ALL_CONDS = ['kit', 'kit-nobatch', 'kit-rules', 'plain'];
+const read = (dir, rel) => (fs.existsSync(path.join(dir, rel)) ? fs.readFileSync(path.join(dir, rel), 'utf8') : null);
+const flat = (s) => s.replace(/\s+/g, ' ').trim();
+const codingRules = (stack) => stack.match(/^## Coding rules\s*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1].trim();
+let prepared = null;
+function dryRuns() {
+  if (prepared) return prepared;
+  const out = {};
+  const r = spawnSync(process.execPath, [path.join(EVAL, 'run.mjs'), '--dry', '--keep', '--task', 'bug-sort', '--cond', ALL_CONDS.join(',')], { cwd: REPO, env, encoding: 'utf8', timeout: 600000 });
+  const dirs = {};
+  for (const [, cond, dir] of r.stdout.matchAll(/^bug-sort · (\S+) \((.+)\): hidden /gm)) dirs[cond] = dir;
+  try {
+    for (const c of ALL_CONDS) {
+      const d = dirs[c];
+      assert.ok(d && fs.existsSync(d), `${c}: --keep reports a folder (stdout: ${r.stdout.slice(0, 400)} stderr: ${r.stderr.slice(0, 400)})`);
+      out[c] = { agents: read(d, 'AGENTS.md'), stack: read(d, 'docs/architecture/stack.md'), server: read(d, '.claude/rules/server.md'),
+        rulesDir: fs.existsSync(path.join(d, '.claude', 'rules')), claudeDir: fs.existsSync(path.join(d, '.claude')) };
+    }
+  } finally {
+    for (const d of Object.values(dirs)) fs.rmSync(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
+  prepared = out;
+  return prepared;
+}
+const BATCH = [/run them together in one shell call/, /This is for reading only/, /Keep the script inline/];
+
+test('eval conditions: kit has the batching sentences, a Coding rules section in stack.md and no .claude/rules', () => {
+  const k = dryRuns().kit;
+  for (const re of BATCH) assert.match(k.agents, re);
+  assert.match(k.stack, /^## Coding rules$/m);
+  assert.ok((codingRules(k.stack) ?? '').length > 50, 'the section has content');
+  assert.equal(k.rulesDir, false);
+});
+
+test('eval conditions: kit-nobatch is kit without the batching, reading-only and inline-script sentences', () => {
+  const { kit, 'kit-nobatch': nb } = dryRuns();
+  for (const re of BATCH) assert.doesNotMatch(nb.agents, re);
+  for (const keep of ['Do not read files in bulk.', 'Read docs only when needed', 'Convert a PDF or Office file']) assert.ok(nb.agents.includes(keep), `rule 4 keeps: ${keep}`);
+  const without = flat(kit.agents).replace(/ ?When several reads or searches.*?command text\./, '');
+  assert.equal(flat(nb.agents), flat(without), 'nothing else differs in AGENTS.md');
+  assert.equal(flat(nb.stack), flat(kit.stack));
+  assert.equal(nb.rulesDir, false);
+});
+
+test('eval conditions: kit-rules moves the coding rules to .claude/rules/server.md, scoped to src/, with the same text', () => {
+  const { kit, 'kit-rules': kr } = dryRuns();
+  assert.equal(flat(kr.agents), flat(kit.agents));
+  assert.doesNotMatch(kr.stack, /^## Coding rules/m);
+  assert.match(kr.stack, /^## Verification$/m, 'the rest of stack.md stays');
+  assert.ok(kr.server !== null, '.claude/rules/server.md exists');
+  const front = kr.server.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+  assert.ok(front, 'starts with frontmatter');
+  assert.match(front[1], /^paths:/m);
+  assert.match(front[1], /src\/\S*\*/, 'a src/ glob');
+  assert.ok(flat(kr.server.slice(front[0].length)).includes(flat(codingRules(kit.stack))), 'the coding rules text is the same as in kit');
+});
+
+test('eval conditions: plain stays bare (no kit files)', () => {
+  const p = dryRuns().plain;
+  assert.deepEqual([p.agents, p.stack, p.server, p.claudeDir], [null, null, null, false]);
+});
+
+test('eval conditions: an unknown condition throws and the message lists every condition', () => {
+  const r = spawnSync(process.execPath, [path.join(EVAL, 'run.mjs'), '--dry', '--task', 'bug-sort', '--cond', 'bogus'], { cwd: REPO, env, encoding: 'utf8', timeout: 60000 });
+  assert.notEqual(r.status, 0);
+  const msg = r.stderr.match(/^Error: Unknown condition: bogus.*$/m)?.[0];
+  assert.ok(msg, r.stderr.slice(0, 300));
+  const words = msg.replace('Unknown condition: bogus', '').split(/[^a-z-]+/);
+  for (const c of ALL_CONDS) assert.ok(words.includes(c), `lists ${c}: ${msg}`);
+});

@@ -34,6 +34,17 @@ const DENIED = ['Bash(node *..*)', 'Bash(git * --output*)', 'Bash(git * --no-ind
 const HEADLESS = 'This is an automated evaluation run: there is no user, you cannot ask questions and you cannot wait for approval. ' +
   'Where a decision is needed, pick the best option and go on. Stop when the work is done. Do not commit.';
 const KIT_HEADLESS = ' Question mode is closed (all topics): for plan approval and decision questions, pick the recommended option and record it as "automatic".';
+// One text in two places: in stack.md (kit, kit-nobatch) or as a path-scoped rule (kit-rules), so where it lives is the only difference
+const CODING_RULES = `- Routes parse and validate their input, then call the feature's server code; business logic does not sit in a route.
+- Send every reply through \`sendJson\`, and read bodies with \`readJson\`; a bad body is a 400 with a short message.
+- A route that reads or changes a user's data checks who owns it before anything else.
+- Return 404 for a record the caller may not see, so its existence does not leak.
+- Keep state in the store passed to the routes; no module-level state.
+- No new dependencies: \`node:\` modules only.
+- Keep functions small and name them after what they do; no comments that repeat the code.
+- A new behavior gets a test in \`tests/\` that sends a real request.
+`;
+
 const STACK = `# Stack
 
 - Node.js 24, ES modules, no dependencies: \`node:http\` server, \`node:test\` tests.
@@ -57,7 +68,8 @@ const keep = args.includes('--keep') || dry;
 const repeat = Number(opt('--repeat', '1'));
 if (!Number.isInteger(repeat) || repeat < 1 || repeat > 10) throw new Error('--repeat must be an integer from 1 to 10');
 for (const t of tasks) if (!allTasks.includes(t)) throw new Error(`Unknown task: ${t}. Options: ${allTasks.join(', ')}`);
-for (const c of conds) if (c !== 'kit' && c !== 'plain') throw new Error(`Unknown condition: ${c} (kit, plain)`);
+const CONDITIONS = ['kit', 'kit-nobatch', 'kit-rules', 'plain'];
+for (const c of conds) if (!CONDITIONS.includes(c)) throw new Error(`Unknown condition: ${c} (${CONDITIONS.join(', ')})`);
 
 // A child of node --test inherits NODE_TEST_CONTEXT and would report to the parent instead of printing its summary
 const childEnv = (extra = {}) => { const e = { ...process.env, ...extra }; delete e.NODE_TEST_CONTEXT; return e; };
@@ -68,11 +80,22 @@ const run = (cmd, a, cwd, env = {}) => {
 };
 const git = (dir, ...a) => run('git', ['-c', 'user.name=eval', '-c', 'user.email=eval@example.invalid', ...a], dir);
 
-function setupKit(dir) {
+function setupKit(dir, cond) {
   run(process.execPath, [path.join(REPO, 'kit', 'kit.mjs'), 'init', '--project', dir, '--tool', 'claude'], REPO);
   run(process.execPath, [path.join(REPO, 'kit', 'kit.mjs'), 'install', '--type', 'web-saas', '--project', dir], REPO);
   const edit = (rel, fn) => { const p = path.join(dir, rel); fs.writeFileSync(p, fn(fs.readFileSync(p, 'utf8'))); };
-  fs.writeFileSync(path.join(dir, 'docs', 'architecture', 'stack.md'), STACK);
+  if (cond === 'kit-rules') {
+    fs.writeFileSync(path.join(dir, 'docs', 'architecture', 'stack.md'), STACK);
+    fs.mkdirSync(path.join(dir, '.claude', 'rules'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.claude', 'rules', 'server.md'), `---\npaths:\n  - "src/**"\n---\n\n# Coding rules\n\n${CODING_RULES}`);
+  } else {
+    fs.writeFileSync(path.join(dir, 'docs', 'architecture', 'stack.md'), `${STACK}\n## Coding rules\n\n${CODING_RULES}`);
+  }
+  // Measures rule 4's batch reading: everything after "When several reads or searches"
+  if (cond === 'kit-nobatch') {
+    const p = path.join(dir, 'AGENTS.md');
+    fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace(/ When several reads or searches[^\n]*only see the command text\./, ''));
+  }
   edit('AGENTS.md', (s) => s.replace(/^dev:\s*\[ \]/m, 'dev:         npm start').replace(/^test:\s*\[ \]/m, 'test:        npm test'));
   edit('docs/workflow/progress.md', (s) => s
     .replace(/^\*\*Active phase:\*\* .*$/m, '**Active phase:** Phase 1')
@@ -87,7 +110,7 @@ function setupKit(dir) {
 
 function prepare(dir, cond) {
   fs.cpSync(FIXTURE, dir, { recursive: true });
-  if (cond === 'kit') setupKit(dir);
+  if (cond !== 'plain') setupKit(dir, cond);
   if (!fs.existsSync(path.join(dir, '.git'))) git(dir, 'init', '-q');
   git(dir, 'add', '-A');
   git(dir, 'commit', '-q', '--no-verify', '-m', 'base');
@@ -301,7 +324,7 @@ function scored(task, cond, dir, base, res) {
     turns: j?.num_turns ?? null,
     tokens: j ? (u.input_tokens ?? 0) + (u.output_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) : null,
     outputTokens: u.output_tokens ?? null,
-    testFirst: res?.testFirst ?? null, gateRan: res && cond === 'kit' ? res.gateRan : null, // plain has no gate
+    testFirst: res?.testFirst ?? null, gateRan: res && cond !== 'plain' ? res.gateRan : null, // plain has no gate
     claudeVersion: res?.init?.claude_code_version ?? null,
     plugins: res?.init?.plugins?.map((p) => p.name) ?? null,
     summary: scrub(j?.result, dir)?.slice(0, 1500) ?? null,

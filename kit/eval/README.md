@@ -26,6 +26,7 @@ A run spends from the Claude subscription. In the first measurement, 6 Sonnet ru
 - **Conditions:** Every run starts in a fresh temp folder.
   - `kit`: runs `init` + `install --type web-saas`, then writes the state `/start` would leave: stack, `AGENTS.md` → Commands, question mode closed, gate approval for the command.
   - `plain`: the fixture alone.
+  - `kit-nobatch`: `kit` without the batch reading rule (`AGENTS.md` rule 4). `kit-rules`: `kit` with the coding rules in `.claude/rules/server.md` (`paths: src/**`) instead of `stack.md`. Run them with `--cond kit,kit-nobatch,kit-rules` to measure those two rules; they are not in the default run.
   - Both conditions run as `claude -p` with the same model and the same `--allowedTools` list, with project settings only (`--setting-sources project,local`).
   - Permissions are narrow. Reading and writing stay inside the run folder. In Bash, only `npm test`/`npm start`, `node --test`, `node src/…`, `node tests/…`, `node .claude/hooks/…` and read-only git work. Easy ways out of the folder are forbidden: `node -e`, `..`, `git --output`/`--no-index`, `npm --prefix`/`--script-shell`. In both conditions `.git/` and `.claude/` cannot be edited.
   - **This is not a security boundary.** Code the agent writes (`npm test`, `package.json` scripts) runs with your user rights and your environment variables. The rules only make an accidental write outside the folder harder.
