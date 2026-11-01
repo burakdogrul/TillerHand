@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.50.0</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.50.1</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -948,7 +948,7 @@ npx tillerhand init
       <tr><td>Test separation</td><td>The tests are written before the code by a separate agent (<code>test-writer</code>, a different model is recommended), not by whoever writes the code. Nobody but this agent can write to a test file: the main session and the code agent are blocked if they try. A test file changed indirectly by a patch or script also stops at the commit gate. So whoever writes the code can't shape the test to fit their own code</td></tr>
       <tr><td>Test protection</td><td>Deleting or commenting out an assertion, <code>.skip</code>/<code>.only</code>, a loosened assertion, deleting or moving a test file, and narrowing coverage in the test config are asked; so is writing to a test file through the shell</td></tr>
       <tr><td>Deterministic gate</td><td><code>gate.mjs --run</code>: lint, type check, tests and Semgrep run; the output feeds the board, and a red check counts as REJECT. If the "must not change" behaviors in the spec have no test or the test is red, the gate is red. It is also red if an added line contains a path specific to this machine (the full path of the project folder or the home folder). A new or changed command is first shown to you for approval</td></tr>
-      <tr><td>Commit gate</td><td>No commit without a board review and a green gate for the same changes; the task-end approval also counts for the commit, so the same change is not reviewed twice; skipping the review (<code>--skip</code>) is asked every time</td></tr>
+      <tr><td>Commit gate</td><td>No commit without a board review and a green gate for the same changes; the task-end approval also counts for the commit, so the same change is not reviewed twice; skipping the review (<code>--skip</code>) and commands that make commits with nothing to review (<code>git merge</code>, <code>git revert</code>…) are asked every time</td></tr>
       <tr><td>Edit lock</td><td>While <code>/freeze &lt;folder&gt;</code> is on, the AI writes only to that folder; writing outside through the shell is asked, and a symlink can't escape it</td></tr>
       <tr><td>Scope shield</td><td>After <code>/plan-task</code> approval, the plan's file list is saved; writing to an existing file not on the list is asked. Turning the shield on and off is asked too</td></tr>
       <tr><td>Edit round counter</td><td>When the same code file is edited for the 5th and 10th time in a session, a Semgrep and security review reminder appears</td></tr>
@@ -1242,7 +1242,7 @@ Next: G-013 password reset · pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.50.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.50.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

@@ -1104,3 +1104,292 @@ test('3.50.0: wiring: Codex Bash and Antigravity run_command run commit-gate.mjs
   assert.notEqual(run, undefined, 'Antigravity kit-command-guards has a run_command block');
   assert.equal(run.hooks.some((h) => h.type === 'command' && h.command === 'node .claude/hooks/commit-gate.mjs'), true, 'Antigravity run_command runs commit-gate.mjs');
 });
+
+// ---------- 3.50.1: history-writing git verbs and indirect git calls are asked; an error in the gate does not pass a commit ----------
+
+// What the hook decided: 'ask' or 'deny' (stdout JSON, exit 0), null (allowed: no stdout, exit 0), 'exit N' (anything else).
+// Tables below compare whole objects, so a red run lists every command that is wrong, not only the first one.
+const verdict = (r) => (r.status !== 0 ? `exit ${r.status}` : r.stdout === '' ? null : JSON.parse(r.stdout).hookSpecificOutput.permissionDecision);
+const verdicts = (commands) => Object.fromEntries(commands.map((c) => [c, verdict(commit(c))]));
+const every = (commands, want) => Object.fromEntries(commands.map((c) => [c, want]));
+const porcelain = () => execSync('git status --porcelain', { cwd: p, encoding: 'utf8' });
+// A committed tree with no approval on file
+const start351 = (name) => {
+  k9Start(name);
+  fs.rmSync(approvalFile(), { force: true });
+  assert.equal(porcelain(), '', 'precondition: clean tree');
+};
+// The same table on a clean tree and on one with a tracked change and an untracked code file
+const onBothTrees = (name, commands, want) => {
+  start351(name);
+  const clean = verdicts(commands);
+  const a = fs.readFileSync(path.join(p, 'a.js'));
+  write('a.js', `dirty ${name}`);
+  write('dirty351.js', 'x');
+  try {
+    assert.notEqual(porcelain(), '', 'precondition: dirty tree');
+    assert.deepEqual({ clean, dirty: verdicts(commands) }, { clean: every(commands, want), dirty: every(commands, want) });
+  } finally {
+    fs.rmSync(path.join(p, 'dirty351.js'), { force: true });
+    fs.writeFileSync(path.join(p, 'a.js'), a);
+  }
+};
+// The real hook with CLAUDE_PROJECT_DIR on a separate temp project
+const gateIn = (r, command, extra = {}) => verdict(spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], {
+  input: JSON.stringify({ tool_input: { command }, ...extra }), cwd: r, encoding: 'utf8',
+  env: { ...process.env, CLAUDE_PROJECT_DIR: r, SEMGREP: 'missing-semgrep-command' },
+}));
+const gitWorks = (r) => spawnSync('git', ['rev-parse', '--git-dir'], { cwd: r, stdio: 'ignore' }).status === 0;
+
+test('3.50.1 AC-1: merge, cherry-pick, revert, am, rebase, commit-tree and fast-import are asked on a clean and a dirty tree with no approval on file', () => {
+  onBothTrees('ac1-verbs', ['git merge x', 'git cherry-pick abc', 'git revert HEAD', 'git am p.patch', 'git rebase main', 'git commit-tree t', 'git fast-import'], 'ask');
+});
+
+test('3.50.1 AC-1: ATTACK: global options, git.exe, quoted words and --continue spellings of those verbs are asked', () => {
+  onBothTrees('ac1-spellings', ['git -C . merge x', 'git -c a=b revert HEAD', 'git.exe merge x', '"git" "merge" x', 'git merge --continue', 'git cherry-pick --continue'], 'ask');
+});
+
+test('3.50.1 AC-2: ATTACK: a git whose name or subcommand the text does not show is asked on a clean and a dirty tree', () => {
+  onBothTrees('ac2', ['g=git; $g commit -m x', '"$GIT" commit -m x', '${g} commit -m x', '$(which git) commit -m x', '`which git` commit -m x', '%g% commit -m x', '$g -C . merge x',
+    'git $(echo commit)', 'git `echo commit`', 'git $SUB', 'git "$@"', 'git @args', 'git %SUB%', 'git -C "$D" $(echo commit)'], 'ask');
+});
+
+test('3.50.1 AC-3: read-only git, abort spellings, variables in option values and non-git commands are not asked on a clean tree', () => {
+  start351('ac3');
+  const commands = ['git merge-base a b', 'git merge --abort', 'git rebase --abort', 'git cherry-pick --quit', 'git revert --abort', 'git am --abort', 'git status',
+    'git -C "$D" status', 'git -C $D log', 'git -c a=$b log', 'git --git-dir $D log', 'git diff $BASE', 'npm run build', 'echo hello'];
+  assert.deepEqual(verdicts(commands), every(commands, null));
+});
+
+test('3.50.1 AC-4: ATTACK: an abort chained to a real verb is asked', () => {
+  onBothTrees('ac4', ['git merge --abort && git merge x', 'git rebase --abort; git revert HEAD'], 'ask');
+});
+
+test('3.50.1 AC-4: ATTACK: "--abort" in a comment or a message, and a harmless command before the verb, do not hide it', () => {
+  onBothTrees('ac4-hide', ['git merge x # --abort', 'git merge -m "--abort" x', 'git merge-base a b && git merge x', 'git status && git merge x', 'git status\ngit merge x'], 'ask');
+});
+
+test('3.50.1 AC-5: with no board member (board-chair.md alone does not count) or Commit review off, neither a verb nor an indirect commit is asked', () => {
+  start351('ac5');
+  const commands = ['git merge x', 'g=git; $g commit -m x'];
+  const agentsDir = path.join(p, '.claude', 'agents');
+  const member = fs.readFileSync(path.join(agentsDir, 'board-qa.md'));
+  const boardMd = fs.readFileSync(path.join(p, 'docs/workflow/board.md'));
+  write('ac5.js', 'x'); // a code change, so the docs-only exemption is not what lets these through
+  const seen = {};
+  try {
+    fs.rmSync(agentsDir, { recursive: true });
+    seen['no agents folder'] = verdicts(commands);
+    write('.claude/agents/board-chair.md', '---\nname: board-chair\n---\n');
+    seen['board-chair.md alone'] = verdicts(commands);
+    fs.rmSync(agentsDir, { recursive: true });
+    fs.mkdirSync(agentsDir);
+    fs.writeFileSync(path.join(agentsDir, 'board-qa.md'), member);
+    write('docs/workflow/board.md', '**Commit review:** off\n');
+    seen['review off'] = verdicts(commands);
+  } finally {
+    fs.rmSync(agentsDir, { recursive: true, force: true });
+    fs.mkdirSync(agentsDir);
+    fs.writeFileSync(path.join(agentsDir, 'board-qa.md'), member);
+    fs.writeFileSync(path.join(p, 'docs/workflow/board.md'), boardMd);
+    fs.rmSync(path.join(p, 'ac5.js'), { force: true });
+  }
+  const none = every(commands, null);
+  assert.deepEqual(seen, { 'no agents folder': none, 'board-chair.md alone': none, 'review off': none });
+  assert.equal(porcelain(), '', 'the shared fixture is restored');
+});
+
+test('3.50.1 AC-6: a commit whose message names a verb stays a commit: allowed with a valid approval and a green gate, and on a clean tree', () => {
+  const commands = ['git commit -m "git merge fix"', 'git commit -m "git cherry-pick abc"', 'git commit -m "git revert HEAD"', 'git commit -m "git am p.patch"', 'git commit -m "git rebase main"',
+    'git commit -m "git commit-tree t"', 'git commit -m "git fast-import"', "git commit -m 'git merge fix'", 'git add -A && git commit -m "git merge fix"',
+    "git commit -m \"$(cat <<'EOF'\nfix: git merge x\nEOF\n)\""];
+  start351('ac6');
+  const clean = verdicts(commands);
+  write('a.js', 'ac6');
+  ready();
+  try {
+    assert.deepEqual({ clean, approved: verdicts(commands) }, { clean: every(commands, null), approved: every(commands, null) });
+  } finally {
+    sh('git checkout -- a.js');
+  }
+});
+
+test('3.50.1 AC-6: ATTACK: commit text does not wave a real verb through, even with a valid approval and a green gate', () => {
+  start351('ac6-attack');
+  write('a.js', 'ac6 attack');
+  ready();
+  const commands = ['git commit -m "git merge fix" && git merge x', 'git commit -m x; git revert HEAD', 'echo "git commit -m "; git merge x; echo "e"', 'git commit -m "$(git merge x)"'];
+  try {
+    const allowed = commands.filter((c) => verdict(commit(c)) === null);
+    assert.deepEqual(allowed, [], 'stopped or asked, never allowed');
+  } finally {
+    sh('git checkout -- a.js');
+  }
+});
+
+test('3.50.1 AC-7: Codex gets a deny and Antigravity an ask with a reason, as JSON on exit 0, on a clean and a dirty tree', () => {
+  const { r, w } = repo350();
+  const cases = [['codex', 'git merge x', 'deny'], ['codex', 'g=git; $g commit -m x', 'deny'], ['antigravity', 'git merge x', 'ask'], ['antigravity', '$g commit -m x', 'ask']];
+  const seen = () => cases.map(([tool, c]) => {
+    const h = hook350(tool, r, c);
+    return [tool, c, h.status, h.decision, Boolean(h.reason)];
+  });
+  const want = cases.map(([tool, c, decision]) => [tool, c, 0, decision, true]);
+  try {
+    const clean = seen();
+    w('src/a.ts', 'export const a = 2;\n');
+    assert.deepEqual({ clean, dirty: seen() }, { clean: want, dirty: want });
+  } finally { cleanup350(r); }
+});
+
+test('3.50.1 AC-8: ATTACK: git failing on a broken .git/HEAD does not pass a commit: asked, denied with turn_id', () => {
+  const { r, w } = repo350();
+  try {
+    w('src/a.ts', 'export const a = 2;\n');
+    w('.git/HEAD', 'garbage\n');
+    assert.equal(gitWorks(r), false, 'precondition: git fails here');
+    assert.deepEqual([gateIn(r, 'git commit -m x'), gateIn(r, 'git commit -m x', { turn_id: 't1' })], ['ask', 'deny']);
+  } finally { cleanup350(r); }
+});
+
+test('3.50.1 AC-8: ATTACK: a folder with a board and no git at all does not pass a commit: asked', () => {
+  const { r } = repo350();
+  try {
+    fs.rmSync(path.join(r, '.git'), { recursive: true, force: true });
+    assert.equal(gitWorks(r), false, 'precondition: no repository here');
+    assert.equal(gateIn(r, 'git commit -m x'), 'ask');
+  } finally { cleanup350(r); }
+});
+
+test('3.50.1 AC-8: ATTACK: an exception in the hook (.claude/agents is a plain file) does not pass a commit: asked, denied with turn_id, never exit 1', () => {
+  const { r, w } = repo350({ board: false });
+  try {
+    w('.claude/agents', 'not a folder\n');
+    w('src/a.ts', 'export const a = 2;\n');
+    assert.equal(fs.statSync(path.join(r, '.claude/agents')).isFile(), true, 'precondition: a plain file');
+    assert.equal(gitWorks(r), true, 'precondition: a real repository');
+    assert.deepEqual([gateIn(r, 'git commit -m x'), gateIn(r, 'git commit -m x', { turn_id: 't1' })], ['ask', 'deny']);
+  } finally { cleanup350(r); }
+});
+
+test('3.50.1 AC-9: unreadable stdin stays allowed: empty input, {bad, null and [] exit 0 with no stdout', () => {
+  const inputs = ['', '{bad', 'null', '[]'];
+  const seen = Object.fromEntries(inputs.map((input) => [input, verdict(spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], { input, encoding: 'utf8', env: env() }))]));
+  assert.deepEqual(seen, every(inputs, null));
+});
+
+// The timeout is the bound: a killed hook has no exit code, so verdict reports it as 'exit null'
+const timed = (command) => verdict(spawnSync(process.execPath, [path.join(HOOKS, 'commit-gate.mjs')], {
+  input: JSON.stringify({ tool_input: { command } }), encoding: 'utf8', env: env(), timeout: 5000, killSignal: 'SIGKILL',
+}));
+
+test('3.50.1 AC-10: ATTACK: repeated git options get an answer within 5 seconds: no decision without a verb, asked with one', () => {
+  start351('ac10');
+  const repeated = `echo git${' -c'.repeat(2000)} nope`;
+  assert.deepEqual({ status: timed(`${repeated}; git status`), merge: timed(`${repeated}; git merge x`) }, { status: null, merge: 'ask' });
+});
+
+test('3.50.1 AC-11: ATTACK: GIT and GIT.EXE are git, $GIT is a variable and "digit" is not git, on a dirty tree with no approval', () => {
+  start351('ac11');
+  write('a.js', 'ac11');
+  try {
+    assert.notEqual(porcelain(), '', 'precondition: dirty tree');
+    const want = { 'GIT commit -m x': 'exit 2', 'GIT.EXE commit -m x': 'exit 2', 'GIT merge x': 'ask', '$GIT commit -m x': 'ask', 'echo digit commit': null };
+    assert.deepEqual(verdicts(Object.keys(want)), want);
+  } finally {
+    sh('git checkout -- a.js');
+  }
+});
+
+test('3.50.1 AC-12: ATTACK: repeated long options get an answer within 5 seconds: no decision without a verb, stopped or asked with one', () => {
+  start351('ac12');
+  const a = ' --a'.repeat(200);
+  // Short labels, so a red run stays readable with 200 repeats in each command
+  const rows = {
+    'git --a x200 status': `git${a} status`,
+    '$g --a x200 status': `$g${a} status`,
+    'git --git-dir x200 status': `git${' --git-dir'.repeat(200)} status`,
+    'git --a x200 status; git commit': `git${a} status; git commit -m x`,
+    'git --a x200 status; git merge': `git${a} status; git merge x`,
+  };
+  const run = (want) => Object.fromEntries(Object.keys(want).map((label) => [label, timed(rows[label])]));
+  const wantClean = { 'git --a x200 status': null, '$g --a x200 status': null, 'git --git-dir x200 status': null, 'git --a x200 status; git merge': 'ask' };
+  const wantDirty = { 'git --a x200 status; git commit': 'exit 2', 'git --a x200 status; git merge': 'ask' };
+  const clean = run(wantClean);
+  write('a.js', 'ac12');
+  try {
+    assert.notEqual(porcelain(), '', 'precondition: dirty tree');
+    assert.deepEqual({ clean, dirty: run(wantDirty) }, { clean: wantClean, dirty: wantDirty });
+  } finally {
+    sh('git checkout -- a.js');
+  }
+});
+
+test('3.50.1 AC-13: ATTACK: a global option\'s value does not hide the subcommand: stopped or asked on a dirty tree, and a value that names a verb is not the verb on a clean tree', () => {
+  start351('ac13');
+  const wantClean = every(['git --git-dir $D log', 'git --work-tree "$D" status', 'git --namespace merge status', 'git --git-dir commit status'], null);
+  const clean = verdicts(Object.keys(wantClean));
+  const wantDirty = {
+    ...every(['git --work-tree . commit -m x', 'git --namespace n commit -m x', 'git --git-dir repo commit -m x', 'git --super-prefix p commit -m x'], 'exit 2'),
+    ...every(['git --work-tree . merge x', 'git --git-dir repo revert HEAD', 'git --git-dir $D $X', '$g --git-dir repo merge x'], 'ask'),
+  };
+  write('a.js', 'ac13');
+  try {
+    assert.notEqual(porcelain(), '', 'precondition: dirty tree');
+    assert.deepEqual({ clean, dirty: verdicts(Object.keys(wantDirty)) }, { clean: wantClean, dirty: wantDirty });
+  } finally {
+    sh('git checkout -- a.js');
+  }
+});
+
+test('3.50.1 AC-14: ATTACK: a quoted or spaced option value does not hide the subcommand: stopped or asked on a dirty tree, and no decision without a verb on a clean tree', () => {
+  start351('ac14');
+  const wantClean = every(['git -C "my dir" status', 'git -c user.name="A B" log', 'git --attr-source HEAD log', 'git -C "merge" status'], null);
+  const clean = verdicts(Object.keys(wantClean));
+  const wantDirty = {
+    ...every(['git -C "my dir" commit -m x', "git -C 'my dir' commit -m x", 'git -C my\\ dir commit -m x', 'git -c user.name="A B" commit -m x',
+      'git --git-dir="a b" commit -m x', 'git --work-tree "a b" commit -m x', 'git --attr-source HEAD commit -m x', 'git -C "my dir" "commit" -m x'], 'exit 2'),
+    ...every(['git -C "my dir" merge x', 'git -c user.name="A B" revert HEAD', 'git --attr-source HEAD merge x', 'git -C "my dir" "merge" x',
+      'git -C "my dir" $(echo commit)', '$g -C "my dir" commit -m x'], 'ask'),
+  };
+  write('a.js', 'ac14');
+  try {
+    assert.notEqual(porcelain(), '', 'precondition: dirty tree');
+    assert.deepEqual({ clean, dirty: verdicts(Object.keys(wantDirty)) }, { clean: wantClean, dirty: wantDirty });
+  } finally {
+    sh('git checkout -- a.js');
+  }
+});
+
+test('3.50.1 AC-15: ATTACK: a very long command gets a decision within 5 seconds when it names git or a commit-making verb, and a command under the limit behaves as before', () => {
+  start351('ac15');
+  const pad = (unit) => unit.repeat(Math.ceil(100_000 / unit.length));
+  // Short labels, so a red run stays readable with 100 KB in each command
+  const rows = {
+    'git -git x100KB; git commit': `git${pad(' -git')}; git commit -m x`,
+    'git -c git x100KB; git merge': `git${pad(' -c git')}; git merge x`,
+    'commit-gate a x100KB --skip y': `${pad('node .claude/hooks/commit-gate.mjs a ')} --skip y`,
+    'echo a x100KB; git commit': `${pad('echo a; ')}git commit -m x`,
+    'echo a x100KB': pad('echo a; '),
+  };
+  assert.deepEqual(Object.keys(rows).filter((label) => rows[label].length < 100_000), [], 'precondition: every row is at least 100 KB');
+  const under = `git commit -m "${'a'.repeat(9000)}"`;
+  const cleanSeen = timed(under);
+  write('a.js', 'ac15');
+  try {
+    assert.notEqual(porcelain(), '', 'precondition: dirty tree');
+    const dirty = Object.fromEntries(Object.keys(rows).map((label) => [label, timed(rows[label])]));
+    assert.deepEqual({ under: cleanSeen, dirty }, {
+      under: null,
+      dirty: {
+        'git -git x100KB; git commit': 'ask',
+        'git -c git x100KB; git merge': 'ask',
+        'commit-gate a x100KB --skip y': 'ask',
+        'echo a x100KB; git commit': 'ask',
+        'echo a x100KB': null,
+      },
+    });
+  } finally {
+    sh('git checkout -- a.js');
+  }
+});

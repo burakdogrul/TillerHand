@@ -3,6 +3,8 @@
 //   PreToolUse (Bash) hook: without review approval it stops the commit with exit code 2 and says what to do.
 //   node .claude/hooks/commit-gate.mjs --approve "<members who took part, or a note>"   binds the approval to the current changes.
 //   node .claude/hooks/commit-gate.mjs --skip "<reason>"   only when the user asks: skips the board and the gate (always asked).
+// Commands that make commits with no working-tree change to review (git merge, git revert…) and git calls the text cannot
+// read ($g commit, git $(echo commit)) have nothing to bind an approval to: the user is asked.
 // Exempt: no board set up, "Commit review: off" in docs/workflow/board.md, or only docs changed.
 // Commits the user makes from their own terminal are not affected (this is a Claude Code hook).
 import fs from 'node:fs';
@@ -11,14 +13,14 @@ import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { findRoot, isMain, reviewOff, parseInput, decisionText } from './shared.mjs';
 import { t } from './lang.mjs';
-import { unquote } from './destructive-guard.mjs';
+import { unquote, MAX_COMMAND } from './destructive-guard.mjs';
 import { isTestFile, isTestConfig, digest, readRecord } from './test-guard.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
 
 // Project root (the script's location) even when called from a subfolder: approval and gate must not be written elsewhere
 const root = findRoot();
 const approvalFile = path.join(root, '.claude', 'state', 'commit-approval.json');
-const git = (c) => execSync(`git ${c}`, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
+const git = (c) => execSync(`git ${c}`, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024, timeout: 20000 });
 
 // Changes that will go into the commit: staged, unstaged in tracked files (git commit -a) and untracked new
 // files (git add -A && git commit). -z: non-ASCII or spaced paths are not quoted and escaped
@@ -56,8 +58,28 @@ export function changes() {
 export const sinceApproval = (approval, d) => d.files.filter((f) => !approval?.hashes || !Object.hasOwn(approval.hashes, f) || approval.hashes[f] !== d.hashes[f]);
 
 // git's global options may come before commit: git --no-pager commit, git -C x commit, git --git-dir=x commit; git.exe on Windows
-const commitRe = (verbs) => new RegExp(`\\bgit(?:\\.exe)?["']?(?:\\s+(?:-[cC]\\s+\\S+|--?[\\w-]+(?:=\\S+)?))*\\s+(?:${verbs.join('|')})(?=\\s|$|["';&|)])`);
+// Every option has one reading: with two, "-c -c -c …" or "--a --a --a …" backtracks exponentially, and a hook that times out lets the command run.
+const VALUE_OPTIONS = '(?:-[cC]|--(?:git-dir|work-tree|namespace|exec-path|super-prefix|config-env|attr-source))';
+// One shell word: git -C "my dir" commit, git -c user.name='A B' commit, git -C my\ dir commit
+const WORD = `(?:"[^"]*"|'[^']*'|\\\\.|[^\\s"'\\\\])+`;
+const GLOBALS = `(?:\\s+(?:${VALUE_OPTIONS}\\s+${WORD}|(?!${VALUE_OPTIONS}\\s)-[\\w-]+(?:=${WORD})?))*`;
+const VERB_END = '(?=\\s|$|["\';&|)])';
+// i: Windows runs GIT.exe as git. $GIT is a variable, not git by name.
+const commitRe = (verbs) => new RegExp(`(?<!\\$)\\bgit(?:\\.exe)?["']?${GLOBALS}\\s+["']?(?:${verbs.join('|')})${VERB_END}`, 'i');
 const COMMIT = commitRe(['commit']);
+// shortcut: these rules read text, so a quoted mention (grep "git merge") also asks; a script file, xargs git, base64 | sh or a mixed-quote spelling (git -C "a b" c"ommit") is not seen; a git hook would close that.
+const MAKES_COMMITS = ['merge', 'cherry-pick', 'revert', 'am', 'rebase', 'commit-tree', 'fast-import'];
+const OTHER_COMMIT = [
+  // git merge, git $(echo commit), git "$@"
+  commitRe([...MAKES_COMMITS, '[$`%@]\\S*']),
+  // $g commit, $(which git) merge, %g% commit
+  new RegExp(`(?:\\$\\{?\\w+\\}?|\\$\\([^)\\n]{0,200}\\)|\`[^\`\\n]{0,200}\`|%\\w+%)["']?${GLOBALS}\\s+["']?(?:commit|${MAKES_COMMITS.join('|')})${VERB_END}`, 'i'),
+];
+// Backing out makes no commit, but only as a whole command: git merge x # --abort still merges
+const BACK_OUT = new RegExp(`\\bgit(?:\\.exe)?${GLOBALS}\\s+(?:merge|cherry-pick|revert|am|rebase)\\s+--(?:abort|quit)(?=\\s*(?:$|[;&|\\n]))`, 'gi');
+const makesOtherCommit = (command) => OTHER_COMMIT.some((re) => re.test(command.replace(BACK_OUT, '')));
+// These rules are not linear in the length, and a hook that times out lets the command run: a long command that names any of this is asked unread
+const GATE_WORDS = new RegExp(`git|commit|${MAKES_COMMITS.join('|')}|gate\\.mjs`, 'i');
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // git aliases that run commit ([alias] ci = commit, cm = !git commit), from git config and from an inline -c alias.x=commit
@@ -184,20 +206,26 @@ function stop(reason) {
   process.exit(2);
 }
 
+const internalError = (e) => t(root, 'guard.commit.internalError', { error: String(e?.message ?? e).slice(0, 200) });
+
 async function hook() {
-  let command = '', dir = root;
+  let raw = '', dir = root;
   try {
     const g = parseInput(JSON.parse(fs.readFileSync(0, 'utf8')) ?? {});
     tool = g.tool;
-    // A backslash-newline is a line continuation: bash joins the words ("git comm\<newline>it" is git commit), the
-    // text rules may also need it as a space ("git commit\<newline>-m x"). Whichever spelling is a commit is checked.
-    const raw = String(g.command ?? '');
-    const joined = raw.replace(/\\\r?\n/g, '');
-    command = [joined, unquote(joined)].some((c) => commitPattern(joined).test(c)) ? joined : raw.replace(/\\\r?\n/g, ' ');
+    raw = String(g.command ?? '');
     if (g.dir) dir = g.dir;
   } catch {
     process.exit(0);
   }
+  if (raw.length > MAX_COMMAND) {
+    if ([raw, unquote(raw)].some((c) => GATE_WORDS.test(c))) decideOut('ask', t(root, 'guard.commit.tooLong'));
+    process.exit(0);
+  }
+  // A backslash-newline is a line continuation: bash joins the words ("git comm\<newline>it" is git commit), the
+  // text rules may also need it as a space ("git commit\<newline>-m x"). Whichever spelling is a commit is checked.
+  const joined = raw.replace(/\\\r?\n/g, '');
+  const command = [joined, unquote(joined)].some((c) => commitPattern(joined).test(c)) ? joined : raw.replace(/\\\r?\n/g, ' ');
   // --skip bypasses the gate and the board: the user is asked in every spelling (the AI must not write it on its own)
   // A commit whose message names --skip goes on to the commit checks below (a real --skip chained to a commit is stopped there).
   const open = unquote(command);
@@ -219,6 +247,8 @@ async function hook() {
     const note = unknown.length ? `\n${t(root, 'guard.commit.gateUnknownKeys', { keys: unknown.join(', ') })}` : '';
     decideOut('ask', t(root, 'guard.commit.gateApprovalAsk', { list }) + note);
   }
+  // A plain commit stays with the commit checks below: what its message names is text
+  if (!commit.test(command) && [command, open].some(makesOtherCommit) && hasBoard() && !boardReviewOff()) decideOut('ask', t(root, 'guard.commit.otherCommitAsk'));
   if (!commit.test(command) && !commit.test(open)) process.exit(0);
   if (!hasBoard() || boardReviewOff()) process.exit(0);
   const chain = chainIssue(command, commit.inline ? COMMIT : commit);
@@ -230,8 +260,8 @@ async function hook() {
   let d;
   try {
     d = changes();
-  } catch {
-    process.exit(0); // not a git repo
+  } catch (e) {
+    decideOut('ask', internalError(e)); // git failed or there is no repo: unread changes must not pass as reviewed
   }
   if (!d.files.length || docsOnly(d.files)) process.exit(0);
 
@@ -286,5 +316,5 @@ if (isMain(import.meta.url)) {
   if (i > -1) approve(process.argv[i + 1] || 'unspecified');
   else if (j > -1) save(`skipped: ${process.argv[j + 1] || 'user request'}`);
   else if (process.argv.includes('--status')) status();
-  else hook();
+  else hook().catch((e) => decideOut('ask', internalError(e))); // a crash exits 1, which does not block the commit
 }

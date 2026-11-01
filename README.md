@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.50.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.50.1-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -242,7 +242,7 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | Test separation | Only the `test-writer` agent writes test files; the main session and the coding agent are blocked |
 | Test guard | Asks before a test is deleted, skipped or weakened |
 | Deterministic gate | No commit until lint, type check, tests and Semgrep have run; catches machine-specific paths written into code |
-| Commit gate | No commit without a board review and a green gate; a test file changed by a patch or a script stops it too |
+| Commit gate | No commit without a board review and a green gate; a test file changed by a patch or a script stops it too; merge, revert and other commands that make commits are asked |
 | Edit lock | With `/freeze <folder>` on, the AI writes only inside that folder |
 | Scope shield | Asks before writing to a file outside the approved plan |
 | Config approval | Rule and guard files never change without your approval |

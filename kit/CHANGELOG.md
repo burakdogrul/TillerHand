@@ -3,6 +3,14 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.50.1] - 2026-11-01
+
+### Fixed
+- **The commit gate now asks about other commands that make commits.** `git merge`, `cherry-pick`, `revert`, `am`, `rebase`, `commit-tree` and `fast-import` are asked even on a clean tree, since a review cannot be bound to them. So is git called in a way the text cannot show (`$g commit`, `git $(echo commit)`, `git "$@"`). On Codex, which has no question, the command is blocked and the user runs it. A lone `--abort` or `--quit` is not asked. A quoted mention such as `grep "git merge"` is also asked.
+- **An error inside the commit gate no longer lets a commit through.** When git fails, or the hook itself crashes, the command is asked instead of passing.
+- **Long or repetitive commands can no longer time the commit gate out.** Text such as `git --a --a --a …` made matching exponentially slow, and a hook that times out lets the command run. Matching no longer backtracks that way, and a command over 10 000 characters that names git or a commit is asked without being read.
+- **A global option's value no longer hides the subcommand.** `git -C "my dir" commit`, `git -c user.name="A B" commit`, `git --work-tree . commit` and `git --attr-source HEAD commit` used to pass as if they were not commits. `GIT commit` now counts as git too.
+
 ## [3.50.0] - 2026-10-30
 
 ### Added

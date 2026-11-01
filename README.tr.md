@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.50.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.50.1-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -242,7 +242,7 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 | Test ayrımı | Test dosyasına yalnız `test-writer` ajanı yazar; ana oturum ve kod ajanı denerse engellenir |
 | Test koruması | Silinen, atlanan veya gevşetilen testi sorar |
 | Deterministik kapı | Lint, tip, test ve Semgrep çalışmadan commit açılmaz; koda yazılmış makineye özel yolu yakalar |
-| Commit kapısı | Kurul denetimi ve yeşil kapı olmadan commit atılmaz; patch veya betikle değişen test dosyası da durur |
+| Commit kapısı | Kurul denetimi ve yeşil kapı olmadan commit atılmaz; patch veya betikle değişen test dosyası da durur; merge, revert gibi commit üreten komutlar sorulur |
 | Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazar |
 | Kapsam kalkanı | Onaylı planın dışındaki dosyaya yazım sorulur |
 | Yapılandırma onayı | Kural ve koruma dosyaları onayın olmadan değişmez |
