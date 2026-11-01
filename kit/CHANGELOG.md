@@ -3,6 +3,11 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.61.0] - 2026-11-02
+
+### Changed
+- **The test role is recommended on Sonnet instead of Opus.** Opus used up the limit quickly, and tests still come from a separate agent. For security, payment or data-deleting work, Opus is suggested so tests do not share the coding model's blind spots. This is a judgment, not a measured quality result.
+
 ## [3.60.0] - 2026-11-01
 
 ### Added

@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.60.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.61.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -52,7 +52,7 @@
 | **Rollback** | `/rollback` returns to the last working state; history is kept, unfinished work is saved. |
 | **Narrator mode** | Optionally explains every change in plain language, as if to someone who doesn't code. |
 | **Learns how you work** | Picks up how you like to work (tone, questions, reports, code style). Preferences you approve apply to all your projects and stay on your computer. |
-| **Model per role** | You pick the model and effort for planning, coding, testing, review and docs at the start of each task. The test role is offered a different model from the coding role: the same model shares the same blind spots. |
+| **Model per role** | You pick the model and effort for planning, coding, testing, review and docs at the start of each task. Tests come from a separate agent; for security, payment or data-deleting work, Opus is suggested so they do not share the coding model's blind spots. |
 | **Learns from bugs** | When the same kind of bug comes back, it proposes one rule to prevent it; the rule is added only if you approve. |
 
 ## Step by step for beginners

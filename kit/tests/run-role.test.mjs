@@ -414,7 +414,7 @@ test('3.60.0 AC-1: a hand-edited models.json with an unknown provider falls back
   const show = m.run(['--show']).stdout;
   assert.match(line(show, 'code'), /openrouter\/deepseek\/deepseek-v4\.1-flash-1017/, 'a valid provider role is kept');
   assert.match(line(show, 'docs'), /^docs: haiku \/ high/);
-  assert.match(line(show, 'test'), /^test: opus \/ high/);
+  assert.match(line(show, 'test'), /^test: sonnet \/ high/);
   assert.doesNotMatch(show, /evil|constructor/);
 });
 

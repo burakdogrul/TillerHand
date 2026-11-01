@@ -66,31 +66,41 @@ test('models: the commands ask both screens and hand the role to the subagent; t
     assert.equal(permissionEquivalent(c) ?? evaluate(c), null, `Codex/Antigravity: not asked either (${c})`);
 });
 
-test('test-writer K4 models: a test role, recommended opus:high, saved and shown like the others', () => {
+test('3.61.0 test role: recommended sonnet:high (the code role stays sonnet:high), saved and shown like the others; opus:high is still accepted', () => {
   assert.ok(Object.hasOwn(ROLES, 'test'), 'ROLES.test');
-  assert.equal(RECOMMENDED.test, 'opus:high');
+  assert.equal(RECOMMENDED.test, 'sonnet:high');
+  assert.equal(RECOMMENDED.code, 'sonnet:high');
   const file = tmpFile();
-  assert.equal(readModels(file).test, 'opus:high');
-  assert.equal(setModels(['test=sonnet:high'], file), null);
-  assert.equal(readModels(file).test, 'sonnet:high');
+  assert.equal(readModels(file).test, 'sonnet:high', 'the default is the recommended value');
+  assert.equal(readModels(file).code, 'sonnet:high');
   assert.match(showModels(file), /^test: sonnet \/ high/m);
+  assert.equal(setModels(['test=opus:high'], file), null);
+  assert.equal(readModels(file).test, 'opus:high');
+  assert.match(showModels(file), /^test: opus \/ high \(.*\) · recommended sonnet \/ high$/m);
 });
 
-test('test-writer K4 models: the CLI warns when the code and test roles share a model, not otherwise', () => {
+test('3.61.0 test role: the CLI prints a same-model note (Opus for security, payment, data-deleting work), not a warning, only when code and test share a model', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'model-tw-'));
   const run = (...args) => spawnSync(process.execPath, [path.join(ROOT, '.claude/hooks/models.mjs'), ...args], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: root } });
   const same = run('--set', 'code=sonnet:high', 'test=sonnet:medium');
   assert.equal(same.status, 0, same.stderr);
-  assert.match(same.stdout, /code and test roles use the same model/, '--set warns');
+  assert.match(same.stdout, /same model/, '--set prints the note');
+  assert.match(same.stdout, /Opus/, '--set points to Opus');
+  assert.doesNotMatch(same.stdout, /Warning/i, 'a note, not a warning');
   assert.equal(readModels(path.join(root, '.claude/state/models.json')).test, 'sonnet:medium', 'the choice is still saved');
-  assert.match(run('--show').stdout, /code and test roles use the same model/, '--show warns');
+  const shown = run('--show').stdout;
+  assert.match(shown, /same model/, '--show prints the note');
+  assert.match(shown, /Opus/);
+  assert.doesNotMatch(shown, /Warning/i);
   const diff = run('--set', 'code=sonnet:high', 'test=opus:high');
   assert.equal(diff.status, 0, diff.stderr);
   assert.doesNotMatch(diff.stdout, /same model/);
   assert.doesNotMatch(run('--show').stdout, /same model/);
   const fresh = fs.mkdtempSync(path.join(os.tmpdir(), 'model-tw0-'));
   const show = spawnSync(process.execPath, [path.join(ROOT, '.claude/hooks/models.mjs'), '--show'], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: fresh } });
-  assert.doesNotMatch(show.stdout, /same model/, 'recommended values differ (sonnet / opus)');
+  assert.match(show.stdout, /same model/, 'the default state (sonnet / sonnet) shows the note');
+  assert.match(show.stdout, /Opus/);
+  assert.doesNotMatch(show.stdout, /Warning/i);
 });
 
 test('test-writer K4 models: build.md saves the test role', () => {

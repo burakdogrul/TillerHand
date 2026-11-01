@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Model and effort per role (docs/workflow/models.md). /build, /start, /adopt and /release ask the user, then save the answer here.
 //   node .claude/hooks/models.mjs --show                    current choice (the recommended one if nothing is saved)
-//   node .claude/hooks/models.mjs --set plan=opus:high code=sonnet:high test=opus:high review=sonnet:high docs=haiku:high
+//   node .claude/hooks/models.mjs --set plan=opus:high code=sonnet:high test=sonnet:high review=sonnet:high docs=haiku:high
 // A role left out of --set keeps its current value. File: .claude/state/models.json (git-ignored, this project only).
 // Aliases, not model IDs: in Claude Code opus/sonnet/haiku/fable always point to the newest model of that family.
 // External model for a role: code=openrouter/deepseek/deepseek-v4.1-flash-1017:high (runs through run-role.mjs). Run these in your own terminal:
@@ -17,8 +17,8 @@ export { EFFORTS };
 export const ROLES = { plan: 'Planning and architecture', code: 'Writing code', test: 'Writing tests', review: 'Review and audit', docs: 'Documents and research' };
 // Role name in the project language, for text the user sees (the dashboard)
 export const roleLabel = (root, role) => t(root, `models.role.${role}`);
-// test differs from code on purpose: another model does not share the coder's blind spots (AGENTS.md rule 7)
-export const RECOMMENDED = { plan: 'opus:high', code: 'sonnet:high', test: 'opus:high', review: 'sonnet:high', docs: 'haiku:high' };
+// test is a separate agent that never sees the code first (AGENTS.md rule 7). Opus costs far more; the note below points to it for critical work.
+export const RECOMMENDED = { plan: 'opus:high', code: 'sonnet:high', test: 'sonnet:high', review: 'sonnet:high', docs: 'haiku:high' };
 export const MODELS = ['opus', 'sonnet', 'haiku', 'fable'];
 
 export const modelsFile = (root = findRoot()) => path.join(root, '.claude', 'state', 'models.json');
@@ -73,7 +73,7 @@ export const showModels = (file = modelsFile()) => {
   const note = modelsNote(file);
   return Object.keys(ROLES).map((r) => `${r}: ${pretty(m[r])} (${ROLES[r]})${m[r] === RECOMMENDED[r] ? '' : ` · recommended ${pretty(RECOMMENDED[r])}`}`).join('\n')
     + (note ? `\n(${note})` : '')
-    + (m.code.split(':')[0] === m.test.split(':')[0] ? '\nWarning: the code and test roles use the same model; a different model is recommended (the same model shares the same blind spots).' : '');
+    + (m.code.split(':')[0] === m.test.split(':')[0] ? '\nNote: the code and test roles use the same model. For security, payment or data-deleting work, pick Opus for the test role: another model does not share the same blind spots.' : '');
 };
 
 // Only a person at a terminal can enter a key: without a TTY (the AI's shell) nothing is read and nothing is saved

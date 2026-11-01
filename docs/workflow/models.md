@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Planning and architecture | `plan` | Plan, architecture and data model decisions; PRD, README and user-visible text. Runs in the main session. | Opus · high |
 | Code writing | `code` | Application code. Cannot write to test files. In the main session for a small task, otherwise in a subagent. | Sonnet · high |
-| Test writing | `test` | Acceptance and adversarial tests, before the code; the `test-writer` agent. A separate agent from the one writing the code, and the recommended model is different too: the same model shares the same blind spot. | Opus · high |
+| Test writing | `test` | Acceptance and adversarial tests, before the code; the `test-writer` agent. A separate agent from the one writing the code. For security, payment or data-deleting work, a different model is better: the same model shares the same blind spot. | Sonnet · high |
 | Review and audit | `review` | Board members, `code-reviewer`, `security-auditor`, findings reports (`/findings-all`). | Sonnet · high |
 | Docs and research | `docs` | CHANGELOG, report summary; code scanning, web research (`/research` deep). The decision log is written in the main session at decision time. | Haiku · high |
 
@@ -20,11 +20,11 @@ Options in each question (the first is recommended; another combination can be w
 |---|---|
 | `plan` | Opus · high / Opus · extra high / Sonnet · high / Sonnet · medium |
 | `code` | Sonnet · high / Opus · high / Sonnet · medium / Haiku · high |
-| `test` | The model different from the code role's last choice goes first: Opus · high if code is Sonnet, Sonnet · high if code is Opus, Sonnet · high if code is Haiku. Then the other two models and the medium effort of the same model |
+| `test` | Sonnet · high / Opus · high (for security, payment or data-deleting work) / Sonnet · medium / Haiku · high |
 | `review` | Sonnet · high / Opus · high / Sonnet · medium / Haiku · high |
 | `docs` | Haiku · high / Haiku · medium / Sonnet · high / Sonnet · medium |
 
-If code and test are set to the same model, `models.mjs` warns but does not block (when the limit is tight, both can be moved to the cheap model).
+If code and test are set to the same model, `models.mjs` prints a note and does not block.
 
 Effort scale: low = `low`, medium = `medium`, high = `high`, extra high = `xhigh`. The higher the effort, the slower the answer and the more it takes from the limit.
 
