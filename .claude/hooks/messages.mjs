@@ -380,6 +380,7 @@ export const MESSAGES = {
   'dashboardData.rlsAction': { en: 'Get the template with /kit-update, add the tables to TABLES' },
   'guard.commit.otherCommitAsk': { en: 'Commit gate: this command can make a commit the board review and the deterministic gate cannot check (merge, revert, cherry-pick, am, rebase, commit-tree, fast-import, or git called through a variable). Approve only if the user asked for it.' },
   'guard.commit.internalError': { en: 'The commit gate could not check this command ({error}). User approval required.' },
+  'guard.doc.wholePdf': { en: 'A whole PDF fills the context. Convert it with the document-to-markdown skill and read only the part you need. For a scanned page or a chart, read with pages (for example pages: "1-5").' },
   'guard.commit.tooLong': { en: 'Commit gate: this command is too long to check and it names git or a commit. Approve only if the user asked for it.' },
   'guard.commit.skipAsk': { en: 'Commit gate: --skip bypasses the board review and the deterministic gate. Approve only if the user explicitly asks.' },
   'guard.commit.noCommands': { en: '(no commands defined)' },

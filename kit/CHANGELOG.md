@@ -3,6 +3,12 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.53.0] - 2026-11-01
+
+### Added
+- **`document-to-markdown` skill.** A PDF, Word, PowerPoint or Excel file is converted with MarkItDown (pinned, run with `uvx`), then only the needed part is read. An empty result means a scanned file, which is read page by page. Needs `uv`; the skill asks before installing it.
+- **PDF guard on Claude Code.** Reading a whole PDF is stopped and sent to the skill; a read with `pages` passes, for scanned pages and charts. Put a document in the project folder and give its path: a file attached to the chat may fill the context before conversion.
+
 ## [3.52.0] - 2026-11-01
 
 ### Changed

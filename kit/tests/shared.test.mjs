@@ -143,6 +143,7 @@ test('init --tool: files are generated per tool, no copies kept in the repo', ()
     return p;
   };
   const commandCount = fs.readdirSync(path.join(REPO, '.claude', 'commands')).length;
+  const skillCount = fs.readdirSync(path.join(REPO, '.claude', 'skills')).length;
   const exists = (p, f) => fs.existsSync(path.join(p, f));
   const record = (p) => JSON.parse(fs.readFileSync(path.join(p, '.kit.json'), 'utf8'));
 
@@ -154,7 +155,7 @@ test('init --tool: files are generated per tool, no copies kept in the repo', ()
   const cx = init('codex', '--tool', 'codex');
   assert.deepEqual(record(cx).tool, ['codex']);
   assert.ok(exists(cx, '.codex/hooks.json') && !exists(cx, '.agents/hooks.json'));
-  assert.equal(fs.readdirSync(path.join(cx, '.agents', 'skills')).filter((d) => exists(cx, `.agents/skills/${d}/SKILL.md`)).length, commandCount + 4, 'every command + the kit\'s 4 skills');
+  assert.equal(fs.readdirSync(path.join(cx, '.agents', 'skills')).filter((d) => exists(cx, `.agents/skills/${d}/SKILL.md`)).length, commandCount + skillCount, 'every command + every kit skill');
   assert.match(fs.readFileSync(path.join(cx, '.agents/skills/start/SKILL.md'), 'utf8'), /^---\nname: start\n/);
   assert.ok(record(cx).files['.codex/hooks.json'], 'hook config is tracked on update');
 

@@ -32,6 +32,7 @@
 | Skill | When |
 |---|---|
 | `source-research` | Any information that can change (version, price, quota, regulation, competitor); technology choice; business and legal reports |
+| `document-to-markdown` | A PDF or Office file: convert with MarkItDown first, read only the part you need |
 | `logo-design` | Logo, icon, favicon, brand pack (SVG, needs no API) |
 | `ui-motion` | In-app animation and transitions |
 | `motion-video` | Promo video, landing page loop (renderAt(t) + Playwright + ffmpeg) |
