@@ -692,3 +692,195 @@ test('3.55.0 AC-4: ATTACK every figure in the guide beyond the project threshold
   const unsourced = read351(GUIDE355).split('\n').filter((l) => FIGURE355.test(l) && !thresholds.test(l) && !/https?:\/\/\S+|\bsource:\s*\S/i.test(l));
   assert.deepEqual(unsourced, []);
 });
+
+// 3.56.0: Agent Reach is an optional tool, pinned, no-login channels only; /research points to it only when the user asks for content from one of them.
+const CATALOG356 = 'docs/workflow/mcp-catalog.md';
+const RESEARCH356 = '.claude/commands/research.md';
+const PINNED356 = 'uv tool install https://github.com/Panniantong/Agent-Reach/releases/download/v1.6.0/agent-reach.zip';
+const parts356 = (text) => text.split(/(?<=[.!?])\s+|\n+|\s\|\s/).filter((s) => s.trim());
+// The pinned URL holds "github.com" and "agent-reach"; neither may pass for a channel or a package name.
+const noUrls356 = (text) => text.replace(/\S*(?:https?:\/\/|github\.com)\S*/gi, ' ');
+const rowRaw356 = () => {
+  const rows = read351(CATALOG356).split('\n').filter((l) => /^\|\s*[*`]*agent[- ]reach\b/i.test(l));
+  assert.equal(rows.length, 1, 'catalog: one row whose first cell names Agent Reach');
+  return rows[0];
+};
+const row356 = () => noUrls356(rowRaw356());
+// Every line naming Agent Reach, plus the more indented lines under it; an HTML comment does not count as a mention.
+const passage356 = (rel) => {
+  const lines = read351(rel).replace(/<!--[\s\S]*?-->/g, '').split('\n');
+  const indent = (l) => l.match(/^\s*/)[0].length;
+  const out = [];
+  lines.forEach((line, i) => {
+    if (!/\bagent[- ]reach\b/i.test(line)) return;
+    out.push(line);
+    for (let j = i + 1; j < lines.length && lines[j].trim() && indent(lines[j]) > indent(line); j++) out.push(lines[j]);
+  });
+  assert.notEqual(out.length, 0, `${rel}: no line names Agent Reach`);
+  return out.join('\n');
+};
+const NEG356 = /\b(?:not|never|no|avoid\w*|forbid\w*|forbidden|ban(?:s|ned)?|without)\b|\w+n't\b/i;
+// A sentence forbids the target when a negation governs it: in the target's own comma part, at the start of its clause ("do not use a, b or c"), or in a list head ("not done: a; b").
+// "no-login", a condition ("if uv is not installed, run ...") and an aside ("it is not this project") do not, nor does a negation about another item of the same sentence.
+const forbids356 = (sentence, target) => {
+  const s = sentence.replace(/\bno[- ]login\b/gi, 'login-free').replace(/\b(?:if|when|unless)\b[^,;:]*(?:[,;:]|$)/gi, ' ');
+  const clause = s.split(/;\s*/).find((c) => target.test(c)) ?? s;
+  const part = clause.split(/,\s*(?![^()]*\))/).find((c) => target.test(c)) ?? clause;
+  const bare = (t) => t.replace(/\([^)]*\)/g, ' ');
+  return NEG356.test(bare(part)) || NEG356.test(bare(s).match(/^[^:]*:/)?.[0] ?? '') || /^\W*(?:do not|don't|never|not|no|avoid)\b/i.test(clause);
+};
+const assertForbids356 = (text, target, label) => {
+  const hits = parts356(text).filter((p) => target.test(p));
+  assert.notEqual(hits.length, 0, `${label}: not named`);
+  assert.equal(hits.some((p) => forbids356(p, target)), true, `${label}: named but not forbidden: ${hits.join(' / ')}`);
+};
+const NO_LOGIN_EN356 = "no[- ](?:login|sign[- ]?in)|without\\s+(?:a\\s+|an\\s+)?(?:login|sign[- ]?in|account)|login[- ]free|(?:do|does)(?:\\s+not|n't)\\s+(?:need|require)\\s+(?:a\\s+)?login";
+const CHANNELS356 = [/\bgithub\b/i, /\byoutube\b/i, /\bweb\b/i, /\bv2ex\b/i];
+
+test('3.56.0 AC-1: the catalog has one Agent Reach row with the pinned install', () => {
+  assert.equal(rowRaw356().includes(PINNED356), true, `row lacks ${PINNED356}`);
+});
+
+test('3.56.0 AC-1: the Agent Reach row says it is optional', () => {
+  assert.match(row356(), /\boptional\b/i);
+});
+
+test('3.56.0 AC-1: the Agent Reach row says it is installed only when the user asks', () => {
+  someWindowHasAll354(parts356(row356()), [/\binstall\w*\b/i, near('only|unless', 'asks?|asked|requests?|requested', 40), /\b(?:user|you)\b/i], 'installed only when the user asks');
+});
+
+test('3.56.0 AC-1: the Agent Reach row lists the no-login channels: GitHub, YouTube, web, V2EX', () => {
+  const windows = windows354(parts356(row356()), new RegExp(`\\b(?:${NO_LOGIN_EN356})\\b`, 'i'), 0, 1);
+  someWindowHasAll354(windows, CHANNELS356, 'no-login channels');
+});
+
+test('3.56.0 AC-2: ATTACK the Agent Reach row says browser or login channels are not added', () => {
+  const text = row356().replace(/\bno[- ]login\b/gi, 'login-free');
+  const said = parts356(text).some((p) => /\bbrowser\b/i.test(p) && /\blogin\b/i.test(p)
+    && (/\b(?:not|never|no)\b[^.;|]{0,15}\badd\w*\b[^.;|]{0,40}\b(?:browser|login)\b/i.test(p) || /\b(?:browser|login)\b[^.;|]{0,40}\bchannels?\b[^.;|]{0,20}\b(?:not|never)\b[^.;|]{0,10}\badd\w*\b/i.test(p)));
+  assert.equal(said, true, row356());
+});
+
+test('3.56.0 AC-2: ATTACK the Agent Reach row gives add reddit as a thing not done', () => {
+  assertForbids356(row356(), /\badd\b[^;]*\breddit\b/i, 'add reddit');
+});
+
+test('3.56.0 AC-2: ATTACK the Agent Reach row gives the reason, CloakBrowser is built to pass bot detection', () => {
+  someWindowHasAll354(windows354(parts356(row356()), /\bcloakbrowser\b/i, 0, 1), [/\bcloakbrowser\b/i, /\bbot[- ]detection\b/i], 'CloakBrowser reason');
+});
+
+test('3.56.0 AC-2: ATTACK the Agent Reach row says there is no setting to prefer Chrome', () => {
+  someWindowHasAll354(windows354(parts356(row356()), /\bchrome\b/i, 0, 0), [
+    /\b(?:no|not|cannot|can't|without)\b[^.;|]{0,40}\bchrome\b/i,
+    /\b(?:setting|set|option|flag|config\w*|switch|way)\b[^.;|]{0,30}\bchrome\b|\bchrome\b[^.;|]{0,30}\b(?:setting|set|option|flag|config\w*|switch)\b/i,
+  ], 'no setting to prefer Chrome');
+});
+
+test('3.56.0 AC-2: ATTACK the Agent Reach row says install.md from the main branch is not followed', () => {
+  assertForbids356(row356(), /\binstall\.md\b[^;]*\bmain\b|\bmain\b[^;]*\binstall\.md\b/i, 'install.md from main');
+});
+
+test('3.56.0 AC-2: ATTACK the Agent Reach row says the agent-reach package on PyPI is not installed', () => {
+  assertForbids356(row356(), /\bagent-reach\b[^;]*\bpypi\b|\bpypi\b[^;]*\bagent-reach\b/i, 'agent-reach on PyPI');
+});
+
+test('3.56.0 AC-2: ATTACK the Agent Reach row says the PyPI package is not this project', () => {
+  someWindowHasAll354(windows354(parts356(row356()), /\bpypi\b/i, 0, 1), [/\bnot\s+(?:this|the\s+same)\b|\b(?:different|another|unrelated)\b/i], 'PyPI package is another project');
+});
+
+test('3.56.0 AC-2: ATTACK the Agent Reach row says proxy or unblocker services are not used', () => {
+  assertForbids356(row356(), /\bprox(?:y|ies)\b[^;]*\bunblock\w*\b|\bunblock\w*\b[^;]*\bprox(?:y|ies)\b/i, 'proxy or unblocker');
+});
+
+for (const [file, rel] of [['the catalog', CATALOG356], ['/research', RESEARCH356]]) {
+  for (const [what, pattern] of [
+    ['releases/latest', /\breleases\/latest\b/i],
+    ['a bare pip install agent-reach', /\bpip3?\s+install\s+(?:-\S+\s+)*agent[-_]?reach\b/i],
+    // Any other install of this project that is not the pinned zip: a repo URL, a branch archive, another version.
+    ['another unpinned install', /\b(?:pipx|uv\s+pip|uv\s+tool)\s+install\s+(?:-\S+\s+)*(?!https:\/\/github\.com\/Panniantong\/Agent-Reach\/releases\/download\/v1\.6\.0\/agent-reach\.zip(?![\w./-]))\S*agent[-_]?reach/i],
+  ]) {
+    test(`3.56.0 AC-3: ATTACK ${file} has ${what} only in a sentence that forbids it`, () => {
+      assert.deepEqual(parts356(read351(rel)).filter((p) => pattern.test(p) && !forbids356(p, pattern)), []);
+    });
+  }
+}
+
+test('3.56.0 AC-4: /research points to Agent Reach only if the user asks for content', () => {
+  someWindowHasAll354(parts356(passage356(RESEARCH356)), [near('only|unless', 'asks?|asked|requests?|requested', 40), /\b(?:user|you)\b/i, /\bcontent\b/i], 'only if the user asks for content');
+});
+
+test('3.56.0 AC-4: /research ties the request to the no-login channels, named or through the catalog row', () => {
+  const text = noUrls356(passage356(RESEARCH356));
+  const named = CHANNELS356.every((c) => c.test(text));
+  const throughCatalog = /\bmcp-catalog\.md\b/.test(text) && new RegExp(`\\b(?:${NO_LOGIN_EN356})\\b`, 'i').test(text);
+  assert.equal(/\bchannels?\b/i.test(text) && (named || throughCatalog), true, text);
+});
+
+test('3.56.0 AC-4: /research gives YouTube subtitles as the example', () => {
+  assert.match(passage356(RESEARCH356), near('youtube', 'subtitles?|captions?|transcripts?', 30));
+});
+
+test('3.56.0 AC-4: ATTACK /research treats fetched content as data, not instructions', () => {
+  someWindowHasAll354(parts356(passage356(RESEARCH356)), [
+    /\b(?:fetch\w*|content|returns?|output)\b/i,
+    /\bdata\b/i,
+    /\binstructions?\b/i,
+    /\bdata\b[^.\n]{0,30}\b(?:not|never)\b|\b(?:not|never)\b[^.\n]{0,30}\bdata\b|\b(?:not|never)\b[^.\n]{0,15}\b(?:follow\w*|obey\w*|run|execut\w*)\b[^.\n]{0,40}\binstructions?\b|\binstructions?\b[^.\n]{0,40}\b(?:not|never)\b[^.\n]{0,15}\b(?:follow\w*|obey\w*|run|execut\w*)\b/i,
+  ], 'data, not instructions');
+});
+
+// "no-login channels" names the allowed side; only the login or browser side anchors these windows.
+const loginWindows356 = () => windows354(parts356(passage356(RESEARCH356).replace(/\bno[- ]login\b/gi, 'login-free')), /\b(?:login|browser)\b/i, 0, 1);
+
+test('3.56.0 AC-4: ATTACK /research tells the user a login or browser platform is not available through the kit', () => {
+  someWindowHasAll354(loginWindows356(), [
+    /\blogin\b/i,
+    /\bbrowser\b/i,
+    /\b(?:tell|tells|telling|inform\w*|say|says|explain\w*)\b[^.\n]{0,30}\buser\b/i,
+    /\b(?:not|isn't|aren't)\s+available\b|\bunavailable\b/i,
+    /\bkit\b/i,
+  ], 'not available through the kit');
+});
+
+test('3.56.0 AC-4: /research offers pasting the content or giving an export instead', () => {
+  someWindowHasAll354(loginWindows356(), [/\bpast(?:e|es|ing)\b/i, /\bexports?\b/i, /\b(?:may|can|could|instead)\b/i], 'paste or export');
+});
+
+test('3.56.0 AC-4: ATTACK /research offers add reddit only as a thing not done', () => {
+  const target = /\badd\b[^;]*\breddit\b/i;
+  assert.deepEqual(parts356(passage356(RESEARCH356)).filter((p) => target.test(p) && !forbids356(p, target)), []);
+});
+
+// One limit, per guide language. A condition on asking ("only if you ask") is not the channel limit, so it is removed first.
+const LIMIT356 = {
+  'kit/guide.html': {
+    lower: (s) => s.toLowerCase(),
+    asking: /\bonly\s+(?:when|if|on|after|once)\b/g,
+    only: '\\bonly\\b',
+    noLogin: `\\b(?:${NO_LOGIN_EN356})\\b`,
+    denied: /\b(?:login|browser)\b[^.\n]{0,40}\b(?:channels?|platforms?)\b[^.\n]{0,25}\b(?:not|never)\b/,
+  },
+  'kit/guide.tr.html': {
+    // toLocaleLowerCase('tr') maps İ to i and I to ı; the JS i flag does neither.
+    lower: (s) => s.toLocaleLowerCase('tr'),
+    asking: /(?:sadece|yalnızca|yalnız)\s+(?:sen\s+)?(?:iste\S*|sor\S*)/g,
+    only: 'sadece|yalnızca|yalnız|sınırlı',
+    noLogin: 'giriş(?:siz| gerektirmeyen| gerektirmez| istemeyen| istemez| yapmadan| yapılmadan| olmadan)|oturum aç(?:madan|ılmadan|ma gerektirmeyen|mayı gerektirmeyen)|hesap(?:sız| gerektirmeyen| açmadan| olmadan)|login (?:gerektirmeyen|istemeyen|olmadan)',
+    denied: /(?:giriş|oturum|login|tarayıcı)[^.\n]{0,40}(?:kanal|platform)[^.\n]{0,25}(?:eklenmez|kullanılmaz|desteklenmez|sunulmaz|açılmaz|yok)/,
+  },
+};
+for (const [rel, limit] of Object.entries(LIMIT356)) {
+  // Tiles sit on one line: closing a list item or block ends the sentence, the other tags go.
+  const text = () => limit.lower(passage356(rel).replace(/<\/(?:li|p|h\d|td|tr|article)>/g, '\n').replace(/<[^>]+>/g, ''));
+
+  test(`3.56.0 AC-5: ${rel} mentions Agent Reach`, () => {
+    assert.match(text(), /\bagent[- ]reach\b/);
+  });
+
+  test(`3.56.0 AC-5: ${rel} gives the limit, no-login channels only`, () => {
+    const t = text().replace(limit.asking, ' ');
+    const onlyNoLogin = new RegExp(`(?:${limit.only})[^.\\n]{0,60}(?:${limit.noLogin})|(?:${limit.noLogin})[^.\\n]{0,60}(?:${limit.only})`).test(t);
+    const loginDenied = limit.denied.test(t.replace(new RegExp(limit.noLogin, 'g'), ' '));
+    assert.equal(onlyNoLogin || loginDenied, true, t);
+  });
+}

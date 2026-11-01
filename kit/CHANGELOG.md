@@ -3,6 +3,11 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.56.0] - 2026-11-01
+
+### Added
+- **Agent Reach in the catalog, optional.** When you ask for content from GitHub, YouTube, the web or V2EX, `/research` can use this third-party CLI, for example for YouTube subtitles. It is installed only when you ask, at a pinned version. Login and browser channels stay out, because they run on a browser built to pass bot detection; for those platforms, paste the content or give an export.
+
 ## [3.55.0] - 2026-11-01
 
 ### Added
