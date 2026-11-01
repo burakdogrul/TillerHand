@@ -47,4 +47,6 @@ Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.m
 1. Preview: `npx -y vercel@63.1.1 deploy` (version pinned; `docs/workflow/mcp-catalog.md`). Produce evidence on the preview URL: the main flow with Playwright CLI, `console` (no errors), desktop and mobile screenshots.
 2. Ask the user: "The preview is ready, promote it to prod?" If approved, `npx -y vercel@63.1.1 promote <preview-url>` or `deploy --prod` (the shield asks again). Rollback path: `vercel rollback`.
 
+**Launch clip (an offer, only when there are no ❌ items):** Ask the user with AskUserQuestion whether they want a 20-second launch clip of the release with the `motion-video` skill. Do nothing if they decline.
+
 Do not start a prod deploy without approval. Ask with **multi-select** which of the ❌ items to fix now. Update `docs/workflow/progress.md` and write the status block.

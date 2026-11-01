@@ -3,6 +3,14 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.54.0] - 2026-11-01
+
+### Added
+- **`motion-video` makes a launch clip.** The skill now asks which video you want: the demo loop as before, or a 20-second clip of a finished project. The clip reads the project, reuses its real interface, generates its own music and delivers a poster and share text. Private data is kept out. `/release` offers a clip when nothing blocks the release. Ideas adapted from `latent-spaces/brag` (MIT).
+
+### Fixed
+- The determinism check now seeks away and back, which catches differences a repeated call misses.
+
 ## [3.53.0] - 2026-11-01
 
 ### Added

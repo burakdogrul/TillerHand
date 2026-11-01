@@ -342,3 +342,225 @@ for (const [file, labels, count, examples] of [
     for (const block of blocks) assert.deepEqual(statusLines(block).filter((l) => joined.test(l)), []);
   });
 }
+
+// 3.54.0: motion-video gains a launch clip mode next to the demo loop.
+// Every line of the skill body carries its heading chain, so a pattern can be scoped to a section whatever its number or level.
+const SKILL354 = '.claude/skills/motion-video';
+const rows354 = () => {
+  const stack = [];
+  let fenced = false;
+  return read351(`${SKILL354}/SKILL.md`).replace(/^---\n[\s\S]*?\n---\n/, '').split('\n').map((line) => {
+    if (line.startsWith('```')) fenced = !fenced;
+    const h = fenced ? null : line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) {
+      while (stack.length && stack.at(-1).level >= h[1].length) stack.pop();
+      stack.push({ level: h[1].length, text: h[2] });
+    }
+    return { line, chain: stack.map((s) => s.text) };
+  });
+};
+const under354 = (re) => rows354().filter((r) => r.chain.some((h) => re.test(h))).map((r) => r.line);
+const launch354 = () => {
+  const lines = under354(/launch clip/i);
+  assert.notEqual(lines.length, 0, 'no heading contains "launch clip"');
+  return lines;
+};
+const launchText354 = () => launch354().join('\n');
+const outsideLaunch354 = () => rows354().filter((r) => !r.chain.some((h) => /launch clip/i.test(h))).map((r) => r.line).join('\n');
+// Sound rules may sit in the launch clip section, under their own heading, or on the sound question's line.
+const soundText354 = () => rows354().filter((r) => r.chain.some((h) => /launch clip|sound|audio|music/i.test(h)) || /\bsound\b/i.test(r.line)).map((r) => r.line).join('\n');
+const windows354 = (lines, re, before, after) => lines.flatMap((l, i) => (re.test(l) ? [lines.slice(Math.max(0, i - before), i + after + 1).join('\n')] : []));
+// Some window holds every pattern; a failure names the patterns the closest window lacks.
+const someWindowHasAll354 = (windows, patterns, label) => {
+  const gaps = windows.map((w) => patterns.filter((p) => !p.test(w)).map(String)).sort((a, b) => a.length - b.length);
+  assert.deepEqual(gaps[0] ?? patterns.map(String), [], label);
+};
+
+test('3.54.0 AC-1: the skill names a demo loop mode and a launch clip mode', () => {
+  const body = rows354().map((r) => r.line).join('\n');
+  assert.match(body, /demo loop[^.\n]*\bmode\b|\bmode\b[^.\n]*demo loop/i);
+  assert.match(body, /launch clip[^.\n]*\bmode\b|\bmode\b[^.\n]*launch clip/i);
+});
+
+test('3.54.0 AC-1: which mode is asked before any other input question', () => {
+  const lines = rows354().map((r) => r.line);
+  const asks = /(\bask|\bfirst question)[^.\n]*\b(which|mode)\b|\b(which|mode)\b[^.\n]*\bask/i;
+  const askAt = lines.findIndex((l, i) => asks.test(l) && /demo loop/i.test(lines.slice(Math.max(0, i - 2), i + 7).join('\n')) && /launch clip/i.test(lines.slice(Math.max(0, i - 2), i + 7).join('\n')));
+  assert.notEqual(askAt, -1, 'no line asks which mode, next to both mode names');
+  const firstInput = lines.findIndex((l) => /\*\*(States|Color|Sound|Format)\b/i.test(l));
+  assert.equal(askAt < (firstInput === -1 ? lines.length : firstInput), true, `mode question at line ${askAt}, first input question at line ${firstInput}`);
+});
+
+for (const [rule, pattern] of [
+  ['renderAt', /\brenderAt\b/],
+  ['a real cursor', /\breal cursor\b/i],
+  ['closed-form springs', /\bsprings?\b[^.\n]*closed form|closed[- ]form[^.\n]*\bsprings?\b/i],
+  ['the loop seam', /\bloop seam\b/i],
+  ['determinism', /\bdeterminism\b/i],
+  ['120 BPM', /\b120 BPM\b/i],
+  ['the ban on cuts', /\b(no|without|never)\b[^.\n]{0,20}\bcuts\b/i],
+]) {
+  test(`3.54.0 AC-1: the demo loop keeps ${rule} outside the launch clip section`, () => {
+    assert.match(outsideLaunch354(), pattern);
+  });
+}
+
+test('3.54.0 AC-1: the launch clip section allows cuts', () => {
+  assert.match(launchText354(), /\bcuts?\b[^.\n]*\b(allowed|fine|ok|okay|permitted|welcome|may|can)\b|\b(may|can)\b(?!\s+(not|never)\b)[^.\n]*\bcuts?\b|\b(allowed|free)\b[^.\n]*\bcuts?\b/i);
+});
+
+test('3.54.0 AC-1: the ban on cuts is tied to the demo loop by its own sentence or heading', () => {
+  const rows = rows354();
+  const sameSentence = rows.some((r) => /\bcuts?\b[^.\n]*demo loop|demo loop[^.\n]*\bcuts?\b/i.test(r.line));
+  const underHeading = rows.some((r) => /\bcuts\b/i.test(r.line) && r.chain.some((h) => /demo loop/i.test(h)));
+  assert.equal(sameSentence || underHeading, true, 'no line or heading ties the ban on cuts to the demo loop');
+});
+
+test('3.54.0 AC-1: motion-video stays the single video skill', () => {
+  const dirs = fs.readdirSync(path.join(ROOT, '.claude/skills')).filter((d) => /video|launch|clip|promo|brag/i.test(d));
+  assert.deepEqual(dirs, ['motion-video']);
+});
+
+test('3.54.0 AC-2: launch clip runs about 20 seconds, within 15-25', () => {
+  const text = launchText354();
+  assert.match(text, /\b20\s*(s|sec|secs|seconds)\b/i);
+  assert.match(text, /\b15\s*(-|–|to)\s*25\b/i);
+});
+
+test('3.54.0 AC-2: launch clip shape is hook, reveal, 2-3 highlights, punchline, in that order', () => {
+  const text = launchText354();
+  assert.match(text, /\bhook\b[\s\S]*?\breveal\b[\s\S]*?\bhighlights?\b[\s\S]*?\bpunchline\b/i);
+  assert.match(text, /\b(2\s*(-|–|to)\s*3|two (or|to) three)\b[^.\n]{0,20}\bhighlights?\b|\bhighlights?\b[^.\n]{0,20}\b(2\s*(-|–|to)\s*3|two (or|to) three)\b/i);
+});
+
+test('3.54.0 AC-2: launch clip reads the project first: main page, styles, real flow', () => {
+  someWindowHasAll354(windows354(launch354(), /\bread\w*\b[^.\n]*\bproject\b|\bproject\b[^.\n]*\bread\b/i, 0, 4), [/\bmain page\b/i, /\bstyles?\b/i, /\bflow\b/i], 'project reading');
+});
+
+test('3.54.0 AC-2: launch clip does not ask for a list of states', () => {
+  assert.match(launchText354(), /\b(not|never|instead of|rather than|without)\b[^.\n]*\b(ask\w*|list)\b[^.\n]*\bstates?\b/i);
+});
+
+test('3.54.0 AC-2: launch clip reuses the real interface rather than redrawing it', () => {
+  const text = launchText354();
+  assert.match(text, /\bre-?us\w*\b[^.\n]*\b(real|actual|existing)\b[^.\n]*\b(interface|ui|components?|screens?)\b/i);
+  assert.match(text, /\b(not|never|rather than|instead of|no)\b[^.\n]*\b(re-?draw\w*|recreat\w*)\b/i);
+});
+
+test('3.54.0 AC-2: launch clip bans invented claims, numbers and testimonials', () => {
+  someWindowHasAll354(windows354(launch354(), /\b(invent\w*|made[- ]up|fabricat\w*)\b/i, 0, 2), [/\bclaims?\b/i, /\bnumbers?\b/i, /\btestimonials?\b/i, /\b(no|not|never)\b/i], 'invented content');
+});
+
+test('3.54.0 AC-2: on-screen text is held about 0.3 seconds per word', () => {
+  someWindowHasAll354(windows354(launch354(), /\b0[.,]3\s*(s|sec|secs|seconds?)\b/i, 0, 0), [/\bwords?\b/i, /\btext\b/i], 'reading time');
+});
+
+test('3.54.0 AC-2: launch clip formats are landscape, vertical and square', () => {
+  const text = launchText354();
+  for (const format of [/\blandscape\b/i, /\bvertical\b/i, /\bsquare\b/i]) assert.match(text, format);
+});
+
+test('3.54.0 AC-3: the sound question offers generated music', () => {
+  assert.match(soundText354(), /\bgenerat\w*\W+(\w+\W+)?(music|soundtrack|score)\b|\b(music|soundtrack|score)\s+(\w+\s+){0,3}generat/i);
+});
+
+test('3.54.0 AC-3: the sound question offers a track the user gives', () => {
+  assert.match(soundText354(), /\b(track|music|audio)\b[^.\n]*\b(user|you|your)\b[^.\n]*\b(giv|provid|suppl|bring)\w*|\b(user|you|your)\b[^.\n]*\b(giv|provid|suppl|bring)\w*[^.\n]*\b(track|music|audio)\b|\b(user's|your own)\s+(own\s+)?(track|music)\b/i);
+});
+
+test('3.54.0 AC-3: the sound question offers silence', () => {
+  assert.match(soundText354(), /\bsilen(t|ce)\b/i);
+});
+
+test('3.54.0 AC-3: generated sound is written by the model with tools on the machine', () => {
+  const text = soundText354();
+  assert.match(text, /\bmodel\b[^.\n]*\b(writ|generat|compos|synth)\w*|\b(writ|generat|compos|synth)\w*\b[^.\n]*\bmodel\b/i);
+  assert.match(text, /\b(on|from)\s+(the|this|the user's)\s+machine\b|\blocal tools?\b|\balready installed\b/i);
+});
+
+test('3.54.0 AC-3: generated sound shares one beat grid with the video', () => {
+  assert.match(soundText354(), /\b(one|same|single|shared)\s+(\w+\s+){0,2}beat\s+grid\b|\bbeat\s+grid\b[^.\n]*\b(video|picture)\b|\b(video|picture)\b[^.\n]*\bbeat\s+grid\b/i);
+});
+
+test('3.54.0 AC-3: sound effects are blended under the music', () => {
+  assert.match(soundText354(), /(\bsound effects?\b|\bsfx\b)[^.\n]*\b(under|beneath|below|blend\w*|duck\w*|mix\w*)\b|\b(blend|mix)\w*\b[^.\n]*(\bsound effects?\b|\bsfx\b)/i);
+});
+
+test('3.54.0 AC-3: generated sound does not clip', () => {
+  // "clip" alone would match "launch clip"
+  assert.match(soundText354(), /\b(no|not|never|without|avoid\w*|prevent\w*)\b[^.\n]{0,30}\bclipp(ing|ed)\b|\b(not|never) clip\b/i);
+});
+
+test('3.54.0 AC-3: no audio file sits under the skill folder', () => {
+  const files = fs.readdirSync(path.join(ROOT, SKILL354), { recursive: true }).map(String);
+  assert.deepEqual(files.filter((f) => /\.(wav|mp3|ogg|oga|flac|m4a|aac|aiff?|opus|wma|mid|midi)$/i.test(f)), []);
+});
+
+test('3.54.0 AC-4: ATTACK launch clip does not read .env files, keys or credentials', () => {
+  someWindowHasAll354(windows354(launch354(), /\b(not|never)\b[^.\n]{0,30}\b(read|open)\b|\bdon't (read|open)\b/i, 0, 4), [/\.env\b/i, /\bkeys?\b/i, /\bcredentials?\b/i], 'not-read list');
+});
+
+test('3.54.0 AC-4: ATTACK secrets and personal data never reach the video or the share text', () => {
+  someWindowHasAll354(windows354(launch354(), /\bsecrets?\b/i, 2, 5), [
+    /\b(never|not|no)\b/i, /\btokens?\b/i, /\binternal URLs?\b/i, /\bcustomer names?\b/i, /\be-?mails?\b/i, /\bpersonal data\b/i, /\bvideo\b/i, /\bshare[- ](text|copy)\b/i,
+  ], 'data kept out');
+});
+
+test('3.54.0 AC-4: ATTACK such data on screen is replaced with made-up sample values', () => {
+  someWindowHasAll354(windows354(launch354(), /\b(replac|swap|substitut)\w*|\binstead\b/i, 1, 1), [/\b(made[- ]up|fake|fictional)\b/i, /\b(sample|values?)\b/i, /\b(on[- ]screen|screen|visible|interface|ui)\b/i], 'replacement');
+});
+
+test('3.54.0 AC-5: launch clip delivers a poster frame', () => {
+  assert.match(launchText354(), /\bposter\b/i);
+});
+
+test('3.54.0 AC-5: launch clip delivers share-copy.txt, passed through humanizer', () => {
+  someWindowHasAll354(windows354(launch354(), /\bshare-copy\.txt\b/i, 2, 2), [/\bhumanizer\b/i, /\bshare\b/i], 'share text');
+});
+
+test('3.54.0 AC-5: the launch clip section says deliverables go to marketing/motion/', () => {
+  assert.match(launchText354(), /\bmarketing\/motion\//i);
+});
+
+test('3.54.0 AC-6: the skill credits latent-spaces/brag (MIT) for the launch clip ideas', () => {
+  someWindowHasAll354(windows354(rows354().map((r) => r.line), /\blatent-spaces\/brag\b/i, 1, 1), [/\bMIT\b/, /\blaunch clip\b/i], 'brag credit');
+});
+
+test('3.54.0 AC-6: the credit for the original prompt stays', () => {
+  assert.match(rows354().map((r) => r.line).join('\n'), /\bN01ennn\b[^\n]*\bprompt\b/i);
+});
+
+const releaseOffer354 = () => read351('.claude/commands/release.md').split('\n').filter((l) => /\bmotion-video\b/.test(l));
+
+test('3.54.0 AC-7: release.md suggests a launch clip with motion-video as an offer the user answers', () => {
+  someWindowHasAll354(releaseOffer354(), [/\blaunch clip\b/i, /\b(suggest\w*|offer\w*|ask\w*|AskUserQuestion)\b/i], 'release offer');
+});
+
+test('3.54.0 AC-7: ATTACK the launch clip offer in release.md is not an automatic step', () => {
+  const lines = releaseOffer354();
+  assert.notEqual(lines.length, 0, 'release.md does not mention motion-video');
+  const sentences = lines.flatMap((l) => l.split(/(?<=[.;:])\s+/));
+  assert.deepEqual(sentences.filter((s) => /\bautomatic(ally)?\b/i.test(s) && !/\b(not|never|no)\b/i.test(s)), []);
+});
+
+test('3.54.0 AC-7: the motion-video row in docs/workflow/skills.md mentions the launch clip', () => {
+  const row = read351('docs/workflow/skills.md').match(/^\|\s*`motion-video`\s*\|.*$/m);
+  assert.notEqual(row, null, 'no motion-video row');
+  assert.match(row[0], /\blaunch clip\b/i);
+});
+
+test('3.54.0 AC-8: the prerequisites table lists Node, Playwright and ffmpeg, nothing else', () => {
+  const rows = under354(/prerequisites/i).filter((l) => l.startsWith('|')).slice(2);
+  assert.deepEqual(rows.map((l) => l.split('|')[1].trim().split(/\s+/)[0].toLowerCase()), ['node', 'playwright', 'ffmpeg']);
+});
+
+test('3.54.0 AC-8: hyperframes does not appear in the skill', () => {
+  assert.doesNotMatch(read351(`${SKILL354}/SKILL.md`), /hyperframes/i);
+});
+
+test('3.54.0 AC-8: the skill installs no new package', () => {
+  const md = read351(`${SKILL354}/SKILL.md`);
+  const packages = [...md.matchAll(/\b(?:npm\s+(?:i|install)|pnpm\s+add|yarn\s+add|bun\s+add|pip3?\s+install|npx|uv\s+run\s+--with)\s+(?:-\S+\s+)*(@?[\w./-]+)/gi)].map((m) => m[1]);
+  assert.deepEqual([...new Set(packages)].sort(), ['numpy', 'playwright']);
+  assert.deepEqual(fs.readdirSync(path.join(ROOT, SKILL354), { recursive: true }).map(String).filter((f) => /package(-lock)?\.json$/.test(f)), []);
+});

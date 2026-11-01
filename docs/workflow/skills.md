@@ -35,7 +35,7 @@
 | `document-to-markdown` | A PDF or Office file: convert with MarkItDown first, read only the part you need |
 | `logo-design` | Logo, icon, favicon, brand pack (SVG, needs no API) |
 | `ui-motion` | In-app animation and transitions |
-| `motion-video` | Promo video, landing page loop (renderAt(t) + Playwright + ffmpeg) |
+| `motion-video` | Promo video: landing page demo loop, or a 20-second launch clip of a finished project with generated music (renderAt(t) + Playwright + ffmpeg) |
 
 ## Tools (MCP)
 
