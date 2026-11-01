@@ -1,6 +1,6 @@
 ---
 name: motion-video
-description: Produces the product's promo video with code, in two modes. Demo loop: a landing page or SaaS demo with a real cursor, closed-form springs and a 120 BPM rhythm. Launch clip: a 20-second video of a finished project with generated music and share text. Frames are captured one by one with Playwright and converted to MP4 with ffmpeg. Use when a "promo video", "demo video", "launch video", "product animation" or "landing page loop" is requested. Not for in-app animation (use ui-motion for that).
+description: Produces the product's promo video with code, in two modes. Demo loop: a landing page or SaaS demo with a real cursor, closed-form springs and a steady rhythm. Launch clip: a short video of a finished project with generated music and share text. Asks length, style, rhythm and music, gets a script approved before building, and changes music or one scene cheaply. Frames are captured one by one with Playwright and converted to MP4 with ffmpeg. Use when a "promo video", "demo video", "launch video", "product animation" or "landing page loop" is requested. Not for in-app animation (use ui-motion for that).
 ---
 
 # Promo video (with code)
@@ -13,7 +13,45 @@ Ask decisions per `docs/workflow/decision-protocol.md`. Visual decisions (direct
 
 **Ask first which mode, demo loop or launch clip:**
 - **Demo loop:** a seamless loop of the product in use, for a landing page. Sections 1-6 below.
-- **Launch clip:** a 20-second video that tells a stranger what a finished project is, for sharing. The "Launch clip" section; it uses cuts.
+- **Launch clip:** a short video that tells a stranger what a finished project is, for sharing. The "Launch clip" section; it uses cuts.
+
+## A. Questions (both modes)
+
+Ask these before anything else, with AskUserQuestion:
+
+1. **Length:** 20, 30 or 40 seconds. The user can write any other length through Other, for example 60.
+2. **Style:** premium (cinematic, restrained), minimalist (empty space, few elements), illustrated cartoon animation (drawn, playful; shows less of the real interface and depends more on the model's drawing), or kinetic typography (moving type carries the story).
+3. **Rhythm:** high (140 BPM), medium (120 BPM) or low (90 BPM). The tempo sets the beat grid, so cuts, actions and sound all follow it.
+4. **Music:** the kind of music (calm, energetic electronic, cinematic, warm acoustic), the user's own track (the license is the user's responsibility) or silence.
+
+## B. Script approval (both modes)
+
+Before any code, stills or render, write `script.md` and show it: a table of scenes with duration, on-screen text, visual and sound. Ask for approval with AskUserQuestion. Nothing is built until the user approves it. A change to the script gets approved the same way. Most of the tokens are spent after this step, so this is the cheapest place to change your mind.
+
+## C. Music samples (both modes)
+
+When music is generated, make 2-3 samples of about 8 seconds after the script is approved, in the chosen kind and rhythm, under `.previews/NN-motion/`. The model cannot hear them: the user listens and picks one, and only then is the full track made. If none fits, make new samples from what the user says. The user's own track and silence stay available. These samples are about sound only; the stills are still approved before the full render.
+
+## D. Cheap changes (both modes)
+
+Keep sound and picture apart, and keep the frames on disk, so a later change does not start over:
+
+- **Files:** The sound is a separate script: `sound.mjs` writes `track.wav`. The picture is kept without sound as `out/silent.mp4`. `frames/` stays on disk (out of git).
+- **Only the music:** rewrite the sound, then join. The video is not rendered again, `index.html` need not be read and frames need not be looked at:
+
+```bash
+ffmpeg -y -i out/silent.mp4 -i track.wav -c:v copy -c:a aac -shortest out/final.mp4
+```
+
+- **One scene:** read only that scene's code, render only that time range with `node render.mjs --from <s> --to <s>`, look at stills from that scene only, and encode again from the frames on disk.
+- **Recipe:** `marketing/motion/<name>/README.md` holds this table, filled in with the project's commands:
+
+| Change | What to do |
+|---|---|
+| Music | Rewrite the sound, join with `-c:v copy` |
+| A line of text | Change it in that scene, render that range, encode, join |
+| One scene | Render that range, check its stills, encode, join |
+| Length or style | Back to the script (B); most scenes change |
 
 ## 0. Prerequisites
 
@@ -31,12 +69,11 @@ Check them; if one is missing, give the user the install command (install happen
 
 ## 1. Inputs (ask first)
 
-Ask in one round (4 questions at most, with recommendations):
+After the questions in A, for the demo loop, ask in one round (with recommendations):
 
 1. **States:** 8-12 interface states of the product. Source: routes of the running app (recommended), screenshots or components. List what each state shows in one sentence and get it confirmed.
 2. **Color and typography:** Black, white and a single accent color (default: the main color in `DESIGN.md`), typefaces, logo (`public/brand/` or `assets/brand/`).
-3. **Sound:** Generated music (see "Generated sound"), a 120 BPM track the user gives (the license is the user's responsibility), just a click track (generated automatically), or silent.
-4. **Format and closing:** 1440×1440 (default, social media and landing page) or 1920×1080; the one-line text shown on the last frame (run it through `humanizer:humanizer`).
+3. **Format and closing:** 1440×1440 (default, social media and landing page) or 1920×1080; the one-line text shown on the last frame (run it through `humanizer:humanizer`).
 
 ## 2. Direction
 
@@ -44,17 +81,17 @@ Ask in one round (4 questions at most, with recommendations):
 - **Real cursor:** The cursor triggers every change (hover, click, drag, typing). The cursor never leaves the frame.
 - **Camera:** In each state, it zooms in so that state fills the frame, then pulls back.
 - **Springs:** Use springs with mass and a very small overshoot.
-- **Forbidden:** bouncy curves, particle effects, glows, gradients in the interface, dead time, a template look.
+- **Forbidden (unless the chosen style calls for it):** bouncy curves, particle effects, glows, gradients in the interface, dead time, a template look.
 
 ## 3. Structure
 
-- 120 BPM, **one action per beat**. Example flow: button → loading → confirmation → panel → list → chart → … → return to the opening frame.
+- The chosen rhythm (medium is 120 BPM), **one action per beat**. The chosen length sets how many beats there are. Example flow: button → loading → confirmation → panel → list → chart → … → return to the opening frame.
 - The hero state holds for 2 beats. No moment stays still for 4 beats.
-- **Beat map:** In the `beats.json` file, for each beat: time (s), action, target element and camera info. If music is given, take the beats from the track; detect the first beat's time from the audio start with ffmpeg and snap the rest to a 0.5 s grid. If needed, run a short analysis with `uv run --with numpy`.
+- **Beat map:** In the `beats.json` file, for each beat: time (s), action, target element and camera info. If music is given, take the beats from the track; detect the first beat's time from the audio start with ffmpeg and snap the rest to the beat grid (one beat is 60 / BPM seconds). If needed, run a short analysis with `uv run --with numpy`.
 
 ## 4. Build
 
-Files go under `marketing/motion/<ad>/`: `index.html`, `beats.json`, `render.mjs`. Frames and output go under `frames/` and `out/` (these stay out of git).
+Files go under `marketing/motion/<name>/`: `script.md`, `index.html`, `beats.json`, `render.mjs`, `sound.mjs`. Frames and output go under `frames/` and `out/` (these stay out of git).
 
 **`index.html`**
 - Expose the `renderAt(t)` and `seek(t)` functions.
@@ -82,12 +119,12 @@ function yay(y0, v0, omega, zeta, t) {
 - **Motion blur:** Capture 4 sub-frames per frame, that is 240 fps. ffmpeg blends them:
 
 ```bash
-ffmpeg -y -framerate 240 -i frames/%06d.png -i track.wav \
-  -vf "tmix=frames=4,fps=60" -shortest \
-  -c:v libx264 -crf 14 -pix_fmt yuv420p out/loop.mp4
+ffmpeg -y -framerate 240 -i frames/%06d.png \
+  -vf "tmix=frames=4,fps=60" \
+  -c:v libx264 -crf 14 -pix_fmt yuv420p out/silent.mp4
 ```
 
-With no audio, remove `-i track.wav` and `-shortest`. If a click track is needed, generate it with ffmpeg's `aevalsrc` source, using short sine pulses at the beat times.
+Then join the sound as in D. If a click track is needed, generate it with ffmpeg's `aevalsrc` source, using short sine pulses at the beat times.
 
 ## 5. Pitfalls (check)
 
@@ -98,23 +135,24 @@ With no audio, remove `-i track.wav` and `-shortest`. If a click track is needed
 
 ## 6. Start order
 
-1. Ask the inputs (§1).
-2. Show the **beat map** as a table and produce **4 still frames**: the opening state, two middle states, the loop seam (last frame and first frame side by side).
-3. Show the frames under `.previews/NN-motion/` and ask for approval with AskUserQuestion: Start / Change this. **Do not do a full render until the user says "Start".**
-4. Render, run the determinism and loop seam tests, and show screenshots of 3 frames of the video.
-5. Write the decisions to `docs/decisions/log.md`. Write the video's path and how to reproduce it to `marketing/motion/<ad>/README.md`.
+1. Ask the questions (A) and the inputs (§1).
+2. Get the script approved (B) and, for generated music, a sample picked (C).
+3. Show the **beat map** as a table and produce **4 still frames**: the opening state, two middle states, the loop seam (last frame and first frame side by side).
+4. Show the frames under `.previews/NN-motion/` and ask for approval with AskUserQuestion: Start / Change this. **Do not do a full render until the user says "Start".**
+5. Render, run the determinism and loop seam tests, and show screenshots of 3 frames of the video.
+6. Write the decisions to `docs/decisions/log.md`. Write the video's path, how to reproduce it and the recipe (D) to `marketing/motion/<name>/README.md`.
 
 ## Launch clip
 
-About 20 seconds (15-25). After one viewing, a stranger knows what the project does, who it is for and how to get it. Scenes may use cuts. A plain crossfade between two busy layouts looks muddy, so take the old content out first, then bring the new content in.
+The length is the user's answer in A; the default is about 20 seconds (15-25). After one viewing, a stranger knows what the project does, who it is for and how to get it. Scenes may use cuts. A plain crossfade between two busy layouts looks muddy, so take the old content out first, then bring the new content in.
 
 **1. Read the project first.** Do not ask for a list of states. Read the main page, the styles (exact colors and fonts), the README, the routes and the key components, and find the real flow: entry, key action, result.
 
 Do not read `.env` files, keys, credentials, build output or lock files.
 
-**2. Ask** the tone (playful, polished, deadpan or the user's own), the format and the sound. Formats: landscape 1920×1080, vertical 1080×1920, square 1080×1080. If the user points at one feature or version, it becomes the focus.
+**2. Ask** the questions in A and the format: landscape 1920×1080, vertical 1080×1920, square 1080×1080. If the user points at one feature or version, it becomes the focus.
 
-**3. Plan** as hook (2-3 s), reveal (2-4 s), 2-3 highlights, punchline (2-4 s). Show the plan as a table with durations and every cut on a beat, and keep it in `beats.json`: the sound reads the same file. Then:
+**3. Write the script** (B) as hook (2-3 s), reveal (2-4 s), 2-3 highlights, punchline (2-4 s), stretched to the chosen length. Every cut sits on a beat. Keep the timing in `beats.json`: the sound reads the same file. Nothing is built before the user approves it. For generated music, get a sample picked (C). The script follows these rules:
 
 - **Reuse the real interface:** render the project's own components, styles, fonts and images instead of redrawing them. Prefer the working app over a page that describes it.
 - **Nothing invented:** no made-up claims, numbers or testimonials. Small sample text inside a screen is fine (a file name, a toast).
@@ -129,10 +167,12 @@ Do not read `.env` files, keys, credentials, build output or lock files.
 Blending sub-frames with `fps` smears a cut into a grey frame. Capture each frame's sub-frames inside that frame, at `(n + (j + 0.5) / 4) / fps` for `j` from 0 to 3, then keep every fourth blended frame. At 30 fps:
 
 ```bash
-ffmpeg -y -framerate 120 -i frames/%06d.png -i track.wav \
-  -vf "tmix=frames=4,select='eq(mod(n,4),3)',setpts=N/(30*TB)" -r 30 -shortest \
-  -c:v libx264 -crf 14 -pix_fmt yuv420p out/clip.mp4
+ffmpeg -y -framerate 120 -i frames/%06d.png \
+  -vf "tmix=frames=4,select='eq(mod(n,4),3)',setpts=N/(30*TB)" -r 30 \
+  -c:v libx264 -crf 14 -pix_fmt yuv420p out/silent.mp4
 ```
+
+Then join the sound as in D.
 
 Before the full render, look at stills from every scene, from mid-transition and from the frames on both sides of a cut, and fix overflow, collisions and low contrast. Show them under `.previews/NN-motion/` and ask with AskUserQuestion: Start / Change this. Do not do a full render until the user approves the stills.
 
@@ -140,7 +180,7 @@ Before the full render, look at stills from every scene, from mid-transition and
 
 ## Generated sound
 
-No music or audio file ships with the kit. The model writes the sound itself with tools on the machine, for example a short Node script that writes a WAV file, or ffmpeg's `aevalsrc`:
+No music or audio file ships with the kit. The model writes the sound itself with tools on the machine, in `sound.mjs` that writes `track.wav` (a short Node script, or ffmpeg's `aevalsrc`):
 
 - **One beat grid:** drums, bass, melody and effects play on the same grid as the video, counted from the first frame.
 - **Effects under the music:** sound effects share the music's key and sit softly under it. Repeated small sounds stay in the background.

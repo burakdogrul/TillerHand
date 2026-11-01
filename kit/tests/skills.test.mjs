@@ -884,3 +884,349 @@ for (const [rel, limit] of Object.entries(LIMIT356)) {
     assert.equal(onlyNoLogin || loginDenied, true, t);
   });
 }
+
+// 3.57.0: motion-video asks more before spending tokens, and later changes become cheap.
+// All of it applies to both modes, so every wording test below reads shared sections only.
+const BOTH357 = /\bboth\s+(?:the\s+)?(?:modes?|demo loop)\b|\b(?:either|every|each|all|whichever)\s+(?:of the\s+)?modes?\b|\bdemo loop and (?:the )?launch clip\b|\blaunch clip and (?:the )?demo loop\b/i;
+// Sections 1-6 belong to the demo loop, though their headings do not say so.
+const DEMO_SECTION357 = /^(?:§?\d+\.\s*)?(?:Inputs|Direction|Structure|Build|Pitfalls|Start order)\b/i;
+const launchHeading357 = (h) => !BOTH357.test(h) && /\blaunch clip\b/i.test(h);
+const demoHeading357 = (h) => !BOTH357.test(h) && (/\bdemo loop\b/i.test(h) || DEMO_SECTION357.test(h));
+const inScope357 = (scope) => rows354().filter((r) => r.chain.some(scope)).map((r) => r.line);
+const shared357 = () => rows354().filter((r) => !r.chain.some((h) => launchHeading357(h) || demoHeading357(h))).map((r) => r.line);
+const sharedSentences357 = () => parts356(shared357().join('\n'));
+// Some sentence of the shared sections holds every pattern, within `before` and `after` sentences of the anchor.
+const sharedSays357 = (anchor, patterns, label, before = 0, after = 0) => someWindowHasAll354(windows354(sharedSentences357(), anchor, before, after), patterns, label);
+const SAMPLES357 = /\bsamples?\b/i;
+
+test('3.57.0 AC-1: a shared section says the questions apply to both modes', () => {
+  assert.match(shared357().join('\n'), BOTH357);
+});
+
+test('3.57.0 AC-1: the length question offers 20, 30 and 40 seconds', () => {
+  someWindowHasAll354(windows354(shared357(), /\blength\b/i, 0, 2), [/\b20\b/, /\b30\b/, /\b40\b/, /\bseconds?\b|\b40\s*s\b/i], 'length options');
+});
+
+test('3.57.0 AC-1: the length question takes a free length through Other, for example 60', () => {
+  someWindowHasAll354(windows354(shared357(), /\blength\b/i, 0, 2), [/\bother\b/i, /\b60\b/, /\b20\b/], 'free length');
+});
+
+test('3.57.0 AC-1: the style question offers premium, minimalist, illustrated or cartoon animation, kinetic typography', () => {
+  someWindowHasAll354(windows354(shared357(), /\bstyle\b/i, 0, 2), [/\bpremium\b/i, /\bminimalist\b/i, /\billustrated\b/i, /\bcartoon\b/i, /\banimation\b/i, /\bkinetic typography\b/i], 'style options');
+});
+
+test('3.57.0 AC-1: the rhythm question offers high, medium and low', () => {
+  someWindowHasAll354(windows354(shared357(), /\brhythm\b/i, 0, 4), [/\bhigh\b/i, /\bmedium\b/i, /\blow\b/i], 'rhythm options');
+});
+
+// A level's tempo: "High (140 BPM)" first, then the reverse order "140 BPM (high)".
+const tempo357 = (level) => {
+  const number = '(\\d{2,3})(?:\\s*(?:-|–|to)\\s*\\d{2,3})?\\s*BPM\\b';
+  for (const re of [new RegExp(`\\b${level}\\b[^\\d\\n]{0,40}${number}`, 'i'), new RegExp(`${number}[^\\d\\n]{0,20}\\b${level}\\b`, 'i')]) {
+    for (const line of shared357()) {
+      const m = line.match(re);
+      if (m) return Number(m[1]);
+    }
+  }
+  return null;
+};
+
+test('3.57.0 AC-1: each rhythm is tied to a tempo: high above medium above low, medium at 120 BPM', () => {
+  const [high, medium, low] = ['high', 'medium', 'low'].map(tempo357);
+  assert.equal(medium, 120, `medium tempo: ${medium}`);
+  assert.equal(high > medium, true, `high tempo: ${high}`);
+  assert.equal(low !== null && low < medium, true, `low tempo: ${low}`);
+});
+
+test('3.57.0 AC-1: the sound and the cuts follow the rhythm', () => {
+  sharedSays357(/\bcuts?\b/i, [/\b(?:sound|music)\b/i, /\b(?:follow\w*|set\w*|drives?|match\w*|sync\w*)\b/i, /\b(?:rhythm|tempo|BPM)\b/i], 'sound and cuts follow', 1, 0);
+});
+
+test('3.57.0 AC-1: the question set asks the kind of music', () => {
+  assert.match(shared357().join('\n'), /\b(?:kind|type|genre|style)s?\s+of\s+(?:the\s+)?music\b|\bmusic\s+(?:kind|type|genre|style)\b|\bmusical\s+(?:genre|style)\b/i);
+});
+
+test('3.57.0 AC-1: a line ties 120 BPM to the medium rhythm', () => {
+  someWindowHasAll354(windows354(sharedSentences357(), /\b120\s*BPM\b/i, 0, 0), [/\bmedium\b/i], '120 BPM is medium');
+});
+
+test('3.57.0 AC-1: ATTACK no line of the skill body keeps 120 BPM as a fixed rule, apart from the medium rhythm', () => {
+  assert.deepEqual(rows354().map((r) => r.line).filter((l) => /\b120\s*BPM\b/i.test(l) && !/\bmedium\b/i.test(l)), []);
+});
+
+test('3.57.0 AC-1: ATTACK the skill description does not sell 120 BPM as fixed', () => {
+  const description = read351(`${SKILL354}/SKILL.md`).match(/^description:\s*(.+)$/m)[1];
+  assert.deepEqual(parts356(description).filter((s) => /\b120\s*BPM\b/i.test(s) && !/\bmedium\b/i.test(s)), []);
+});
+
+test('3.57.0 AC-1: ATTACK the 0.5 s beat grid, which is 120 BPM in other words, is not left fixed', () => {
+  assert.deepEqual(rows354().map((r) => r.line).filter((l) => /\b0[.,]5\s*s\b[^.\n]*\bgrid\b|\bgrid\b[^.\n]*\b0[.,]5\s*s\b/i.test(l) && !/\b(?:medium|120|rhythm|tempo)\b/i.test(l)), []);
+});
+
+const SCRIPT_MD357 = /\bscript\.md\b/i;
+
+test('3.57.0 AC-2: the script is a table of scenes with duration, on-screen text, visual and sound, kept in script.md', () => {
+  someWindowHasAll354(windows354(shared357(), SCRIPT_MD357, 3, 6), [/\btable\b|^\|/im, /\bscenes?\b/i, /\bduration\b/i, /\bon[- ]screen text\b/i, /\bvisual\b/i, /\bsound\b/i], 'script table');
+});
+
+test('3.57.0 AC-2: the script goes to the user before any code, stills or render', () => {
+  sharedSays357(/\bscript\b/i, [/\b(?:before|until|first)\b/i, /\bcode\b/i, /\bstills?\b/i, /\brender\w*\b/i], 'script comes first');
+  // Lines rather than sentences here: the table of scenes may sit between the script and the user.
+  someWindowHasAll354(windows354(shared357(), /\bscript\b/i, 0, 6), [/\buser\b/i, /\bcode\b/i], 'goes to the user');
+});
+
+test('3.57.0 AC-2: the script is approved with AskUserQuestion', () => {
+  someWindowHasAll354(windows354(shared357(), /\bscript\b/i, 0, 6), [/\bapprov\w*/i, /\bAskUserQuestion\b/], 'script approval');
+});
+
+test('3.57.0 AC-2: nothing is built until the user approves', () => {
+  assert.equal(sharedSentences357().some((s) => /\b(?:nothing|no|not|never|don't)\b.{0,40}\b(?:build|built|building|code)\b.{0,60}\b(?:until|before|without)\b.{0,60}\bapprov\w*/i.test(s) && /\buser\b/i.test(s)), true, 'no sentence holds building back until the user approves');
+});
+
+test('3.57.0 AC-2: a change to the script gets approved the same way', () => {
+  sharedSays357(/\bchang(?:e|es|ed|ing)\b(?! this)[^.\n]{0,40}\bscript\b|\bscript\b[^.\n]{0,40}\bchang(?:e|es|ed|ing)\b(?! this)/i, [/\bapprov\w*/i, /\bsame way\b|\bagain\b|\bre-?approv\w*|\bAskUserQuestion\b/i], 'script change', 0, 1);
+});
+
+const scriptApprovalAt357 = () => rows354().findIndex((r) => /\bscript\b/i.test(r.line) && /\bapprov\w*/i.test(r.line));
+const assertScriptFirst357 = (at, what) => {
+  const approval = scriptApprovalAt357();
+  assert.notEqual(at, -1, `the skill does not mention ${what}`);
+  assert.notEqual(approval, -1, 'no line mentions script approval');
+  assert.equal(approval < at, true, `script approval on body line ${approval}, ${what} on body line ${at}`);
+};
+const firstAt357 = (scope, re) => rows354().findIndex((r) => r.chain.some(scope) && re.test(r.line));
+
+test('3.57.0 AC-2: ATTACK in the demo loop script approval comes before the first stills and full render step', () => {
+  assertScriptFirst357(firstAt357(demoHeading357, /\bstill frames?\b|\bfull render\b/i), 'the demo loop stills step');
+});
+
+test('3.57.0 AC-2: ATTACK in the launch clip script approval comes before the build step', () => {
+  assertScriptFirst357(firstAt357(launchHeading357, /\bindex\.html\b|\bbuild and check\b/i), 'the launch clip build step');
+});
+
+test('3.57.0 AC-3: samples are made after the script is approved', () => {
+  someWindowHasAll354(windows354(sharedSentences357(), SAMPLES357, 1, 0), [/\b(?:after|once|when)\b.{0,40}\bscript\b/i, /\bapprov\w*/i], 'samples after script approval');
+});
+
+test('3.57.0 AC-3: samples are for generated music', () => {
+  sharedSays357(SAMPLES357, [/\bgenerat\w*/i, /\bmusic\b/i], 'samples of generated music', 1, 1);
+});
+
+test('3.57.0 AC-3: 2-3 samples of about 8 seconds', () => {
+  sharedSays357(SAMPLES357, [/\b(?:2\s*(?:-|–|to|or)\s*3|two\s+(?:or|to)\s+three)\b.{0,30}\bsamples?\b/i, /\b8[\s-]*(?:s|sec|secs|seconds?)\b/i], 'sample count and length', 0, 1);
+});
+
+test('3.57.0 AC-3: samples follow the chosen kind and rhythm', () => {
+  sharedSays357(SAMPLES357, [/\b(?:chosen|picked|selected)\b/i, /\b(?:kind|genre|type|style)\b/i, /\b(?:rhythm|tempo)\b/i], 'chosen kind and rhythm', 0, 1);
+});
+
+test('3.57.0 AC-3: the user listens and picks a sample', () => {
+  someWindowHasAll354(windows354(sharedSentences357(), /\blisten\w*/i, 1, 1), [SAMPLES357, /\buser\b/i, /\b(?:pick\w*|choos\w*|select\w*)\b/i], 'user listens and picks');
+});
+
+test('3.57.0 AC-3: only after the pick is the full track made', () => {
+  someWindowHasAll354(windows354(sharedSentences357(), /\b(?:full|whole|complete)\s+track\b/i, 1, 0), [/\b(?:only then|then|after|once|until|before)\b/i, /\b(?:pick\w*|choos\w*|chosen|select\w*)\b/i], 'full track after the pick');
+});
+
+test('3.57.0 AC-3: the user\'s own track and silence stay available in the shared sections', () => {
+  someWindowHasAll354(windows354(shared357(), /\bsilen(?:t|ce)\b/i, 2, 2), [/\b(?:user's|your|their)\s+own\b|\b(?:track|music)\b[^.\n]{0,30}\buser\b[^.\n]{0,10}\b(?:gives?|provides?|brings?)\b/i, /\b(?:track|music)\b/i], 'own track and silence');
+});
+
+test('3.57.0 AC-3: the skill says the model cannot hear the result', () => {
+  assert.match(shared357().join('\n'), /\b(?:cannot|can't|can not|unable to)\s+hear\b/i);
+});
+
+test('3.57.0 AC-4: ATTACK script approval comes before the launch clip\'s first mention of the full render start step', () => {
+  assertScriptFirst357(firstAt357(launchHeading357, /\bfull render\b|\bStart\b[^.\n]{0,5}\/[^.\n]{0,5}\bChange\b/i), 'the launch clip full render start step');
+});
+
+test('3.57.0 AC-4: ATTACK samples are not presented as replacing the stills approval', () => {
+  const body = parts356(rows354().map((r) => r.line).join('\n'));
+  assert.notEqual(body.filter((s) => SAMPLES357.test(s) && /\bmusic\b|\bsound\b|\btrack\b/i.test(s)).length, 0, 'the skill has no music samples yet');
+  const aboutBoth = body.filter((s) => SAMPLES357.test(s) && /\bstills?\b|\bstill frames?\b/i.test(s));
+  const replaces = /\b(?:replac\w*|instead|skip\w*|substitut\w*)\b/i;
+  const denied = /\b(?:not|never|don't|doesn't)\b.{0,30}\b(?:replac\w*|skip\w*|substitut\w*)\b|\bnot\b.{0,10}\binstead\b/i;
+  assert.deepEqual(aboutBoth.filter((s) => (replaces.test(s) && !denied.test(s)) || /\bin place of\b|\bno longer\b|\bno need\b|\bnot needed\b|\bunnecessary\b/i.test(s)), []);
+});
+
+test('3.57.0 AC-4: the launch clip keeps its stills approval before the full render', () => {
+  someWindowHasAll354(windows354(inScope357(launchHeading357), /\bstills\b/i, 0, 2), [/\bAskUserQuestion\b/, /\b(?:not|no|never)\b[^.\n]{0,30}\bfull render\b[^.\n]{0,30}\b(?:until|before|without)\b[^.\n]{0,40}\bstills\b/i], 'launch clip stills approval');
+});
+
+test('3.57.0 AC-4: the demo loop keeps its still frames approval before the full render', () => {
+  someWindowHasAll354(windows354(inScope357(demoHeading357), /\bstill frames?\b/i, 0, 2), [/\bAskUserQuestion\b/, /\b(?:not|no|never)\b[^.\n]{0,30}\bfull render\b[^.\n]{0,30}\b(?:until|before|without)\b/i], 'demo loop stills approval');
+});
+
+// The passage around the join: it says what a music change does not need.
+const musicChange357 = () => {
+  const found = windows354(shared357(), /-c:v\s+copy\b/, 6, 6).flatMap((w) => parts356(w));
+  assert.notEqual(found.length, 0, 'no shared line uses -c:v copy');
+  return found;
+};
+const NEG357 = "(?:not|no|never|nothing|without|don't|doesn't|needn't)";
+
+test('3.57.0 AC-5: the sound is a separate script, sound.mjs, writing track.wav', () => {
+  sharedSays357(/\bsound\.mjs\b/i, [/\bseparate\b/i, /\bscript\b/i, /\btrack\.wav\b/i], 'sound script', 0, 1);
+});
+
+test('3.57.0 AC-5: the picture is kept without sound as out/silent.mp4', () => {
+  // The path itself holds the word "silent", so it cannot prove the sentence says so.
+  someWindowHasAll354(windows354(sharedSentences357(), /\bout\/silent\.mp4\b/i, 0, 0).map((s) => s.replace(/\bout\/silent\.mp4\b/gi, 'PATH')), [/\bPATH\b/, /\b(?:without|no)\s+(?:any\s+)?(?:sound|audio)\b|\bsoundless\b|\bsilent\b/i, /\b(?:picture|video)\b/i, /\b(?:keep\w*|kept|stay\w*|sav\w*)\b/i], 'silent picture');
+});
+
+test('3.57.0 AC-5: joining uses ffmpeg with -c:v copy on the silent picture and track.wav', () => {
+  someWindowHasAll354(windows354(shared357(), /-c:v\s+copy\b/, 3, 3), [/\bffmpeg\b/i, /\bsilent\.mp4\b/i, /\btrack\.wav\b/i], 'join');
+});
+
+test('3.57.0 AC-5: to change only the music, rewrite the sound', () => {
+  const said = musicChange357();
+  assert.equal(said.some((s) => /\bonly\b.{0,30}\bmusic\b|\bmusic\b.{0,30}\bonly\b/i.test(s)), true, 'no sentence on changing only the music');
+  assert.equal(said.some((s) => /\b(?:re-?writ\w*|edit\w*|chang\w*)\b.{0,40}\bsound\b|\bsound\b.{0,40}\b(?:re-?writ\w*|edit\w*)\b/i.test(s)), true, 'no sentence on rewriting the sound');
+});
+
+test('3.57.0 AC-5: ATTACK the join does not re-encode the picture: no filter next to -c:v copy', () => {
+  const joined = shared357().join('\n').replace(/\\\n\s*/g, ' ').split('\n').filter((l) => /-c:v\s+copy\b/.test(l));
+  assert.notEqual(joined.length, 0, 'no shared line uses -c:v copy');
+  assert.deepEqual(joined.filter((l) => /\s-(?:vf|filter:v|filter_complex)\b/.test(l)), []);
+});
+
+test('3.57.0 AC-5: a music change says the video is not rendered again', () => {
+  const re = new RegExp(`\\b${NEG357}\\b.{0,40}\\b(?:re-?)?render\\w*\\b|\\b(?:video|picture)\\b.{0,30}\\b(?:not|never)\\b.{0,20}\\b(?:re-?)?rendered\\b`, 'i');
+  assert.equal(musicChange357().some((s) => re.test(s) && !/\b(?:until|before)\b/i.test(s)), true, 'no sentence says the video is not rendered again');
+});
+
+test('3.57.0 AC-5: a music change says index.html need not be read', () => {
+  const re = new RegExp(`\\b${NEG357}\\b.{0,80}\\b(?:read\\w*|open\\w*)\\b.{0,25}\\bindex\\.html\\b|\\bindex\\.html\\b.{0,40}\\b(?:not|never|no need)\\b.{0,25}\\b(?:read|opened)\\b`, 'i');
+  assert.equal(musicChange357().some((s) => re.test(s)), true, 'no sentence says index.html need not be read');
+});
+
+test('3.57.0 AC-5: a music change says frames need not be looked at', () => {
+  const re = new RegExp(`\\b${NEG357}\\b.{0,100}\\b(?:look\\w*|check\\w*|inspect\\w*|view\\w*|read\\w*|open\\w*)\\b.{0,20}\\bframes?\\b|\\bframes?\\b.{0,40}\\b(?:not|never|no need)\\b.{0,25}\\b(?:looked|checked|inspected|viewed|read|opened)\\b`, 'i');
+  assert.equal(musicChange357().some((s) => re.test(s)), true, 'no sentence says frames need not be looked at');
+});
+
+// The passage around the range render: a change to one scene.
+const sceneChange357 = () => {
+  const found = windows354(shared357(), /--from\b/, 6, 6).flatMap((w) => parts356(w));
+  assert.notEqual(found.length, 0, 'no shared line uses --from');
+  return found;
+};
+const sceneSays357 = (re, label) => assert.equal(sceneChange357().some((s) => re.test(s)), true, label);
+
+test('3.57.0 AC-6: frames stay on disk', () => {
+  assert.equal(sharedSentences357().some((s) => /\bframes\b.{0,40}\b(?:stay|stays|kept|keep|keeps|remain\w*|left)\b.{0,20}\bdisk\b|\bkeep\w*\b.{0,15}\bframes\b.{0,20}\bdisk\b|\b(?:not|never)\b.{0,15}\bdelet\w*\b.{0,15}\bframes\b.{0,20}\bdisk\b/i.test(s)), true, 'no sentence keeps frames on disk');
+});
+
+test('3.57.0 AC-6: the range render command is render.mjs --from <s> --to <s>', () => {
+  assert.match(shared357().join('\n'), /\brender\.mjs\s+--from\s+\S+\s+--to\s+\S+/i);
+});
+
+test('3.57.0 AC-6: the passage is about a change to one scene', () => {
+  sceneSays357(/\b(?:one|single)\s+scene\b/i, 'no sentence on a change to one scene');
+});
+
+test('3.57.0 AC-6: a change to one scene reads only that scene\'s code', () => {
+  sceneSays357(/\bread\w*\b.{0,20}\bonly\b.{0,30}\bscene\b.{0,20}\bcode\b|\bonly\b.{0,20}\bread\w*\b.{0,30}\bscene\b.{0,20}\bcode\b|\bread\w*\b.{0,30}\bscene\b.{0,20}\bcode\b.{0,10}\bonly\b/i, 'no sentence reads only that scene\'s code');
+});
+
+test('3.57.0 AC-6: a change to one scene renders only that time range', () => {
+  sceneSays357(/\brender\w*\b.{0,20}\bonly\b.{0,40}\b(?:range|scene)\b|\bonly\b.{0,20}\brender\w*\b.{0,40}\brange\b/i, 'no sentence renders only that range');
+});
+
+test('3.57.0 AC-6: a change to one scene looks at stills from that scene only', () => {
+  sceneSays357(/\bstills?\b.{0,30}\bscene\b.{0,15}\bonly\b|\bonly\b.{0,30}\bstills?\b.{0,20}\bscene\b|\bstills?\b.{0,15}\bonly\b.{0,20}\bscene\b/i, 'no sentence limits the stills to that scene');
+});
+
+test('3.57.0 AC-6: a change to one scene encodes again from the frames on disk', () => {
+  sceneSays357(/\b(?:re-?encod\w*|encod\w*\b.{0,15}\bagain)\b.{0,40}\bframes\b.{0,20}\bdisk\b|\bframes\b.{0,20}\bdisk\b.{0,40}\b(?:re-?encod\w*|encod\w*)\b/i, 'no sentence encodes again from the frames on disk');
+});
+
+const README357 = /\bmarketing\/motion\/<name>\/README\.md\b/;
+// The rows of the section that names the README, table rows or list items, split into what changed and what to do.
+const recipe357 = () => {
+  const rows = rows354();
+  const sections = rows.filter((r) => README357.test(r.line) && !r.chain.some((h) => launchHeading357(h) || demoHeading357(h))).map((r) => r.chain.join('\n'));
+  return rows.filter((r) => sections.some((s) => r.chain.join('\n').startsWith(s))).flatMap((r) => {
+    const cells = r.line.startsWith('|') ? r.line.split('|').slice(1, -1) : null;
+    if (cells) return [{ kind: cells[0], action: cells.slice(1).join(' ') }];
+    const item = r.line.match(/^\s*[-*]\s+(.*?)(?::|→|->)(.*)$/);
+    return item ? [{ kind: item[1], action: item[2] }] : [];
+  });
+};
+const recipeFor357 = (re) => recipe357().filter((r) => re.test(r.kind));
+const KINDS357 = [['music', /\bmusic\b/i], ['a line of text', /\btext\b/i], ['one scene', /\bscene\b/i], ['length', /\blength\b/i], ['style', /\bstyle\b/i]];
+
+test('3.57.0 AC-7: a shared section names marketing/motion/<name>/README.md as holding a table', () => {
+  someWindowHasAll354(windows354(shared357(), README357, 3, 6), [/\btable\b|^\|/im], 'recipe table');
+});
+
+for (const [kind, re] of KINDS357) {
+  test(`3.57.0 AC-7: the recipe says what to do for a change of ${kind}`, () => {
+    assert.notDeepEqual(recipeFor357(re).filter((r) => /\w/.test(r.action)), [], `no recipe row for ${kind}`);
+  });
+}
+
+test('3.57.0 AC-7: the music row goes to the sound, the scene row to the range render', () => {
+  assert.equal(recipeFor357(/\bmusic\b/i).some((r) => /\bsound\b|\bsound\.mjs\b|-c:v\s+copy\b/i.test(r.action)), true, 'music row');
+  assert.equal(recipeFor357(/\bscene\b/i).some((r) => /--from\b|\brange\b/i.test(r.action)), true, 'scene row');
+});
+
+for (const [kind, re] of KINDS357.slice(3)) {
+  test(`3.57.0 AC-7: a change in ${kind} goes back to the script`, () => {
+    assert.equal(recipeFor357(re).some((r) => /\bscript\b/i.test(r.action)), true, `the ${kind} row does not go to the script`);
+  });
+}
+
+test('3.57.0 AC-7: ATTACK the README has one path in both modes, no second placeholder', () => {
+  assert.deepEqual(rows354().map((r) => r.line).filter((l) => /\bmarketing\/motion\/<ad>\/README\.md\b/.test(l)), []);
+});
+
+const skillsRow357 = () => {
+  const row = read351('docs/workflow/skills.md').match(/^\|\s*`motion-video`\s*\|.*$/m);
+  assert.notEqual(row, null, 'no motion-video row');
+  return row[0];
+};
+
+for (const [what, pattern] of [
+  ['promo video', /\bpromo video\b/i],
+  ['the landing page demo loop', /\blanding page\b[^|]*\bdemo loop\b/i],
+  ['the 20-second launch clip', /\b20[- ]second\s+launch clip\b/i],
+  ['generated music', /\bgenerated music\b/i],
+  ['renderAt, Playwright and ffmpeg', /\brenderAt\b[^|]*\bPlaywright\b[^|]*\bffmpeg\b/i],
+]) {
+  test(`3.57.0 AC-8: the motion-video row in docs/workflow/skills.md keeps ${what}`, () => {
+    assert.match(skillsRow357(), pattern);
+  });
+}
+
+test('3.57.0 AC-8: ATTACK the motion-video row in docs/workflow/skills.md gains no new meaning', () => {
+  assert.deepEqual(skillsRow357().match(/\b(?:script|samples?|rhythm|BPM|approv\w*|silent|sound\.mjs)\b/gi) ?? [], []);
+});
+
+const TILE357 = {
+  'kit/guide.html': { title: 'Promo video', lower: (s) => s.toLowerCase(), choose: 'choos\\w*|chosen|choice|pick\\w*|select\\w*', length: 'length', style: 'style', script: 'script', approve: 'approv\\w*', first: 'first|before|then' },
+  // toLocaleLowerCase('tr') maps İ to i and I to ı; \b does not see ü, ö or ş as letters, so a lookbehind marks the word start.
+  'kit/guide.tr.html': { title: 'Tanıtım videosu', lower: (s) => s.toLocaleLowerCase('tr'), choose: 'seç\\S*|belirle\\S*', length: 'süre(?!ç)\\S*|uzunluk\\S*', style: 'stil\\S*|tarz\\S*|üslup\\S*', script: 'senaryo\\S*|script\\S*', approve: 'onay\\S*', first: 'önce|ilk|sonra|onaylanmadan' },
+};
+for (const [rel, t] of Object.entries(TILE357)) {
+  const items = () => {
+    const tile = read351(rel).match(new RegExp(`<article class="tile"><h3>${t.title}</h3>[\\s\\S]*?</article>`));
+    assert.notEqual(tile, null, `${rel}: no ${t.title} tile`);
+    return tile[0].split('</li>').map((li) => t.lower(li.replace(/<[^>]+>/g, ' ')));
+  };
+  const word = (alternatives) => `(?<!\\p{L})(?:${alternatives})`;
+  const pair = (a, b) => new RegExp(`${word(a)}.{0,40}${word(b)}|${word(b)}.{0,40}${word(a)}`, 'u');
+
+  test(`3.57.0 AC-8: ${rel} promo video tile mentions choosing the length`, () => {
+    assert.equal(items().some((i) => pair(t.choose, t.length).test(i)), true, items().join(' / '));
+  });
+
+  test(`3.57.0 AC-8: ${rel} promo video tile mentions choosing the style`, () => {
+    assert.equal(items().some((i) => pair(t.choose, t.style).test(i)), true, items().join(' / '));
+  });
+
+  test(`3.57.0 AC-8: ${rel} promo video tile mentions approving a script first`, () => {
+    const has = (alternatives) => new RegExp(word(alternatives), 'u');
+    assert.equal(items().some((i) => has(t.script).test(i) && has(t.approve).test(i) && has(t.first).test(i)), true, items().join(' / '));
+  });
+}

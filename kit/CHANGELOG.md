@@ -3,6 +3,13 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.57.0] - 2026-11-01
+
+### Changed
+- **`motion-video` asks before it spends.** In both modes you choose the length (20, 30, 40 seconds or your own), the style (premium, minimalist, illustrated, kinetic typography), the rhythm and the kind of music. A script goes to you for approval before any code or render.
+- **You pick the music by ear.** Generated music starts with 2-3 samples of about 8 seconds; the full track comes after you pick one. Your own track and silence stay available.
+- **Later changes are cheap.** Changing only the music joins a new track to the kept picture without rendering again. Changing one scene renders only that scene. Each video's `README.md` lists what to do per kind of change.
+
 ## [3.56.0] - 2026-11-01
 
 ### Added
