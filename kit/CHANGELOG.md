@@ -3,6 +3,12 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.55.0] - 2026-11-01
+
+### Added
+- **Reads are batched.** When several reads or searches are needed, the agent runs them together in one shell call with an inline script and prints only what is needed. Writing, deleting, commits and deploys stay out of it, because guards only see the command text.
+- **The AI add-on guide covers programmatic tool calling** for the products you build: how it works, when not to use it and how to measure it.
+
 ## [3.54.0] - 2026-11-01
 
 ### Added

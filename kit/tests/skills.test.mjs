@@ -564,3 +564,131 @@ test('3.54.0 AC-8: the skill installs no new package', () => {
   assert.deepEqual([...new Set(packages)].sort(), ['numpy', 'playwright']);
   assert.deepEqual(fs.readdirSync(path.join(ROOT, SKILL354), { recursive: true }).map(String).filter((f) => /package(-lock)?\.json$/.test(f)), []);
 });
+
+// 3.55.0: agents batch reads in one shell call (AGENTS.md rule 4); the AI add-on guide covers programmatic tool calling for the user's product.
+const sentences355 = (text) => text.split(/(?<=[.!?])\s+|\n+/).filter((s) => s.trim());
+const rule4355 = () => {
+  const rule = read351('AGENTS.md').match(/^4\. \*\*Spend few tokens\.\*\*[\s\S]*?(?=^5\. )/m);
+  assert.notEqual(rule, null, 'AGENTS.md has no rule 4 "Spend few tokens"');
+  return rule[0];
+};
+// Rule 4 minus its sentences from before 3.55.0: the older "read only the part you need" must not pass for the new read-only limit.
+const batch355 = () => {
+  const added = sentences355(rule4355()).filter((s) => !/^4\.$|codebase-memory|do not read files in bulk|read docs only when needed|document-to-markdown/i.test(s));
+  assert.notEqual(added.length, 0, 'rule 4 has no batch passage');
+  return added;
+};
+
+test('3.55.0 AC-1: rule 4 applies when several reads or searches are needed', () => {
+  someWindowHasAll354(batch355(), [/\b(several|multiple|many|more than one|two or more)\b/i, /\breads?\b/i, /\bsearch(es)?\b/i], 'several reads or searches');
+});
+
+test('3.55.0 AC-1: rule 4 says to run them together in one shell call', () => {
+  someWindowHasAll354(batch355(), [/\b(together|batch\w*|at once)\b/i, /\b(one|single)\s+(\w+\s+)?(shell|bash)\s+(call|command)\b/i], 'together in one shell call');
+});
+
+test('3.55.0 AC-1: rule 4 says the call uses an inline script', () => {
+  assert.match(batch355().join('\n'), /\binline\s+(\w+\s+)?script\b/i);
+});
+
+test('3.55.0 AC-1: rule 4 says to print only what is needed', () => {
+  assert.match(batch355().join('\n'), /\b(print|output|show)\w*\s+only\b[^.\n]*\bneed|\bonly\s+(print|output|show)\w*\b[^.\n]*\bneed/i);
+});
+
+test('3.55.0 AC-2: ATTACK rule 4 limits the batch to reading only', () => {
+  // The lookahead keeps "read only the files you need", which is scope advice, from passing as the limit.
+  assert.match(batch355().join('\n'), /\b(read-only|read only|reads only|reading only|for reads? only|only (for )?(reading|reads))\b(?!\s+(the|what|those|files?|parts?|lines?)\b)/i);
+});
+
+test('3.55.0 AC-2: ATTACK rule 4 says writing, deleting, commits and deploys are not done through the batch', () => {
+  const sentences = batch355();
+  const banned = {
+    // "do not write a script file" is the inline rule, not the limit on writing.
+    writing: /\bwrit(e|es|ing)\b(?!\s+(an?\s+|the\s+)?(\w+\s+)?(script|file))/i,
+    deleting: /\bdelet(e|es|ing|ion)\b/i,
+    commits: /\bcommit(s|ting)?\b/i,
+    deploys: /\bdeploy(s|ing|ments?)?\b/i,
+  };
+  const unstated = Object.keys(banned).filter((k) => !sentences.some((s) => banned[k].test(s) && /\b(not|never|no|nothing|outside)\b|n't\b/i.test(s)));
+  assert.deepEqual(unstated, []);
+});
+
+test('3.55.0 AC-2: ATTACK rule 4 says the script is not a script file', () => {
+  assert.match(batch355().join('\n'), /\b(not|never|no|instead of|rather than|without)\b[^.\n]*\bscript files?\b/i);
+});
+
+test('3.55.0 AC-2: ATTACK rule 4 gives the reason next to it, guards only see the command text', () => {
+  const sentences = batch355();
+  const near = sentences.filter((_, i) => sentences.slice(Math.max(0, i - 1), i + 2).some((s) => /\bscript files?\b/i.test(s)));
+  someWindowHasAll354(near, [/\b(guards?|hooks?)\b/i, /\bcommand text\b/i, /\b(only|just|nothing but)\b/i], 'guards only see the command text');
+});
+
+// Where the kit keeps it: the AI add-on's template, which install copies to docs/ai/guide.md. The repo root has no docs/ai.
+const GUIDE355 = 'kit/templates/addons/ai/docs/ai/guide.md';
+const ptc355 = () => {
+  let fenced = false, level = 0;
+  const section = [];
+  for (const line of read351(GUIDE355).split('\n')) {
+    if (line.startsWith('```')) fenced = !fenced;
+    const h = fenced ? null : line.match(/^(#{1,6})\s/);
+    if (h && level && h[1].length <= level) break;
+    if (h && !level && /programmatic tool calling/i.test(line)) level = h[1].length;
+    if (level) section.push(line);
+  }
+  assert.notEqual(section.length, 0, 'the guide has no heading containing "programmatic tool calling"');
+  return section;
+};
+const notUse355 = () => {
+  const text = ptc355().join('\n');
+  const at = text.search(/\bwhen not\b|\b(not|don't) use\b|\bskip it\b|\bnot worth\b/i);
+  assert.notEqual(at, -1, 'the section does not say when not to use it');
+  return sentences355(text.slice(at));
+};
+
+test('3.55.0 AC-3: the section is for an AI product the user builds', () => {
+  assert.match(ptc355().join('\n'), /\b(your|AI)\s+(\w+\s+)?(product|app|application)\b|\b(product|app|application)\s+(that\s+)?you\b/i);
+});
+
+test('3.55.0 AC-3: the section names allowed_callers', () => {
+  assert.match(ptc355().join('\n'), /\ballowed_callers\b/);
+});
+
+test('3.55.0 AC-3: the section names code_execution', () => {
+  // No closing \b: the tool type can carry a date suffix.
+  assert.match(ptc355().join('\n'), /\bcode_execution/);
+});
+
+test('3.55.0 AC-3: the section says it is an API feature', () => {
+  assert.match(ptc355().join('\n'), /\bAPI\b[^.\n]*\bfeature\b|\bfeature\b[^.\n]*\bAPI\b/i);
+});
+
+test('3.55.0 AC-3: not to use it with few calls and small results', () => {
+  someWindowHasAll354(notUse355(), [/\bfew\b/i, /\bcalls?\b/i, /\bsmall\b/i, /\b(results?|outputs?|responses?)\b/i], 'few calls, small results');
+});
+
+test('3.55.0 AC-3: not to use it when each call depends on reasoning over the last', () => {
+  someWindowHasAll354(notUse355(), [/\b(each|every|next)\b/i, /\bcalls?\b/i, /\b(depend\w*|needs?|requires?|relies|hinges)\b/i, /\breason\w*/i, /\b(last|previous|prior|earlier)\b/i], 'each call depends on reasoning over the last');
+});
+
+test('3.55.0 AC-3: not to use it when a user needs to see results between calls', () => {
+  someWindowHasAll354(notUse355(), [/\busers?\b/i, /\b(see|sees|seeing|review\w*)\b/i, /\bresults?\b/i, /\bbetween\s+(\w+\s+)?(calls?|steps?)\b/i], 'a user sees results between calls');
+});
+
+test('3.55.0 AC-3: the section tells the reader to measure billed input tokens with and without it', () => {
+  const windows = windows354(sentences355(ptc355().join('\n')), /\bbilled\b/i, 1, 1);
+  someWindowHasAll354(windows, [/\bmeasur\w*/i, /\bbilled\s+(\w+\s+)?input\s+tokens?\b|\binput\s+tokens?\s+billed\b/i, /\bwith\b[^.\n]*\bwithout\b/i], 'measure billed input tokens with and without');
+});
+
+// A percentage or a multiplier; "no invented figure" covers both.
+const FIGURE355 = /\d\s*%|%\s*\d|\bper\s?cent\b|\b\d+(\.\d+)?\s*(x|times)\b/i;
+
+test('3.55.0 AC-4: ATTACK the AGENTS.md rule carries no percentage or multiplier', () => {
+  assert.doesNotMatch(rule4355(), FIGURE355);
+});
+
+test('3.55.0 AC-4: ATTACK every figure in the guide beyond the project thresholds gives its source', () => {
+  // These three lines are thresholds the project fills in, not claims about a result.
+  const thresholds = /\*\*Acceptance threshold:\*\*|50%\/80% alarms|warning at 80%, at 100%/;
+  const unsourced = read351(GUIDE355).split('\n').filter((l) => FIGURE355.test(l) && !thresholds.test(l) && !/https?:\/\/\S+|\bsource:\s*\S/i.test(l));
+  assert.deepEqual(unsourced, []);
+});

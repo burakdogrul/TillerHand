@@ -40,6 +40,17 @@ When a prompt or model changes, "I think it got better" is not enough.
 - [ ] Prompt caching is used for repeated long context (system prompt, documents).
 - [ ] Every call is logged: feature, model, input/output tokens, duration, estimated cost, user id (not the content).
 
+## 4a. Programmatic tool calling
+
+For an AI product you build that calls many tools. It is an API feature, not a Claude Code setting: the model writes code that calls your tools inside a code execution container, so intermediate results stay out of the context and only the final output comes back. Your app still runs each tool.
+
+- **How:** add the `code_execution` tool and set `allowed_callers` on each tool that code may call. Check the current tool version and the supported models in the docs before using it.
+- **When not to use it:** few calls with small results, where container overhead can exceed the saving; a chain where each call depends on reasoning over the last result; a user who needs to see results between calls.
+- **Measure before turning it on broadly:** compare billed input tokens with and without `allowed_callers` on your own workload.
+- `allowed_callers` is not a security boundary: still handle a direct call to any tool.
+
+Source: platform.claude.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling (2026-11-01).
+
 ## 5. Security
 
 - [ ] The API key is on the server only; the client does not call the provider directly.
