@@ -10,6 +10,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { Readable } from 'node:stream';
 import { findRoot, isMain } from './shared.mjs';
 import { PATTERNS, findSecrets } from './guard-secrets.mjs';
+import { isJob, roleOf, savedChoice, modelsFile } from './models.mjs';
 import { PROVIDERS, EXTERNAL_ROLES, MODEL_ID, isProvider, parseExternal, readStore, resolveKey, spendAllowed, spentOn, addSpend, today } from './providers.mjs';
 
 // Used when a model's price is unknown: too high on purpose, so a daily limit still fires
@@ -180,15 +181,15 @@ function fail(message) {
   process.exit(1);
 }
 
-async function main([role, promptFile]) {
-  if (!role || !promptFile) fail('Usage: node .claude/hooks/run-role.mjs <code|test|docs> <prompt file>');
+async function main([job, promptFile]) {
+  if (!job || !promptFile) fail('Usage: node .claude/hooks/run-role.mjs <code|test|docs, or a job such as code.ui> <prompt file>');
+  if (!isJob(job)) fail(`Unknown role or job: ${job}`);
+  const role = roleOf(job);
   const root = findRoot();
   const missing = guardsMissing(root);
   if (missing) fail(`Not running: ${missing}.`);
-  let saved = {};
-  try { saved = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'models.json'), 'utf8')); } catch { /* none */ }
-  const choice = parseExternal(saved?.[role]);
-  if (!choice) fail(`The ${role} role has no external provider. Choose one with /models, or run it as a plan subagent.`);
+  const choice = parseExternal(savedChoice(job, modelsFile(root)));
+  if (!choice) fail(`The ${job} role has no external provider. Choose one with /models, or run it as a plan subagent.`);
   const { provider, model, effort } = choice;
   const problem = checkRun({ role, provider, model, promptFile, root });
   if (problem) fail(problem);
@@ -236,7 +237,7 @@ async function main([role, promptFile]) {
   // No content here: role, model, time and spend only
   try {
     fs.mkdirSync(path.join(root, '.claude', 'state'), { recursive: true });
-    fs.appendFileSync(path.join(root, '.claude', 'state', 'role-runs.jsonl'), `${JSON.stringify({ date: new Date().toISOString(), role, provider, model, seconds, usd: +spent.toFixed(4), priceKnown: Boolean(known), exit: code })}\n`);
+    fs.appendFileSync(path.join(root, '.claude', 'state', 'role-runs.jsonl'), `${JSON.stringify({ date: new Date().toISOString(), job, role, provider, model, seconds, usd: +spent.toFixed(4), priceKnown: Boolean(known), exit: code })}\n`);
   } catch { /* the run still reports */ }
   const hidden = [key, token];
   console.log(wrapResult(scrub(result?.result ?? (scrub(err, hidden).slice(0, 500) || 'No result.'), hidden)));

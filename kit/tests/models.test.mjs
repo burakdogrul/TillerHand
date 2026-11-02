@@ -27,7 +27,7 @@ test('models: recommended by default, --set changes only the given roles, bad in
   assert.equal(setModels(['code=haiku:medium', 'PLAN=Opus:XHIGH'], file), null);
   assert.deepEqual(readModels(file), { ...RECOMMENDED, code: 'haiku:medium', plan: 'opus:xhigh' });
   assert.match(showModels(file), /^plan: opus \/ xhigh \(Planning and architecture\) · recommended opus \/ high$/m);
-  for (const bad of ['code=gpt:low', 'code=sonnet:max', 'code=sonnet', 'code=sonnet:low:x', 'code=sonnet:medium=x', 'none=sonnet:low', '__proto__=sonnet:low', 'code'])
+  for (const bad of ['code=gpt:low', 'code=sonnet', 'code=sonnet:low:x', 'code=sonnet:medium=x', 'none=sonnet:low', '__proto__=sonnet:low', 'code'])
     assert.match(setModels([bad], file), /Invalid/, bad);
   assert.match(setModels([], file), /Usage/);
   assert.equal(readModels(file).code, 'haiku:medium', 'a refused --set writes nothing');
@@ -51,18 +51,17 @@ test('models: the CLI exits 1 on a bad --set and writes nothing', () => {
   assert.equal(run('--nope').status, 1);
 });
 
-test('models: the commands ask both screens and hand the role to the subagent; the doc ships with the kit', () => {
-  const build = read('.claude/commands/build.md');
-  assert.match(build, /models\.mjs --set/);
-  assert.match(build, /docs\/workflow\/models\.md/);
-  for (const c of ['start', 'adopt', 'release']) assert.match(read(`.claude/commands/${c}.md`), /docs\/workflow\/models\.md/, c);
+// 3.62.0 (AC-62.3): the commands no longer ask about the model; each job reads its model with --for
+test('AC-62.3 models: the commands do not ask about the model; the doc ships with the kit and the allow rules cover --show, --set, --for and --reset', () => {
+  for (const c of ['build', 'start', 'adopt', 'release']) assert.doesNotMatch(read(`.claude/commands/${c}.md`), /two screens/i, c);
+  assert.match(read('.claude/commands/build.md'), /models\.mjs --for/);
   const doc = read('docs/workflow/models.md');
   for (const r of ['plan', 'code', 'review', 'test', 'docs']) assert.match(doc, new RegExp('`' + r + '`'), r);
+  assert.doesNotMatch(doc, /two screens/i);
   assert.match(read('kit/kit.mjs'), /workflow\\\/\([^)]*\bmodels\b/, 'models.md is replaced on update (KIT_OWNED)');
   const settings = JSON.parse(read('.claude/settings.json')).permissions;
-  assert.ok(settings.allow.includes('Bash(node .claude/hooks/models.mjs --show)'));
-  assert.ok(settings.allow.includes('Bash(node .claude/hooks/models.mjs --set:*)'));
-  for (const c of ['node .claude/hooks/models.mjs --set code=haiku:low', 'node .claude/hooks/models.mjs --show'])
+  for (const rule of ['--show)', '--set:*)', '--for:*)', '--reset:*)']) assert.ok(settings.allow.includes(`Bash(node .claude/hooks/models.mjs ${rule}`), rule);
+  for (const c of ['node .claude/hooks/models.mjs --set code=haiku:low', 'node .claude/hooks/models.mjs --show', 'node .claude/hooks/models.mjs --for code.ui', 'node .claude/hooks/models.mjs --reset code.ui'])
     assert.equal(permissionEquivalent(c) ?? evaluate(c), null, `Codex/Antigravity: not asked either (${c})`);
 });
 
@@ -103,8 +102,9 @@ test('3.61.0 test role: the CLI prints a same-model note (Opus for security, pay
   assert.doesNotMatch(show.stdout, /Warning/i);
 });
 
-test('test-writer K4 models: build.md saves the test role', () => {
-  const set = read('.claude/commands/build.md').split('\n').find((l) => /models\.mjs --set/.test(l));
-  assert.ok(set, 'build.md has a --set example');
-  assert.match(set, /models\.mjs --set [^`]*\btest=/);
+test('AC-62.3 test-writer K4 models: build.md reads the test model per job with --for and saves nothing', () => {
+  const build = read('.claude/commands/build.md');
+  assert.doesNotMatch(build, /models\.mjs --set/, 'build.md no longer saves a choice');
+  const call = build.split('\n').find((l) => /test-writer/.test(l) && /--for test\./.test(l));
+  assert.ok(call, 'the line that starts the test-writer subagent has --for test.<job>');
 });

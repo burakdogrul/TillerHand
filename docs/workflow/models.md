@@ -1,8 +1,8 @@
-# Model and Effort (per role)
+# Model and Effort (per role and job)
 
-> The kit splits the work into five roles. You choose each role's model and effort (how much it thinks).
-> `/build` asks one question per role (model and effort together) at the start of every task; `/start`, `/adopt` and `/release` ask when they begin. Two screens: first plan, code, test; then review, docs.
-> The choice is written with `node .claude/hooks/models.mjs --set …` to `.claude/state/models.json` (not in git). `node .claude/hooks/models.mjs --show` shows the current choice.
+> The kit splits the work into five roles, and each role into jobs. You choose a role's model and effort (how much it thinks); a job follows its role unless you give it its own.
+> Commands do not stop to choose. They read the value before each subagent call and show one line: `Model: code.critical → opus / high`. Change a choice with `/models`; it applies from the next call.
+> `node .claude/hooks/models.mjs --for <job>` prints one job's value. `--set …` writes to `.claude/state/models.json` (not in git). `--show` shows the current choice.
 
 ## Roles
 
@@ -14,7 +14,63 @@
 | Review and audit | `review` | Board members, `code-reviewer`, `security-auditor`, findings reports (`/findings-all`). | Sonnet · high |
 | Docs and research | `docs` | CHANGELOG, report summary; code scanning, web research (`/research` deep). The decision log is written in the main session at decision time. | Haiku · high |
 
-Options in each question (the first is recommended; another combination can be written with "Other"):
+## Jobs
+
+A job follows the chain below until it finds a saved choice. To give one job its own value: `--set code.ui=opus:xhigh`. `--reset code.ui` sends it back to the role.
+
+| Role | Job | When |
+|---|---|---|
+| main session | `main` | The conversation itself. Also written to `.claude/settings.local.json` (`model`, `effortLevel`), so it applies from the next session |
+| `plan` | `plan.task` | Task plan |
+| | `plan.architecture` | Architecture, data model, one-way door |
+| | `plan.text` | PRD, README, user-visible text |
+| `code` | `code.simple` | Small task |
+| | `code.feature` | Normal feature |
+| | `code.critical` | Auth, payment, data deleting, migration, security |
+| | `code.bugfix` | Bug fix |
+| | `code.refactor` | Change that keeps behavior |
+| | `code.ui` | Interface code |
+| `test` | `test.simple` | Test of a small task |
+| | `test.feature` | Acceptance test |
+| | `test.adversarial` | Adversarial test |
+| | `test.critical` | Test of auth, payment, data deleting |
+| `review` | `review.code` | `code-reviewer` |
+| | `review.security` | `security-auditor`, also when it joins the board |
+| | `findings.default` | All findings reports, one choice |
+| | `findings.security`, `findings.tech`, `findings.perf`, `findings.ux`, `findings.business`, `findings.legal` | `/findings-*`, per report |
+| | `board.default` | The whole board, one choice |
+| | `board.commit` | Commit meeting |
+| | `board.product`, `board.architect`, `board.ux`, `board.performance`, `board.privacy`, `board.api`, `board.qa`, `board.devops`, `board.mobile`, `board.ai` | Per member |
+| `docs` | `docs.changelog`, `docs.report`, `docs.scan`, `docs.research` | CHANGELOG, report summary, code scanning, web research |
+
+Chains:
+
+- General: job → role → recommended.
+- Report: `findings.<type>` → `findings.default` → `review` → recommended.
+- Board member: `board.<member>` → `board.default` → `review` → recommended.
+- Commit meeting: `board.commit` → recommended `haiku:low`. The role and the member choices do not reach it, because it runs on every commit.
+- Main session: `main` → `plan` → recommended.
+
+A saved value that is not valid is skipped and the reason goes to stderr. A job name in the file that the kit does not know is ignored and kept.
+
+`code.simple` also takes the value `main`. `--for code.simple` prints `main` when it is saved that way or when its value equals the main session's value: the work is then written in the main session. Any other value goes to a subagent, which pays a cold start, so choose `main` for this job if small tasks should stay in the session.
+
+## Which job
+
+The commands pick the job by this table. If several fit, the upper one wins. Show the result in one line: `Model: code.critical → opus / high`. If the user says "treat this as simple", use that job for the task and save nothing.
+
+| The work | Job |
+|---|---|
+| Auth, authorization, payment, webhook, personal data, data deleting, migration | `code.critical`, `test.critical` |
+| The flow says "code: main session" | `code.simple`, `test.simple` |
+| `/fix-bug` | `code.bugfix` |
+| Behavior does not change | `code.refactor` |
+| Interface only | `code.ui` |
+| Anything else | `code.feature`, `test.feature` |
+
+## Options
+
+`/models` offers these per role (the first is recommended; another combination can be written with "Other"):
 
 | Role | Options |
 |---|---|
@@ -26,27 +82,26 @@ Options in each question (the first is recommended; another combination can be w
 
 If code and test are set to the same model, `models.mjs` prints a note and does not block.
 
-Effort scale: low = `low`, medium = `medium`, high = `high`, extra high = `xhigh`. The higher the effort, the slower the answer and the more it takes from the limit.
+Effort scale: low = `low`, medium = `medium`, high = `high`, extra high = `xhigh`, max = `max`. `max` works in subagent calls and in `/effort`, not for `main`: the `effortLevel` setting does not accept it. The higher the effort, the slower the answer and the more it takes from the limit.
 
 Opus is the most expensive model and Haiku the cheapest. When the limit turns yellow or red, the biggest saving is to move the code role to a lower model (`docs/workflow/usage-limits.md` §3). Security, data model and architecture decisions stay in the planning role.
 
 ## How it applies in Claude Code
 
-- **The main session** runs the planning role. The kit cannot change the main session's model: if the chosen plan model or effort differs from the session's, the AI suggests `/model <name>` and `/effort <level>` in one line.
-- **Subagents:** Code writing, review and docs work goes to a subagent with the Agent tool. The call passes the role's `model` and `effort` value; the value in the call overrides the `model:` line in the agent file.
+- **The main session** runs the `main` job, which follows the planning role. The kit cannot change a running session's model: if `--for main` differs from the session's, the AI suggests `/model <name>` and `/effort <level>` in one line. A `/model` in a session wins for that session.
+- **Subagents:** Code writing, review and docs work goes to a subagent with the Agent tool. The call passes the `model` and `effort` from `--for <job>`; the value in the call overrides the `model:` line in the agent file.
 - **Aliases:** `opus`, `sonnet`, `haiku` (also `fable`) always go to the newest model of that family. To pin to a specific version, use the full model ID or the `ANTHROPIC_DEFAULT_OPUS_MODEL` (SONNET, HAIKU) environment variable.
 - **Effort:** In a subagent call, effort can be passed in Claude Code v2.1.292 and later. If the `CLAUDE_CODE_EFFORT_LEVEL` environment variable is set, it overrides all effort choices. A model may not support every level.
-- **Question mode:** If the `cost` topic is closed, no question is asked and the last choice stays valid.
-- **Exceptions:** The commit (light) board review runs on every commit, so it stays at `haiku` and `low` (`.claude/board/rules.md`). The decision council (`.claude/board/council.md`) deliberately compares different models; the role choice does not apply to it.
+- **Exception:** The decision council (`.claude/board/council.md`) deliberately compares different models; the role choice does not apply to it.
 
 Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config (2026-10-26).
 
 ## External models
 
-`/models` moves the code, test and docs roles to a model from OpenRouter, DeepSeek or Kimi. Planning and review stay on the plan. Available in Claude Code; Codex not yet, Antigravity not supported.
+`/models` moves the code, test and docs roles and their jobs to a model from OpenRouter, DeepSeek or Kimi. Planning and review stay on the plan. Available in Claude Code; Codex not yet, Antigravity not supported.
 
-- A role's value is `provider/model:effort`, for example `code=openrouter/deepseek/deepseek-v4.1-flash-1017:high`.
-- Such a role runs with `node .claude/hooks/run-role.mjs <role> <prompt file>`, not with the Agent tool. It asks for approval each time. The reply is untrusted output.
+- The value is `provider/model:effort`, for example `code=openrouter/deepseek/deepseek-v4.1-flash-1017:high` or `code.ui=openrouter/…:high`. `max` is not available for an external model.
+- Such a job runs with `node .claude/hooks/run-role.mjs <job> <prompt file>` (`--for` prints it), not with the Agent tool. It asks for approval each time. The reply is untrusted output.
 - The key is entered by the user: `node .claude/hooks/models.mjs --set-key <provider>`, or through the system variable `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` or `MOONSHOT_API_KEY`. A project `.env` is not used.
 - The limit is per provider, per day, set by the user: `--set-limit <provider> <usd>`. `--remove-key <provider>` removes a key.
 - The remaining risk: an allowed command runs code the model wrote, and that code can read project files and the user's own files. Do not give code and test roles to an external model in a project with real secrets.
@@ -59,6 +114,6 @@ Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config
 | Subagent | `.codex/agents/<ad>.toml` → `model`, `model_reasoning_effort`. Can also be given in the prompt at launch; if not given, it takes the main session's. | `.agents/agents/<ad>.md` → `model: inherit`, `flash` or `pro`. A subagent has no thinking level. |
 | Role equivalent | Opus and Sonnet → strong model, Haiku → fast model (the docs' recommendation on 2026-10-26: `gpt-6.1-sol` and `gpt-6-luna`). Effort names are the same: `low` … `xhigh`. | Opus and Sonnet → `pro`, Haiku → `flash`. |
 
-If there is no question tool with options (Codex), ask the two screens as a numbered list. If you cannot run a subagent, run the role yourself and suggest the model in text.
+`--for` works there too: read the value and use the equivalent above. If you cannot run a subagent, run the role yourself and suggest the model in text.
 
 Source: developers.openai.com/codex/subagents, antigravity.google/docs/subagents, antigravity.google/docs/models (2026-10-26).

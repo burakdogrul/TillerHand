@@ -23,7 +23,7 @@ Measurement (2026-10-12): One council used about 12% of the 5-hour limit on Pro.
 
 | Case (if the profile allows) | Council type | Stage 1 members | Chair |
 |---|---|---|---|
-| Plan, phase-end, go-live meeting | **Meeting council** | Board members chosen by rules.md §3 (with the review role's model) | `board-chair` |
+| Plan, phase-end, go-live meeting | **Meeting council** | Board members chosen by rules.md §3 (`node .claude/hooks/models.mjs --for board.<member>`; `security-auditor` uses `--for review.security`) | `board-chair` |
 | REJECT in a task-end meeting | Meeting council (stages 2 and 3 only) | The member who gave REJECT + the other members of that meeting | `board-chair` |
 | One-way door decision (Light/Standard: database and auth only; Full: all; `docs/workflow/decision-protocol.md` §2a) or `/board council <question>` in any profile | **Decision council** | 3 × `council-advisor`: `haiku`, `sonnet`, `opus` (same question, different model) | `board-chair` |
 

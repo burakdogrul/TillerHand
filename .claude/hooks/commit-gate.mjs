@@ -303,7 +303,7 @@ async function hook() {
       : `Commit stopped: the board has not reviewed these changes (${d.files.length} files).\n`) +
       '0. Run the deterministic gate (lint, types, tests, Semgrep) with node .claude/hooks/gate.mjs --run; give its output to the members.\n' +
       (tool === 'claude'
-        ? '1. Following .claude/board/rules.md §3, run at most 2 relevant board members for the changed files with model "haiku", on the diff only.\n'
+        ? '1. Following .claude/board/rules.md §3, run at most 2 relevant board members for the changed files with the model and effort from node .claude/hooks/models.mjs --for board.commit, on the diff only.\n'
         : '1. Following .claude/board/rules.md §3, read the definitions of at most 2 relevant board members (.claude/agents/board-*.md) and review the diff as those roles yourself (single model).\n') +
       '2. If there is no REJECT: node .claude/hooks/commit-gate.mjs --approve "<members who took part>" and try the commit again.\n' +
       '3. If there is a REJECT, do not commit; ask the user about the finding and the options.\n' +

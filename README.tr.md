@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.61.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.62.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -52,7 +52,7 @@
 | **Geri alma** | `/rollback` son çalışan hale döner; geçmiş silinmez, yarım iş saklanır. |
 | **Anlatıcı mod** | İstersen her değişikliği yazılım bilmeyen birine anlatır gibi sade bir dille açıklar. |
 | **Seni tanır** | Nasıl çalışmak istediğini (konuşma, soru, rapor, kod tarzı) öğrenir. Onayladığın tercihler tüm projelerinde geçerli olur ve bilgisayarında kalır. |
-| **Rol bazlı model** | Planlama, kod, test, inceleme ve doküman için modeli ve effort'u her görevin başında sen seçersin. Testleri ayrı bir ajan yazar; güvenlik, ödeme veya veri silen işlerde kodla aynı kör noktayı paylaşmasın diye Opus önerilir. |
+| **Rol bazlı model** | Planlama, kod, test, inceleme ve doküman için modeli ve effort'u `/models` ile seçersin, istersen tek bir iş için de (arayüz kodu, kritik kod, bir kurul üyesi). Komutlar artık durup sormaz; her koşu kullanılan modeli tek satırda gösterir. Testleri ayrı bir ajan yazar; güvenlik, ödeme veya veri silen işlerde kodla aynı kör noktayı paylaşmasın diye Opus önerilir. |
 | **Hatadan öğrenir** | Aynı türden hata tekrar edince onu önleyecek tek bir kural önerir; sen onaylarsan eklenir. |
 
 ## Hiç bilmiyorsan: adım adım

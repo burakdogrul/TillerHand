@@ -3,6 +3,22 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.62.0] - 2026-11-02
+
+### Added
+- **Model choice per job.** Under the five roles there are now jobs such as `code.ui`, `code.critical`, `test.adversarial`, `findings.security` and `board.qa`. A job follows its role until you give it its own value (`--set code.ui=opus:xhigh`); `--reset code.ui` sends it back. The list is in `docs/workflow/models.md`.
+- **`models.mjs --for <job>`** prints the value for one job. Every subagent call in the commands and board rules now reads it first, so a change applies from the next call.
+- **`max` effort** for subagent jobs. It is refused for `main`, because the `effortLevel` setting does not accept it, and for external models.
+- **`--set main=…`** also writes `model` and `effortLevel` to `.claude/settings.local.json`, so it applies from the next session.
+- `run-role.mjs` takes a job as well as a role, and `role-runs.jsonl` records the job.
+
+### Changed
+- **`/build`, `/release`, `/start` and `/adopt` no longer ask about models.** They show one line instead: `Model: code.critical → opus / high`. Change a choice with `/models`.
+- The commit meeting uses the `board.commit` job, still `haiku` and `low` by default, and you can now change it. The review role does not reach it.
+- A small task goes to a subagent when `code.simple` differs from the main session's model, which is the recommended setup (Sonnet against Opus). To keep small tasks in the session, run `--set code.simple=main`.
+- `/fix-bug` hands the fix to a subagent when `code.bugfix` differs from the main session's model.
+- `--set` writes only what you name, so roles you did not set keep following the recommended values.
+
 ## [3.61.0] - 2026-11-02
 
 ### Changed

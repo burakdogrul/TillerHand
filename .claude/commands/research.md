@@ -12,7 +12,7 @@ Work by the rules of the `source-research` skill: every claim with source, date 
 1. Restate the topic in one sentence and derive 3-6 search terms (in the user's language and in English).
 2. Read the limit and ask for the depth, with the estimated cost:
    - **Quick (Recommended, on Pro):** At most 5 sources per category. About 10-15% of the 5-hour limit.
-   - **Deep:** 10-15 sources per category, three categories in parallel with subagents (the docs role's `model` and `effort`, `docs/workflow/models.md`). About 25-35%.
+   - **Deep:** 10-15 sources per category, three categories in parallel with subagents (`model` and `effort` from `node .claude/hooks/models.mjs --for docs.research`). About 25-35%.
 3. Have the categories confirmed with multi-select: academic papers, GitHub projects, commercial products.
 
 ## 1. Academic papers

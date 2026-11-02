@@ -14,11 +14,11 @@
 
 | Meeting | When | Who attends | Model |
 |---|---|---|---|
-| **Plan** | At the end of `/plan-task`, before user approval | `board-product` + `board-architect` + members relevant to the change (max 4) | review role (`docs/workflow/models.md`) |
-| **Task end** | At the end of `/build`, before saying "done" | Members relevant to the change (max 3) | review role (`docs/workflow/models.md`) |
-| **Commit (light)** | Before every `git commit` (a hook enforces it) | Max 2 members relevant to the changed files; reviews only the changed lines (diff) | always `haiku`, effort `low` |
-| **Phase end** | When a phase ends (`/wrap-up` suggests it) or `/board convene phase-end` | The whole board | review role (`docs/workflow/models.md`) |
-| **Go-live** | `/release first` | The whole board | review role (`docs/workflow/models.md`) |
+| **Plan** | At the end of `/plan-task`, before user approval | `board-product` + `board-architect` + members relevant to the change (max 4) | `--for board.<member>` (`docs/workflow/models.md`) |
+| **Task end** | At the end of `/build`, before saying "done" | Members relevant to the change (max 3) | `--for board.<member>` (`docs/workflow/models.md`) |
+| **Commit (light)** | Before every `git commit` (a hook enforces it) | Max 2 members relevant to the changed files; reviews only the changed lines (diff) | `--for board.commit` for every member (recommended `haiku`, effort `low`) |
+| **Phase end** | When a phase ends (`/wrap-up` suggests it) or `/board convene phase-end` | The whole board | `--for board.<member>` (`docs/workflow/models.md`) |
+| **Go-live** | `/release first` | The whole board | `--for board.<member>` (`docs/workflow/models.md`) |
 
 Commits that contain only documentation changes (`.md`, `docs/`) are exempt from review.
 
@@ -48,7 +48,7 @@ Do not call a member who is not on the board. If the relevant area has no member
 1. **Limit check** (`docs/workflow/usage-limits.md`): If the level is yellow, halve the member count. If red, ask the user (including the option to lighten the board). For a task-end meeting, `node .claude/hooks/flow.mjs` gives the member count and whether to run in parallel or in sequence (change size + limit; `code-reviewer` always attends, and `security-auditor` on a sensitive path).
 1b. **Deterministic gate** (commit, task end, phase end; not in the plan meeting): `node .claude/hooks/gate.mjs --run`. It runs the lint, type check and test from AGENTS.md → `Commands`, plus Semgrep. The result is stored with the change signature. If it is red or empty (no check ran), the commit gate does not open: fix first or fill in `Commands`. If the user explicitly asks for an intermediate commit, use `node .claude/hooks/commit-gate.mjs --skip "user request"` (it always asks for approval). If the gate says "command approval required", show the commands to the user. If the user approves, run `node .claude/hooks/gate.mjs --approve` (a new or changed command does not run without approval).
 1c. **In a commit meeting, first** run `node .claude/hooks/commit-gate.mjs --status`. If it says "Approval valid", there is no meeting (the task-end meeting already reviewed the same changes). If it says "Changed since the last approval: …", give the members only the diff of those files.
-2. **Run the members in parallel** (Agent tool, each member as a separate subagent). Give each member: meeting type, scope (plan text / diff range / phase), task id, acceptance criteria and gate output (if any). In the call, pass the `model` and `effort` of the review role (`node .claude/hooks/models.mjs --show`). In a commit meeting, pass `model: "haiku"`, `effort: "low"`. Write the report contract in the prompt: max ~15 lines and 5 findings (any more as one line: "other: N minor findings"), one line per finding, in order of severity, no praise or summary (reports enter the main session's context). Prompt order: the part that is the same for all members (meeting type, scope, acceptance criteria, gate output) first, the member-specific part last; the shared head is read from cache. If a re-check is needed after fixes, do not start a new member. Continue the same member with SendMessage and give only the fixed diff (the cold start is paid once).
+2. **Run the members in parallel** (Agent tool, each member as a separate subagent). Give each member: meeting type, scope (plan text / diff range / phase), task id, acceptance criteria and gate output (if any). In the call, pass the `model` and `effort` from `node .claude/hooks/models.mjs --for board.<member>`; `code-reviewer` uses `--for review.code` and `security-auditor` uses `--for review.security`. In a commit meeting, every member uses `--for board.commit`. Write the report contract in the prompt: max ~15 lines and 5 findings (any more as one line: "other: N minor findings"), one line per finding, in order of severity, no praise or summary (reports enter the main session's context). Prompt order: the part that is the same for all members (meeting type, scope, acceptance criteria, gate output) first, the member-specific part last; the shared head is read from cache. If a re-check is needed after fixes, do not start a new member. Continue the same member with SendMessage and give only the fixed diff (the cold start is paid once).
 2b. **If it is a council meeting** (§2), apply stages 1-4 of `.claude/board/council.md`. Build the synthesis from the chair's decision. Write the minority view on the disagreement line.
 3. **Synthesize** (main agent; in a council, from the chair's decision):
 
@@ -71,9 +71,9 @@ If the user wants to skip commit review for now, they must say so explicitly. Th
 
 1. Recommend by project type and PRD (table below). If there is an AI add-on, `board-ai` is always recommended. If there is personal data, `board-privacy` is always recommended.
 2. Ask the user as a **multi-select** (recommended ones marked). With "Other" they can ask for a new expert, for example "Accessibility expert", "Game designer" or "Fintech compliance expert". In that case, write a new `board-<name>.md` using the existing template structure.
-3. Do not ask for a model: members work with the model and effort of the review role (`docs/workflow/models.md`).
+3. Do not ask for a model: each member reads its own job, `board.<member>` (`docs/workflow/models.md`).
 4. For each selected member, copy `.claude/board/board-<role>.md` to `.claude/agents/board-<role>.md` and **fill in the "This project" section**: product summary, chosen stack, critical flows, risks specific to this role. `security-auditor` is already under `.claude/agents/`.
-5. In `docs/workflow/board.md`, fill in the status (`set up (YYYY-MM-DD)`; English in every language), the member table (write "review role" in the Model column) and the commit review line.
+5. In `docs/workflow/board.md`, fill in the status (`set up (YYYY-MM-DD)`; English in every language), the member table (write `board.<member>` in the Model column) and the commit review line.
 6. Introduce the board to the user: what each member does, when it steps in, the estimated cost (one line).
 7. New agents load when the session restarts. Tell the user this. In this session, if needed, run the member as a general-purpose subagent by giving it the content of the role file.
 

@@ -10,7 +10,7 @@ import { readStatus, readText, sections, findSection, tally, tableRows } from '.
 import { verdict, isValue } from './labels.mjs';
 import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
-import { readModels, modelsFile, modelsNote, roleLabel } from './models.mjs';
+import { readModels, modelsFile, modelsNote, roleLabel, customJobs } from './models.mjs';
 import { readStore, spentOn } from './providers.mjs';
 import { readLang, t, locale } from './lang.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
@@ -327,7 +327,7 @@ const limitSection = `
 <section class="card"><h3>${L('dashboard.usageLimit')}</h3><div class="grid2 tight">${limitCard(L('dashboard.limit5h'), 'five_hour')}${limitCard(L('dashboard.limitWeekly'), 'seven_day')}</div>
 <p class="muted small">${e(summary(limit))}</p>
 <h4>${L('dashboard.contextWindow')}</h4>${context ? `<div class="lim"><div class="lim-h"><b>${L('dashboard.lastSessionShort')}</b>${badge(context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good', `%${context.percent}`)}</div><div class="bar big ${context.percent >= 70 ? 'critical' : context.percent >= 50 ? 'warn' : 'good'}"><span style="width:${Math.min(100, context.percent)}%"></span><i style="left:50%"></i><i style="left:70%"></i></div><div class="muted small">${L('dashboard.contextHint', { time: new Date(context.readAt).toLocaleString(loc, { hour: '2-digit', minute: '2-digit' }) })}</div></div>` : empty(L('dashboard.noContext'))}
-<h4>${L('dashboard.modelEffort')}</h4><div class="tw"><table><tbody>${Object.entries(readModels(modelsFile(root))).map(([r, v]) => `<tr><td>${e(roleLabel(root, r))}</td><td class="nw">${e(v.replace(/:(?=[^:]*$)/, ' · '))}</td></tr>`).join('')}</tbody></table></div>${Object.entries(readStore().limits).map(([p, limit]) => `<p class="muted small">${L('dashboard.externalSpend')}: ${e(p)} $${spentOn(p).toFixed(2)} / $${e(limit)}</p>`).join('')}<p class="muted small">${modelsNote(modelsFile(root), root) ? `${e(modelsNote(modelsFile(root), root))}. ` : ''}${L('dashboard.modelsHint')}</p></section>
+<h4>${L('dashboard.modelEffort')}</h4><div class="tw"><table><tbody>${Object.entries(readModels(modelsFile(root))).map(([r, v]) => `<tr><td>${e(roleLabel(root, r))}</td><td class="nw">${e(v.replace(/:(?=[^:]*$)/, ' · '))}</td></tr>`).join('')}${customJobs(modelsFile(root)).map(([job, v]) => `<tr><td><code>${e(job)}</code></td><td class="nw">${e(v.replace(/:(?=[^:]*$)/, ' · '))}</td></tr>`).join('')}</tbody></table></div>${Object.entries(readStore().limits).map(([p, limit]) => `<p class="muted small">${L('dashboard.externalSpend')}: ${e(p)} $${spentOn(p).toFixed(2)} / $${e(limit)}</p>`).join('')}<p class="muted small">${modelsNote(modelsFile(root), root) ? `${e(modelsNote(modelsFile(root), root))}. ` : ''}${L('dashboard.modelsHint')}</p></section>
 <section class="card"><h3>${L('dashboard.tokenCost')}</h3>${tokenCost?.days.length ? (() => {
   const latest = tokenCost.days.slice(-14);
   const maxTokens = Math.max(...latest.map((g) => g.token));
