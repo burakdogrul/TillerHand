@@ -15,7 +15,8 @@ import { findRoot, isMain } from './shared.mjs';
 import { t, readLang, locale } from './lang.mjs';
 import { MESSAGES } from './messages.mjs';
 import { ROLES, JOBS, MODELS, roleOf, recommendedFor, resolveJob, readSaved, modelsFile, modelsVersion, applyChanges, setDefaults, replaceFile } from './models.mjs';
-import { PROVIDERS, EXTERNAL_ROLES, EFFORTS, MODEL_ID, parseExternal, isProvider, keyFormatOk, readStore, keyInfo, resolveKey, setKey, removeKey, setLimit, checkKey, addCatalog, removeCatalog, today } from './providers.mjs';
+// This file opens no vault and takes no key: keys are entered in a terminal (models.mjs --set-key), and a stolen panel session cannot touch one.
+import { EFFORTS, parseExternal, isProvider, readStore, keyInfo, providerNames, setLimit, addCatalog, removeCatalog, today, purgePlainKeys } from './providers.mjs';
 import { systemExe } from './keystore.mjs';
 import { rangeOf, claudeUsage, externalFromRuns, externalFromStore } from './panel-data.mjs';
 import { readLimits } from './usage.mjs';
@@ -24,8 +25,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PANEL_DIR = path.join(HERE, 'panel');
 const COST_SCRIPT = path.join(HERE, 'cost.mjs');
 const MAX_BODY = 64 * 1024;
-const MAX_MODEL_LIST = 10 * 1024 * 1024;
-const OPENROUTER_MODELS = 'https://openrouter.ai/api/v1/models'; // in code on purpose, like the provider addresses
 const RANGES = ['today', 'thisWeek', 'lastWeek', 'days30'];
 const SCOPES = ['project', 'all'];
 const OVERRIDES = ['ANTHROPIC_MODEL', 'CLAUDE_CODE_EFFORT_LEVEL', 'CLAUDE_CODE_SUBAGENT_MODEL'];
@@ -80,20 +79,9 @@ function readRuns(root) {
   }
 }
 
-// What OpenRouter lists, as USD per million tokens. A model with no fixed price (variable pricing) cannot be costed, so it is left out.
-function listModels(data) {
-  const perMillion = (v) => { const n = Number(v) * 1e6; return Number.isFinite(n) && n >= 0 ? +n.toFixed(6) : null; };
-  return (Array.isArray(data) ? data : []).slice(0, 3000).flatMap((m) => {
-    if (!isObject(m) || typeof m.id !== 'string' || m.id.length > 200 || !MODEL_ID.test(m.id)) return [];
-    const input = perMillion(m.pricing?.prompt), output = perMillion(m.pricing?.completion);
-    if (input === null || output === null) return [];
-    const context = Number(m.context_length);
-    return [{ id: m.id, context: Number.isFinite(context) && context >= 0 ? context : 0, input, output, tools: Array.isArray(m.supported_parameters) && m.supported_parameters.includes('tools') }];
-  });
-}
-
 // onLogin runs when the one-time token is used (the CLI deletes its temporary file then)
-export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, now = Date.now, fetchImpl = fetch, onLogin = () => {} } = {}) {
+export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, now = Date.now, onLogin = () => {} } = {}) {
+  try { purgePlainKeys(); } catch { /* the store is not writable; a plain key in it is never read */ }
   const token = crypto.randomBytes(32).toString('base64url');
   const sessionValue = crypto.randomBytes(32).toString('base64url');
   const stateDir = path.join(root, '.claude', 'state');
@@ -140,7 +128,7 @@ export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, 
       lang,
       project: path.basename(root),
       // What the page's model and effort lists hold, and the chain each job follows, so a draft shows what would run
-      choices: { models: MODELS, efforts: EFFORTS, externalRoles: EXTERNAL_ROLES, links: JOBS },
+      choices: { models: MODELS, efforts: EFFORTS, links: JOBS },
       locale: locale(lang),
       strings: Object.fromEntries(Object.keys(MESSAGES).filter((k) => k.startsWith('panel.')).map((k) => [k, text(k)])),
       version: modelsVersion(file),
@@ -149,7 +137,7 @@ export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, 
       recommended: Object.fromEntries(names.map((name) => [name, recommendedFor(name)])),
       main: resolveJob('main', file).value,
       overrides: OVERRIDES.filter((name) => process.env[name]),
-      providers: Object.fromEntries(Object.keys(PROVIDERS).map((p) => [p, { env: PROVIDERS[p].env, keyInfo: keyInfo(p), limit: Number(store.limits[p]) > 0 ? Number(store.limits[p]) : null, spentToday: Number(store.spend[p]?.[day]) || 0 }])),
+      providers: Object.fromEntries(providerNames().map((p) => [p, { keyInfo: keyInfo(p), limit: Number(store.limits[p]) > 0 ? Number(store.limits[p]) : null, spentToday: Number(store.spend[p]?.[day]) || 0 }])),
       catalog: store.catalog,
       limits: readLimits(root, now()),
       claude: claudeState(kind, scope),
@@ -180,31 +168,6 @@ export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, 
     res.end(data);
   }
 
-  // The body is read in pieces and stops at the cap, so an oversize list never sits whole in memory
-  async function readCapped(response, max) {
-    const reader = response.body.getReader();
-    const chunks = [];
-    let size = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.length;
-      if (size > max) { await reader.cancel(); throw new Error('too large'); }
-      chunks.push(value);
-    }
-    return Buffer.concat(chunks).toString('utf8');
-  }
-
-  async function modelList(res) {
-    try {
-      const r = await fetchImpl(OPENROUTER_MODELS, { method: 'GET', headers: { accept: 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(15000) });
-      if (!r.ok) throw new Error('status');
-      return json(res, 200, { models: listModels(JSON.parse(await readCapped(r, MAX_MODEL_LIST))?.data) });
-    } catch {
-      return fail(res, 502, 'modelList');
-    }
-  }
-
   // One handler per write route. body is a plain object; each handler reads only the fields it names.
   const writes = {
     'POST /api/jobs': (res, { changes, ifVersion, clearJobsUnder, overwriteBroken, confirmExternal }) => {
@@ -213,22 +176,6 @@ export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, 
       const r = applyChanges({ changes, ifVersion, clearJobsUnder, overwriteBroken }, modelsFile(root));
       if (r.ok) return json(res, 200, { ok: true, version: r.version });
       return fail(res, r.code === 'conflict' ? 409 : r.code === 'failed' ? 500 : 422, r.code, { code: r.code, detail: r.message });
-    },
-    'POST /api/key': (res, { provider, key }) => {
-      if (!isProvider(provider)) return fail(res, 422, 'badRequest');
-      if (!keyFormatOk(provider, key)) return fail(res, 422, 'keyFormat');
-      if (setKey(provider, key) !== null) return fail(res, 422, 'vault');
-      return json(res, 200, { ok: true, keyInfo: keyInfo(provider) });
-    },
-    'DELETE /api/key': (res, { provider }) => {
-      if (!isProvider(provider)) return fail(res, 422, 'badRequest');
-      if (removeKey(provider) !== null) return fail(res, 500, 'vault');
-      return json(res, 200, { ok: true });
-    },
-    'POST /api/key/check': async (res, { provider }) => {
-      if (!isProvider(provider)) return fail(res, 422, 'badRequest');
-      const key = resolveKey(provider);
-      return json(res, 200, { result: key ? await checkKey(provider, { key, fetchImpl }) : 'unverified' });
     },
     'POST /api/limit': (res, { provider, usd }) => {
       if (!isProvider(provider)) return fail(res, 422, 'badRequest');
@@ -279,7 +226,6 @@ export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, 
     restartIdle();
     if (req.method === 'GET') {
       if (route === '/api/state') return json(res, 200, buildState(query));
-      if (route === '/api/openrouter-models') return modelList(res);
       return fail(res, 404, 'notFound');
     }
     if (req.method !== 'POST' && req.method !== 'DELETE') return refuse(req, res, 405, 'forbidden');

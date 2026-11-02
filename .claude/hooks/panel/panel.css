@@ -195,6 +195,7 @@ select:disabled{opacity:.6}
 .note{font-size:12px;color:var(--ink3);flex-basis:100%}
 .note.bad{color:var(--bad);font-weight:500}
 .tagC{font-size:11px;font-weight:600;color:var(--ext-ink)}
+.tagA{font-size:11px;font-weight:600;color:var(--ink2);margin-left:6px}
 .tagU{font-size:11px;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:0 6px;line-height:1.45}
 .job select{width:100%;transition:color var(--dur) ease-out}
 .job.follows select{color:var(--ink3);background-color:transparent;border-color:var(--hair)}
@@ -345,3 +346,7 @@ dialog li{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;pad
   .job.custom .tap::after,.brand i{forced-color-adjust:none;background:Highlight}
   .seriesRect{stroke:Canvas}
 }
+.cmdRow{margin-top:12px}
+.cmdLine{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
+.cmdLine code{flex:1 1 240px;min-width:0;overflow-wrap:anywhere}
+.aliases code{white-space:nowrap}

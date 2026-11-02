@@ -5,8 +5,9 @@
 // Hard limits of this file: no real claude, no real network, no browser, no real key, no real home folder.
 //   - createPanel() is used, never the CLI (the CLI opens a browser). fetchImpl is always a fake.
 //   - run-role runs get a preload that replaces spawn('claude') and the provider network; cost.mjs gets a fake npx first on PATH.
-//   - The vault is a fake backend (setVaultBackend) except the Windows DPAPI test, which uses the real DPAPI under a temp home.
-// NOT covered here: the real macOS Keychain path and the real Linux secret-tool path. They need a real machine of that kind.
+// 3.64.0: no ready-made providers; a key and its address are sealed together in the vault (setProvider / readProvider). The vault is a fake backend
+//   (setVaultBackend, or a folder through fake-vault.mjs), never the real one: the real DPAPI file sits in the real home folder, which a test cannot move.
+// NOT covered here: the real Windows DPAPI, macOS Keychain and Linux secret-tool paths. They need a real machine of that kind.
 // Modules load inside the tests, so a missing module or export turns that test red on its own, not the whole file.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,6 +19,7 @@ import path from 'node:path';
 import cp, { spawnSync } from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileBackend, makeFakeClaude, FAKE_VAULT_URL } from './fake-vault.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const HOOKS = path.join(ROOT, '.claude', 'hooks');
@@ -31,7 +33,6 @@ const IS_WIN = process.platform === 'win32';
 const TMP_HOME = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mp-top-home-')));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
-process.env.VIBE_KIT_VAULT = 'none';
 process.on('exit', () => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* temp */ } });
 
 // Split up so this file does not trip the secret scan
@@ -39,6 +40,8 @@ const OR_KEY = 'sk-' + 'or-v1-' + 'a1b2c3d4'.repeat(6); // last four: c3d4
 const OR_KEY_2 = 'sk-' + 'or-v1-' + 'f0e1d2c3'.repeat(6);
 const DS_KEY = 'sk-' + '0123456789abcdef'.repeat(2); // last four: cdef
 const EXT = 'openrouter/x/y:high';
+const OR_URL = 'https://openrouter.ai/api';
+const DS_URL = 'https://api.deepseek.com/anthropic';
 
 const tmpDir = (t, prefix) => {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
@@ -85,6 +88,19 @@ const freshHome = (t) => {
   withEnv(t, { HOME: home, USERPROFILE: home, OPENROUTER_API_KEY: undefined, DEEPSEEK_API_KEY: undefined, MOONSHOT_API_KEY: undefined });
   return home;
 };
+// In this process the vault is a folder (never null: null would fall back to the real vault of this machine); children get one through the preload
+const DEFAULT_VAULT = path.join(TMP_HOME, 'default-vault');
+{
+  const ks = await load('keystore.mjs');
+  ks.setVaultBackend(fileBackend(DEFAULT_VAULT));
+}
+// The key and its address go in through the same code the command uses, into the vault folder of one project
+async function sealKey(vaultDir, file, name = 'openrouter', url = OR_URL, key = OR_KEY) {
+  const ks = await load('keystore.mjs');
+  const { setProvider } = await load('providers.mjs');
+  ks.setVaultBackend(fileBackend(vaultDir));
+  try { return setProvider(name, url, key, file); } finally { ks.setVaultBackend(fileBackend(DEFAULT_VAULT)); }
+}
 const storeOf = (home) => path.join(home, '.vibe-kit', 'providers.json');
 
 // A vault that lives in memory and counts every call
@@ -102,16 +118,15 @@ function fakeVault({ kind = 'keychain', failSave = false, failRead = false, fail
 async function installVault(t, opts) {
   const ks = await load('keystore.mjs');
   const v = fakeVault(opts);
-  withEnv(t, { VIBE_KIT_VAULT: undefined });
   ks.setVaultBackend(v.backend);
-  t.after(() => ks.setVaultBackend(null));
+  t.after(() => ks.setVaultBackend(fileBackend(DEFAULT_VAULT)));
   return v;
 }
 
 function cleanEnv() {
   const env = { ...process.env };
-  for (const k of Object.keys(env)) if (/^(ANTHROPIC|CLAUDE)|^(OPENROUTER|DEEPSEEK|MOONSHOT)_API_KEY$/i.test(k) || /^FAKE_NPX_/.test(k)) delete env[k];
-  env.VIBE_KIT_VAULT = 'none';
+  // What a run refuses to start under, and what the desktop app sets in every child, are put aside: the result must not depend on this machine
+  for (const k of Object.keys(env)) if (/^(ANTHROPIC|CLAUDE|KIT_)|_API_KEY$|^(NODE_TLS_REJECT_UNAUTHORIZED|NODE_EXTRA_CA_CERTS|NODE_USE_SYSTEM_CA|NODE_USE_ENV_PROXY|SSL_CERT_FILE|SSL_CERT_DIR)$/i.test(k) || /^FAKE_NPX_/.test(k)) delete env[k];
   return env;
 }
 const pathKey = (env) => Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'PATH';
@@ -169,15 +184,15 @@ const R = {
 // Key store: keystore.mjs and providers.mjs (AC-63.11 .. AC-63.14, AC-63.17)
 // ============================================================================================
 
-test('AC-63.11 vaultKind names the backend, and VIBE_KIT_VAULT=none gives null', T, async (t) => {
+test('AC-63.11 vaultKind names the backend the system has, no variable switches the vault off, and a backend put in place is the one used', T, async (t) => {
   const ks = await load('keystore.mjs');
-  assert.equal(ks.vaultKind(), null, 'VIBE_KIT_VAULT=none');
-  withEnv(t, { VIBE_KIT_VAULT: undefined });
-  ks.setVaultBackend(null);
-  t.after(() => ks.setVaultBackend(null));
+  t.after(() => ks.setVaultBackend(fileBackend(DEFAULT_VAULT)));
+  ks.setVaultBackend(null); // the system's own choice: only its kind is read here, nothing is opened
   const real = ks.vaultKind();
   const allowed = { win32: ['dpapi'], darwin: ['keychain'], linux: ['secret-tool', null] }[process.platform] ?? [null];
   assert.ok(allowed.includes(real), `${process.platform}: ${real}`);
+  withEnv(t, { VIBE_KIT_VAULT: 'none' });
+  assert.equal(ks.vaultKind(), real, 'VIBE_KIT_VAULT is not read any more (3.64.0)');
   for (const kind of ['dpapi', 'keychain', 'secret-tool']) {
     ks.setVaultBackend({ kind, save() {}, read() { return null; }, remove() {} });
     assert.equal(ks.vaultKind(), kind);
@@ -199,133 +214,122 @@ test('AC-63.11 vaultSave, vaultRead and vaultDelete go to the backend; a missing
   assert.throws(() => ks.vaultRead('openrouter'));
 });
 
-test('AC-63.11 setKey stores in the vault, resolveKey reads it back, and the store keeps only metadata (each backend kind)', T, async (t) => {
-  const { setKey, resolveKey, keyInfo, readStore } = await load('providers.mjs');
+test('AC-63.11 setProvider seals the address and the key into the vault, readProvider reads them back, and the store keeps only metadata (each backend kind)', T, async (t) => {
+  const { setProvider, readProvider, keyInfo, readStore } = await load('providers.mjs');
   for (const kind of ['dpapi', 'keychain', 'secret-tool']) {
     const v = await installVault(t, { kind });
     const file = path.join(tmpDir(t, 'mp-store-'), 'providers.json');
-    assert.equal(setKey('openrouter', OR_KEY, file), null, kind);
-    assert.equal(v.store.get('openrouter'), OR_KEY, `${kind}: the key is in the vault`);
-    assert.equal(resolveKey('openrouter', { file, env: {} }), OR_KEY, `${kind}: read back`);
+    assert.equal(setProvider('openrouter', OR_URL, OR_KEY, file), null, kind);
+    const sealed = v.store.get('openrouter');
+    assert.notEqual(sealed, OR_KEY, `${kind}: the vault holds the sealed package, not the bare key`);
+    assert.equal(String(sealed).includes(OR_KEY), false, `${kind}: and the key is not readable in it`);
+    assert.match(sealed, /^[\w-]+$/, `${kind}: only characters the macOS Keychain command line takes`);
+    assert.deepEqual(readProvider('openrouter'), { url: OR_URL, key: OR_KEY }, `${kind}: read back`);
     assert.equal(fs.readFileSync(file, 'utf8').includes(OR_KEY), false, `${kind}: not in providers.json`);
-    assert.equal(readStore(file).keys.openrouter, undefined, `${kind}: no plain entry`);
-    assert.equal(typeof readStore(file).keyMeta, 'object');
-    const info = keyInfo('openrouter', { file, env: {} });
+    assert.equal(Object.hasOwn(readStore(file), 'keys'), false, `${kind}: no plain entry`);
+    const info = keyInfo('openrouter', { file });
+    assert.deepEqual(Object.keys(info).sort(), ['addedAt', 'host', 'present'], `${kind}: metadata only`);
     assert.equal(info.present, true);
-    assert.equal(info.last4, OR_KEY.slice(-4));
-    assert.equal(info.source, 'vault');
-    assert.equal(info.protected, true);
+    assert.equal(info.host, 'openrouter.ai');
     assert.equal(Number.isNaN(Date.parse(info.addedAt)), false, 'addedAt is a date');
     assert.ok(Math.abs(Date.now() - Date.parse(info.addedAt)) < 60000, 'addedAt is now');
   }
 });
 
-test('AC-63.11 win32: the real DPAPI path round-trips a fake key under a temp home (macOS and Linux real vaults are not run)', T, async (t) => {
-  if (process.platform !== 'win32') return; // honest limit: the real Keychain and secret-tool paths need a Mac and a Linux desktop
-  const home = freshHome(t);
-  const ks = await load('keystore.mjs');
-  const { setKey, resolveKey } = await load('providers.mjs');
-  withEnv(t, { VIBE_KIT_VAULT: undefined });
-  ks.setVaultBackend(null);
-  assert.equal(ks.vaultKind(), 'dpapi');
-  ks.vaultSave('openrouter', OR_KEY);
-  const files = walk(path.join(home, '.vibe-kit', 'keys'));
-  assert.ok(files.length >= 1, 'ciphertext lives under ~/.vibe-kit/keys/');
-  assert.deepEqual(holders([path.join(home, '.vibe-kit', 'keys')], OR_KEY), [], 'the ciphertext does not hold the key');
-  assert.equal(ks.vaultRead('openrouter'), OR_KEY);
-  assert.equal(ks.vaultRead('deepseek'), null);
-  ks.vaultSave('openrouter', OR_KEY_2);
-  assert.equal(ks.vaultRead('openrouter'), OR_KEY_2, 'a second save replaces the first');
-  ks.vaultDelete('openrouter');
-  assert.equal(ks.vaultRead('openrouter'), null);
-  assert.deepEqual(walk(path.join(home, '.vibe-kit', 'keys')), [], 'the ciphertext file is gone');
-  const file = storeOf(home);
-  assert.equal(setKey('deepseek', DS_KEY, file), null);
-  assert.equal(resolveKey('deepseek', { file, env: {} }), DS_KEY);
-  assert.deepEqual(holders([home], DS_KEY), [], 'no file under the home folder holds the key');
+// The DPAPI file sits in the real home folder (os.userInfo().homedir, which a project cannot steer), so a real round trip cannot run under a temp home.
+// Instead keystore.mjs runs in a child on a made-up Windows: every child process it starts and every file it writes is recorded, and none is really done.
+test('AC-63.12 ATTACK: the key reaches the DPAPI child process through its stdin only: never argv, command or env, and no written file holds it', T, (t) => {
+  const win = tmpDir(t, 'mp-argv-win-');
+  const root = tmpDir(t, 'mp-argv-root-');
+  write(path.join(win, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'), '');
+  const sealed = Buffer.from(JSON.stringify({ url: OR_URL, key: OR_KEY })).toString('base64url');
+  const probe = path.join(root, 'argv-probe.mjs');
+  write(probe, [
+    "import fs from 'node:fs';",
+    "import cp from 'node:child_process';",
+    "Object.defineProperty(process, 'platform', { value: 'win32' });",
+    "delete process.env.SYSTEMROOT; process.env.SystemRoot = process.env.MP_SYSTEMROOT;",
+    'const calls = [], writes = [];',
+    "for (const name of ['mkdirSync', 'writeFileSync', 'renameSync', 'rmSync', 'appendFileSync', 'copyFileSync']) fs[name] = (...a) => { writes.push(a.map((x) => String(x))); };",
+    "for (const name of ['execFileSync', 'execSync', 'spawnSync', 'spawn', 'execFile', 'exec']) cp[name] = (...a) => {",
+    "  const opts = a.find((x) => x && typeof x === 'object' && !Array.isArray(x)) ?? {};",
+    "  calls.push({ cmd: typeof a[0] === 'string' ? a[0] : '', argv: Array.isArray(a[1]) ? a[1] : [], env: opts.env ?? {}, input: opts.input ?? null });",
+    "  return 'QUJD';",
+    '};',
+    'const ks = await import(process.env.MP_KEYSTORE);',
+    'ks.vaultSave("openrouter", process.env.MP_PAYLOAD);',
+    'console.log(JSON.stringify({ kind: ks.vaultKind(), calls, writes }));',
+  ].join('\n'));
+  const r = spawnSync(process.execPath, [probe], {
+    cwd: root, encoding: 'utf8', timeout: 30000,
+    env: { ...cleanEnv(), CLAUDE_PROJECT_DIR: root, MP_SYSTEMROOT: win, MP_KEYSTORE: pathToFileURL(path.join(HOOKS, 'keystore.mjs')).href, MP_PAYLOAD: sealed },
+  });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+  const out = JSON.parse(r.stdout.trim().split('\n').at(-1));
+  assert.equal(out.kind, 'dpapi');
+  assert.ok(out.calls.length >= 1, 'DPAPI runs through a child process, so there was something to watch');
+  assert.ok(out.calls.some((c) => c.input === sealed), 'the payload goes in as stdin');
+  const forms = [OR_KEY, sealed, Buffer.from(OR_KEY).toString('base64'), Buffer.from(OR_KEY, 'utf16le').toString('base64'), Buffer.from(OR_KEY).toString('hex')];
+  for (const c of out.calls) {
+    const seen = JSON.stringify({ cmd: c.cmd, argv: c.argv, env: c.env });
+    for (const f of forms) assert.equal(seen.includes(f), false, `a child process got the key (${f.slice(0, 8)}...) in argv, command or env`);
+  }
+  for (const f of forms) assert.equal(JSON.stringify(out.writes).includes(f), false, 'a written file holds the key or the package');
 });
 
-test('AC-63.12 ATTACK: the key never reaches a child process argv, command line or env (real DPAPI, child processes watched)', T, async (t) => {
-  if (process.platform !== 'win32') return; // on macOS and Linux the real vault commands are not run here
+test('AC-63.12 ATTACK: after setProvider the key is in no providers.json, no project file and no file under the home folder', T, async (t) => {
   const home = freshHome(t);
-  const ks = await load('keystore.mjs');
-  const { setKey, resolveKey } = await load('providers.mjs');
-  withEnv(t, { VIBE_KIT_VAULT: undefined });
-  ks.setVaultBackend(null);
-  const seen = [];
-  const names = ['execFileSync', 'execSync', 'spawnSync', 'spawn', 'execFile', 'exec'];
-  const original = Object.fromEntries(names.map((n) => [n, cp[n]]));
-  for (const n of names) {
-    cp[n] = function (...args) {
-      const opts = args.find((a) => a && typeof a === 'object' && !Array.isArray(a)) ?? {};
-      // stdin (input) is the allowed way to pass a key, so it is left out of what is checked
-      seen.push(JSON.stringify({ cmd: typeof args[0] === 'string' ? args[0] : '', argv: Array.isArray(args[1]) ? args[1] : [], env: opts.env ?? {} }));
-      return original[n].apply(this, args);
-    };
-  }
-  syncBuiltinESMExports();
-  try {
-    assert.equal(setKey('openrouter', OR_KEY, storeOf(home)), null);
-    assert.equal(resolveKey('openrouter', { file: storeOf(home), env: {} }), OR_KEY);
-  } finally {
-    for (const n of names) cp[n] = original[n];
-    syncBuiltinESMExports();
-  }
-  assert.ok(seen.length >= 1, 'DPAPI runs through a child process, so there was something to watch');
-  const forms = [OR_KEY, Buffer.from(OR_KEY).toString('base64'), Buffer.from(OR_KEY, 'utf16le').toString('base64'), Buffer.from(OR_KEY).toString('hex')];
-  for (const line of seen) for (const f of forms) assert.equal(line.includes(f), false, `a child process got the key (${f.slice(0, 8)}...) in argv, command or env`);
-  assert.deepEqual(holders([home], OR_KEY), [], 'and no file holds it');
-});
-
-test('AC-63.12 ATTACK: after setKey the key is in no providers.json, no project file and no file under the home folder', T, async (t) => {
-  const home = freshHome(t);
-  const { setKey, readStore } = await load('providers.mjs');
+  const { setProvider, readStore } = await load('providers.mjs');
   const v = await installVault(t);
   const project = tmpDir(t, 'mp-proj-');
   write(path.join(project, '.kit.json'), JSON.stringify({ type: 'web-saas', lang: 'en' }));
   const file = storeOf(home);
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
-  assert.equal(setKey('deepseek', DS_KEY, file), null);
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, file), null);
+  assert.equal(setProvider('deepseek', DS_URL, DS_KEY, file), null);
   assert.deepEqual(holders([home, project], OR_KEY), []);
   assert.deepEqual(holders([home, project], DS_KEY), []);
   assert.equal(JSON.stringify(readStore(file)).includes(OR_KEY), false, 'readStore returns no key');
+  for (const last4 of [OR_KEY.slice(-4), DS_KEY.slice(-4)]) assert.equal(fs.readFileSync(file, 'utf8').includes(last4), false, 'not even the last four');
   assert.equal(v.store.size, 2);
 });
 
-test('AC-63.12 ATTACK: a refused key never reaches the vault, and a vault key replaces a plain entry', T, async (t) => {
-  const { setKey, readStore } = await load('providers.mjs');
+test('AC-63.12 ATTACK: a refused key or address never reaches the vault, and an old plain entry is gone once a key is saved', T, async (t) => {
+  const { setProvider, readStore } = await load('providers.mjs');
   const v = await installVault(t);
   const file = path.join(tmpDir(t, 'mp-store-'), 'providers.json');
-  for (const [provider, key] of [['openrouter', DS_KEY], ['deepseek', OR_KEY], ['evil', OR_KEY], ['__proto__', OR_KEY], ['openrouter', `${OR_KEY}\r\nx-evil: 1`], ['openrouter', '']]) {
-    const err = setKey(provider, key, file);
-    assert.equal(typeof err, 'string', `${provider}: error text`);
+  // 3.64.0: a key has no format per provider; the one rule is printable ASCII of 16 to 512 characters, and the address must be https
+  for (const [provider, url, key] of [['openrouter', OR_URL, ''], ['openrouter', OR_URL, 'short'], ['openrouter', OR_URL, `${OR_KEY}\r\nx-evil: 1`], ['openrouter', OR_URL, `${OR_KEY} x`], ['openrouter', 'http://openrouter.ai/api', OR_KEY],
+    ['openrouter', 'https://user:pw@openrouter.ai/api', OR_KEY], ['openrouter', 'https://openrouter.ai/api?x=1', OR_KEY], ['__proto__', OR_URL, OR_KEY], ['constructor', OR_URL, OR_KEY], ['Evil', OR_URL, OR_KEY], ['con', OR_URL, OR_KEY], ['openrouter', undefined, OR_KEY]]) {
+    const err = setProvider(provider, url, key, file);
+    assert.equal(typeof err, 'string', `${provider} ${url}: error text`);
     assert.match(err, /\S/);
-    assert.equal(err.includes(key) && key.length > 8, false, 'the error does not echo the key');
+    assert.equal(err.includes(OR_KEY), false, 'the error does not echo the key');
   }
   assert.equal(v.calls.save, 0, 'nothing reached the vault');
   assert.equal(v.store.size, 0);
   assert.equal(fs.existsSync(file), false, 'nothing written');
-  // A plain entry from an older release goes when the vault takes the key
+  // A plain entry from an older release goes when the store is next written
   write(file, JSON.stringify({ keys: { openrouter: OR_KEY_2 }, limits: { openrouter: 3 }, spend: {} }));
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
-  assert.equal(readStore(file).keys.openrouter, undefined, 'the plain entry is removed');
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, file), null);
+  assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(file, 'utf8')), 'keys'), false, 'the plain entry is removed');
   assert.equal(fs.readFileSync(file, 'utf8').includes(OR_KEY_2), false);
   assert.equal(readStore(file).limits.openrouter, 3, 'the limit stays');
 });
 
 test('AC-63.13 readModels, resolveJob, hasKey, keyInfo, readStore and applyChanges never open the vault (fake backend counts zero reads)', T, async (t) => {
   const home = freshHome(t);
-  const { setKey, hasKey, keyInfo, readStore, resolveKey } = await load('providers.mjs');
+  const { setProvider, hasKey, keyInfo, readStore, readProvider, providerNames } = await load('providers.mjs');
   const models = await load('models.mjs');
   const v = await installVault(t);
   const file = storeOf(home);
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, file), null);
   const modelsFile = path.join(tmpDir(t, 'mp-state-'), 'models.json');
   write(modelsFile, JSON.stringify({ code: EXT, tasks: { 'docs.report': EXT } }));
   v.calls.read = 0;
-  assert.equal(hasKey('openrouter', { file, env: {} }), true);
-  assert.equal(hasKey('deepseek', { file, env: {} }), false);
-  assert.equal(keyInfo('openrouter', { file, env: {} }).present, true);
+  assert.equal(hasKey('openrouter', { file }), true);
+  assert.equal(hasKey('deepseek', { file }), false);
+  assert.equal(keyInfo('openrouter', { file }).present, true);
+  assert.deepEqual(providerNames(file), ['openrouter']);
   assert.equal(typeof readStore(file), 'object');
   assert.equal(models.readModels(modelsFile).code, EXT, 'the external role is valid from the metadata alone');
   assert.equal(models.resolveJob('code.ui', modelsFile).value, EXT);
@@ -334,11 +338,10 @@ test('AC-63.13 readModels, resolveJob, hasKey, keyInfo, readStore and applyChang
   const r = models.applyChanges({ changes: { 'test.simple': EXT } }, modelsFile);
   assert.equal(r.ok, true, r.message);
   assert.equal(v.calls.read, 0, 'no read of the vault');
-  assert.equal(resolveKey('openrouter', { file, env: {} }), OR_KEY, 'control: resolveKey does read it');
+  assert.deepEqual(readProvider('openrouter'), { url: OR_URL, key: OR_KEY }, 'control: readProvider does read it');
   assert.equal(v.calls.read, 1);
 });
 
-// A preload that puts a counting vault into a child process. The same keystore.mjs file URL is used, so it is the same module instance.
 const COUNT_PRELOAD = path.join(TMP_HOME, 'mp-vault-count.mjs');
 fs.writeFileSync(COUNT_PRELOAD, [
   "import fs from 'node:fs';",
@@ -354,7 +357,6 @@ function countedProject(t) {
   write(path.join(root, '.claude', 'state', 'models.json'), JSON.stringify({ code: EXT }));
   const spy = path.join(home, 'vault-spy.txt');
   const env = { ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root, MP_SPY: spy, MP_KEYSTORE: pathToFileURL(path.join(HOOKS, 'keystore.mjs')).href };
-  delete env.VIBE_KIT_VAULT;
   const run = (script, args, extra = {}) => spawnSync(process.execPath, ['--import', pathToFileURL(COUNT_PRELOAD).href, ...script, ...args], { cwd: root, encoding: 'utf8', timeout: 90000, env: { ...env, ...extra } });
   const reads = () => (fs.existsSync(spy) ? fs.readFileSync(spy, 'utf8').split('\n').filter(Boolean) : []);
   return { root, home, run, reads, spy, env };
@@ -362,10 +364,10 @@ function countedProject(t) {
 
 test('AC-63.13 models.mjs --show and --for never open the vault, and still see an external role by its metadata (child processes)', T, async (t) => {
   const p = countedProject(t);
-  const { setKey } = await load('providers.mjs');
+  const { setProvider } = await load('providers.mjs');
   const v = await installVault(t);
   withEnv(t, { HOME: p.home, USERPROFILE: p.home });
-  assert.equal(setKey('openrouter', OR_KEY, storeOf(p.home)), null);
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, storeOf(p.home)), null);
   assert.equal(v.store.size, 1);
   const control = p.run(['-e'], ['import(process.env.MP_KEYSTORE).then((m) => m.vaultRead("openrouter"))']);
   assert.equal(control.status, 0, control.stderr);
@@ -385,146 +387,56 @@ test('AC-63.13 models.mjs --show and --for never open the vault, and still see a
 
 test('AC-63.13 the dashboard never opens the vault', T, async (t) => {
   const p = countedProject(t);
-  const { setKey } = await load('providers.mjs');
+  const { setProvider } = await load('providers.mjs');
   await installVault(t);
   withEnv(t, { HOME: p.home, USERPROFILE: p.home });
-  assert.equal(setKey('openrouter', OR_KEY, storeOf(p.home)), null);
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, storeOf(p.home)), null);
   const r = p.run([path.join(HOOKS, 'dashboard.mjs')], [p.root]);
   assert.equal(r.status, 0, r.stderr);
   assert.equal(fs.existsSync(path.join(p.root, 'dashboard.html')), true);
   assert.deepEqual(p.reads(), [], 'no vault read by the dashboard');
 });
 
-test('AC-63.14 no vault: a Linux-style plain store, protected false, and the plain key resolves', T, async (t) => {
-  const home = freshHome(t);
-  const ks = await load('keystore.mjs');
-  const { setKey, resolveKey, keyInfo, hasKey, readStore } = await load('providers.mjs');
-  assert.equal(ks.vaultKind(), null);
-  const file = storeOf(home);
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
-  assert.equal(readStore(file).keys.openrouter, OR_KEY, 'plain store');
-  assert.equal(resolveKey('openrouter', { file, env: {} }), OR_KEY);
-  const info = keyInfo('openrouter', { file, env: {} });
-  assert.equal(info.present, true);
-  assert.equal(info.source, 'plain');
-  assert.equal(info.protected, false);
-  assert.equal(info.last4, OR_KEY.slice(-4));
-  assert.equal(hasKey('openrouter', { file, env: {} }), true);
-  assert.equal(readStore(file).keyMeta.openrouter.source, 'plain');
-  assert.equal(readStore(file).keyMeta.openrouter.last4, OR_KEY.slice(-4));
-});
-
-test('AC-63.14 keyInfo and hasKey: env source, nothing at all, and the key itself is never in the answer', T, async (t) => {
-  const { keyInfo, hasKey } = await load('providers.mjs');
-  const file = path.join(tmpDir(t, 'mp-store-'), 'none.json');
-  const env = keyInfo('deepseek', { file, env: { DEEPSEEK_API_KEY: DS_KEY } });
-  assert.equal(env.present, true);
-  assert.equal(env.source, 'env');
-  assert.equal(env.protected, false);
-  assert.equal(env.last4, DS_KEY.slice(-4));
-  assert.equal(hasKey('deepseek', { file, env: { DEEPSEEK_API_KEY: DS_KEY } }), true);
-  const none = keyInfo('deepseek', { file, env: {} });
-  assert.equal(none.present, false);
-  assert.equal(none.source, null);
-  assert.equal(hasKey('deepseek', { file, env: {} }), false);
-  assert.equal(JSON.stringify([env, none]).includes(DS_KEY), false);
-});
-
-test('AC-63.14 a plain entry is read only when there is no vault; a vault that cannot open falls to the env variable, else null', T, async (t) => {
-  const { resolveKey } = await load('providers.mjs');
-  const file = path.join(tmpDir(t, 'mp-store-'), 'providers.json');
-  write(file, JSON.stringify({ keys: { deepseek: DS_KEY }, limits: {}, spend: {} }));
-  assert.equal(resolveKey('deepseek', { file, env: {} }), DS_KEY, 'no vault: the plain entry is used');
-  const v = await installVault(t);
-  assert.equal(resolveKey('deepseek', { file, env: {} }), null, 'a vault exists and holds nothing: the plain entry is ignored');
-  assert.equal(resolveKey('deepseek', { file, env: { DEEPSEEK_API_KEY: DS_KEY } }), DS_KEY, 'the env variable still works');
-  v.store.set('deepseek', DS_KEY);
-  assert.equal(resolveKey('deepseek', { file, env: {} }), DS_KEY, 'the vault wins');
-  const ks = await load('keystore.mjs');
-  ks.setVaultBackend(fakeVault({ failRead: true }).backend);
-  assert.equal(resolveKey('deepseek', { file, env: { DEEPSEEK_API_KEY: DS_KEY } }), DS_KEY, 'locked vault: env variable');
-  assert.equal(resolveKey('deepseek', { file, env: {} }), null, 'locked vault, no variable: null, no throw');
-});
-
-test('AC-63.14 a vault that throws on save: setKey returns an error and saves nothing, not even a plain entry', T, async (t) => {
-  const { setKey, readStore, keyInfo } = await load('providers.mjs');
+test('AC-63.14 a vault that throws on save: setProvider returns an error and saves nothing: no metadata, and no plain fallback', T, async (t) => {
+  const { setProvider, readStore, keyInfo, readProvider } = await load('providers.mjs');
   const v = await installVault(t, { failSave: true });
   const file = path.join(tmpDir(t, 'mp-store-'), 'providers.json');
-  const err = setKey('openrouter', OR_KEY, file);
+  const err = setProvider('openrouter', OR_URL, OR_KEY, file);
   assert.equal(typeof err, 'string');
   assert.match(err, /\S/);
   assert.equal(err.includes(OR_KEY), false, 'the error does not echo the key');
   assert.equal(v.store.size, 0);
   if (fs.existsSync(file)) {
     const store = readStore(file);
-    assert.deepEqual(store.keys, {}, 'no plain fallback');
+    assert.equal(Object.hasOwn(store, 'keys'), false, 'no plain fallback');
     assert.deepEqual(store.keyMeta, {}, 'no metadata for a key that was not saved');
   }
-  assert.equal(keyInfo('openrouter', { file, env: {} }).present, false);
+  assert.equal(keyInfo('openrouter', { file }).present, false);
+  assert.equal(readProvider('openrouter'), null);
   assert.deepEqual(holders([path.dirname(file)], OR_KEY), []);
 });
 
-test('AC-63.11 removeKey: the vault key, the metadata and a plain entry all go; other providers stay', T, async (t) => {
-  const { setKey, removeKey, hasKey, readStore } = await load('providers.mjs');
+test('AC-63.11 removeKey: the vault entry, the metadata and an old plain entry all go; other providers stay', T, async (t) => {
+  const { setProvider, removeKey, hasKey, readStore, readProvider } = await load('providers.mjs');
   const v = await installVault(t);
   const file = path.join(tmpDir(t, 'mp-store-'), 'providers.json');
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
-  assert.equal(setKey('deepseek', DS_KEY, file), null);
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, file), null);
+  assert.equal(setProvider('deepseek', DS_URL, DS_KEY, file), null);
   const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
   raw.keys = { ...raw.keys, openrouter: OR_KEY_2 };
   write(file, JSON.stringify(raw));
   removeKey('openrouter', file);
   assert.equal(v.store.has('openrouter'), false, 'vault');
   assert.equal(readStore(file).keyMeta.openrouter, undefined, 'metadata');
-  assert.equal(readStore(file).keys.openrouter, undefined, 'plain entry');
+  assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(file, 'utf8')), 'keys'), false, 'plain entry');
   assert.equal(fs.readFileSync(file, 'utf8').includes(OR_KEY_2), false);
-  assert.equal(hasKey('openrouter', { file, env: {} }), false);
-  assert.equal(hasKey('deepseek', { file, env: {} }), true, 'the other provider stays');
-  assert.equal(v.store.get('deepseek'), DS_KEY);
+  assert.equal(hasKey('openrouter', { file }), false);
+  assert.equal(hasKey('deepseek', { file }), true, 'the other provider stays');
+  assert.deepEqual(readProvider('deepseek'), { url: DS_URL, key: DS_KEY });
   assert.doesNotThrow(() => removeKey('kimi', file), 'a provider with no key');
   assert.doesNotThrow(() => removeKey('openrouter', file), 'twice');
 });
 
-const URLS = { openrouter: 'https://openrouter.ai/api/v1/key', deepseek: 'https://api.deepseek.com/user/balance', kimi: 'https://api.moonshot.ai/v1/models' };
-const KEY_OF = { openrouter: OR_KEY, deepseek: DS_KEY, kimi: DS_KEY };
-
-test('AC-63.17 checkKey maps 200, 401, 403, 500, other statuses and a thrown fetch, and calls the fixed address with a Bearer header', T, async () => {
-  const { checkKey } = await load('providers.mjs');
-  for (const provider of Object.keys(URLS)) {
-    for (const [status, want] of [[200, 'valid'], [401, 'invalid'], [403, 'invalid'], [500, 'unverified'], [502, 'unverified'], [404, 'unverified'], [429, 'unverified'], [204, 'unverified'], [301, 'unverified']]) {
-      const f = fetchFake(async () => new Response(status === 204 || status === 301 ? null : '{}', { status }));
-      const got = await checkKey(provider, { key: KEY_OF[provider], fetchImpl: f.impl });
-      assert.equal(got, want, `${provider} ${status}`);
-      assert.equal(f.calls.length, 1, `${provider} ${status}: one call`);
-      assert.equal(f.calls[0].url, URLS[provider], `${provider}: the fixed address`);
-      assert.equal(f.calls[0].method, 'GET');
-      assert.equal(f.calls[0].headers.authorization, `Bearer ${KEY_OF[provider]}`);
-      assert.equal(f.calls[0].init.body, undefined, 'no body');
-      assert.equal(typeof got, 'string');
-      assert.equal(got.includes(KEY_OF[provider]), false);
-    }
-    for (const failure of [new TypeError('fetch failed'), Object.assign(new Error('timed out'), { name: 'AbortError' }), 'plain string']) {
-      const f = fetchFake(async () => { throw failure; });
-      assert.equal(await checkKey(provider, { key: KEY_OF[provider], fetchImpl: f.impl }), 'unverified', `${provider}: ${String(failure)}`);
-    }
-  }
-});
-
-test('AC-63.17 ATTACK: checkKey calls nothing for an unknown provider or a key that does not fit the provider, and never says valid for them', T, async () => {
-  const { checkKey } = await load('providers.mjs');
-  assert.equal(typeof checkKey, 'function', 'checkKey is exported');
-  const control = fetchFake(async () => new Response('{}', { status: 200 }));
-  assert.equal(await checkKey('openrouter', { key: OR_KEY, fetchImpl: control.impl }), 'valid', 'control: a fitting key is checked');
-  assert.equal(control.calls.length, 1);
-  const bad = [['evil', OR_KEY], ['__proto__', OR_KEY], ['constructor', OR_KEY], [undefined, OR_KEY], ['openrouter', DS_KEY], ['deepseek', OR_KEY], ['openrouter', `${OR_KEY}\r\nx-evil: 1`], ['openrouter', ''], ['openrouter', undefined], ['openrouter', 5]];
-  for (const [provider, key] of bad) {
-    const f = fetchFake(async () => new Response('{}', { status: 200 }));
-    let got;
-    try { got = await checkKey(provider, { key, fetchImpl: f.impl }); } catch { got = 'threw'; }
-    assert.notEqual(got, 'valid', `${provider} ${JSON.stringify(key)}`);
-    assert.equal(f.calls.length, 0, `${provider} ${JSON.stringify(key)}: nothing was sent`);
-  }
-});
 
 // ============================================================================================
 // Catalog and per-model spend (AC-63.15 store side)
@@ -533,9 +445,13 @@ test('AC-63.17 ATTACK: checkKey calls nothing for an unknown provider or a key t
 test('AC-63.15 readStore also returns keyMeta, modelSpend and catalog (empty on a missing file)', T, async (t) => {
   const { readStore } = await load('providers.mjs');
   const dir = tmpDir(t, 'mp-store-');
-  assert.deepEqual(readStore(path.join(dir, 'none.json')), { keys: {}, limits: {}, spend: {}, keyMeta: {}, modelSpend: {}, catalog: {} });
+  // 3.64.0: no keys part: a plain keys field is never read
+  const empty = { limits: {}, spend: {}, keyMeta: {}, modelSpend: {}, catalog: {} };
+  assert.deepEqual(readStore(path.join(dir, 'none.json')), empty);
   write(path.join(dir, 'odd.json'), JSON.stringify({ keys: [], keyMeta: 'x', modelSpend: 5, catalog: null }));
-  assert.deepEqual(readStore(path.join(dir, 'odd.json')), { keys: {}, limits: {}, spend: {}, keyMeta: {}, modelSpend: {}, catalog: {} });
+  assert.deepEqual(readStore(path.join(dir, 'odd.json')), empty);
+  write(path.join(dir, 'old.json'), JSON.stringify({ keys: { openrouter: OR_KEY }, limits: { openrouter: 2 } }));
+  assert.equal(JSON.stringify(readStore(path.join(dir, 'old.json'))).includes(OR_KEY), false, 'an old plain key is not carried');
 });
 
 test('AC-63.15 addModelSpend adds up per day, and externalFromStore reads it back by range', T, async (t) => {
@@ -583,7 +499,7 @@ test('AC-63.15 addCatalog and removeCatalog keep external model prices (USD per 
   assert.doesNotThrow(() => removeCatalog('openrouter', 'acme/never-added', file));
 });
 
-test('AC-63.15 ATTACK: addCatalog refuses a bad model id, a bad price, a bad context and an unknown provider, and writes nothing', T, async (t) => {
+test('AC-63.15 ATTACK: addCatalog refuses a bad model id, a bad price, a bad context and a malformed provider name, and writes nothing', T, async (t) => {
   const { addCatalog, readStore } = await load('providers.mjs');
   const file = path.join(tmpDir(t, 'mp-store-'), 'providers.json');
   const good = { model: 'acme/priced-1', input: 2, output: 4, context: 32000 };
@@ -594,7 +510,7 @@ test('AC-63.15 ATTACK: addCatalog refuses a bad model id, a bad price, a bad con
     ['openrouter', { ...good, input: -1 }], ['openrouter', { ...good, input: NaN }], ['openrouter', { ...good, input: Infinity }], ['openrouter', { ...good, input: '2' }], ['openrouter', { ...good, input: null }], ['openrouter', { ...good, input: undefined }],
     ['openrouter', { ...good, output: -1 }], ['openrouter', { ...good, output: NaN }], ['openrouter', { ...good, output: '4' }], ['openrouter', { ...good, output: undefined }],
     ['openrouter', { ...good, context: -5 }], ['openrouter', { ...good, context: NaN }], ['openrouter', { ...good, context: 'big' }],
-    ['evil', good], ['__proto__', good], ['constructor', good], [undefined, good], ['openrouter', null], ['openrouter', 'acme/priced-1'],
+    ['Evil', good], ['__proto__', good], ['constructor', good], ['con', good], ['a b', good], ['../x', good], [undefined, good], ['openrouter', null], ['openrouter', 'acme/priced-1'],
   ];
   for (const [provider, entry] of bad) {
     const err = addCatalog(provider, entry, file);
@@ -1204,9 +1120,12 @@ syncBuiltinESMExports();
 const AGENTS_FIXTURE = '# Fixture\n\n## Commands\n\n```bash\ntest:        npm test\n```\n';
 
 async function runProject(t, { model, catalog, tamper, env = {} } = {}) {
-  const { setKey, setLimit, addCatalog } = await load('providers.mjs');
+  const { setLimit, addCatalog } = await load('providers.mjs');
   const root = tmpDir(t, 'mp-run-');
   const home = tmpDir(t, 'mp-run-home-');
+  const vault = tmpDir(t, 'mp-run-vault-');
+  const bin = tmpDir(t, 'mp-run-bin-');
+  makeFakeClaude(bin); // findProgram needs a claude on PATH outside the project; the preload never runs it
   fs.cpSync(HOOKS, path.join(root, '.claude', 'hooks'), { recursive: true });
   fs.cpSync(path.join(ROOT, '.claude', 'agents'), path.join(root, '.claude', 'agents'), { recursive: true });
   fs.copyFileSync(path.join(ROOT, '.claude', 'settings.json'), path.join(root, '.claude', 'settings.json'));
@@ -1215,16 +1134,16 @@ async function runProject(t, { model, catalog, tamper, env = {} } = {}) {
   write(path.join(root, 'p.md'), 'PROMPT-MARKER do the task\n');
   write(path.join(root, '.claude', 'state', 'models.json'), JSON.stringify({ tasks: { 'code.ui': `openrouter/${model}:high` } }));
   const store = storeOf(home);
-  assert.equal(setKey('openrouter', OR_KEY, store), null);
+  assert.equal(await sealKey(vault, store), null);
   setLimit('openrouter', 5, store);
   if (catalog) assert.ok([null, undefined].includes(addCatalog('openrouter', { model, ...catalog }, store)));
   if (tamper) { const raw = JSON.parse(fs.readFileSync(store, 'utf8')); tamper(raw.catalog.openrouter[model]); fs.writeFileSync(store, JSON.stringify(raw)); }
   const spy = path.join(home, 'spy.jsonl');
-  const base = { ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root, MP_SPY: spy, ...env };
-  // Even if the preload failed to catch the spawn, a real claude would not be found
+  const base = { ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root, KIT_TEST_VAULT_DIR: vault, MP_SPY: spy, ...env };
+  // Only the stand-in claude is on PATH (plus node and the system folder); the preload catches the spawn, and a real claude would not be found anyway
   const systemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
-  base[pathKey(base)] = [path.dirname(process.execPath), ...(systemRoot ? [path.join(systemRoot, 'System32')] : [])].join(path.delimiter);
-  const r = spawnSync(process.execPath, ['--import', pathToFileURL(RUN_PRELOAD).href, path.join(root, '.claude', 'hooks', 'run-role.mjs'), 'code.ui', 'p.md'], { cwd: root, encoding: 'utf8', timeout: 60000, env: base });
+  base[pathKey(base)] = [bin, path.dirname(process.execPath), ...(systemRoot ? [path.join(systemRoot, 'System32')] : [])].join(path.delimiter);
+  const r = spawnSync(process.execPath, ['--import', FAKE_VAULT_URL, '--import', pathToFileURL(RUN_PRELOAD).href, path.join(root, '.claude', 'hooks', 'run-role.mjs'), 'code.ui', 'p.md'], { cwd: root, encoding: 'utf8', timeout: 60000, env: base });
   const spied = fs.existsSync(spy) ? fs.readFileSync(spy, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
   const logFile = path.join(root, '.claude', 'state', 'role-runs.jsonl');
   const rows = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
@@ -1444,7 +1363,7 @@ test('AC-63.2 ATTACK: a write needs the right Origin, a JSON content type and a 
   for (const origin of [null, 'http://evil.example', `http://localhost:${p}`, `http://127.0.0.1:${p + 1}`, `https://127.0.0.1:${p}`, 'null', `http://127.0.0.1:${p}.evil.example`, '']) {
     const r = await s.post('/api/jobs', body, { origin });
     assert.equal(r.status, 403, `Origin: ${JSON.stringify(origin)}`);
-    const d = await s.del('/api/key', { provider: 'openrouter' }, { origin });
+    const d = await s.del('/api/catalog', { provider: 'openrouter', model: 'acme/x' }, { origin });
     assert.equal(d.status, 403, `DELETE Origin: ${JSON.stringify(origin)}`);
   }
   for (const type of [null, 'text/plain', 'application/x-www-form-urlencoded', 'multipart/form-data; boundary=x', 'text/html', 'application/xml']) {
@@ -1778,7 +1697,7 @@ test('AC-63.7 there is no field that combines Claude and external USD, and the s
 test('AC-63.1 the state carries the pieces the page needs: lang, locale, version, saved, jobs, recommended, main, overrides, providers, catalog, limits, external, refreshing', T, async (t) => {
   const home = freshHome(t);
   const models = await load('models.mjs');
-  const { setLimit, addSpend, addCatalog } = await load('providers.mjs');
+  const { setLimit, addSpend, addCatalog, setProvider } = await load('providers.mjs');
   await installVault(t);
   const proj = panelProject(t, { files: { '.claude/state/models.json': { code: 'haiku:low', tasks: { 'code.ui': 'opus:high' } } } });
   withEnv(t, { ANTHROPIC_MODEL: 'override-marker-model', CLAUDE_CODE_SUBAGENT_MODEL: 'override-marker-sub' });
@@ -1800,7 +1719,9 @@ test('AC-63.1 the state carries the pieces the page needs: lang, locale, version
   assert.ok(Object.hasOwn(st, 'main'));
   assert.deepEqual([...st.overrides].sort(), ['ANTHROPIC_MODEL', 'CLAUDE_CODE_SUBAGENT_MODEL'], 'names of the set variables');
   assert.equal(JSON.stringify(st).includes('override-marker'), false, 'names only, never the values');
-  for (const p of ['openrouter', 'deepseek', 'kimi']) assert.ok(JSON.stringify(st.providers).includes(p), p);
+  // 3.64.0: no ready-made providers. The list holds the names the user has used (a key, a catalog entry or a limit), and nothing else.
+  assert.deepEqual(Object.keys(st.providers), ['openrouter'], 'only the name that has a limit and a catalog entry');
+  assert.deepEqual(Object.keys(st.choices).sort(), ['efforts', 'links', 'models'], 'no externalRoles: any job may take an outside model');
   assert.equal(st.providers.openrouter.limit, 5);
   assert.equal(st.providers.openrouter.keyInfo.present, false);
   assert.ok(JSON.stringify(st.providers.openrouter).includes('0.5'), "today's spend");
@@ -1810,42 +1731,53 @@ test('AC-63.1 the state carries the pieces the page needs: lang, locale, version
   assert.equal(typeof st.limits.ageMin, 'number');
   assert.equal(st.refreshing, false);
   assert.equal(st.saved.broken, undefined);
-  // The vault is never read for the state
+  // A provider with a key shows what the store holds: the date and the host, never the key or its last four
   const v = await installVault(t);
-  await s.state();
+  assert.equal(setProvider('acme', 'https://api.acme.test/anthropic', OR_KEY, file), null);
+  v.calls.read = 0;
+  const after = await s.state();
+  assert.deepEqual(Object.keys(after.providers).sort(), ['acme', 'openrouter']);
+  assert.deepEqual(Object.keys(after.providers.acme.keyInfo).sort(), ['addedAt', 'host', 'present']);
+  assert.equal(after.providers.acme.keyInfo.present, true);
+  assert.equal(after.providers.acme.keyInfo.host, 'api.acme.test');
+  assert.equal(JSON.stringify(after).includes(OR_KEY), false);
+  assert.equal(JSON.stringify(after).includes(OR_KEY.slice(-4)), false, 'not even the last four');
   assert.equal(v.calls.read, 0, 'GET /api/state does not open the vault');
 });
 
-test('AC-63.3 ATTACK: a key sent to POST /api/key is in no response, no stdout or stderr, no panel.json and no file under the project or home', T, async (t) => {
+test('AC-64.5 ATTACK: the panel has no key, key check or provider list route: a session secret cannot write, check, remove or read a key', T, async (t) => {
   const home = freshHome(t);
+  const { setProvider } = await load('providers.mjs');
   const v = await installVault(t);
   const out = capture(t);
   const proj = panelProject(t);
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, storeOf(home)), null, 'the key is in the vault, as --set-key leaves it');
+  const sealed = v.store.get('openrouter');
+  const before = fs.readFileSync(storeOf(home), 'utf8');
+  v.calls.read = v.calls.save = v.calls.remove = 0;
   const s = await session(t, proj);
-  const saved = await s.post('/api/key', { provider: 'openrouter', key: OR_KEY });
-  assert.equal(saved.status, 200, saved.text);
-  assert.equal(v.store.get('openrouter'), OR_KEY, 'the key reached the vault');
-  const seen = [saved];
-  // Everything the page can ask for, after the key is in
-  for (const url of ['/api/state', '/api/state?range=days30&scope=all', '/', '/panel.js', '/panel.css', '/api/openrouter-models']) seen.push(await s.get(url));
-  // Refused requests that carry the key in their body
-  seen.push(await s.post('/api/key', { provider: 'deepseek', key: OR_KEY }));
-  seen.push(await s.post('/api/key', { provider: 'evil', key: OR_KEY }));
-  seen.push(await s.post('/api/key', { provider: 'openrouter', key: `${OR_KEY}\r\nx-evil: 1` }));
-  seen.push(await s.post('/api/key', { provider: 'openrouter', key: OR_KEY }, { origin: 'http://evil.example' }));
-  seen.push(await s.post('/api/key', JSON.stringify({ provider: 'openrouter', key: OR_KEY, pad: 'a'.repeat(70000) })));
-  seen.push(await s.post('/api/key', '{"provider":"openrouter","key":"' + OR_KEY));
-  seen.push(await call(s.panel, { method: 'POST', url: '/api/key', body: { provider: 'openrouter', key: OR_KEY } }));
-  seen.push(await s.post('/api/key/check', { provider: 'openrouter' }));
-  for (const r of seen) {
-    assert.equal(r.text.includes(OR_KEY), false, `a response (status ${r.status}) holds the key`);
-    assert.equal(JSON.stringify(r.headers).includes(OR_KEY), false);
+  const seen = [];
+  for (const [method, url, body] of [
+    ['POST', '/api/key', { provider: 'openrouter', key: OR_KEY_2 }], ['POST', '/api/key', { provider: 'openrouter', url: 'https://evil.example', key: OR_KEY_2 }], ['POST', '/api/key/check', { provider: 'openrouter' }],
+    ['DELETE', '/api/key', { provider: 'openrouter' }], ['GET', '/api/key'], ['GET', '/api/openrouter-models'], ['GET', '/api/providers'], ['GET', '/api/keys'],
+  ]) {
+    const r = method === 'GET' ? await s.get(url) : method === 'POST' ? await s.post(url, body) : await s.del(url, body);
+    assert.equal(r.status, 404, `${method} ${url}`);
+    seen.push(r);
   }
-  const st = (await s.state()).providers.openrouter;
-  assert.equal(st.keyInfo.present, true);
-  assert.equal(st.keyInfo.last4, OR_KEY.slice(-4), 'only the last four');
-  assert.equal(st.keyInfo.source, 'vault');
-  assert.equal(st.keyInfo.protected, true);
+  // Everything the page can ask for, with the key in the vault
+  for (const url of ['/api/state', '/api/state?range=days30&scope=all', '/', '/panel.js', '/panel.css']) seen.push(await s.get(url));
+  for (const r of seen) {
+    for (const secret of [OR_KEY, OR_KEY_2, OR_KEY.slice(-4), sealed]) {
+      assert.equal(r.text.includes(secret), false, `a response (status ${r.status}) holds ${secret.length === 4 ? 'the last four' : 'a key'}`);
+      assert.equal(JSON.stringify(r.headers).includes(secret), false);
+    }
+  }
+  assert.deepEqual(v.calls, { save: 0, read: 0, remove: 0 }, 'the panel never opened the vault');
+  assert.equal(v.store.get('openrouter'), sealed, 'and the key is as it was');
+  assert.equal(fs.readFileSync(storeOf(home), 'utf8'), before, 'the store is as it was');
+  const page = fs.readFileSync(path.join(PANEL_DIR, 'panel.js'), 'utf8');
+  assert.doesNotMatch(page, /\/api\/key|openrouter-models/, 'the page does not call a route that is gone');
   await s.panel.close();
   assert.equal(out().includes(OR_KEY), false, 'stdout or stderr holds the key');
   const panelJson = path.join(proj.stateDir, 'panel.json');
@@ -1860,66 +1792,14 @@ test('AC-63.3 ATTACK: a key sent to POST /api/key is in no response, no stdout o
   assert.equal(out().includes(s.secret), false, 'no output holds the session secret');
 });
 
-test('AC-63.3 POST /api/key refuses a bad provider or key with a 4xx and saves nothing; a vault that cannot save gives an error and no key', T, async (t) => {
-  const home = freshHome(t);
-  const v = await installVault(t);
-  const proj = panelProject(t);
-  const s = await session(t, proj);
-  const bad = [{ provider: 'evil', key: OR_KEY }, { provider: '__proto__', key: OR_KEY }, { provider: 'openrouter', key: DS_KEY }, { provider: 'deepseek', key: OR_KEY }, { provider: 'openrouter', key: 'short' }, { provider: 'openrouter', key: 123 }, { provider: 'openrouter' }, { key: OR_KEY }, {}, [], 'text'];
-  for (const body of bad) {
-    const r = await s.post('/api/key', body);
-    assert.ok(r.status >= 400 && r.status < 500, `${JSON.stringify(body)}: ${r.status}`);
-    assert.equal(r.text.includes(OR_KEY), false);
-  }
-  assert.equal(v.calls.save, 0);
-  assert.equal(fs.existsSync(storeOf(home)), false, 'nothing written');
-  const ks = await load('keystore.mjs');
-  ks.setVaultBackend(fakeVault({ failSave: true }).backend);
-  const failed = await s.post('/api/key', { provider: 'openrouter', key: OR_KEY });
-  assert.ok(failed.status >= 400, `a vault that cannot save: ${failed.status}`);
-  assert.equal(failed.text.includes(OR_KEY), false);
-  assert.equal((await s.state()).providers.openrouter.keyInfo.present, false, 'nothing was saved');
-  assert.deepEqual(holders([home, proj.root], OR_KEY), []);
-});
-
-test('AC-63.17 POST /api/key/check asks the provider through fetchImpl and answers valid, invalid or unverified; DELETE /api/key removes the key', T, async (t) => {
-  const home = freshHome(t);
-  const v = await installVault(t);
-  let status = 200;
-  const f = fetchFake(async () => new Response('{}', { status }));
-  const proj = panelProject(t);
-  const s = await session(t, proj, { fetchImpl: f.impl });
-  const none = await s.post('/api/key/check', { provider: 'openrouter' });
-  assert.equal(f.calls.length, 0, 'no key, no call');
-  assert.notEqual(none.json().result, 'valid');
-  assert.equal((await s.post('/api/key', { provider: 'openrouter', key: OR_KEY })).status, 200);
-  for (const [code, want] of [[200, 'valid'], [401, 'invalid'], [403, 'invalid'], [500, 'unverified']]) {
-    status = code;
-    const r = await s.post('/api/key/check', { provider: 'openrouter' });
-    assert.equal(r.status, 200, r.text);
-    assert.deepEqual(Object.keys(r.json()), ['result']);
-    assert.equal(r.json().result, want, String(code));
-    assert.equal(r.text.includes(OR_KEY), false);
-  }
-  assert.equal(f.calls.length, 4);
-  for (const c of f.calls) { assert.equal(c.url, 'https://openrouter.ai/api/v1/key'); assert.equal(c.headers.authorization, `Bearer ${OR_KEY}`); }
-  const evil = await s.post('/api/key/check', { provider: 'evil' });
-  assert.ok(evil.status >= 400 || evil.json().result !== 'valid');
-  assert.equal(f.calls.length, 4, 'an unknown provider sends nothing');
-  const gone = await s.del('/api/key', { provider: 'openrouter' });
-  assert.equal(gone.status, 200, gone.text);
-  assert.equal(v.store.has('openrouter'), false);
-  assert.equal((await s.state()).providers.openrouter.keyInfo.present, false);
-  assert.deepEqual(holders([home], OR_KEY), []);
-});
-
 test('AC-63.1 POST /api/limit sets the daily limit; a bad amount is refused and the old limit stays', T, async (t) => {
   const home = freshHome(t);
   const proj = panelProject(t);
   const s = await session(t, proj);
   assert.equal((await s.post('/api/limit', { provider: 'openrouter', usd: 2.5 })).status, 200);
   assert.equal((await s.state()).providers.openrouter.limit, 2.5);
-  for (const body of [{ provider: 'openrouter', usd: 0 }, { provider: 'openrouter', usd: -1 }, { provider: 'openrouter', usd: 'abc' }, { provider: 'openrouter', usd: null }, { provider: 'openrouter', usd: 1e999 }, { provider: 'evil', usd: 1 }, { usd: 1 }, {}]) {
+  // 3.64.0: any well-formed name takes a limit; a malformed one is refused
+  for (const body of [{ provider: 'openrouter', usd: 0 }, { provider: 'openrouter', usd: -1 }, { provider: 'openrouter', usd: 'abc' }, { provider: 'openrouter', usd: null }, { provider: 'openrouter', usd: 1e999 }, { provider: 'Evil', usd: 1 }, { provider: '__proto__', usd: 1 }, { provider: 'con', usd: 1 }, { provider: '../x', usd: 1 }, { usd: 1 }, {}]) {
     const r = await s.post('/api/limit', body);
     assert.ok(r.status >= 400 && r.status < 500, `${JSON.stringify(body)}: ${r.status}`);
   }
@@ -1937,41 +1817,6 @@ test('AC-63.9 POST /api/default saves the project choice as the global default',
   assert.equal(fs.existsSync(path.join(home, '.vibe-kit', 'models-default.json')), true);
   assert.equal(readDefaults().code, 'haiku:low');
   assert.equal(readDefaults().tasks['code.ui'], 'opus:high');
-});
-
-test('AC-63.1 GET /api/openrouter-models returns id, context, input, output (USD per million) and tools, and a failing fetch does not stop the panel', T, async (t) => {
-  freshHome(t);
-  const list = { data: [
-    { id: 'a/with-tools', context_length: 128000, pricing: { prompt: '0.00000015', completion: '0.0000006' }, supported_parameters: ['temperature', 'tools'] },
-    { id: 'c/no-tools:free', context_length: 8000, pricing: { prompt: '0', completion: '0' }, supported_parameters: ['temperature'] },
-    { id: 'd/dear', context_length: 1000000, pricing: { prompt: '0.000005', completion: '0.000025' }, supported_parameters: ['tools', 'tool_choice'] },
-  ] };
-  let fail = false;
-  const f = fetchFake(async () => { if (fail) throw new TypeError('fetch failed'); return new Response(JSON.stringify(list), { status: 200, headers: { 'content-type': 'application/json' } }); });
-  const proj = panelProject(t);
-  const s = await session(t, proj, { fetchImpl: f.impl });
-  const r = await s.get('/api/openrouter-models');
-  assert.equal(r.status, 200, r.text);
-  assert.equal(f.calls.length, 1);
-  assert.equal(f.calls[0].url, 'https://openrouter.ai/api/v1/models');
-  assert.equal(f.calls[0].method, 'GET');
-  const { models } = r.json();
-  assert.equal(models.length, 3);
-  for (const m of models) assert.deepEqual(Object.keys(m).sort(), ['context', 'id', 'input', 'output', 'tools']);
-  const by = Object.fromEntries(models.map((m) => [m.id, m]));
-  assert.equal(by['a/with-tools'].context, 128000);
-  close(by['a/with-tools'].input, 0.15, 'per million');
-  close(by['a/with-tools'].output, 0.6);
-  assert.equal(by['a/with-tools'].tools, true);
-  assert.equal(by['c/no-tools:free'].tools, false);
-  assert.equal(by['c/no-tools:free'].input, 0);
-  close(by['d/dear'].input, 5);
-  close(by['d/dear'].output, 25);
-  fail = true;
-  const down = await s.get('/api/openrouter-models');
-  assert.ok(down.status >= 400 || down.json().models.length === 0, 'a failed fetch is not shown as a list');
-  assert.doesNotMatch(down.text, /\bat \S+ \(|node:internal|TypeError/, 'no stack trace');
-  assert.equal((await s.get('/api/state')).status, 200, 'the panel still answers');
 });
 
 test('AC-63.16 strings: every panel.* text, in the project language, and locale; en is built in', T, async (t) => {
@@ -2382,12 +2227,13 @@ test('AC-63.23 the browser opener argv names the temp file and holds no token an
 });
 
 test('AC-63.24 /api/jobs: an external value needs confirmExternal: true, else 422 with code confirm; with it, saved', T, async (t) => {
-  freshHome(t);
+  const home = freshHome(t);
+  const { setProvider } = await load('providers.mjs');
   await installVault(t);
   const proj = panelProject(t);
   const s = await session(t, proj);
-  assert.equal((await s.post('/api/key', { provider: 'openrouter', key: OR_KEY })).status, 200);
-  for (const changes of [{ 'code.ui': EXT }, { code: EXT }, { 'docs.report': EXT }, { 'code.ui': EXT, 'test.simple': 'haiku:low' }]) {
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, storeOf(home)), null);
+  for (const changes of [{ 'code.ui': EXT }, { code: EXT }, { 'docs.report': EXT }, { 'code.ui': EXT, 'test.simple': 'haiku:low' }, { main: EXT }, { 'review.code': EXT }, { plan: EXT }]) {
     const r = await s.post('/api/jobs', { changes });
     assert.equal(r.status, 422, JSON.stringify(changes));
     assert.equal(r.json().code, 'confirm', JSON.stringify(changes));
@@ -2408,23 +2254,34 @@ test('AC-63.24 /api/jobs: an external value needs confirmExternal: true, else 42
   const role = await s.post('/api/jobs', { changes: { docs: EXT }, confirmExternal: true });
   assert.equal(role.status, 200, role.text);
   assert.equal(proj.saved().docs, EXT);
+  // 3.64.0: any job may take an outside model once its provider has a key; main and the review jobs too
+  for (const job of ['review.code', 'board.qa', 'plan.task', 'main']) {
+    const r = await s.post('/api/jobs', { changes: { [job]: EXT }, confirmExternal: true });
+    assert.equal(r.status, 200, `${job}: ${r.text}`);
+    assert.equal(proj.saved().tasks[job], EXT, job);
+  }
+  assert.match(proj.forJob('main'), /^openrouter\/x\/y:high .*run-session\.mjs$/, 'main is opened by run-session.mjs');
+  assert.equal(fs.existsSync(proj.local), false, 'an outside main leaves settings.local.json alone');
   const reset = await s.post('/api/jobs', { changes: { 'code.ui': null } });
   assert.equal(reset.status, 200, 'taking an external value away needs no confirmation');
-  const bad = await s.post('/api/jobs', { changes: { 'review.code': EXT }, confirmExternal: true });
+  // Confirming does not make a value valid: a provider with no key is refused
+  const bad = await s.post('/api/jobs', { changes: { 'code.ui': 'nokey/x/y:high' }, confirmExternal: true });
   assert.equal(bad.status, 422);
   assert.equal(bad.json().code, 'invalid', 'confirming does not make an invalid value valid');
+  const upper = await s.post('/api/jobs', { changes: { 'code.ui': 'Openrouter/x/y:high' }, confirmExternal: true });
+  assert.equal(upper.status, 422);
 });
 
-test('AC-63.25 ATTACK: the guard asks on security -i, dump-keychain, find-internet-password, a pipe into security, resolveKey, vaultRead and the three API key variable names', T, async () => {
+test('AC-63.25 ATTACK: the guard asks on security -i, dump-keychain, find-internet-password, a pipe into security, readProvider, vaultRead and key variable names', T, async () => {
   const { evaluate } = await load('destructive-guard.mjs');
   const asked = [
     'security -i', 'security   -i', '/usr/bin/security -i', 'security dump-keychain', 'security dump-keychain -d login.keychain', 'security find-internet-password -s x -w',
     'echo "find-generic-password -s x -w" | security', 'cat cmds.txt | /usr/bin/security -i', 'printf "dump-keychain" | security',
-    'node -e "import(\'./.claude/hooks/providers.mjs\').then((m) => console.log(m.resolveKey(\'openrouter\')))"', 'node -e "import(\'./.claude/hooks/keystore.mjs\').then((m) => console.log(m.vaultRead(\'openrouter\')))"', 'node tools/x.mjs resolveKey', 'node tools/x.mjs vaultRead',
+    'node -e "import(\'./.claude/hooks/providers.mjs\').then((m) => console.log(m.readProvider(\'openrouter\')))"', 'node -e "import(\'./.claude/hooks/keystore.mjs\').then((m) => console.log(m.vaultRead(\'openrouter\')))"', 'node tools/x.mjs readProvider', 'node tools/x.mjs vaultRead',
     'echo $OPENROUTER_API_KEY', 'printenv DEEPSEEK_API_KEY', 'env | grep MOONSHOT_API_KEY', 'powershell -c "$env:OPENROUTER_API_KEY"', 'echo %DEEPSEEK_API_KEY%', 'node -e "console.log(process.env.MOONSHOT_API_KEY)"', 'echo ${OPENROUTER_API_KEY}', 'echo "$DEEPSEEK_API_KEY"',
   ];
-  const tricks = ['cd /tmp && security dump-keychain', 'sec""urity dump-keychain', 'printenv | grep -i openrouter_api_key', 'echo $OPENROUTER_API""_KEY', 'echo $DEEPSEEK_API\\_KEY', 'node -e "m.resolve\'\'Key()"', 'bash -c "security -i"'];
-  const free = ['git status', 'node --version', 'echo hello', 'security find-identity -v', 'git commit -m "docs: mention OPENROUTER_API_KEY and resolveKey"', 'git commit -m "feat: vaultRead is never called by --show"', 'git commit -m "fix: DEEPSEEK_API_KEY and MOONSHOT_API_KEY are documented"'];
+  const tricks = ['cd /tmp && security dump-keychain', 'sec""urity dump-keychain', 'printenv | grep -i openrouter_api_key', 'echo $OPENROUTER_API""_KEY', 'echo $DEEPSEEK_API\\_KEY', 'node -e "m.read\'\'Provider()"', 'bash -c "security -i"'];
+  const free = ['git status', 'node --version', 'echo hello', 'security find-identity -v', 'git commit -m "docs: mention OPENROUTER_API_KEY and readProvider"', 'git commit -m "feat: vaultRead is never called by --show"', 'git commit -m "fix: DEEPSEEK_API_KEY and MOONSHOT_API_KEY are documented"'];
   for (const ctx of [{}, { tool: 'claude', agent: '' }, { tool: 'claude', agent: 'test-writer' }]) {
     assert.deepEqual(asked.filter((c) => evaluate(c, ctx)?.decision !== 'ask'), [], `asked (${JSON.stringify(ctx)})`);
     assert.deepEqual(tricks.filter((c) => !['ask', 'deny'].includes(evaluate(c, ctx)?.decision)), [], `tricky spellings (${JSON.stringify(ctx)})`);
@@ -2458,20 +2315,21 @@ test('AC-63.26 ATTACK: an unauthorised request does not restart the idle timer; 
 });
 
 test('AC-63.26 removeKey with a vault that throws returns an error text and keeps the metadata (and the key stays in the vault)', T, async (t) => {
-  const { setKey, removeKey, readStore, hasKey } = await load('providers.mjs');
+  const { setProvider, removeKey, readStore, hasKey, readProvider } = await load('providers.mjs');
   const ks = await load('keystore.mjs');
   const v = await installVault(t);
   const file = path.join(tmpDir(t, 'mp-store-'), 'providers.json');
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
+  assert.equal(setProvider('openrouter', OR_URL, OR_KEY, file), null);
   ks.setVaultBackend(fakeVault({ failRemove: true }).backend);
   const err = removeKey('openrouter', file);
   assert.equal(typeof err, 'string', 'an error text');
   assert.match(err, /\S/);
   assert.equal(err.includes(OR_KEY), false);
   assert.equal(typeof readStore(file).keyMeta.openrouter, 'object', 'the metadata stays, so the panel still shows the key');
-  assert.equal(hasKey('openrouter', { file, env: {} }), true);
-  assert.equal(v.store.get('openrouter'), OR_KEY, 'the key is still in the vault');
+  assert.equal(hasKey('openrouter', { file }), true);
+  assert.notEqual(v.store.get('openrouter'), undefined, 'the key is still in the vault');
   ks.setVaultBackend(v.backend);
+  assert.deepEqual(readProvider('openrouter'), { url: OR_URL, key: OR_KEY }, 'and it still reads back');
   assert.ok([null, undefined].includes(removeKey('openrouter', file)), 'control: a working vault removes it');
   assert.equal(readStore(file).keyMeta.openrouter, undefined);
   assert.equal(v.store.has('openrouter'), false);
@@ -2507,29 +2365,6 @@ test('AC-63.26 cost.mjs gives npx an env without key, token, secret and password
   const names = npx.envNames();
   assert.ok(names.some((n) => n.toLowerCase() === 'path'), 'PATH is kept');
   assert.deepEqual(names.filter((n) => /_API_KEY|_TOKEN|SECRET|PASSWORD/i.test(n)), [], 'no secret-looking variable reached npx');
-});
-
-test('AC-63.26 /api/openrouter-models refuses a response over 10 MB and skips any model id over 200 characters', T, async (t) => {
-  freshHome(t);
-  const mb = 1024 * 1024;
-  let mode = 'big';
-  const okId = `a/${'b'.repeat(198)}`;
-  const f = fetchFake(async () => {
-    if (mode === 'big') return new Response(`{"data":[],"pad":"${'a'.repeat(10 * mb + 4096)}"}`, { status: 200, headers: { 'content-type': 'application/json' } });
-    const row = (id) => ({ id, context_length: 8000, pricing: { prompt: '0.000001', completion: '0.000002' }, supported_parameters: ['tools'] });
-    return new Response(JSON.stringify({ data: [row('x/short'), row(okId), row(`${okId}c`), row(`z/${'y'.repeat(5000)}`)] }), { status: 200, headers: { 'content-type': 'application/json' } });
-  });
-  const s = await session(t, panelProject(t), { fetchImpl: f.impl });
-  const big = await s.get('/api/openrouter-models');
-  let body = null;
-  try { body = big.json(); } catch { /* an error page */ }
-  assert.ok(big.status >= 400 || body?.error !== undefined, `an error for an oversize response, got ${big.status}`);
-  assert.equal(Array.isArray(body?.models) && body.models.length > 0, false, 'no list');
-  assert.equal((await s.get('/api/state')).status, 200, 'the panel still answers');
-  mode = 'long';
-  const ok = await s.get('/api/openrouter-models');
-  assert.equal(ok.status, 200, ok.text);
-  assert.deepEqual(ok.json().models.map((m) => m.id).sort(), ['x/short', okId].sort(), '200 characters is kept, 201 and 5000 are skipped');
 });
 
 test('AC-63.26 setModels writes settings.local.json through a temp file and a rename: a failed write leaves the old file whole', T, async (t) => {
@@ -2824,7 +2659,6 @@ console.log(JSON.stringify({ kind: ks.vaultKind(), calls, saveError }));
 function vaultProbe(t, { platform, systemRoot, root, extraPath }) {
   const home = tmpDir(t, 'mp-probe-home-');
   const env = { ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root, MP_PLATFORM: platform, MP_KEYSTORE: pathToFileURL(path.join(HOOKS, 'keystore.mjs')).href };
-  delete env.VIBE_KIT_VAULT;
   if (systemRoot !== undefined) env.MP_SYSTEMROOT = systemRoot;
   const withPath = extraPath ? prependPath(env, extraPath) : env;
   const r = spawnSync(process.execPath, [VAULT_PROBE], { cwd: root, encoding: 'utf8', timeout: 30000, env: withPath });

@@ -2,7 +2,8 @@
 // 3.62.0: model choice per job under the five roles (models.mjs --for / --set / --reset / --show, run-role.mjs <job>),
 // and the commands stop asking about models. Behaviour is tested through the CLI on a temp project and a temp HOME.
 // Modules load inside the tests, so a missing export turns that test red on its own, not the whole file.
-// No real provider and no real claude: run-role.mjs gets a preload that replaces spawn('claude'). Keys are fake and match the provider format.
+// 3.64.0: no ready-made provider; the user names it, and the key is sealed with its address in a vault. These tests use a vault in a folder (fake-vault.mjs).
+// No real provider and no real claude: run-role.mjs gets the fake-vault preload, which records the claude call and never runs it. Keys are fake.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileBackend, makeFakeClaude, FAKE_VAULT_URL } from './fake-vault.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const HOOKS = path.join(ROOT, '.claude', 'hooks');
@@ -21,11 +23,15 @@ const T = { timeout: 180000 };
 const TMP_HOME = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mj-top-home-')));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
-// 3.63.0: a plain key entry is read only when the machine has no vault. These tests store plain keys, so they run with no vault.
-process.env.VIBE_KIT_VAULT = 'none';
 process.on('exit', () => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* temp */ } });
 
+// The key goes in through the same code the command uses, in this process, into a vault folder that is not the real one
+const keystore = await load('keystore.mjs');
+const DEFAULT_VAULT = path.join(TMP_HOME, 'default-vault');
+keystore.setVaultBackend(fileBackend(DEFAULT_VAULT)); // never null: null would fall back to the real vault of this machine
+
 // Split up so this file does not trip the secret scan
+const OR_URL = 'https://llm.example/anthropic';
 const OR_KEY = 'sk-' + 'or-v1-' + 'a1b2c3d4'.repeat(6);
 const EXT = 'openrouter/x/y:high';
 const MODEL = 'deepseek/deepseek-v4.1-flash-1017';
@@ -60,11 +66,17 @@ const rec = (job) => (job === 'main' || job.startsWith('plan.') ? 'opus:high' : 
 // ---- A temp project and a temp home; models.mjs from the repository ----
 
 const storeOf = (home) => path.join(home, '.vibe-kit', 'providers.json');
+// What a run refuses to start under, and what the desktop app sets in every child, are put aside: the result must not depend on this machine
+const AMBIENT = /^(ANTHROPIC|CLAUDE|KIT_)|_API_KEY$|^(NODE_TLS_REJECT_UNAUTHORIZED|NODE_EXTRA_CA_CERTS|NODE_USE_SYSTEM_CA|NODE_USE_ENV_PROXY|SSL_CERT_FILE|SSL_CERT_DIR)$/i;
 function cleanEnv() {
   const env = { ...process.env };
-  for (const k of Object.keys(env)) if (/^(ANTHROPIC|CLAUDE)|^(OPENROUTER|DEEPSEEK|MOONSHOT)_API_KEY$/i.test(k)) delete env[k];
-  env.VIBE_KIT_VAULT = 'none'; // 3.63.0: the child reads the plain store these tests write
+  for (const k of Object.keys(env)) if (AMBIENT.test(k)) delete env[k];
   return env;
+}
+async function seedKey(vaultDir, storeFile) {
+  const { setProvider } = await load('providers.mjs');
+  keystore.setVaultBackend(fileBackend(vaultDir));
+  try { assert.equal(setProvider('openrouter', OR_URL, OR_KEY, storeFile), null); } finally { keystore.setVaultBackend(fileBackend(DEFAULT_VAULT)); }
 }
 function mk(t) {
   const root = tmpDir(t, 'mj-proj-');
@@ -85,7 +97,7 @@ function mk(t) {
     saved: () => JSON.parse(fs.readFileSync(modelsFile, 'utf8')),
     has: () => fs.existsSync(modelsFile),
     bytes: () => fs.readFileSync(modelsFile, 'utf8'),
-    key: async () => { const { setKey } = await load('providers.mjs'); assert.equal(setKey('openrouter', OR_KEY, storeOf(home)), null); },
+    key: () => seedKey(DEFAULT_VAULT, storeOf(home)),
   };
 }
 const REASON = /invalid|not valid|unknown|unsupported|skipp|ignor|no key|not allowed|cannot/i;
@@ -359,40 +371,58 @@ test('AC-62.2 a tasks value that is not an object (string, array, number, null) 
   }
 });
 
-test('AC-62.2 ATTACK: an external value is refused on a job outside code, test and docs, even with a key; code.ui accepts it with a key', T, async (t) => {
+// 3.64.0: any job may take an outside model, as long as its provider has a key. Without a key the value is invalid, and a hand-edited one is skipped.
+const ANY_JOB = ['review.code', 'review.security', 'board.qa', 'board.commit', 'board.default', 'findings.tech', 'findings.default', 'plan.task', 'plan.text', 'main', 'review', 'plan', 'code.ui', 'code.simple', 'test.critical', 'test.adversarial', 'docs.report', 'docs.research', 'code', 'test', 'docs'];
+
+test('AC-62.2 ATTACK: an external value with no key for its provider is refused on every job, and a hand-edited one is skipped with a reason', T, (t) => {
   const m = mk(t);
-  const outside = ['review.code', 'review.security', 'board.qa', 'board.commit', 'board.default', 'findings.tech', 'findings.default', 'plan.task', 'plan.text', 'main', 'review', 'plan'];
-  const none = m.run('--set', `code.ui=${EXT}`);
-  assert.equal(none.status, 1, 'no key yet');
-  assert.match(none.stderr, /key/i);
-  assert.equal(m.has(), false);
-  await m.key();
-  for (const job of outside) {
+  for (const job of ANY_JOB) {
     const r = m.run('--set', `${job}=${EXT}`);
-    assert.equal(r.status, 1, job);
+    assert.equal(r.status, 1, `${job}: no key yet`);
     assert.match(r.stderr, /Invalid/, job);
+    assert.doesNotMatch(r.stderr, /TypeError|at file:/, job);
     assert.equal(m.has(), false, `nothing written: ${job}`);
   }
-  for (const job of ['code.ui', 'code.simple', 'test.critical', 'test.adversarial', 'docs.report', 'docs.research', 'code', 'test', 'docs']) {
-    const r = m.run('--set', `${job}=${EXT}`);
-    assert.equal(r.status, 0, `${job} ${r.stderr}`);
-  }
-  assert.equal(m.saved().tasks['code.ui'], EXT);
-  assert.equal(m.saved().tasks['test.critical'], EXT);
-  assert.equal(m.saved().tasks['docs.report'], EXT);
-  // The same by hand edit: the link is skipped with a reason, the next one is used
-  m.put({ review: 'haiku:medium', tasks: { 'review.code': EXT, 'board.qa': EXT, 'findings.tech': EXT, 'plan.task': EXT } });
-  for (const [job, want] of [['review.code', 'haiku:medium'], ['board.qa', 'haiku:medium'], ['findings.tech', 'haiku:medium'], ['plan.task', 'opus:high']]) {
+  assert.equal(fs.existsSync(m.localFile), false, 'main was not applied to the session either');
+  // The same by hand edit: the link is skipped with the missing key as the reason, the next one is used
+  m.put({ review: 'haiku:medium', tasks: { 'review.code': EXT, 'board.qa': EXT, 'findings.tech': EXT, 'plan.task': EXT, 'code.ui': EXT } });
+  for (const [job, want] of [['review.code', 'haiku:medium'], ['board.qa', 'haiku:medium'], ['findings.tech', 'haiku:medium'], ['plan.task', 'opus:high'], ['code.ui', 'sonnet:high']]) {
     const r = m.forJob(job);
     assert.equal(r.status, 0, job);
     assert.equal(r.out, want, job);
     assert.match(r.err, new RegExp(job.replace('.', '\\.')), job);
+    assert.match(r.err, /no key for openrouter/, job);
   }
   m.put({ tasks: { main: EXT } });
   assert.equal(m.forJob('main').out, 'opus:high');
   m.put({ review: EXT, plan: EXT });
   assert.equal(m.forJob('review.code').out, 'sonnet:high');
   assert.equal(m.forJob('plan.task').out, 'opus:high');
+});
+
+test('AC-62.2 with a key, an external value is accepted on any job, main and the review and board jobs too, and each prints the command that runs it', T, async (t) => {
+  const m = mk(t);
+  await m.key();
+  for (const job of ANY_JOB) {
+    const r = m.run('--set', `${job}=${EXT}`);
+    assert.equal(r.status, 0, `${job} ${r.stderr}`);
+  }
+  assert.equal(m.saved().tasks['code.ui'], EXT);
+  assert.equal(m.saved().tasks['test.critical'], EXT);
+  assert.equal(m.saved().tasks['docs.report'], EXT);
+  assert.equal(m.saved().tasks['review.code'], EXT);
+  assert.equal(m.saved().tasks.main, EXT);
+  assert.equal(m.saved().review, EXT);
+  assert.equal(fs.existsSync(m.localFile), false, 'an outside main leaves settings.local.json alone: the session is opened by run-session.mjs');
+  for (const job of ['review.code', 'board.qa', 'plan.task', 'findings.tech']) assert.match(m.forJob(job).out, new RegExp(`^openrouter/x/y:high .*run-role\\.mjs ${job.replace('.', '\\.')}(\\s|$)`), job);
+  const main = m.forJob('main');
+  assert.equal(main.lines, 1);
+  assert.match(main.out, /^openrouter\/x\/y:high .*run-session\.mjs$/);
+  assert.doesNotMatch(main.out, /run-role/);
+  // Another provider name, with no key, is still not valid
+  assert.equal(m.run('--set', 'code.ui=other/x/y:high').status, 1);
+  assert.equal(m.run('--set', 'code.ui=Openrouter/x/y:high').status, 1, 'a provider name is lower case');
+  assert.equal(m.run('--set', 'code.ui=con/x/y:high').status, 1, 'a reserved name');
 });
 
 test('AC-62.2 ATTACK: the destructive guard asks for an external --set and leaves --for, --reset and a plain --set alone', T, async () => {
@@ -700,33 +730,14 @@ test('AC-62.7 an external value on code.simple never prints main', T, async (t) 
 // ---- AC-62.8 ----
 
 const AGENTS_FIXTURE = '# Fixture\n\n## Commands\n\n```bash\ntest:        npm test\n```\n';
-const FAKE_CLAUDE = path.join(TMP_HOME, 'fake-claude.mjs');
-fs.writeFileSync(FAKE_CLAUDE, [
-  "import fs from 'node:fs';",
-  "import cp from 'node:child_process';",
-  "import { syncBuiltinESMExports } from 'node:module';",
-  "import { EventEmitter } from 'node:events';",
-  "import { PassThrough } from 'node:stream';",
-  'const real = cp.spawn;',
-  'cp.spawn = (cmd, args, opts) => {',
-  '  if (!/claude/i.test(String(cmd))) return real(cmd, args, opts);',
-  "  fs.appendFileSync(process.env.MJ_SPY, JSON.stringify({ cmd, args, env: opts.env }) + '\\n');",
-  '  const child = new EventEmitter();',
-  '  Object.assign(child, { stdout: new PassThrough(), stderr: new PassThrough(), kill() {} });',
-  '  setTimeout(() => {',
-  "    child.stdout.write(JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: 'fake child done' }) + '\\n');",
-  '    child.stdout.end(); child.stderr.end();',
-  "    child.emit('close', 0);",
-  '  }, 20);',
-  '  return child;',
-  '};',
-  'syncBuiltinESMExports();',
-].join('\n'));
-
+// The claude call is recorded by the fake-vault preload (KIT_TEST_SPY) and never run; the key comes from a vault folder of this project
 async function roleProject(t, models) {
-  const { setKey, setLimit } = await load('providers.mjs');
+  const { setLimit } = await load('providers.mjs');
   const root = tmpDir(t, 'mj-run-');
   const home = tmpDir(t, 'mj-run-home-');
+  const vault = tmpDir(t, 'mj-run-vault-');
+  const bin = tmpDir(t, 'mj-run-bin-');
+  makeFakeClaude(bin);
   fs.cpSync(HOOKS, path.join(root, '.claude', 'hooks'), { recursive: true });
   fs.cpSync(path.join(ROOT, '.claude', 'agents'), path.join(root, '.claude', 'agents'), { recursive: true });
   fs.copyFileSync(path.join(ROOT, '.claude', 'settings.json'), path.join(root, '.claude', 'settings.json'));
@@ -736,17 +747,17 @@ async function roleProject(t, models) {
   write(path.join(root, '.claude', 'state', 'models.json'), JSON.stringify(models));
   const store = storeOf(home);
   fs.mkdirSync(path.dirname(store), { recursive: true });
-  assert.equal(setKey('openrouter', OR_KEY, store), null);
+  await seedKey(vault, store);
   setLimit('openrouter', 5, store);
   const spy = path.join(home, 'spy.jsonl');
   const run = (...args) => {
     fs.rmSync(spy, { force: true });
-    const r = spawnSync(process.execPath, ['--import', pathToFileURL(FAKE_CLAUDE).href, path.join(root, '.claude', 'hooks', 'run-role.mjs'), ...args], {
-      cwd: root, encoding: 'utf8', timeout: 45000,
-      env: { ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root, MJ_SPY: spy },
-    });
-    const spawned = fs.existsSync(spy) ? fs.readFileSync(spy, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
-    return { status: r.status, stdout: r.stdout, stderr: r.stderr, spawned };
+    const env = { ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root, KIT_TEST_VAULT_DIR: vault, KIT_TEST_SPY: spy };
+    const pathKey = Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'PATH';
+    env[pathKey] = [bin, path.dirname(process.execPath), env[pathKey] ?? ''].join(path.delimiter);
+    const r = spawnSync(process.execPath, ['--import', FAKE_VAULT_URL, path.join(root, '.claude', 'hooks', 'run-role.mjs'), ...args], { cwd: root, encoding: 'utf8', timeout: 45000, env });
+    const spied = fs.existsSync(spy) ? fs.readFileSync(spy, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
+    return { status: r.status, stdout: r.stdout, stderr: r.stderr, spawned: spied.filter((x) => x.kind === 'program' && x.name === 'claude'), net: spied.filter((x) => x.kind === 'net') };
   };
   const logFile = path.join(root, '.claude', 'state', 'role-runs.jsonl');
   const log = () => (fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []);
@@ -809,24 +820,43 @@ test('AC-62.8 a job with no external value fails with the existing kind of messa
     const r = p.run(job, 'p.md');
     assert.notEqual(r.status, 0, job);
     assert.equal(r.status === null, false, job);
-    assert.match(r.stdout + r.stderr, /external provider/, job);
+    assert.match(r.stdout + r.stderr, /no external model/, job);
     assert.doesNotMatch(r.stderr, /ERR_MODULE_NOT_FOUND|TypeError|at file:/, job);
     assert.deepEqual(r.spawned, [], `${job}: no child`);
   }
   assert.deepEqual(p.log(), [], 'a refused run leaves no log row');
 });
 
-test('AC-62.8 ATTACK: review.code, board.qa and main are refused even with an external value hand-edited in; so are unknown jobs', T, async (t) => {
-  const p = await roleProject(t, { review: MODEL_VALUE, plan: MODEL_VALUE, tasks: { 'review.code': MODEL_VALUE, 'board.qa': MODEL_VALUE, main: MODEL_VALUE, 'findings.tech': MODEL_VALUE, 'plan.task': MODEL_VALUE } });
-  for (const job of ['review.code', 'board.qa', 'main', 'findings.tech', 'plan.task', 'review', 'plan', 'code.nope', '__proto__', 'constructor', 'tasks', 'acknowledged']) {
+test('AC-62.8 ATTACK: main is not a role run, and unknown jobs are refused, even with an external value saved for main', T, async (t) => {
+  const p = await roleProject(t, { review: MODEL_VALUE, plan: MODEL_VALUE, tasks: { main: MODEL_VALUE } });
+  for (const job of ['main', 'code.nope', '__proto__', 'constructor', 'tasks', 'acknowledged', 'CODE.UI', '']) {
     const r = p.run(job, 'p.md');
     assert.notEqual(r.status, 0, job);
     assert.equal(r.status === null, false, job);
     assert.match(r.stdout + r.stderr, /\S/, `${job}: says why`);
     assert.doesNotMatch(r.stderr, /ERR_MODULE_NOT_FOUND|TypeError|at file:/, job);
     assert.deepEqual(r.spawned, [], `${job}: no child`);
+    assert.deepEqual(r.net, [], `${job}: nothing sent`);
   }
+  assert.match(p.run('main', 'p.md').stderr, /run-session\.mjs/, 'main points to the session command');
   assert.deepEqual(p.log(), []);
+});
+
+test('AC-62.8 plan, review, board and findings jobs run on an external value, with read tools only: no Write, Edit or Bash', T, async (t) => {
+  const p = await roleProject(t, { plan: MODEL_VALUE, review: MODEL_VALUE, tasks: { 'board.qa': MODEL_VALUE } });
+  const expected = [['plan.task', 'plan'], ['plan', 'plan'], ['review.code', 'review'], ['review', 'review'], ['board.qa', 'review'], ['findings.tech', 'review']];
+  for (const [job] of expected) {
+    const r = p.run(job, 'p.md');
+    assert.equal(r.status, 0, `${job} ${r.stdout}\n${r.stderr}`);
+    assert.equal(r.spawned.length, 1, job);
+    const args = r.spawned[0].args;
+    assert.equal(argAfter(args, '--model'), MODEL, job);
+    const disallowed = args.slice(args.indexOf('--disallowedTools') + 1, args.indexOf('--allowedTools'));
+    const allowed = args.slice(args.indexOf('--allowedTools') + 1, args.indexOf('--'));
+    for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash', 'Agent']) assert.equal(disallowed.includes(tool), true, `${job}: ${tool} is off`);
+    assert.deepEqual(allowed, ['Read(./**)'], job);
+  }
+  assert.deepEqual(p.log().map((x) => [x.job, x.role]), expected);
 });
 
 // ---- AC-62.9 ----

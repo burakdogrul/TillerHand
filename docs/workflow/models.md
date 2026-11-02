@@ -110,14 +110,16 @@ Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config
 
 ## External models
 
-`/models` moves the code, test and docs roles and their jobs to a model from OpenRouter, DeepSeek or Kimi. Planning and review stay on the plan. Available in Claude Code; Codex not yet, Antigravity not supported.
+`/models` moves any role or job to a model from a provider the user added. Claude stays the recommendation for the main job, planning and review. Available in Claude Code; Codex not yet, Antigravity not supported.
 
-- The value is `provider/model:effort`, for example `code=openrouter/deepseek/deepseek-v4.1-flash-1017:high` or `code.ui=openrouter/…:high`. `max` is not available for an external model.
-- Such a job runs with `node .claude/hooks/run-role.mjs <job> <prompt file>` (`--for` prints it), not with the Agent tool. It asks for approval each time. The reply is untrusted output.
-- The key is entered by the user, in the panel or with `node .claude/hooks/models.mjs --set-key <provider>` in their own terminal, or it comes from the system variable `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` or `MOONSHOT_API_KEY`. A project `.env` is not used.
-- Where a key is kept: in the system key vault when the machine has one (Windows DPAPI under `~/.vibe-kit/keys/`, the macOS Keychain, Linux `secret-tool`). `~/.vibe-kit/providers.json` then holds only the last four characters and the date. Showing the choice (`--show`, `--for`), the panel's pages and the dashboard never open the vault; only a run and the key check do. Without a vault (Linux with no `secret-tool`, or `VIBE_KIT_VAULT=none`) the key stays in `providers.json` in plain text and the panel says so. If the vault cannot be opened, nothing falls back to a plain file: a run stops and asks for the key again.
-- The limit is per provider, per day, set by the user: `--set-limit <provider> <usd>`. `--remove-key <provider>` removes a key.
-- The remaining risk: an allowed command runs code the model wrote, and that code can read project files and the user's own files. Do not give code and test roles to an external model in a project with real secrets.
+- The value is `provider/model:effort`, for example `code=myprovider/some-model:high` or `code.ui=myprovider/some-model:high`. The user chooses the provider name and writes the model id. `max` is not available for an external model.
+- Such a job runs with `node .claude/hooks/run-role.mjs <job> <prompt file>` (`--for` prints it), not with the Agent tool. It asks for approval each time. The reply is untrusted output. For an agent's job, put the agent's definition in the prompt file. Plan and review jobs get read-only tools there, and the file tools of any such job cannot leave the project.
+- The main job opens in the user's own terminal with `node .claude/hooks/run-session.mjs`. The whole conversation goes to the provider, and an Agent call to a job set to a Claude model is refused. `--for main` prints the command.
+- The provider must answer Anthropic Messages at `/v1/messages` over `https` with a Bearer key.
+- The key is entered only by the user, in their own terminal: `node .claude/hooks/models.mjs --set-key <provider>` asks for the address and the key. The panel never takes a key. System variables and `.env` are not read.
+- Where a key is kept: sealed with its address in the system key vault (Windows DPAPI under `~/.vibe-kit/keys/`, the macOS Keychain, Linux `secret-tool`), so it goes only to that address. `~/.vibe-kit/providers.json` holds only the date and the host for display. Showing the choice (`--show`, `--for`), the panel and the dashboard never open the vault; only a run does. With no vault, external models are not available.
+- The limit is per provider, per day, and optional: `--set-limit <provider> <usd>`. `--remove-key <provider>` removes a key.
+- The remaining risk: a program running as the user can open the vault, and the guards only read command text. An allowed command runs code the model wrote, and that code can read project files and the user's own files. Do not give code and test roles to an external model in a project with real secrets.
 
 ## Codex and Antigravity
 

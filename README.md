@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.63.1-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.64.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -278,58 +278,58 @@ Every command, setting, tool and skill is in the **[guide](https://burakdogrul.g
 
 ## External models
 
-With `/models` you choose which model does which job. The code, test and docs roles can run on a model you bought from OpenRouter, DeepSeek or Kimi, while planning and review stay on your Claude plan. Available in Claude Code; Codex not yet, Antigravity not supported.
+With `/models` you choose which model does which job. You can add any provider that accepts the Anthropic Messages format, and any job can run on a model you added. Claude stays the recommendation for the main job, planning and review. Available in Claude Code; Codex not yet, Antigravity not supported.
 
-The panel opens with `/models`, or with `node .claude/hooks/models-panel.mjs` from a terminal. It is a local page with four tabs. **Usage** shows your Claude plan and each external model separately, by day and week. **Jobs** lets you pick the model and effort for every job. **Models** holds your external model list. **Keys** takes provider keys and daily limits. Keys go to the system key vault where one exists, and nothing leaves your machine except what a role sends to its provider.
+The panel opens with `/models`, or with `node .claude/hooks/models-panel.mjs` from a terminal. It is a local page with four tabs. **Usage** shows your Claude plan and each external model separately, by day and week. **Jobs** lets you pick the model and effort for every job. **Models** is where you write a provider and a model. **Keys** shows whether a key exists and gives you the commands; the panel never takes a key.
 
-**Add a key.** Run this in your own terminal, never in the chat. It asks for the key without showing it and keeps it in the system key vault, or in `~/.vibe-kit/providers.json` where there is none. The Keys tab in the panel does the same:
-
-```bash
-node .claude/hooks/models.mjs --set-key openrouter
-```
-
-**Or use a system variable.** The name must match the provider: `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` or `MOONSHOT_API_KEY`. On Windows, then restart the app:
+**Add a provider and its key.** Run this in a separate terminal from the project folder, never in the chat, with a name you choose:
 
 ```bash
-setx OPENROUTER_API_KEY "<your key>"
+node .claude/hooks/models.mjs --set-key <name>
 ```
 
-**Set a daily limit in dollars.** There is no default; a role does not run without one. Also set a hard limit in the provider's panel.
+It asks for the provider's address, shows you the host, then asks for the key without showing it. The address must be `https` and the provider must answer Anthropic Messages at `/v1/messages` with a Bearer key. To change the address or the key, run it again and enter both. After pasting a key, copy something else: a pasted key stays in the clipboard.
+
+The address and the key are sealed together in the system key vault (Windows DPAPI, macOS Keychain, Linux `secret-tool`), so a key goes only to the address it was entered with. With no vault, external models are not available. System variables and `.env` are not read.
+
+**Add the model.** Write the provider name and the model id on the Models tab. Prices and context are optional; with no price, a run says its cost is an estimate. Without a browser, use `node .claude/hooks/models.mjs --set docs=<name>/<model>:high`.
+
+**Choose it for a job** on the Jobs tab. Every model you added is listed for every job. A model whose provider has no key is shown but cannot be chosen.
+
+**The main job** opens in your own terminal. The whole conversation goes to the provider there, and a job set to a Claude model stops and says so. Your other sessions stay on Claude.
 
 ```bash
-node .claude/hooks/models.mjs --set-limit openrouter 5
+node .claude/hooks/run-session.mjs
 ```
 
-**Choose the models** with `/models`.
+**A daily limit is optional.** At the limit the role stops and you are asked. With no limit, the only ceiling is what your provider account allows, so set one in the provider's panel too.
+
+```bash
+node .claude/hooks/models.mjs --set-limit <name> 5
+```
 
 **Remove a key:**
 
 ```bash
-node .claude/hooks/models.mjs --remove-key openrouter
+node .claude/hooks/models.mjs --remove-key <name>
 ```
-
-**Put a key under the wrong name?** A key whose format does not match the provider is not used. Remove the variable and set the right one. If it may have reached the wrong provider, replace the key in the provider's panel. On Windows:
-
-```bash
-[Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $null, 'User')
-```
-
-**Why not `.env`?** It is not used. An allowed command such as `npm test` loads a project `.env` easily, which would hand the key to the code the model wrote. If you put a key there, delete the line and replace the key in the provider's panel.
 
 **What the kit does:**
 
 | Part | How it works |
 |---|---|
-| Roles | Code, test and docs can move out. Planning and review (board, `security-auditor`) stay on your plan |
-| Proxy | The role runs as a separate process with a throwaway token. A local proxy adds the real key and sends only to the provider's fixed address |
-| Daily limit | The proxy counts the spend from the provider's replies. At the limit the role stops and you are asked. Unknown prices use a high default |
-| Permissions | Each role gets a narrow list: docs has no shell, test runs the test command, code runs your approved commands. Hooks still run |
-| Approval | Running a role and moving a role to a provider are asked every time |
+| Proxy | A job runs as a separate process with a throwaway token. A local proxy adds the real key and sends only to the address sealed with it |
+| Spend | The proxy counts the spend from the provider's replies and applies your limit if you set one. Unknown prices use a high default |
+| Permissions | File tools cannot leave the project. Plan and review jobs on an external model can only read. Docs has no shell, test runs the test command, code runs your approved commands. Hooks still run |
+| Refusals | A run stops if the environment turns off certificate checks or adds its own certificates, and `claude` is never taken from inside the project. It also stops if a settings file sends the run to another address |
+| Approval | Running a job, opening an external session, saving a key and moving a job to a provider are asked every time |
 
 **What to know first:**
-- The provider sees everything the role can see: your code, project rules and notes, the output of allowed commands, the folder path with your user name. What is sent cannot be taken back.
-- **The remaining risk:** an allowed command such as `npm test` runs code the model wrote. That code can read project files and your own files, including the key store, and send them out; there is no sandbox. Do not give the code and test roles to an external model in a project that holds real secrets.
-- These models may not work as well as Claude here. OpenRouter does not guarantee non-Anthropic models on this route, so `/models` tries a model before you rely on it.
+- The provider sees everything the job can see: your code, project rules and notes, the output of allowed commands, the folder path with your user name. What is sent cannot be taken back.
+- **The remaining risk:** the vault keeps a key out of files, but a program running as you can still open it. The kit's guards read command text, so they only make that harder. An allowed command such as `npm test` runs code the model wrote, and there is no sandbox. Do not give the code and test jobs to an external model in a project that holds real secrets.
+- Claude is recommended for the main job, planning and review: the model that plans or checks the work should not be an outside one. The panel asks for a stronger consent there.
+- The address on the panel comes from a plain file, so it can be edited. The line a run prints shows the address the key really went to.
+- These models may not work as well as Claude here. Try one on a small job before you rely on it.
 
 ## Codex and Antigravity
 

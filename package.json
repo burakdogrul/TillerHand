@@ -1,6 +1,6 @@
 {
   "name": "tillerhand",
-  "version": "3.63.1",
+  "version": "3.64.0",
   "description": "Vibe coding kit for Claude Code, Codex and Antigravity: rules, commands, guards and project templates.",
   "license": "MIT",
   "type": "module",

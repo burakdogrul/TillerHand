@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.63.1</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.64.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -1152,31 +1152,31 @@ Pending decision: email service</pre>
 <section id="external-models">
   <p class="path">Your own models</p>
   <h2>External models</h2>
-  <p class="lead">With <code>/models</code> you choose which model does which job. The code, test and docs roles can run on a model you bought from OpenRouter, DeepSeek or Kimi, while planning and review stay on your Claude plan. Available in Claude Code; Codex not yet, Antigravity not supported.</p>
-  <h3>Add a key</h3>
-  <p>Run this in your own terminal, never in the chat. It asks for the key without showing it and keeps it outside the project.</p>
-<pre class="term">node .claude/hooks/models.mjs --set-key openrouter</pre>
-  <p>Or use a system variable. The name must match the provider: <code>OPENROUTER_API_KEY</code>, <code>DEEPSEEK_API_KEY</code> or <code>MOONSHOT_API_KEY</code>. On Windows, then restart the app:</p>
-<pre class="term">setx OPENROUTER_API_KEY "&lt;your key&gt;"</pre>
-  <h3>Set a daily limit</h3>
-  <p>In dollars. There is no default, and a role does not run without one. At the limit the role stops and you are asked. Also set a hard limit in the provider's panel. Then choose the models with <code>/models</code>.</p>
-<pre class="term">node .claude/hooks/models.mjs --set-limit openrouter 5</pre>
-  <h3>Remove a key, or fix a wrong name</h3>
-<pre class="term">node .claude/hooks/models.mjs --remove-key openrouter</pre>
-  <p>A key whose format does not match the provider is not used. If you set it under the wrong name, remove the variable and set the right one. If it may have reached the wrong provider, replace the key in the provider's panel. On Windows:</p>
-<pre class="term">[Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $null, 'User')</pre>
-  <p><b>Why not <code>.env</code>?</b> It is not used. An allowed command such as <code>npm test</code> loads a project <code>.env</code> easily, which would hand the key to the code the model wrote. If you put a key there, delete the line and replace the key in the provider's panel.</p>
+  <p class="lead">With <code>/models</code> you choose which model does which job. You can add any provider that accepts the Anthropic Messages format, and any job can run on a model you added. Claude stays the recommendation for the main job, planning and review. Available in Claude Code; Codex not yet, Antigravity not supported.</p>
+  <h3>Add a provider and its key</h3>
+  <p>Run this in a separate terminal from the project folder, never in the chat, with a name you choose. It asks for the provider's address, shows you the host, then asks for the key without showing it. The panel never takes a key; its Keys tab shows whether one exists.</p>
+<pre class="term">node .claude/hooks/models.mjs --set-key &lt;name&gt;</pre>
+  <p>The address must be <code>https</code> and the provider must answer Anthropic Messages at <code>/v1/messages</code> with a Bearer key. The address and the key are sealed together in the system key vault, so a key goes only to the address it was entered with. To change either one, run it again and enter both. With no vault, external models are not available. System variables and <code>.env</code> are not read. After pasting a key, copy something else: a pasted key stays in the clipboard.</p>
+  <h3>Add the model and choose it</h3>
+  <p>Write the provider name and the model id on the Models tab. Prices and context are optional. Then pick it on the Jobs tab: every model you added is listed for every job. A model whose provider has no key is shown but cannot be chosen.</p>
+  <h3>Run the main job on it</h3>
+  <p>The main job opens in your own terminal. The whole conversation goes to the provider there, and a job set to a Claude model stops and says so. Your other sessions stay on Claude.</p>
+<pre class="term">node .claude/hooks/run-session.mjs</pre>
+  <h3>Set a daily limit, or remove a key</h3>
+  <p>A limit is optional, in dollars. At the limit the role stops and you are asked. With no limit, the only ceiling is what your provider account allows, so set one in the provider's panel too.</p>
+<pre class="term">node .claude/hooks/models.mjs --set-limit &lt;name&gt; 5</pre>
+<pre class="term">node .claude/hooks/models.mjs --remove-key &lt;name&gt;</pre>
   <h3>What the kit does</h3>
   <div class="table-wrap"><table>
     <tbody>
-      <tr><td>Roles</td><td>Code, test and docs can move out. Planning and review (board, <code>security-auditor</code>) stay on your plan.</td></tr>
-      <tr><td>Proxy</td><td>The role runs as a separate process with a throwaway token. A local proxy adds the real key and sends only to the provider's fixed address.</td></tr>
-      <tr><td>Daily limit</td><td>The proxy counts the spend from the provider's replies. Unknown prices use a high default.</td></tr>
-      <tr><td>Permissions</td><td>Each role gets a narrow list: docs has no shell, test runs the test command, code runs your approved commands. Hooks still run.</td></tr>
-      <tr><td>Approval</td><td>Running a role and moving a role to a provider are asked every time.</td></tr>
+      <tr><td>Proxy</td><td>A job runs as a separate process with a throwaway token. A local proxy adds the real key and sends only to the address sealed with it.</td></tr>
+      <tr><td>Spend</td><td>The proxy counts the spend from the provider's replies and applies your limit if you set one. Unknown prices use a high default.</td></tr>
+      <tr><td>Permissions</td><td>File tools cannot leave the project. Plan and review jobs on an external model can only read. Docs has no shell, test runs the test command, code runs your approved commands. Hooks still run.</td></tr>
+      <tr><td>Refusals</td><td>A run stops if the environment turns off certificate checks or adds its own certificates, and <code>claude</code> is never taken from inside the project. It also stops if a settings file sends the run to another address.</td></tr>
+      <tr><td>Approval</td><td>Running a job, opening an external session, saving a key and moving a job to a provider are asked every time.</td></tr>
     </tbody>
   </table></div>
-  <div class="note accent"><b>What to know first:</b> The provider sees everything the role can see: your code, project rules and notes, the output of allowed commands, the folder path with your user name. What is sent cannot be taken back. <b>The remaining risk:</b> an allowed command such as <code>npm test</code> runs code the model wrote. That code can read project files and your own files, including the key store, and send them out; there is no sandbox. Do not give the code and test roles to an external model in a project that holds real secrets. These models may not work as well as Claude here: OpenRouter does not guarantee non-Anthropic models on this route, so <code>/models</code> tries a model before you rely on it.</div>
+  <div class="note accent"><b>What to know first:</b> The provider sees everything the job can see: your code, project rules and notes, the output of allowed commands, the folder path with your user name. What is sent cannot be taken back. <b>The remaining risk:</b> the vault keeps a key out of files, but a program running as you can still open it. The kit's guards read command text, so they only make that harder. An allowed command such as <code>npm test</code> runs code the model wrote, and there is no sandbox. Do not give the code and test jobs to an external model in a project that holds real secrets. Claude is recommended for the main job, planning and review: the model that plans or checks the work should not be an outside one. The address on the panel comes from a plain file; the line a run prints shows the address the key really went to. These models may not work as well as Claude here, so try one on a small job first.</div>
 </section>
 
 <section id="tools">
@@ -1230,7 +1230,7 @@ Pending decision: email service</pre>
       <tr><td class="f">/retro</td><td>Writes the lessons into the project; kit suggestions go to a branch in the TillerHand repo</td></tr>
       <tr><td class="f">/research [topic]</td><td>Articles, similar projects on GitHub and competing products; a difference table; chosen features go into the PRD</td></tr>
       <tr><td class="f">/handoff [take]</td><td>Hands the project to another person or account, or takes it over; continues from the same place</td></tr>
-      <tr><td class="f">/models</td><td>Opens the panel: usage, a model for each role and job, external models from OpenRouter, DeepSeek and Kimi, keys and limits</td></tr>
+      <tr><td class="f">/models</td><td>Opens the panel: usage, a model for each role and job, external models you add, key status and limits</td></tr>
       <tr><td class="f">/tools [on|off|measure|commands]</td><td>Shows, turns on or turns off context packs; measures the skill load; makes the command list light or full</td></tr>
       <tr><td class="f">/kit-update</td><td>Brings the project to TillerHand's latest version; asks about conflicts; adds a tool with <code>--tool</code> and an add-on with <code>--addons</code></td></tr>
       <tr><td class="f">/language [language]</td><td>Changes the conversation language (Turkish, English or another language); refreshes the translation of the hook messages and the dashboard</td></tr>
@@ -1288,7 +1288,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.63.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.64.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

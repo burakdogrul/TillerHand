@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.63.1</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.64.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -1152,31 +1152,31 @@ Bekleyen karar: e-posta servisi</pre>
 <section id="dis-modeller">
   <p class="path">Kendi modellerin</p>
   <h2>Dış modeller</h2>
-  <p class="lead"><code>/models</code> ile hangi işi hangi modelin yapacağını seçersin. Dış model kullanabilirsin: kod, test ve doküman rolleri OpenRouter, DeepSeek veya Kimi'den aldığın bir modelde çalışır. Planlama ve inceleme Claude planında kalır. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.</p>
-  <h3>Anahtar ekle</h3>
-  <p>Bunu sohbette değil, kendi terminalinde çalıştır. Anahtarı göstermeden ister ve proje dışında tutar.</p>
-<pre class="term">node .claude/hooks/models.mjs --set-key openrouter</pre>
-  <p>Ya da sistem değişkeni kullan. Ad sağlayıcıyla uyuşmalı: <code>OPENROUTER_API_KEY</code>, <code>DEEPSEEK_API_KEY</code> veya <code>MOONSHOT_API_KEY</code>. Windows'ta, ardından uygulamayı yeniden başlat:</p>
-<pre class="term">setx OPENROUTER_API_KEY "&lt;anahtarın&gt;"</pre>
-  <h3>Günlük sınır koy</h3>
-  <p>Dolar olarak. Varsayılan yok, sınır olmadan rol çalışmaz. Sınırda rol durur, sana sorulur. Sağlayıcının panelinde de sert limit koy. Ardından modelleri <code>/models</code> ile seç.</p>
-<pre class="term">node .claude/hooks/models.mjs --set-limit openrouter 5</pre>
-  <h3>Anahtarı sil veya yanlış adı düzelt</h3>
-<pre class="term">node .claude/hooks/models.mjs --remove-key openrouter</pre>
-  <p>Biçimi sağlayıcıyla uyuşmayan anahtar kullanılmaz. Yanlış adla girdiysen değişkeni sil, doğru adla yeniden tanımla. Yanlış sağlayıcıya gitmiş olabilirse anahtarı panelden yenile. Windows'ta:</p>
-<pre class="term">[Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $null, 'User')</pre>
-  <p><b>Neden <code>.env</code> değil?</b> Kullanılmaz. <code>npm test</code> gibi izinli bir komut proje <code>.env</code> dosyasını kolayca yükler, bu da anahtarı modelin yazdığı koda verir. Oraya anahtar koyduysan satırı sil ve anahtarı sağlayıcının panelinden yenile.</p>
+  <p class="lead"><code>/models</code> ile hangi işi hangi modelin yapacağını seçersin. Anthropic Messages biçimini kabul eden her sağlayıcıyı ekleyebilirsin ve eklediğin modeller her işte çalışabilir. Ana iş, planlama ve inceleme için önerimiz Claude'da kalmak. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.</p>
+  <h3>Sağlayıcı ve anahtar ekle</h3>
+  <p>Bunu sohbette değil, ayrı bir terminalde proje klasöründen, kendi seçtiğin adla çalıştır. Önce sağlayıcının adresini sorar ve sunucuyu gösterir, sonra anahtarı göstermeden ister. Panel anahtar almaz; Anahtarlar sekmesi yalnız anahtar var mı onu gösterir.</p>
+<pre class="term">node .claude/hooks/models.mjs --set-key &lt;ad&gt;</pre>
+  <p>Adres <code>https</code> olmalı; sağlayıcı <code>/v1/messages</code> adresinde Bearer anahtarla Anthropic Messages biçiminde cevap vermeli. Adres ve anahtar sistem anahtar kasasında birlikte mühürlenir, bu yüzden anahtar yalnız girildiği adrese gider. Birini değiştirmek için komutu yeniden çalıştırıp ikisini de gir. Kasa yoksa dış model kullanılamaz. Sistem değişkenleri ve <code>.env</code> okunmaz. Anahtarı yapıştırdıktan sonra başka bir şey kopyala: yapıştırılan anahtar panoda kalır.</p>
+  <h3>Modeli ekle ve seç</h3>
+  <p>Sağlayıcı adını ve model kimliğini Modeller sekmesine yaz. Fiyat ve bağlam isteğe bağlı. Sonra İşler sekmesinden seç: eklediğin her model her işte listelenir. Sağlayıcısının anahtarı olmayan model görünür ama seçilemez.</p>
+  <h3>Ana işi onda çalıştır</h3>
+  <p>Ana iş kendi terminalinde açılır. Orada tüm sohbet sağlayıcıya gider; Claude modeli seçili bir iş durur ve bunu söyler. Diğer oturumların Claude'da kalır.</p>
+<pre class="term">node .claude/hooks/run-session.mjs</pre>
+  <h3>Günlük sınır koy veya anahtarı sil</h3>
+  <p>Sınır isteğe bağlı, dolar olarak. Sınırda rol durur, sana sorulur. Sınır yoksa tek tavan sağlayıcı hesabının izin verdiği miktardır, bu yüzden sağlayıcının panelinde de sınır koy.</p>
+<pre class="term">node .claude/hooks/models.mjs --set-limit &lt;ad&gt; 5</pre>
+<pre class="term">node .claude/hooks/models.mjs --remove-key &lt;ad&gt;</pre>
   <h3>Kit ne yapıyor</h3>
   <div class="table-wrap"><table>
     <tbody>
-      <tr><td>Roller</td><td>Kod, test ve doküman dışarı verilebilir. Planlama ve inceleme (kurul, <code>security-auditor</code>) dış modele verilemez, planında kalır.</td></tr>
-      <tr><td>Proxy</td><td>Rol, geçici bir tokenla ayrı süreçte çalışır. Yerel proxy gerçek anahtarı kendisi ekler ve yalnız sağlayıcının sabit adresine gönderir.</td></tr>
-      <tr><td>Günlük sınır</td><td>Proxy harcamayı sağlayıcının yanıtlarından sayar. Fiyatı bilinmeyen model için yüksek bir varsayılan kullanılır.</td></tr>
-      <tr><td>İzinler</td><td>Her rolün dar bir listesi var: dokümanda kabuk yok, test yalnız test komutunu, kod onayladığın komutları çalıştırır. Hook'lar çalışmaya devam eder.</td></tr>
-      <tr><td>Onay</td><td>Rolü çalıştırmak ve rolü sağlayıcıya taşımak her seferinde sorulur.</td></tr>
+      <tr><td>Proxy</td><td>İş, geçici bir tokenla ayrı süreçte çalışır. Yerel proxy gerçek anahtarı kendisi ekler ve yalnız onunla mühürlü adrese gönderir.</td></tr>
+      <tr><td>Harcama</td><td>Proxy harcamayı sağlayıcının yanıtlarından sayar, sınır koyduysan uygular. Fiyatı bilinmeyen model için yüksek bir varsayılan kullanılır.</td></tr>
+      <tr><td>İzinler</td><td>Dosya araçları proje dışına çıkamaz. Dış modeldeki plan ve inceleme işleri yalnız okuyabilir. Dokümanda kabuk yok, test yalnız test komutunu, kod onayladığın komutları çalıştırır. Hook'lar çalışmaya devam eder.</td></tr>
+      <tr><td>Reddetme</td><td>Ortam sertifika denetimini kapatıyor veya kendi sertifikasını ekliyorsa çalıştırma durur; <code>claude</code> proje içinden alınmaz. Bir ayar dosyası çalıştırmayı başka adrese yönlendiriyorsa da durur.</td></tr>
+      <tr><td>Onay</td><td>İşi çalıştırmak, dış oturum açmak, anahtar kaydetmek ve işi sağlayıcıya taşımak her seferinde sorulur.</td></tr>
     </tbody>
   </table></div>
-  <div class="note accent"><b>Önce bilmen gerekenler:</b> Sağlayıcı, rolün görebildiği her şeyi görür: kodun, proje kuralları ve notlar, izinli komutların çıktıları, kullanıcı adını içeren klasör yolu. Gönderilen geri alınamaz. <b>Kalan risk:</b> <code>npm test</code> gibi izinli bir komut modelin yazdığı kodu çalıştırır. O kod proje dosyalarını ve anahtar deposu dahil kendi dosyalarını okuyup dışarı gönderebilir; sandbox yok. Gerçek sır içeren projede kod ve test rollerini dış modele verme. Bu modeller burada Claude kadar iyi çalışmayabilir: OpenRouter bu yolda Anthropic dışı modelleri garanti etmiyor, bu yüzden <code>/models</code> modeli güvenmeden önce dener.</div>
+  <div class="note accent"><b>Önce bilmen gerekenler:</b> Sağlayıcı, işin görebildiği her şeyi görür: kodun, proje kuralları ve notlar, izinli komutların çıktıları, kullanıcı adını içeren klasör yolu. Gönderilen geri alınamaz. <b>Kalan risk:</b> kasa anahtarı dosyalardan uzak tutar, ama senin adınla çalışan bir program kasayı yine açabilir. Kitin korumaları komut metnini okur, yani bunu yalnız zorlaştırır. <code>npm test</code> gibi izinli bir komut modelin yazdığı kodu çalıştırır ve sandbox yok. Gerçek sır içeren projede kod ve test işlerini dış modele verme. Ana iş, planlama ve inceleme için Claude önerilir: işi planlayan veya denetleyen model dışarıdan olmamalı. Paneldeki adres düz bir dosyadan gelir; anahtarın gerçekten gittiği adresi çalıştırmanın yazdığı satır gösterir. Bu modeller burada Claude kadar iyi çalışmayabilir, güvenmeden önce küçük bir işte dene.</div>
 </section>
 
 <section id="araclar">
@@ -1230,7 +1230,7 @@ Bekleyen karar: e-posta servisi</pre>
       <tr><td class="f">/retro</td><td>Dersleri projeye yazar; kite önerileri TillerHand reposunda bir dala</td></tr>
       <tr><td class="f">/research [konu]</td><td>Makaleler, GitHub'daki benzer projeler ve rakip ürünler; fark tablosu; seçilen özellikler PRD'ye</td></tr>
       <tr><td class="f">/handoff [take]</td><td>Projeyi başka kişiye veya hesaba devreder ya da devralır; aynı yerden devam</td></tr>
-      <tr><td class="f">/models</td><td>Paneli açar: kullanım, her rol ve iş için model, OpenRouter, DeepSeek ve Kimi dış modelleri, anahtarlar ve sınırlar</td></tr>
+      <tr><td class="f">/models</td><td>Paneli açar: kullanım, her rol ve iş için model, eklediğin dış modeller, anahtar durumu ve sınırlar</td></tr>
       <tr><td class="f">/tools [on|off|measure|commands]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer; komut listesini hafif veya tam yapar</td></tr>
       <tr><td class="f">/kit-update</td><td>Projeyi TillerHand'in son sürümüne çeker; çakışmaları sorar; <code>--tool</code> ile araç, <code>--addons</code> ile ek ekler</td></tr>
       <tr><td class="f">/language [dil]</td><td>Konuşma dilini değiştirir (Türkçe, İngilizce ya da başka bir dil); hook metinlerinin çevirisini ve panoyu yeniler</td></tr>
@@ -1288,7 +1288,7 @@ Bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.63.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.64.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

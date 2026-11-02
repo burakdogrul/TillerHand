@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 // Model and effort per role and per job (docs/workflow/models.md). Commands read the value with --for before each subagent call; they do not ask.
-//   node .claude/hooks/models.mjs --for code.critical       the value for one job: opus:high, main, or an external value with its run-role command
+//   node .claude/hooks/models.mjs --for code.critical       the value for one job: opus:high, main, or an external value with its command
 //   node .claude/hooks/models.mjs --show                    current choice (the recommended one if nothing is saved)
 //   node .claude/hooks/models.mjs --set code=sonnet:high code.ui=opus:xhigh     --reset code.ui      a job with no choice of its own follows its role
 // File: .claude/state/models.json (git-ignored, this project only). main also goes to .claude/settings.local.json, which Claude Code reads.
 // Aliases, not model IDs: in Claude Code opus/sonnet/haiku/fable always point to the newest model of that family.
-// External model for a role: code=openrouter/deepseek/deepseek-v4.1-flash-1017:high (runs through run-role.mjs). Run these in your own terminal:
-//   node .claude/hooks/models.mjs --set-key <provider>      asks for the key, hidden       --remove-key <provider>      --set-limit <provider> <usd per day>
+// External model for a job: code=<provider>/<model>:high (runs through run-role.mjs; main through run-session.mjs). Run these in your own terminal:
+//   node .claude/hooks/models.mjs --set-key <provider>      asks for the address and the key       --remove-key <provider>      --set-limit <provider> <usd per day>
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import readline from 'node:readline/promises';
 import { findRoot, isMain } from './shared.mjs';
 import { t } from './lang.mjs';
-import { PROVIDERS, EXTERNAL_ROLES, EFFORTS, parseExternal, isProvider, hasKey, setKey, removeKey, setLimit } from './providers.mjs';
+import { EFFORTS, parseExternal, parseProviderUrl, isProvider, hasKey, setProvider, removeKey, setLimit, purgePlainKeys, unsafeEnv } from './providers.mjs';
 
 export { EFFORTS };
 
@@ -46,9 +47,10 @@ export const recommendedFor = (job) => (job === 'board.commit' ? 'haiku:low' : R
 
 export const modelsFile = (root = findRoot()) => path.join(root, '.claude', 'state', 'models.json');
 
-function validExternal(role, value) {
+// Any job can use any model the user added; what is advised (Claude for main, planning and review) is advice, not a rule
+function validExternal(value) {
   const choice = parseExternal(value);
-  return Boolean(choice) && EXTERNAL_ROLES.includes(role) && hasKey(choice.provider);
+  return Boolean(choice) && hasKey(choice.provider);
 }
 
 // max works in a subagent call but not in the effortLevel setting that main writes to
@@ -56,7 +58,7 @@ const validFor = (job, value) => {
   if (typeof value !== 'string') return false;
   if (value === MAIN_SENTINEL) return job === 'code.simple';
   const [model, effort, extra] = value.split(':');
-  return (MODELS.includes(model) && extra === undefined && (EFFORTS.includes(effort) || (effort === 'max' && job !== 'main'))) || validExternal(roleOf(job), value);
+  return (MODELS.includes(model) && extra === undefined && (EFFORTS.includes(effort) || (effort === 'max' && job !== 'main'))) || validExternal(value);
 };
 const pretty = (value) => { const i = value.lastIndexOf(':'); return i < 0 ? value : `${value.slice(0, i)} / ${value.slice(i + 1)}`; };
 // The file can hold anything and the AI reads this output: one short line, no control characters
@@ -91,7 +93,7 @@ export function resolveJob(job, file = modelsFile()) {
     if (candidate === undefined) continue;
     if (validFor(job, candidate) && validFor(link, candidate)) { value = candidate; source = link; break; }
     const external = parseExternal(candidate);
-    notes.push(`${link}: "${clean(candidate)}" skipped, ${external && EXTERNAL_ROLES.includes(roleOf(job)) && !hasKey(external.provider) ? `no key for ${external.provider}` : `invalid for ${job}`}`);
+    notes.push(`${link}: "${clean(candidate)}" skipped, ${external && !hasKey(external.provider) ? `no key for ${external.provider}` : `invalid for ${job}`}`);
   }
   if (job === 'code.simple' && value === resolveJob('main', file).value) value = MAIN_SENTINEL;
   return { value, notes, source };
@@ -106,7 +108,10 @@ export function savedChoice(job, file = modelsFile()) {
 // Jobs with a valid choice of their own
 export const customJobs = (file = modelsFile()) => Object.entries(readSaved(file).tasks).filter(([job, value]) => Object.hasOwn(JOBS, job) && validFor(job, value));
 
-const forLine = (job, value) => (parseExternal(value) ? `${value} · node .claude/hooks/run-role.mjs ${job} <prompt file>` : value);
+const forLine = (job, value) => {
+  if (!parseExternal(value)) return value;
+  return job === 'main' ? `${value} · node .claude/hooks/run-session.mjs` : `${value} · node .claude/hooks/run-role.mjs ${job} <prompt file>`;
+};
 
 // A file is replaced whole: a write that fails halfway leaves the old one as it was
 export function replaceFile(file, text) {
@@ -121,6 +126,8 @@ export function replaceFile(file, text) {
 
 // Runs before models.json is written, so a broken settings file stops the whole --set. value null removes the choice, only if it is still the one the kit wrote (previous).
 function writeMainSession(file, value, previous) {
+  // An external main session starts with run-session.mjs, so settings.local.json keeps the Claude model for every other session
+  if (parseExternal(value)) return null;
   const settingsFile = path.join(path.dirname(file), '..', 'settings.local.json');
   let settings = {};
   try {
@@ -167,7 +174,7 @@ export function setModels(pairs, file = modelsFile()) {
     const job = rawJob.toLowerCase();
     // A model id keeps its case; an alias is lower case
     const value = rawValue?.includes('/') ? rawValue : rawValue?.toLowerCase();
-    if (extra !== undefined || !isJob(job) || !validFor(job, value)) return `Invalid: "${pair}". Role: ${Object.keys(ROLES).join(', ')}, or a job such as code.ui (docs/workflow/models.md) · model: ${MODELS.join(', ')} · effort: ${EFFORTS.join(', ')}, max (not for main) (example code=sonnet:medium). External: ${EXTERNAL_ROLES.join(', ')} only, as provider/model:effort, and the provider needs a key.`;
+    if (extra !== undefined || !isJob(job) || !validFor(job, value)) return `Invalid: "${pair}". Role: ${Object.keys(ROLES).join(', ')}, or a job such as code.ui (docs/workflow/models.md) · model: ${MODELS.join(', ')} · effort: ${EFFORTS.join(', ')}, max (not for main) (example code=sonnet:medium). External: provider/model:effort for any job, once the provider has a key (--set-key <provider>).`;
     if (Object.hasOwn(ROLES, job)) next[job] = value;
     else nextTasks[job] = value;
   }
@@ -308,15 +315,29 @@ function readHidden(prompt) {
   });
 }
 
-async function setKeyFromTerminal(provider) {
-  if (!process.stdin.isTTY) { console.error('Run this in your own terminal: it asks for the key. The AI cannot enter a key.'); process.exit(1); }
-  if (!isProvider(provider)) { console.error(`Provider: ${Object.keys(PROVIDERS).join(', ')}`); process.exit(1); }
-  const error = setKey(provider, (await readHidden(`${provider} key (hidden): `)).trim());
+const PROVIDER_NAME_HELP = 'The provider name is your own: lower case letters, digits and "-", starting with a letter.';
+
+// The address is sealed with the key, so it is asked every time: there is no way to change one and keep the other
+async function setKeyFromTerminal(provider, extra) {
+  // Whatever else is on the line may be the key, and it is already in the shell history: it is never printed
+  if (extra.length) { console.error('Do not put the key on the command line: it stays in your shell history. Clear that entry, and replace the key if it was a real one.'); process.exit(1); }
+  if (!isProvider(provider)) { console.error(PROVIDER_NAME_HELP); process.exit(1); }
+  const unsafe = unsafeEnv();
+  if (unsafe.length) { console.error(`Not saving: ${unsafe.join(', ')} is set, which can send the key to another machine. Remove it first.`); process.exit(1); }
+  if (!process.stdin.isTTY) { console.error('Run this in your own terminal: it asks for the address and the key. The AI cannot enter a key.'); process.exit(1); }
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const parsed = parseProviderUrl(await rl.question(`${provider} address (https, Anthropic Messages API, for example https://example.com/api): `));
+  if (!parsed) { rl.close(); console.error('The address must be https, at most 200 characters, with no user name, query or fragment. Nothing was saved.'); process.exit(1); }
+  const answer = await rl.question(`The key will be sent to ${parsed.host}. Every job on this provider sends its prompts and the files it reads there too. Type yes to go on: `);
+  rl.close();
+  if (!/^(?:y|yes|e|evet)$/i.test(answer.trim())) { console.log('Nothing was saved.'); return; }
+  const error = setProvider(provider, parsed.url, (await readHidden(`${provider} key (hidden): `)).trim());
   if (error) { console.error(error); process.exit(1); }
-  console.log(`${provider} key saved. Remove it with: node .claude/hooks/models.mjs --remove-key ${provider}`);
+  console.log(`${provider} key saved. Copy something else now: a pasted key stays in the clipboard. Remove it with: node .claude/hooks/models.mjs --remove-key ${provider}`);
 }
 
 if (isMain(import.meta.url)) {
+  try { purgePlainKeys(); } catch { /* the store is not writable; a plain key in it is never read */ }
   const [mode, ...rest] = process.argv.slice(2);
   if (mode === '--set') {
     const error = setModels(rest);
@@ -342,12 +363,12 @@ if (isMain(import.meta.url)) {
     if (error) { console.error(error); process.exit(1); }
     console.log(showModels());
   } else if (mode === '--set-key') {
-    await setKeyFromTerminal(rest[0]);
+    await setKeyFromTerminal(rest[0], rest.slice(1));
   } else if (mode === '--remove-key') {
-    if (!isProvider(rest[0])) { console.error(`Provider: ${Object.keys(PROVIDERS).join(', ')}`); process.exit(1); }
+    if (!isProvider(rest[0])) { console.error(PROVIDER_NAME_HELP); process.exit(1); }
     const error = removeKey(rest[0]);
     if (error) { console.error(error); process.exit(1); }
-    console.log(`${rest[0]} key removed. If you also set ${PROVIDERS[rest[0]].env} in your system, remove that too.`);
+    console.log(`${rest[0]} key removed.`);
   } else if (mode === '--set-limit') {
     const error = setLimit(rest[0], Number(rest[1]));
     if (error) { console.error(error); process.exit(1); }

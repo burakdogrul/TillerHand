@@ -11,6 +11,8 @@ import { detectTool, findRoot, sessionNote } from './shared.mjs';
 import { prefsNote } from './prefs.mjs';
 import { readLang, t } from './lang.mjs';
 import { isValue } from './labels.mjs';
+import { resolveJob, modelsFile } from './models.mjs';
+import { parseExternal } from './providers.mjs';
 
 const notes = [];
 let next = '';
@@ -53,6 +55,9 @@ try {
     const l = readLimits(root);
     notes.push(l ? `Limit (last known): ${summary(l)}` : 'Limit: unknown. Read it before planning work (get_usage or node .claude/hooks/usage.mjs).');
     notes.push('Load the caveman:caveman skill for the report style (skip if it is not installed).');
+    // This session is on Claude even though the user chose otherwise, so say it once
+    const mainValue = resolveJob('main', modelsFile(root)).value;
+    if (parseExternal(mainValue) && !process.env.KIT_EXTERNAL_SESSION) notes.push(`The main job is set to ${mainValue}, but this session is not on it. Tell the user it opens in their own terminal: node .claude/hooks/run-session.mjs`);
   }
 } catch {
   // docs could not be read: give git info only

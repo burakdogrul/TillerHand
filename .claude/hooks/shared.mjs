@@ -44,6 +44,25 @@ const texts = (x) => (isText(x) ? [x] : x && typeof x === 'object' ? Object.valu
 // The environment a child process may inherit (run-role.mjs, cost.mjs): names only, so a key or token in the environment never reaches it
 export const ENV_ALLOWED = /^(?:PATH|PATHEXT|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|TEMP|TMP|TMPDIR|HOME|HOMEDRIVE|HOMEPATH|USERPROFILE|USERNAME|USER|LOGNAME|APPDATA|LOCALAPPDATA|PROGRAMDATA|PROGRAMFILES|PROGRAMFILES\(X86\)|PROGRAMW6432|COMMONPROGRAMFILES(?:\(X86\))?|COMMONPROGRAMW6432|OS|PROCESSOR_[A-Z0-9_]+|NUMBER_OF_PROCESSORS|LANG|LC_[A-Z]+|TZ|TERM|SHELL|XDG_[A-Z_]+|CLAUDE_CODE_GIT_BASH_PATH)$/i;
 
+// A program's full path from PATH, never one inside the project. On Windows a bare name looks in the working folder first. .exe and .com only: spawn cannot run a .cmd without a shell.
+export function findProgram(name, root, env = process.env) {
+  const win = process.platform === 'win32';
+  const base = fs.realpathSync(root);
+  for (const dir of String(env.PATH ?? env.Path ?? '').split(path.delimiter)) {
+    if (!path.isAbsolute(dir)) continue;
+    for (const ext of win ? ['.exe', '.com'] : ['']) {
+      const file = path.join(dir, name + ext);
+      try {
+        fs.accessSync(file, fs.constants.X_OK);
+        const real = fs.realpathSync(file);
+        const rel = path.relative(base, real);
+        if (fs.statSync(real).isFile() && (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel))) return file;
+      } catch { /* not here */ }
+    }
+  }
+  return null;
+}
+
 // Project root comes from the script's own location (<project>/.claude/hooks/): it does not depend on cwd or on
 // marker files the agent could create (.git), so it stays right when Codex opens in a subfolder.
 const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');

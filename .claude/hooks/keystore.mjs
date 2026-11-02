@@ -1,6 +1,6 @@
 // The system key vault (docs/workflow/models.md): Windows DPAPI, the macOS Keychain, Linux secret-tool.
 // A key reaches a child process through stdin only: never in argv, never in the environment.
-// VIBE_KIT_VAULT=none turns the vault off (the plain store of providers.mjs is used instead).
+// There is no switch to turn the vault off: a project's settings could set it.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,7 +23,7 @@ export function systemExe(...parts) {
   try {
     const exe = path.join(system, ...parts);
     const rel = path.relative(fs.realpathSync(findRoot()), fs.realpathSync(exe));
-    return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel)) ? null : exe;
+    return rel === '' || (rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel)) ? null : exe;
   } catch {
     return null;
   }
@@ -36,7 +36,8 @@ const PS = ['-NoProfile', '-NonInteractive', '-Command'];
 const PS_PROTECT = "Add-Type -AssemblyName System.Security; $k = [Console]::In.ReadToEnd().Trim(); $e = [System.Security.Cryptography.ProtectedData]::Protect([System.Text.Encoding]::UTF8.GetBytes($k), $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser); [Console]::Out.Write([Convert]::ToBase64String($e))";
 const PS_UNPROTECT = "Add-Type -AssemblyName System.Security; $c = [Console]::In.ReadToEnd().Trim(); $d = [System.Security.Cryptography.ProtectedData]::Unprotect([Convert]::FromBase64String($c), $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser); [Console]::Out.Write([System.Text.Encoding]::UTF8.GetString($d))";
 
-const keyFile = (provider) => path.join(os.homedir(), '.vibe-kit', 'keys', `${check(provider)}.dpapi`);
+// The real user folder: a project's settings can set USERPROFILE and HOME, and must not choose where a key is read from
+const keyFile = (provider) => path.join(os.userInfo().homedir, '.vibe-kit', 'keys', `${check(provider)}.dpapi`);
 const quiet = (fn) => { try { return fn(); } catch { return null; } };
 
 const dpapi = {
@@ -80,7 +81,6 @@ let backendOverride = null;
 export const setVaultBackend = (backend) => { backendOverride = backend; };
 
 function backend() {
-  if (process.env.VIBE_KIT_VAULT === 'none') return null;
   if (backendOverride) return backendOverride;
   if (process.platform === 'win32') return powershell() ? dpapi : null;
   if (process.platform === 'darwin') return keychain;

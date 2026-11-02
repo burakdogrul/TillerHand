@@ -39,6 +39,11 @@
       "Bash(node .claude/hooks/progress.mjs:*)"
     ],
     "ask": [
+      "Bash(node .claude/hooks/models.mjs --set-key:*)",
+      "Bash(node .claude/hooks/models.mjs --remove-key:*)",
+      "Bash(node .claude/hooks/models.mjs --set-limit:*)",
+      "Bash(node .claude/hooks/run-session.mjs:*)",
+      "Bash(node .claude/hooks/run-role.mjs:*)",
       "Bash(node kit/kit.mjs install:*)",
       "Bash(git push:*)",
       "Bash(node .claude/hooks/tools.mjs --enable:*)",
@@ -111,6 +116,15 @@
       }
     ],
     "PreToolUse": [
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/external-session-guard.mjs\""
+          }
+        ]
+      },
       {
         "matcher": "Grep|Glob",
         "hooks": [

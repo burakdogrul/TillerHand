@@ -2,6 +2,29 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.64.0] - 2026-11-03
+
+### Changed
+- **You add the providers.** The ready-made OpenRouter, DeepSeek and Kimi entries and the OpenRouter model list are gone. Write your own provider name and model id. The provider must answer Anthropic Messages at `/v1/messages` over `https` with a Bearer key.
+- **Keys are entered only in your own terminal.** `node .claude/hooks/models.mjs --set-key <name>` asks for the address and the key. The panel no longer takes, tries or removes a key; its Keys tab shows whether one exists and gives the commands.
+- **A key goes only to the address it was entered with.** The address and the key are sealed together in the system key vault. With no vault, external models are not available.
+- **Any model you added can be chosen for any job,** including the main job, planning and review. Claude is recommended there: the panel shows a badge and asks for a stronger consent. A model whose provider has no key is shown but cannot be chosen.
+- **A daily limit is now optional.** Prices and context on a model are optional too.
+
+### Added
+- `node .claude/hooks/run-session.mjs` opens the main job on an external model in your own terminal. A job set to a Claude model stops there and says so.
+
+### Security
+- System variables are no longer read for keys. Keys kept in a plain file are removed when the kit next runs; replace those keys at the provider.
+- A run stops if the environment turns off certificate checks or adds its own certificates, and `claude` and `git` are never taken from inside the project.
+- Plan and review jobs on an external model can only read, and the file tools of any external job cannot leave the project. A prompt file that holds the key stops the run.
+- A run stops if a settings file sets a route or certificate variable or `apiKeyHelper`, which could send it to another address.
+- Reading the key store with the Read, Grep or Glob tools is refused, and commands that print key variables are asked first.
+
+### Adapt by hand
+- Enter your keys again with `--set-key`, and add your models on the Models tab: the old provider choices stop working.
+- Remove the old system variables if you set them: `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `MOONSHOT_API_KEY`.
+
 
 ## [3.63.1] - 2026-11-02
 

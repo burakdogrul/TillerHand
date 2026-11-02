@@ -49,14 +49,15 @@ const UNCLEAR_ENV = /\b(vercel|vc)(@[\w.-]+)?\b(?=[^;&|]*\s(env\s+pull|pull)\b)(
 
 const NEEDS_APPROVAL = [
   // An external model spends the user's money and sends the project out; the key store is the user's
-  [/run-role\.mjs/i, 'guard.models.run'],
+  [/run-(?:role|session)\.mjs/i, 'guard.models.run'],
   [/models\.mjs\b[^;&|\n]*\s--(set-key|remove-key|set-limit)\b/i, 'guard.models.keys'],
   [/models\.mjs\b[^;&|\n]*\s--set\b[^;&|\n]*=[^\s;&|]*\//i, 'guard.models.provider'],
-  // Reading a key back out of the system vault (Linux, macOS, Windows): the panel does that, the AI does not
+  // Reading a key back out of the system vault (Linux, macOS, Windows): run-role and run-session do that, the AI does not
   // security reads its commands from stdin too (security -i, a pipe), so those count as well; flags may come before the subcommand, and a glob can spell it
-  // A name split inside a script ('resolve' + 'Key') stays a known limit of a text check
-  [/\bsecret-tool\s+(?:lookup|search)\b|\bsecurity\s(?:[^;&|\n]{0,100}\s)?(?:find-(?:generic|internet)-pass|dump-keychain|find-[\w-]*[*?[])|\bsecurity\s+-i(?![\w-])|\|\s*(?:\S*\/)?security(?![\w-])|Unprotect|\b(?:resolveKey|vaultRead)\b|\bkeyring\s+get\b|\b(?:import|from)\s+keyring\b/i, 'guard.models.vault'],
-  [/OPENROUTER_API_KEY|DEEPSEEK_API_KEY|MOONSHOT_API_KEY/i, 'guard.models.keyVar'],
+  // A name split inside a script ('read' + 'Provider'), or a script file, stays a known limit of a text check
+  [/\bsecret-tool\s+(?:lookup|search)\b|\bsecurity\s(?:[^;&|\n]{0,100}\s)?(?:find-(?:generic|internet)-pass|dump-keychain|find-[\w-]*[*?[])|\bsecurity\s+-i(?![\w-])|\|\s*(?:\S*\/)?security(?![\w-])|Unprotect|\b(?:readProvider|vaultRead|setProvider|vaultSave)\b|\bkeyring\s+get\b|\b(?:import|from)\s+keyring\b/i, 'guard.models.vault'],
+  // The kit reads no key from the environment, but a shell may still hold one. Upper case only: "token" in a commit message is not a variable.
+  [/\b[A-Z][A-Z0-9_]*(?:API_KEY|SECRET|TOKEN)\b|\$\{?(?:API_KEY|SECRET|TOKEN)\b|\bprintenv\b|\b(?:Get-ChildItem|gci|ls|dir)\s+(?:-Path\s+)?[Ee]nv:|(?:^|[;&|]\s*)env\s*(?:$|[;&|>])/, 'guard.models.keyVar'],
   [/\.vibe-kit(?![\w-])(?![\\/](?:preferences|gate-approval))|\.vib(?:e-?[\w-]{0,3})?[*?[]|\.vib[^;&|\n]{0,200}providers\.json|(?:~|\bHOME\b["'}]*|\bUSERPROFILE\b[%"'}]*)[\/]\.[\w-]{0,6}[*?[]/i, 'guard.models.store'],
   // The panel's one-time token (its temporary page) and session header open the key page: the AI never reads or sends them
   [PANEL_TOKEN, 'guard.models.panelToken'],

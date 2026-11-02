@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.63.1-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.64.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -278,58 +278,58 @@ Tüm komutlar, ayarlar, araçlar ve skill'ler **[rehberde](https://burakdogrul.g
 
 ## Dış modeller
 
-`/models` ile hangi işi hangi modelin yapacağını seçersin. Dış model kullanabilirsin: kod, test ve doküman rolleri OpenRouter, DeepSeek veya Kimi'den aldığın bir modelde çalışır. Planlama ve inceleme Claude planında kalır. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.
+`/models` ile hangi işi hangi modelin yapacağını seçersin. Anthropic Messages biçimini kabul eden her sağlayıcıyı ekleyebilirsin ve eklediğin modeller her işte çalışabilir. Ana iş, planlama ve inceleme için önerimiz Claude'da kalmak. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.
 
-Panel `/models` ile ya da terminalden `node .claude/hooks/models-panel.mjs` ile açılır. Dört sekmeli yerel bir sayfadır. **Kullanım**, Claude planını ve her dış modeli ayrı ayrı, gün ve hafta olarak gösterir. **İşler**, her iş için model ve effort seçtirir. **Modeller**, dış model listeni tutar. **Anahtarlar**, sağlayıcı anahtarlarını ve günlük sınırları alır. Anahtarlar varsa sistem kasasına gider; bir rolün sağlayıcısına gönderdiği dışında makinenden hiçbir şey çıkmaz.
+Panel `/models` ile ya da terminalden `node .claude/hooks/models-panel.mjs` ile açılır. Dört sekmeli yerel bir sayfadır. **Kullanım**, Claude planını ve her dış modeli ayrı ayrı, gün ve hafta olarak gösterir. **İşler**, her iş için model ve effort seçtirir. **Modeller**, sağlayıcıyı ve modeli yazdığın yerdir. **Anahtarlar**, anahtar var mı onu gösterir ve komutları verir; panel anahtar almaz.
 
-**Anahtar ekle.** Bunu sohbette değil, kendi terminalinde çalıştır. Anahtarı göstermeden ister ve sistem kasasında tutar, kasa yoksa `~/.vibe-kit/providers.json` içinde. Paneldeki Anahtarlar sekmesi de aynısını yapar:
-
-```bash
-node .claude/hooks/models.mjs --set-key openrouter
-```
-
-**Ya da sistem değişkeni kullan.** Ad sağlayıcıyla uyuşmalı: `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` veya `MOONSHOT_API_KEY`. Windows'ta, ardından uygulamayı yeniden başlat:
+**Sağlayıcı ve anahtar ekle.** Bunu sohbette değil, ayrı bir terminalde proje klasöründen, kendi seçtiğin adla çalıştır:
 
 ```bash
-setx OPENROUTER_API_KEY "<anahtarın>"
+node .claude/hooks/models.mjs --set-key <ad>
 ```
 
-**Dolar olarak günlük sınır koy.** Varsayılan yok; sınır olmadan rol çalışmaz. Sağlayıcının panelinde de sert limit koy.
+Önce sağlayıcının adresini sorar ve sunucuyu gösterir, sonra anahtarı göstermeden ister. Adres `https` olmalı; sağlayıcı `/v1/messages` adresinde Bearer anahtarla Anthropic Messages biçiminde cevap vermeli. Adresi veya anahtarı değiştirmek için komutu yeniden çalıştırıp ikisini de gir. Anahtarı yapıştırdıktan sonra başka bir şey kopyala: yapıştırılan anahtar panoda kalır.
+
+Adres ve anahtar sistem anahtar kasasında birlikte mühürlenir (Windows DPAPI, macOS Keychain, Linux `secret-tool`), bu yüzden anahtar yalnız girildiği adrese gider. Kasa yoksa dış model kullanılamaz. Sistem değişkenleri ve `.env` okunmaz.
+
+**Modeli ekle.** Sağlayıcı adını ve model kimliğini Modeller sekmesine yaz. Fiyat ve bağlam isteğe bağlı; fiyat yoksa çalıştırma maliyetin tahmin olduğunu söyler. Tarayıcı yoksa `node .claude/hooks/models.mjs --set docs=<ad>/<model>:high` kullan.
+
+**İşe seç.** İşler sekmesinde eklediğin her model her işte listelenir. Sağlayıcısının anahtarı olmayan model görünür ama seçilemez.
+
+**Ana iş** kendi terminalinde açılır. Orada tüm sohbet sağlayıcıya gider; Claude modeli seçili bir iş durur ve bunu söyler. Diğer oturumların Claude'da kalır.
 
 ```bash
-node .claude/hooks/models.mjs --set-limit openrouter 5
+node .claude/hooks/run-session.mjs
 ```
 
-**Modelleri seç:** `/models`.
+**Günlük sınır isteğe bağlı.** Sınırda rol durur, sana sorulur. Sınır yoksa tek tavan sağlayıcı hesabının izin verdiği miktardır, bu yüzden sağlayıcının panelinde de sınır koy.
+
+```bash
+node .claude/hooks/models.mjs --set-limit <ad> 5
+```
 
 **Anahtarı sil:**
 
 ```bash
-node .claude/hooks/models.mjs --remove-key openrouter
+node .claude/hooks/models.mjs --remove-key <ad>
 ```
-
-**Anahtarı yanlış adla mı girdin?** Biçimi sağlayıcıyla uyuşmayan anahtar kullanılmaz. Değişkeni sil, doğru adla yeniden tanımla. Yanlış sağlayıcıya gitmiş olabilirse anahtarı panelden yenile. Windows'ta:
-
-```bash
-[Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $null, 'User')
-```
-
-**Neden `.env` değil?** Kullanılmaz. `npm test` gibi izinli bir komut proje `.env` dosyasını kolayca yükler, bu da anahtarı modelin yazdığı koda verir. Oraya anahtar koyduysan satırı sil ve anahtarı sağlayıcının panelinden yenile.
 
 **Kit ne yapıyor:**
 
 | Parça | Nasıl çalışır |
 |---|---|
-| Roller | Kod, test ve doküman dışarı verilebilir. Planlama ve inceleme (kurul, `security-auditor`) dış modele verilemez, planında kalır |
-| Proxy | Rol, geçici bir tokenla ayrı süreçte çalışır. Yerel proxy gerçek anahtarı kendisi ekler ve yalnız sağlayıcının sabit adresine gönderir |
-| Günlük sınır | Proxy harcamayı sağlayıcının yanıtlarından sayar. Sınırda rol durur, sana sorulur. Fiyatı bilinmeyen model için yüksek bir varsayılan kullanılır |
-| İzinler | Her rolün dar bir listesi var: dokümanda kabuk yok, test yalnız test komutunu, kod onayladığın komutları çalıştırır. Hook'lar çalışmaya devam eder |
-| Onay | Rolü çalıştırmak ve rolü sağlayıcıya taşımak her seferinde sorulur |
+| Proxy | İş, geçici bir tokenla ayrı süreçte çalışır. Yerel proxy gerçek anahtarı kendisi ekler ve yalnız onunla mühürlü adrese gönderir |
+| Harcama | Proxy harcamayı sağlayıcının yanıtlarından sayar, sınır koyduysan uygular. Fiyatı bilinmeyen model için yüksek bir varsayılan kullanılır |
+| İzinler | Dosya araçları proje dışına çıkamaz. Dış modeldeki plan ve inceleme işleri yalnız okuyabilir. Dokümanda kabuk yok, test yalnız test komutunu, kod onayladığın komutları çalıştırır. Hook'lar çalışmaya devam eder |
+| Reddetme | Ortam sertifika denetimini kapatıyor veya kendi sertifikasını ekliyorsa çalıştırma durur; `claude` proje içinden alınmaz. Bir ayar dosyası çalıştırmayı başka adrese yönlendiriyorsa da durur |
+| Onay | İşi çalıştırmak, dış oturum açmak, anahtar kaydetmek ve işi sağlayıcıya taşımak her seferinde sorulur |
 
 **Önce bilmen gerekenler:**
-- Sağlayıcı, rolün görebildiği her şeyi görür: kodun, proje kuralları ve notlar, izinli komutların çıktıları, kullanıcı adını içeren klasör yolu. Gönderilen geri alınamaz.
-- **Kalan risk:** `npm test` gibi izinli bir komut modelin yazdığı kodu çalıştırır. O kod proje dosyalarını ve anahtar deposu dahil kendi dosyalarını okuyup dışarı gönderebilir; sandbox yok. Gerçek sır içeren projede kod ve test rollerini dış modele verme.
-- Bu modeller burada Claude kadar iyi çalışmayabilir. OpenRouter bu yolda Anthropic dışı modelleri garanti etmiyor, bu yüzden `/models` modeli güvenmeden önce dener.
+- Sağlayıcı, işin görebildiği her şeyi görür: kodun, proje kuralları ve notlar, izinli komutların çıktıları, kullanıcı adını içeren klasör yolu. Gönderilen geri alınamaz.
+- **Kalan risk:** kasa anahtarı dosyalardan uzak tutar, ama senin adınla çalışan bir program kasayı yine açabilir. Kitin korumaları komut metnini okur, yani bunu yalnız zorlaştırır. `npm test` gibi izinli bir komut modelin yazdığı kodu çalıştırır ve sandbox yok. Gerçek sır içeren projede kod ve test işlerini dış modele verme.
+- Ana iş, planlama ve inceleme için Claude önerilir: işi planlayan veya denetleyen model dışarıdan olmamalı. Panel burada daha güçlü bir onay ister.
+- Paneldeki adres düz bir dosyadan gelir, yani değiştirilebilir. Anahtarın gerçekten gittiği adresi çalıştırmanın yazdığı satır gösterir.
+- Bu modeller burada Claude kadar iyi çalışmayabilir. Güvenmeden önce küçük bir işte dene.
 
 ## Codex ve Antigravity
 

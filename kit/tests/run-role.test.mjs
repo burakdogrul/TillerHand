@@ -13,6 +13,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileBackend, vaultFiles, makeFakeClaude, FAKE_VAULT_URL } from './fake-vault.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const HOOKS = path.join(ROOT, '.claude', 'hooks');
@@ -20,13 +21,24 @@ const load = (name) => import(pathToFileURL(path.join(HOOKS, name)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const T = { timeout: 45000 };
 
-// Nothing in this file may touch the real store
+// Nothing in this file may touch the real store or a real vault
 const TMP_HOME = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rr-top-home-')));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
-// 3.63.0: a plain key entry is read only when the machine has no vault. These tests store plain keys, so they run with no vault.
-process.env.VIBE_KIT_VAULT = 'none';
 process.on('exit', () => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* temp */ } });
+// 3.64.0: a key and its address are sealed in the vault. In this process the vault is a folder (never null: null would fall back to the real vault);
+// child processes get the same kind of folder through the preload of fake-vault.mjs. A stand-in claude sits first on their PATH.
+const keystore = await load('keystore.mjs');
+const DEFAULT_VAULT = path.join(TMP_HOME, 'default-vault');
+keystore.setVaultBackend(fileBackend(DEFAULT_VAULT));
+const FAKE_BIN = path.join(TMP_HOME, 'fake-bin');
+const FAKE_CLAUDE = makeFakeClaude(FAKE_BIN);
+// The address the user typed with the key; the name of the provider is the user's own choice
+const ADDR = { openrouter: 'https://openrouter.ai/api', deepseek: 'https://api.deepseek.com/anthropic', kimi: 'https://api.moonshot.ai/anthropic' };
+// The five variables that run-role.mjs, run-session.mjs and --set-key refuse to start with.
+// NODE_USE_SYSTEM_CA is not one: the Claude desktop app sets it to 1 in every child, and it trusts only what the system already trusts.
+const UNSAFE_ENV = { NODE_TLS_REJECT_UNAUTHORIZED: '0', NODE_EXTRA_CA_CERTS: 'evil-ca.pem', SSL_CERT_FILE: 'evil-ca.pem', SSL_CERT_DIR: 'evil-certs', NODE_USE_ENV_PROXY: '1' };
+const SYSTEM_CA = 'NODE_USE_SYSTEM_CA';
 
 // Test values are split up so this file itself does not trip the secret scan
 const OR_KEY = 'sk-' + 'or-v1-' + 'a1b2c3d4'.repeat(6);
@@ -227,9 +239,10 @@ const post = (env) => new Promise((resolve, reject) => {
   req.end(JSON.stringify({ model: process.env.RR_CHILD_MODEL ?? env.ANTHROPIC_MODEL, stream: true, messages: [{ role: 'user', content: 'x' }] }));
 });
 const isClaude = (cmd, args) => [cmd, ...(Array.isArray(args) ? args.slice(0, 2) : [])].some((x) => /(^|[\\/\s])claude(\.exe|\.cmd)?(\s|$)/i.test(String(x)));
+const isGit = (cmd) => /(^|[\\/])git(\.exe)?$/i.test(String(cmd));
 const realSpawn = cp.spawn, realSpawnSync = cp.spawnSync, realExecFileSync = cp.execFileSync, realExecSync = cp.execSync;
 cp.spawn = (cmd, args, opts) => {
-  if (!isClaude(cmd, args)) return realSpawn(cmd, args, opts);
+  if (!isClaude(cmd, args)) { if (isGit(cmd)) rec({ kind: 'git', cmd: String(cmd) }); return realSpawn(cmd, args, opts); }
   const list = Array.isArray(args) ? args : [];
   const o = (Array.isArray(args) ? opts : args) ?? {};
   const env = o.env ?? process.env;
@@ -255,8 +268,8 @@ cp.spawn = (cmd, args, opts) => {
   }, 30);
   return child;
 };
-cp.spawnSync = (cmd, args, opts) => (isClaude(cmd, args) ? (rec({ kind: 'claude-sync', cmd }), { status: 0, stdout: '', stderr: '', output: [], pid: 1 }) : realSpawnSync(cmd, args, opts));
-cp.execFileSync = (cmd, args, opts) => (isClaude(cmd, args) ? (rec({ kind: 'claude-sync', cmd }), '') : realExecFileSync(cmd, args, opts));
+cp.spawnSync = (cmd, args, opts) => (isClaude(cmd, args) ? (rec({ kind: 'claude-sync', cmd }), { status: 0, stdout: '', stderr: '', output: [], pid: 1 }) : (isGit(cmd) && rec({ kind: 'git', cmd: String(cmd) }), realSpawnSync(cmd, args, opts)));
+cp.execFileSync = (cmd, args, opts) => (isClaude(cmd, args) ? (rec({ kind: 'claude-sync', cmd }), '') : (isGit(cmd) && rec({ kind: 'git', cmd: String(cmd) }), realExecFileSync(cmd, args, opts)));
 cp.execSync = (cmd, opts) => (isClaude(cmd) ? (rec({ kind: 'claude-sync', cmd }), '') : realExecSync(cmd, opts));
 syncBuiltinESMExports();
 `);
@@ -269,11 +282,25 @@ const dayKeys = () => {
 };
 const AGENTS_FIXTURE = '# Fixture\n\n## Commands\n\n```bash\ntest:        npm test\nlint:        npm run lint\ntype check: npm run typecheck\nbuild:       npm run build\n```\n';
 
-async function project(t, { models = { code: MODEL_VALUE, test: MODEL_VALUE, docs: MODEL_VALUE }, key = true, limit = 5, spent = 0, settings = true, drop = [] } = {}) {
-  const { setKey, setLimit, addSpend } = await load('providers.mjs');
+// The vault of one project or home: this process writes to it through the code under test, the child reads it through the preload
+function ownVault(t, dir) {
+  keystore.setVaultBackend(fileBackend(dir));
+  t.after(() => keystore.setVaultBackend(fileBackend(DEFAULT_VAULT)));
+}
+async function addKey(t, who, name = 'openrouter', key = OR_KEY, url = ADDR[name]) {
+  const { setProvider } = await load('providers.mjs');
+  ownVault(t, who.vault);
+  assert.equal(setProvider(name, url, key, who.file), null);
+}
+
+// limit: null means no daily limit at all (3.64.0: a limit is optional)
+// priced: the user put a price for MODEL in the catalog, so a run costs cents. Without one the high default price is used (the UNPRICED tests).
+async function project(t, { models = { code: MODEL_VALUE, test: MODEL_VALUE, docs: MODEL_VALUE }, key = true, limit = 5, spent = 0, settings = true, drop = [], priced = true } = {}) {
+  const { setLimit, addSpend, addCatalog } = await load('providers.mjs');
   await load('run-role.mjs');
   const root = tmpDir(t, 'rr-proj-');
   const home = tmpDir(t, 'rr-home-');
+  const vault = tmpDir(t, 'rr-vault-');
   fs.cpSync(HOOKS, path.join(root, '.claude', 'hooks'), { recursive: true });
   fs.cpSync(path.join(ROOT, '.claude', 'agents'), path.join(root, '.claude', 'agents'), { recursive: true });
   if (settings) fs.copyFileSync(path.join(ROOT, '.claude', 'settings.json'), path.join(root, '.claude', 'settings.json'));
@@ -284,26 +311,32 @@ async function project(t, { models = { code: MODEL_VALUE, test: MODEL_VALUE, doc
   for (const f of drop) fs.rmSync(path.join(root, '.claude', 'hooks', f));
   const file = storeOf(home);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (key) assert.equal(setKey('openrouter', OR_KEY, file), null);
+  const proj = { root, home, file, vault, spy: path.join(home, 'spy.jsonl') };
+  if (key) await addKey(t, proj);
   if (limit !== null) setLimit('openrouter', limit, file);
+  if (priced) assert.equal(addCatalog('openrouter', { model: MODEL, input: 0.1, output: 0.4 }, file), null);
   if (spent) for (const d of dayKeys()) addSpend('openrouter', spent, d, file);
-  return { root, home, file, spy: path.join(home, 'spy.jsonl') };
+  return proj;
 }
 
 function cleanEnv() {
   const env = { ...process.env };
-  // The provider variables too: a key on the machine running the tests must not reach a test
-  for (const k of Object.keys(env)) if (/^(ANTHROPIC|CLAUDE)|^(OPENROUTER|DEEPSEEK|MOONSHOT)_API_KEY$/i.test(k)) delete env[k];
-  env.VIBE_KIT_VAULT = 'none'; // 3.63.0: the child reads the plain store these tests write
+  // A key variable on the machine running the tests must not reach a test, and neither may one of the variables run-role refuses
+  for (const k of Object.keys(env)) if (/^(ANTHROPIC|CLAUDE)|_API_KEY$|^KIT_/i.test(k) || [...Object.keys(UNSAFE_ENV), SYSTEM_CA].includes(k.toUpperCase())) delete env[k];
   return env;
 }
+// The stand-in claude first on PATH, outside every project
+const withFakeBin = (env) => {
+  const key = Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'PATH';
+  return { ...env, [key]: [FAKE_BIN, env[key] ?? ''].join(path.delimiter) };
+};
 const b64 = (s) => Buffer.from(s).toString('base64');
 
-function cli(proj, args, env = {}) {
+function cli(proj, args, env = {}, { script = 'run-role.mjs' } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ['--import', PRELOAD, path.join(proj.root, '.claude', 'hooks', 'run-role.mjs'), ...args], {
+    const child = spawn(process.execPath, ['--import', FAKE_VAULT_URL, '--import', PRELOAD, path.join(proj.root, '.claude', 'hooks', script), ...args], {
       cwd: proj.root,
-      env: { ...cleanEnv(), HOME: proj.home, USERPROFILE: proj.home, CLAUDE_PROJECT_DIR: proj.root, RR_SPY: proj.spy, RR_SSE: b64(sse()), ...env },
+      env: withFakeBin({ ...cleanEnv(), HOME: proj.home, USERPROFILE: proj.home, CLAUDE_PROJECT_DIR: proj.root, KIT_TEST_VAULT_DIR: proj.vault, RR_SPY: proj.spy, RR_SSE: b64(sse()), ...env }),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '', stderr = '';
@@ -343,20 +376,20 @@ const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =
 function modelsProject(t) {
   const root = tmpDir(t, 'rr-model-');
   const home = tmpDir(t, 'rr-model-home-');
+  const vault = tmpDir(t, 'rr-model-vault-');
   write(path.join(root, '.kit.json'), JSON.stringify({ type: 'web-saas', lang: 'en' }));
-  const run = (args, input = '') => spawnSync(process.execPath, [path.join(HOOKS, 'models.mjs'), ...args], {
-    encoding: 'utf8', input, env: { ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root },
+  const run = (args, input = '', env = {}) => spawnSync(process.execPath, ['--import', FAKE_VAULT_URL, path.join(HOOKS, 'models.mjs'), ...args], {
+    encoding: 'utf8', input, env: withFakeBin({ ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root, KIT_TEST_VAULT_DIR: vault, ...env }),
   });
-  return { root, home, run, file: storeOf(home), modelsFile: path.join(root, '.claude', 'state', 'models.json') };
+  return { root, home, vault, run, file: storeOf(home), modelsFile: path.join(root, '.claude', 'state', 'models.json') };
 }
 const line = (output, role) => output.split('\n').find((l) => l.startsWith(`${role}: `)) ?? '';
 
 // ---- AC-1 ----
 
-test('3.60.0 AC-1: --set takes rol=provider/model:effort with a key in the store, the model id may hold ":", and the old form still works', T, async (t) => {
-  const { setKey } = await load('providers.mjs');
+test('3.60.0 AC-1: --set takes rol=provider/model:effort with a key in the vault, the model id may hold ":", and the old form still works', T, async (t) => {
   const m = modelsProject(t);
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
+  await addKey(t, m);
   const set = m.run(['--set', `code=${MODEL_VALUE}`]);
   assert.equal(set.status, 0, set.stderr);
   assert.equal(JSON.parse(fs.readFileSync(m.modelsFile, 'utf8')).code, MODEL_VALUE);
@@ -371,9 +404,8 @@ test('3.60.0 AC-1: --set takes rol=provider/model:effort with a key in the store
 });
 
 test('3.60.0 AC-1: --show displays a provider role and a plain role side by side', T, async (t) => {
-  const { setKey } = await load('providers.mjs');
   const m = modelsProject(t);
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
+  await addKey(t, m);
   assert.equal(m.run(['--set', `code=${MODEL_VALUE}`, 'test=opus:high', 'docs=openrouter/deepseek/deepseek-r1:free:low']).status, 0);
   const show = m.run(['--show']);
   assert.equal(show.status, 0, show.stderr);
@@ -384,35 +416,34 @@ test('3.60.0 AC-1: --show displays a provider role and a plain role side by side
 });
 
 test('3.60.0 AC-1: a model id keeps its case; only the kit forms are lower-cased', T, async (t) => {
-  const { setKey } = await load('providers.mjs');
   const m = modelsProject(t);
-  assert.equal(setKey('kimi', DS_KEY, m.file), null);
+  await addKey(t, m, 'kimi', DS_KEY);
   const r = m.run(['--set', 'code=kimi/Kimi-K2.5:high']);
   assert.equal(r.status, 0, r.stderr);
   assert.equal(JSON.parse(fs.readFileSync(m.modelsFile, 'utf8')).code, 'kimi/Kimi-K2.5:high', 'provider model ids are case-sensitive');
 });
 
-test('3.60.0 AC-1: --set refuses a provider with no key and an unknown provider, and writes nothing; the same value passes once the key is there', T, async (t) => {
-  const { setKey } = await load('providers.mjs');
+test('3.60.0 AC-1: --set refuses a provider with no key and a malformed or reserved provider name, and writes nothing; the same value passes once the key is there', T, async (t) => {
   const m = modelsProject(t);
   const noKey = m.run(['--set', `code=${MODEL_VALUE}`]);
   assert.equal(noKey.status, 1);
-  assert.match(noKey.stderr, /key/i);
-  for (const value of ['evil/x/y:high', 'https://evil.example/x:high', '__proto__/x/y:high', 'constructor/x/y:high', 'openrouter/x/y:max', 'openrouter/x/y']) {
+  assert.match(noKey.stderr, /Invalid/);
+  assert.equal(fs.existsSync(m.modelsFile), false, 'nothing written without a key');
+  // 3.64.0: "evil" is a well-formed name now, so it is refused for want of a key like any other; the rest fail on the name or the form
+  for (const value of ['evil/x/y:high', 'https://evil.example/x:high', '__proto__/x/y:high', 'constructor/x/y:high', 'prototype/x/y:high', 'con/x/y:high', 'Openrouter/x/y:high', 'openrouter/x/y:max', 'openrouter/x/y']) {
     const r = m.run(['--set', `code=${value}`]);
     assert.equal(r.status, 1, value);
     assert.equal(fs.existsSync(m.modelsFile), false, `nothing written: ${value}`);
   }
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
+  await addKey(t, m);
   const ok = m.run(['--set', `code=${MODEL_VALUE}`]);
   assert.equal(ok.status, 0, ok.stderr);
   assert.equal(JSON.parse(fs.readFileSync(m.modelsFile, 'utf8')).code, MODEL_VALUE);
 });
 
-test('3.60.0 AC-1: a hand-edited models.json with an unknown provider falls back to the recommended value; a valid provider role stays', T, async (t) => {
-  const { setKey } = await load('providers.mjs');
+test('3.60.0 AC-1: a hand-edited models.json with a provider that has no key falls back to the recommended value; a valid provider role stays', T, async (t) => {
   const m = modelsProject(t);
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
+  await addKey(t, m);
   write(m.modelsFile, JSON.stringify({ code: MODEL_VALUE, docs: 'evil/x/y:high', test: 'constructor/x/y:high' }));
   const show = m.run(['--show']).stdout;
   assert.match(line(show, 'code'), /openrouter\/deepseek\/deepseek-v4\.1-flash-1017/, 'a valid provider role is kept');
@@ -509,22 +540,26 @@ test('3.60.0 AC-2: the run token and the port differ per run, and the prompt rea
 test('3.60.0 AC-2: storePath is under the home folder, the store shape is tolerant of a missing or broken file', T, async (t) => {
   const { storePath, readStore } = await load('providers.mjs');
   assert.equal(storePath(), path.join(TMP_HOME, '.vibe-kit', 'providers.json'));
-  // 3.63.0: readStore also returns keyMeta, modelSpend and catalog
-  const empty = { keys: {}, limits: {}, spend: {}, keyMeta: {}, modelSpend: {}, catalog: {} };
+  // 3.64.0: a keys field is never read, so the store has no keys part to compare; the other parts are empty
+  const empty = { limits: {}, spend: {}, keyMeta: {}, modelSpend: {}, catalog: {} };
+  const parts = (s) => Object.fromEntries(Object.keys(empty).map((k) => [k, s[k]]));
   const dir = tmpDir(t, 'rr-store-');
-  assert.deepEqual(readStore(path.join(dir, 'none.json')), empty);
-  assert.deepEqual(readStore(), empty, 'default path, nothing there yet');
+  assert.deepEqual(parts(readStore(path.join(dir, 'none.json'))), empty);
+  assert.deepEqual(parts(readStore()), empty, 'default path, nothing there yet');
   for (const broken of ['', 'not json', '{"keys":', 'null', '[]', '12']) {
     const f = path.join(dir, 'broken.json');
     fs.writeFileSync(f, broken);
-    assert.deepEqual(readStore(f), empty, JSON.stringify(broken));
+    assert.deepEqual(parts(readStore(f)), empty, JSON.stringify(broken));
   }
+  const old = path.join(dir, 'old.json');
+  fs.writeFileSync(old, JSON.stringify({ keys: { openrouter: OR_KEY }, limits: { openrouter: 2 } }));
+  assert.equal(JSON.stringify(readStore(old)).includes(OR_KEY), false, 'a plain keys field is not read');
+  assert.equal(readStore(old).limits.openrouter, 2);
 });
 
 test('3.60.0 AC-2: no key value appears in models.json or in models.mjs output', T, async (t) => {
-  const { setKey } = await load('providers.mjs');
   const m = modelsProject(t);
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
+  await addKey(t, m);
   const set = m.run(['--set', `code=${MODEL_VALUE}`]);
   const show = m.run(['--show']);
   assert.equal(set.status, 0, set.stderr);
@@ -594,62 +629,52 @@ test('3.60.0 AC-2: childEnv sets the proxy address, the run token and the model 
 
 // ---- AC-3 ----
 
-test('3.60.0 AC-3: ATTACK: keyFormatOk ties a key to its provider and refuses what cannot be a key', T, async () => {
-  const { keyFormatOk } = await load('providers.mjs');
-  assert.equal(keyFormatOk('openrouter', OR_KEY), true);
-  assert.equal(keyFormatOk('deepseek', DS_KEY), true);
-  assert.equal(keyFormatOk('kimi', DS_KEY), true);
-  assert.equal(keyFormatOk('openrouter', DS_KEY), false, 'OpenRouter keys start sk-or-');
-  assert.equal(keyFormatOk('deepseek', OR_KEY), false, 'an sk-or- key is not for deepseek');
-  assert.equal(keyFormatOk('kimi', OR_KEY), false, 'an sk-or- key is not for kimi');
-  for (const provider of ['evil', '', 'OPENROUTER', '__proto__', 'constructor', 'toString', undefined, null])
-    assert.equal(keyFormatOk(provider, OR_KEY), false, `unknown provider ${provider}`);
-  for (const key of ['', undefined, null, 123, {}, `${OR_KEY}\r\nx-evil: 1`, `${OR_KEY} extra`, `\n${OR_KEY}`]) {
-    assert.equal(keyFormatOk('openrouter', key), false, `openrouter: ${JSON.stringify(key)}`);
-  }
-  for (const key of ['', undefined, `${DS_KEY}\r\nx-evil: 1`]) assert.equal(keyFormatOk('deepseek', key), false, `deepseek: ${JSON.stringify(key)}`);
-});
-
-test('3.60.0 AC-3: ATTACK: setKey on a format mismatch returns an error, writes nothing and calls no network', T, async (t) => {
-  const { setKey, readStore } = await load('providers.mjs');
-  const file = path.join(tmpDir(t, 'rr-key-'), 'sub', 'providers.json');
+// 3.64.0: keyFormatOk (a format per provider) is gone; the one general rule is keyOk, tested in provider-keys.test.mjs (AC-64.8b).
+// What stays here is the part that touches a run: a refused key never reaches the vault or the network.
+test('3.64.0 AC-3: ATTACK: setProvider on a bad key or address returns an error, writes nothing and calls no network', T, async (t) => {
+  const { setProvider } = await load('providers.mjs');
+  const who = { vault: tmpDir(t, 'rr-key-vault-'), file: path.join(tmpDir(t, 'rr-key-'), 'sub', 'providers.json') };
+  ownVault(t, who.vault);
   const realFetch = globalThis.fetch;
   let fetched = 0;
   globalThis.fetch = async () => { fetched++; throw new Error('no network'); };
   t.after(() => { globalThis.fetch = realFetch; });
-  for (const [provider, key] of [['openrouter', DS_KEY], ['deepseek', OR_KEY], ['kimi', OR_KEY], ['evil', OR_KEY], ['__proto__', OR_KEY], ['openrouter', '']]) {
-    assert.match(setKey(provider, key, file) ?? '', /\S/, `${provider} refused`);
-    assert.equal(fs.existsSync(file), false, `${provider}: no file`);
+  for (const [name, url, key] of [['openrouter', ADDR.openrouter, ''], ['openrouter', ADDR.openrouter, `${OR_KEY}\r\nx-evil: 1`], ['openrouter', ADDR.openrouter, 'short'], ['openrouter', 'http://openrouter.ai/api', OR_KEY], ['__proto__', ADDR.openrouter, OR_KEY], ['constructor', ADDR.openrouter, OR_KEY]]) {
+    assert.match(setProvider(name, url, key, who.file) ?? '', /\S/, `${name} refused`);
+    assert.equal(fs.existsSync(who.file), false, `${name}: no file`);
   }
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
-  const before = fs.readFileSync(file, 'utf8');
-  assert.match(setKey('deepseek', OR_KEY, file) ?? '', /\S/);
-  assert.equal(fs.readFileSync(file, 'utf8'), before, 'a refused key leaves the store as it was');
+  assert.deepEqual(vaultFiles(who.vault), {}, 'nothing in the vault');
+  assert.equal(setProvider('openrouter', ADDR.openrouter, OR_KEY, who.file), null);
+  const before = fs.readFileSync(who.file, 'utf8');
+  assert.match(setProvider('deepseek', ADDR.deepseek, 'short', who.file) ?? '', /\S/);
+  assert.equal(fs.readFileSync(who.file, 'utf8'), before, 'a refused key leaves the store as it was');
   assert.equal(fetched, 0);
-  assert.equal(readStore(file).keys.openrouter, OR_KEY);
-  assert.equal(readStore(file).keys.deepseek, undefined);
 });
 
-test('3.60.0 AC-3: setKey keeps the other entries, and the file is 0600 on POSIX', T, async (t) => {
-  const { setKey, setLimit, readStore } = await load('providers.mjs');
-  const file = path.join(tmpDir(t, 'rr-key-'), '.vibe-kit', 'providers.json');
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
-  setLimit('openrouter', 2.5, file);
-  assert.equal(setKey('deepseek', DS_KEY, file), null);
-  const store = readStore(file);
-  assert.deepEqual(store.keys, { openrouter: OR_KEY, deepseek: DS_KEY });
+test('3.64.0 AC-3: setProvider keeps the other entries, keeps the key out of providers.json, and the file is 0600 on POSIX', T, async (t) => {
+  const { setProvider, setLimit, readStore } = await load('providers.mjs');
+  const who = { vault: tmpDir(t, 'rr-key-vault-'), file: path.join(tmpDir(t, 'rr-key-'), '.vibe-kit', 'providers.json') };
+  ownVault(t, who.vault);
+  assert.equal(setProvider('openrouter', ADDR.openrouter, OR_KEY, who.file), null);
+  setLimit('openrouter', 2.5, who.file);
+  assert.equal(setProvider('deepseek', ADDR.deepseek, DS_KEY, who.file), null);
+  const store = readStore(who.file);
+  assert.deepEqual(Object.keys(store.keyMeta).sort(), ['deepseek', 'openrouter']);
   assert.equal(store.limits.openrouter, 2.5);
-  if (process.platform !== 'win32') assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  const text = fs.readFileSync(who.file, 'utf8');
+  for (const secret of [OR_KEY, DS_KEY, OR_KEY.slice(-4), DS_KEY.slice(-4)]) assert.equal(text.includes(secret), false, secret.length === 4 ? 'the last four' : 'a key');
+  if (process.platform !== 'win32') assert.equal(fs.statSync(who.file).mode & 0o777, 0o600);
 });
 
-test('3.60.0 AC-3: ATTACK: --set-key refuses when stdin is not a TTY and writes nothing, even with a good key on stdin', T, async (t) => {
+test('3.60.0 AC-3: ATTACK: --set-key refuses when stdin is not a TTY and writes nothing, even with a good address and key on stdin', T, async (t) => {
   await load('providers.mjs');
   const m = modelsProject(t);
-  const r = m.run(['--set-key', 'openrouter'], `${OR_KEY}\n`);
+  const r = m.run(['--set-key', 'openrouter'], `${ADDR.openrouter}\n${OR_KEY}\n`);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /terminal|tty/i);
   assert.doesNotMatch(r.stderr, /Usage/);
   assert.equal(fs.existsSync(m.file), false, 'no store');
+  assert.deepEqual(vaultFiles(m.vault), {}, 'nothing in the vault');
   assert.equal((r.stdout + r.stderr).includes(OR_KEY), false, 'the key is not echoed');
   assert.equal(walk(m.root).some((f) => fs.readFileSync(f).includes(OR_KEY)), false);
 });
@@ -672,104 +697,75 @@ test('3.60.0 AC-3: the shield asks for --set-key and --set-limit, also in a tric
 const OR_KEY_2 = 'sk-' + 'or-v1-' + 'f0e1d2c3'.repeat(6);
 const DS_KEY_2 = 'sk-' + 'fedcba9876543210'.repeat(2);
 const NO_FILE = (t) => path.join(tmpDir(t, 'rr-resolve-'), 'none.json');
-const FIXED_NAMES = [['openrouter', 'OPENROUTER_API_KEY', OR_KEY], ['deepseek', 'DEEPSEEK_API_KEY', DS_KEY], ['kimi', 'MOONSHOT_API_KEY', DS_KEY]];
 
-test('3.60.0 AC-3: resolveKey takes the store first, then the provider\'s fixed variable, otherwise null', T, async (t) => {
-  const { resolveKey, setKey } = await load('providers.mjs');
-  const none = NO_FILE(t);
-  for (const [provider, name, key] of FIXED_NAMES) {
-    assert.equal(resolveKey(provider, { file: none, env: { [name]: key } }), key, `${provider} from ${name}`);
-    assert.equal(resolveKey(provider, { file: none, env: {} }), null, `${provider} nothing`);
-  }
-  const file = path.join(tmpDir(t, 'rr-resolve-'), 'providers.json');
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
-  assert.equal(setKey('deepseek', DS_KEY, file), null);
-  assert.equal(resolveKey('openrouter', { file, env: { OPENROUTER_API_KEY: OR_KEY_2 } }), OR_KEY, 'the store wins');
-  assert.equal(resolveKey('deepseek', { file, env: { DEEPSEEK_API_KEY: DS_KEY_2 } }), DS_KEY, 'the store wins');
-  assert.equal(resolveKey('kimi', { file, env: { MOONSHOT_API_KEY: DS_KEY_2 } }), DS_KEY_2, 'no store entry for this provider');
-  assert.equal(resolveKey('kimi', { file, env: {} }), null);
-  const broken = path.join(tmpDir(t, 'rr-resolve-'), 'broken.json');
-  fs.writeFileSync(broken, '{"keys":');
-  assert.equal(resolveKey('openrouter', { file: broken, env: { OPENROUTER_API_KEY: OR_KEY } }), OR_KEY, 'a broken store falls to the variable');
-  assert.equal(resolveKey('openrouter', { file: broken, env: {} }), null);
-});
-
-test('3.60.0 AC-3: ATTACK: resolveKey never returns a key that fails the format of that provider, so nothing goes to the wrong provider', T, async (t) => {
-  const { resolveKey } = await load('providers.mjs');
+// 3.64.0: resolveKey is gone. readProvider reads the vault only: no variable, no plain store, no project file is a route to a key.
+test('3.64.0 AC-3: ATTACK: readProvider reads the vault only: a variable named after the provider, a plain keys entry and a project .env give no key', T, async (t) => {
+  const { readProvider } = await load('providers.mjs');
   const file = NO_FILE(t);
-  assert.equal(resolveKey('deepseek', { file, env: { DEEPSEEK_API_KEY: OR_KEY } }), null, 'an OpenRouter key in DEEPSEEK_API_KEY');
-  assert.equal(resolveKey('kimi', { file, env: { MOONSHOT_API_KEY: OR_KEY } }), null, 'an OpenRouter key in MOONSHOT_API_KEY');
-  assert.equal(resolveKey('openrouter', { file, env: { OPENROUTER_API_KEY: DS_KEY } }), null, 'a plain key in OPENROUTER_API_KEY');
-  for (const bad of ['', ' ', `${OR_KEY}\r\nx-evil: 1`, `${OR_KEY} extra`, `\n${OR_KEY}`])
-    assert.equal(resolveKey('openrouter', { file, env: { OPENROUTER_API_KEY: bad } }), null, JSON.stringify(bad));
-
-  const tampered = path.join(tmpDir(t, 'rr-resolve-'), 'providers.json');
-  write(tampered, JSON.stringify({ keys: { deepseek: OR_KEY, openrouter: `${OR_KEY}\r\nx-evil: 1` } }));
-  assert.equal(resolveKey('deepseek', { file: tampered, env: {} }), null, 'a hand-edited store is held to the format too');
-  assert.equal(resolveKey('openrouter', { file: tampered, env: {} }), null, 'header injection from the store');
+  const names = ['OPENROUTER_API_KEY', 'DEEPSEEK_API_KEY', 'MOONSHOT_API_KEY', 'KIMI_API_KEY', 'API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'openrouter_api_key'];
+  const had = Object.fromEntries(names.map((n) => [n, process.env[n]]));
+  for (const n of names) process.env[n] = OR_KEY;
+  t.after(() => { for (const [n, v] of Object.entries(had)) { if (v === undefined) delete process.env[n]; else process.env[n] = v; } });
+  write(file, JSON.stringify({ keys: { openrouter: OR_KEY, deepseek: DS_KEY }, keyMeta: { openrouter: { addedAt: '2026-11-01T00:00:00.000Z', host: 'openrouter.ai' } } }));
+  ownVault(t, tmpDir(t, 'rr-resolve-vault-'));
+  for (const provider of ['openrouter', 'deepseek', 'kimi']) assert.equal(readProvider(provider), null, provider);
+  assert.equal(typeof (await load('providers.mjs')).resolveKey, 'undefined', 'resolveKey is gone');
 });
 
-test('3.60.0 AC-3: ATTACK: resolveKey reads the fixed name only, from the env it is given, and refuses an unknown provider', T, async (t) => {
-  const { resolveKey } = await load('providers.mjs');
-  const file = NO_FILE(t);
-  assert.equal(resolveKey('deepseek', { file, env: { OPENROUTER_API_KEY: OR_KEY } }), null, 'another provider\'s variable');
-  assert.equal(resolveKey('kimi', { file, env: { DEEPSEEK_API_KEY: DS_KEY } }), null, 'a valid key under another provider\'s name');
-  assert.equal(resolveKey('deepseek', { file, env: { MOONSHOT_API_KEY: DS_KEY } }), null);
-  for (const name of ['KIMI_API_KEY', 'deepseek_api_key', 'API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'])
-    assert.equal(resolveKey(name === 'KIMI_API_KEY' ? 'kimi' : 'deepseek', { file, env: { [name]: DS_KEY } }), null, name);
-  const everyName = { OPENROUTER_API_KEY: OR_KEY, DEEPSEEK_API_KEY: DS_KEY, MOONSHOT_API_KEY: DS_KEY, EVIL_API_KEY: OR_KEY, __PROTO___API_KEY: OR_KEY };
-  for (const provider of ['evil', '', 'OPENROUTER', '__proto__', 'constructor', 'toString', undefined, null])
-    assert.equal(resolveKey(provider, { file, env: everyName }), null, String(provider));
-
-  const had = process.env.OPENROUTER_API_KEY;
-  process.env.OPENROUTER_API_KEY = OR_KEY;
-  t.after(() => { if (had === undefined) delete process.env.OPENROUTER_API_KEY; else process.env.OPENROUTER_API_KEY = had; });
-  assert.equal(resolveKey('openrouter', { file, env: {} }), null, 'the env given is the only env read');
+test('3.64.0 AC-3: readProvider gives the key of that provider only: two providers in one vault never swap', T, async (t) => {
+  const { readProvider } = await load('providers.mjs');
+  const who = { vault: tmpDir(t, 'rr-resolve-vault-'), file: path.join(tmpDir(t, 'rr-resolve-'), 'providers.json') };
+  await addKey(t, who, 'openrouter', OR_KEY);
+  await addKey(t, who, 'deepseek', DS_KEY);
+  assert.deepEqual(readProvider('openrouter'), { url: ADDR.openrouter, key: OR_KEY });
+  assert.deepEqual(readProvider('deepseek'), { url: ADDR.deepseek, key: DS_KEY });
+  assert.equal(readProvider('kimi'), null);
 });
 
-test('3.60.0 AC-3: removeKey removes that key only: the bytes leave the file, other keys, limits and spend stay', T, async (t) => {
-  const { setKey, setLimit, addSpend, spentOn, removeKey, readStore, resolveKey } = await load('providers.mjs');
-  const file = path.join(tmpDir(t, 'rr-remove-'), '.vibe-kit', 'providers.json');
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
-  assert.equal(setKey('deepseek', DS_KEY, file), null);
-  setLimit('openrouter', 2.5, file);
-  setLimit('deepseek', 4, file);
-  addSpend('openrouter', 1.5, '2026-11-01', file);
-  removeKey('openrouter', file);
-  assert.equal(fs.readFileSync(file).includes(OR_KEY), false, 'the key is gone from the file');
-  const store = readStore(file);
-  assert.deepEqual(store.keys, { deepseek: DS_KEY });
+test('3.64.0 AC-3: removeKey removes that key only: the vault entry and the metadata go, other keys, limits and spend stay', T, async (t) => {
+  const { setLimit, addSpend, spentOn, removeKey, readStore, readProvider } = await load('providers.mjs');
+  const who = { vault: tmpDir(t, 'rr-remove-vault-'), file: path.join(tmpDir(t, 'rr-remove-'), '.vibe-kit', 'providers.json') };
+  await addKey(t, who, 'openrouter', OR_KEY);
+  await addKey(t, who, 'deepseek', DS_KEY);
+  setLimit('openrouter', 2.5, who.file);
+  setLimit('deepseek', 4, who.file);
+  addSpend('openrouter', 1.5, '2026-11-01', who.file);
+  removeKey('openrouter', who.file);
+  assert.deepEqual(Object.keys(vaultFiles(who.vault)), ['deepseek'], 'the vault entry is gone');
+  const store = readStore(who.file);
+  assert.deepEqual(Object.keys(store.keyMeta), ['deepseek']);
   assert.deepEqual(store.limits, { openrouter: 2.5, deepseek: 4 });
-  close(spentOn('openrouter', '2026-11-01', file), 1.5, 'the ledger stays');
-  assert.equal(resolveKey('openrouter', { file, env: {} }), null, 'nothing to resolve any more');
-  assert.equal(resolveKey('openrouter', { file, env: { OPENROUTER_API_KEY: OR_KEY_2 } }), OR_KEY_2, 'the variable is still there as a route');
-  if (process.platform !== 'win32') assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  close(spentOn('openrouter', '2026-11-01', who.file), 1.5, 'the ledger stays');
+  assert.equal(readProvider('openrouter'), null, 'nothing to read any more');
+  assert.deepEqual(readProvider('deepseek'), { url: ADDR.deepseek, key: DS_KEY });
+  if (process.platform !== 'win32') assert.equal(fs.statSync(who.file).mode & 0o777, 0o600);
 });
 
-test('3.60.0 AC-3: removing a key that is absent is not an error and changes nothing', T, async (t) => {
-  const { setKey, setLimit, removeKey, readStore } = await load('providers.mjs');
-  const dir = tmpDir(t, 'rr-remove-');
-  const missing = path.join(dir, 'none', 'providers.json');
+test('3.64.0 AC-3: removing a key that is absent is not an error and changes nothing', T, async (t) => {
+  const { setLimit, removeKey, readStore } = await load('providers.mjs');
+  const who = { vault: tmpDir(t, 'rr-remove-vault-'), file: path.join(tmpDir(t, 'rr-remove-'), 'providers.json') };
+  ownVault(t, who.vault);
+  const missing = path.join(path.dirname(who.file), 'none', 'providers.json');
   assert.doesNotThrow(() => removeKey('openrouter', missing), 'no file');
-  assert.deepEqual(readStore(missing), { keys: {}, limits: {}, spend: {}, keyMeta: {}, modelSpend: {}, catalog: {} }); // 3.63.0 shape
-  const file = path.join(dir, 'providers.json');
-  assert.equal(setKey('deepseek', DS_KEY, file), null);
-  setLimit('openrouter', 2.5, file);
-  assert.doesNotThrow(() => removeKey('openrouter', file), 'no key for this provider');
-  assert.doesNotThrow(() => removeKey('openrouter', file), 'twice');
-  assert.deepEqual(readStore(file).keys, { deepseek: DS_KEY });
-  assert.equal(readStore(file).limits.openrouter, 2.5);
+  assert.equal(fs.existsSync(missing), false, 'and none is made');
+  await addKey(t, who, 'deepseek', DS_KEY);
+  setLimit('openrouter', 2.5, who.file);
+  assert.doesNotThrow(() => removeKey('openrouter', who.file), 'no key for this provider');
+  assert.doesNotThrow(() => removeKey('openrouter', who.file), 'twice');
+  assert.deepEqual(Object.keys(readStore(who.file).keyMeta), ['deepseek']);
+  assert.equal(readStore(who.file).limits.openrouter, 2.5);
 });
 
 test('3.60.0 AC-3: --remove-key works without a TTY, removes that key only, and is not an error when the key is absent', T, async (t) => {
-  const { setKey, setLimit, readStore } = await load('providers.mjs');
+  const { setLimit, readStore } = await load('providers.mjs');
   const m = modelsProject(t);
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
-  assert.equal(setKey('deepseek', DS_KEY, m.file), null);
+  await addKey(t, m, 'openrouter', OR_KEY);
+  await addKey(t, m, 'deepseek', DS_KEY);
   setLimit('openrouter', 2.5, m.file);
   const r = m.run(['--remove-key', 'openrouter']);
   assert.equal(r.status, 0, r.stderr);
-  assert.deepEqual(readStore(m.file).keys, { deepseek: DS_KEY });
+  assert.deepEqual(Object.keys(vaultFiles(m.vault)), ['deepseek']);
+  assert.deepEqual(Object.keys(readStore(m.file).keyMeta), ['deepseek']);
   assert.equal(readStore(m.file).limits.openrouter, 2.5);
   assert.equal((r.stdout + r.stderr).includes(OR_KEY), false, 'the key is not echoed');
   const again = m.run(['--remove-key', 'openrouter']);
@@ -780,14 +776,15 @@ test('3.60.0 AC-3: --remove-key works without a TTY, removes that key only, and 
 });
 
 test('3.60.0 AC-3: ATTACK: --remove-key with no provider or a made-up provider removes nothing', T, async (t) => {
-  const { setKey } = await load('providers.mjs');
   const m = modelsProject(t);
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
+  await addKey(t, m);
   const before = fs.readFileSync(m.file, 'utf8');
+  const vaultBefore = JSON.stringify(vaultFiles(m.vault));
   assert.equal(m.run(['--remove-key']).status, 1, 'no provider');
-  for (const provider of ['evil', '__proto__', 'constructor', 'OPENROUTER', '*', '--all']) {
+  for (const provider of ['__proto__', 'constructor', 'prototype', 'con', 'OPENROUTER', '*', '--all', '../openrouter']) {
     const r = m.run(['--remove-key', provider]);
     assert.equal(fs.readFileSync(m.file, 'utf8'), before, provider);
+    assert.equal(JSON.stringify(vaultFiles(m.vault)), vaultBefore, `${provider}: the vault is untouched`);
     assert.notEqual(r.status, null, `${provider} ends by itself`);
     assert.doesNotMatch(r.stderr, /TypeError|at file:/, `${provider}: no crash`);
   }
@@ -811,29 +808,6 @@ test('3.60.0 AC-3: the shield asks for --remove-key, also in a tricky spelling; 
   ];
   assert.deepEqual(tricks.filter((c) => !['ask', 'deny'].includes(evaluate(c)?.decision)), []);
   assert.equal(evaluate('git commit -m "docs: explain models.mjs --remove-key openrouter"'), null);
-});
-
-test('3.60.0 AC-3: the CLI runs with a key from the fixed variable alone; the key reaches only the provider and is not saved', T, async (t) => {
-  const { readStore, setLimit } = await load('providers.mjs');
-  for (const [provider, name, key, model, host] of [
-    ['openrouter', 'OPENROUTER_API_KEY', OR_KEY, MODEL, 'https://openrouter.ai/api/v1/messages'],
-    ['deepseek', 'DEEPSEEK_API_KEY', DS_KEY, 'deepseek-chat', 'https://api.deepseek.com/anthropic/v1/messages'],
-    ['kimi', 'MOONSHOT_API_KEY', DS_KEY, 'kimi-k2', 'https://api.moonshot.ai/anthropic/v1/messages'],
-  ]) {
-    const p = await project(t, { key: false, models: { code: `${provider}/${model}:high` } });
-    setLimit(provider, 5, p.file);
-    const r = await cli(p, ['code', 'p.md'], { [name]: key });
-    assertRan(r);
-    assert.deepEqual(messageCalls(r).map((n) => n.url.split('?')[0]), [host], provider);
-    assert.equal(messageCalls(r)[0].headers.authorization, `Bearer ${key}`, provider);
-    const child = r.spawned[0];
-    assert.equal(name in child.env, false, `${provider}: the variable does not reach the child`);
-    assert.equal(JSON.stringify([child.env, child.args]).includes(key), false, `${provider}: nor its value`);
-    assert.equal((r.stdout + r.stderr).includes(key), false, `${provider}: output`);
-    assert.equal(fs.readFileSync(p.file).includes(key), false, `${provider}: not copied into the store`);
-    assert.equal(readStore(p.file).keys[provider], undefined, provider);
-    assert.deepEqual(walk(p.root).filter((f) => fs.readFileSync(f).includes(key)), [], `${provider}: project files`);
-  }
 });
 
 test('3.60.0 AC-3: the CLI takes the store key over the variable', T, async (t) => {
@@ -861,10 +835,6 @@ test('3.60.0 AC-3: ATTACK: the CLI refuses a variable holding the wrong provider
   }
 });
 
-test('3.60.0 AC-3: a key from the variable still needs a daily limit', T, async (t) => {
-  assertRefused(await cli(await project(t, { key: false, limit: null }), ['code', 'p.md'], { OPENROUTER_API_KEY: OR_KEY }), /limit/i);
-});
-
 test('3.60.0 AC-3: ATTACK: a key in the project .env is not used: alone it gives a refusal and nothing sent', T, async (t) => {
   for (const name of ['.env', '.env.local', '.env.production']) {
     const p = await project(t, { key: false });
@@ -884,28 +854,22 @@ test('3.60.0 AC-3: ATTACK: a key in the project .env does not win over the store
   assert.equal(JSON.stringify(r.spawned[0].env).includes(OR_KEY_2), false);
 });
 
-test('3.60.0 AC-3: --remove-key ends the role: the CLI refuses afterwards, and only the variable can bring it back', T, async (t) => {
+
+test('3.64.0 AC-3: --remove-key ends the role: the CLI refuses afterwards, and a key variable does not bring it back', T, async (t) => {
   const p = await project(t);
   assertRan(await cli(p, ['code', 'p.md']));
-  const removed = spawnSync(process.execPath, [path.join(p.root, '.claude', 'hooks', 'models.mjs'), '--remove-key', 'openrouter'], {
-    encoding: 'utf8', input: '', env: { ...cleanEnv(), HOME: p.home, USERPROFILE: p.home, CLAUDE_PROJECT_DIR: p.root },
+  const removed = spawnSync(process.execPath, ['--import', FAKE_VAULT_URL, path.join(p.root, '.claude', 'hooks', 'models.mjs'), '--remove-key', 'openrouter'], {
+    encoding: 'utf8', input: '', env: { ...cleanEnv(), HOME: p.home, USERPROFILE: p.home, CLAUDE_PROJECT_DIR: p.root, KIT_TEST_VAULT_DIR: p.vault },
   });
   assert.equal(removed.status, 0, removed.stderr);
-  assertRefused(await cli(p, ['code', 'p.md']), /key/i);
-  const back = await cli(p, ['code', 'p.md'], { OPENROUTER_API_KEY: OR_KEY_2 });
-  assertRan(back);
-  assert.equal(messageCalls(back)[0].headers.authorization, `Bearer ${OR_KEY_2}`);
+  assert.deepEqual(vaultFiles(p.vault), {}, 'the vault entry is gone');
+  assertRefused(await cli(p, ['code', 'p.md']), /No openrouter key/);
+  const variable = await cli(p, ['code', 'p.md'], { OPENROUTER_API_KEY: OR_KEY_2, ANTHROPIC_API_KEY: OR_KEY_2 });
+  assertRefused(variable, /No openrouter key/);
+  assert.equal((variable.stdout + variable.stderr).includes(OR_KEY_2), false, 'a variable is not a key and is not shown');
 });
 
 // ---- AC-4 ----
-
-test('3.60.0 AC-4: PROVIDERS holds the three fixed addresses', T, async () => {
-  const { PROVIDERS } = await load('providers.mjs');
-  assert.deepEqual(Object.keys(PROVIDERS).sort(), ['deepseek', 'kimi', 'openrouter']);
-  assert.equal(PROVIDERS.openrouter.url, 'https://openrouter.ai/api');
-  assert.equal(PROVIDERS.deepseek.url, 'https://api.deepseek.com/anthropic');
-  assert.equal(PROVIDERS.kimi.url, 'https://api.moonshot.ai/anthropic');
-});
 
 test('3.60.0 AC-4: ATTACK: ANTHROPIC_BASE_URL and other overrides in the parent env do not change where the key goes or which binary runs', T, async (t) => {
   const evil = await upstream(t, (req, res) => res.end('stolen'));
@@ -926,21 +890,25 @@ test('3.60.0 AC-4: ATTACK: ANTHROPIC_BASE_URL and other overrides in the parent 
   assert.deepEqual(r.net.filter((n) => new URL(n.url ?? 'https://blocked.invalid').hostname !== 'openrouter.ai').map((n) => n.url), [], 'no other outside host');
 });
 
-test('3.60.0 AC-4: ATTACK: an address written into the store or models.json by hand does not move the key', T, async (t) => {
+
+test('3.64.0 AC-4: ATTACK: an address written into the store or models.json by hand does not move the key: the sealed address is the only one', T, async (t) => {
   const evil = await upstream(t, (req, res) => res.end('stolen'));
   const p = await project(t);
   const store = JSON.parse(fs.readFileSync(p.file, 'utf8'));
-  fs.writeFileSync(p.file, JSON.stringify({ ...store, baseUrl: evil.origin, url: evil.origin, urls: { openrouter: evil.origin }, providers: { openrouter: { url: evil.origin, baseUrl: evil.origin } } }));
+  const meta = { ...store.keyMeta.openrouter, host: new URL(evil.origin).host, url: evil.origin, baseUrl: evil.origin };
+  fs.writeFileSync(p.file, JSON.stringify({ ...store, keyMeta: { openrouter: meta }, baseUrl: evil.origin, url: evil.origin, urls: { openrouter: evil.origin }, providers: { openrouter: { url: evil.origin, baseUrl: evil.origin } } }));
   write(path.join(p.root, '.claude', 'state', 'models.json'), JSON.stringify({ code: MODEL_VALUE, baseUrl: evil.origin, url: evil.origin, providers: { openrouter: { url: evil.origin } } }));
   const r = await cli(p, ['code', 'p.md']);
   assertRan(r);
   assert.deepEqual(messageCalls(r).map((n) => new URL(n.url).origin), ['https://openrouter.ai']);
+  assert.equal(messageCalls(r)[0].headers.authorization, `Bearer ${OR_KEY}`);
   assert.equal(evil.seen.length, 0);
+  assert.match(r.stdout, /sent to openrouter\.ai/, 'the run says where it sent the prompt');
 
   // A host in the provider slot is not a provider
   write(path.join(p.root, '.claude', 'state', 'models.json'), JSON.stringify({ code: `${evil.origin}/x:high` }));
   const hostInModel = await cli(p, ['code', 'p.md']);
-  assertRefused(hostInModel, /provider/i);
+  assertRefused(hostInModel, /no external model/i);
   assert.equal(evil.seen.length, 0);
 });
 
@@ -1115,9 +1083,12 @@ test('3.60.0 AC-5: childEnv lets the operating system\'s own variables through',
   assert.equal(env.PATH, 'keep-me');
 });
 
+
 test('3.60.0 AC-5: ATTACK: a real run spawns the child without the hijack variables', T, async (t) => {
   const p = await project(t);
-  const r = await cli(p, ['code', 'p.md'], { ...HIJACK, NODE_EXTRA_CA_CERTS: path.join(p.home, 'evil-ca.pem') });
+  // NODE_EXTRA_CA_CERTS is one of the variables the run refuses to start with (next test), so it is not among these
+  const { NODE_EXTRA_CA_CERTS: _refused, ...hijack } = HIJACK;
+  const r = await cli(p, ['code', 'p.md'], hijack);
   assertRan(r);
   const env = r.spawned[0].env;
   assert.deepEqual(Object.keys(HIJACK).filter((k) => k in env), []);
@@ -1125,42 +1096,66 @@ test('3.60.0 AC-5: ATTACK: a real run spawns the child without the hijack variab
   assert.equal(env.ANTHROPIC_BASE_URL.startsWith('http://127.0.0.1:'), true);
 });
 
+test('3.64.0 AC-5: ATTACK: run-role.mjs does not start with a certificate or proxy variable that would carry the key off, and says which one; NODE_USE_SYSTEM_CA is fine', T, async (t) => {
+  const p = await project(t);
+  for (const [name, value] of Object.entries(UNSAFE_ENV)) {
+    const r = await cli(p, ['code', 'p.md'], { [name]: /CERT|CA_/.test(name) ? path.join(p.home, 'evil-ca.pem') : value });
+    assertRefused(r, new RegExp(name));
+    assert.equal((r.stdout + r.stderr).includes(OR_KEY), false, `${name}: no key shown`);
+  }
+  // The Claude desktop app sets it to 1 in every child; it trusts only what the system already trusts
+  assertRan(await cli(p, ['code', 'p.md'], { [SYSTEM_CA]: '1' }));
+});
+
 // ---- AC-6 ----
 
-test('3.60.0 AC-6: checkRun allows code, test and docs, and refuses plan, review, board and security-auditor roles', T, async (t) => {
+
+test('3.64.0 AC-6: checkRun refuses the main session, which has its own command, and allows the roles that run as a child, plan and review too', T, async (t) => {
   const { checkRun } = await load('run-role.mjs');
   const root = tmpDir(t, 'rr-role-');
   write(path.join(root, 'p.md'), 'x');
   const run = (role) => checkRun({ role, provider: 'openrouter', model: MODEL, promptFile: 'p.md', root });
-  for (const role of ['code', 'test', 'docs']) assert.equal(run(role), null, role);
-  const refused = ['plan', 'review', 'board', 'board-chair', 'council-advisor', 'code-reviewer', 'security-auditor', 'PLAN', 'Review', 'Security-Auditor', ' plan', 'plan ', 'admin', '', '__proto__', 'constructor', undefined, null];
-  assert.deepEqual(refused.filter((role) => typeof run(role) !== 'string' || !/\S/.test(run(role))), []);
+  for (const role of ['code', 'test', 'docs', 'plan', 'review']) assert.equal(run(role), null, role);
+  const main = run('main');
+  assert.equal(typeof main, 'string');
+  assert.match(main, /run-session\.mjs/, 'it names the command that opens the main session');
+  // Whatever else is wrong with the call, main is still refused
+  assert.equal(typeof checkRun({ role: 'main', provider: 'openrouter', model: MODEL, promptFile: 'p.md', root }), 'string');
 });
 
-test('3.60.0 AC-6: --set refuses a provider for plan and review, a hand edit falls back, and those roles keep the plain forms', T, async (t) => {
-  const { setKey } = await load('providers.mjs');
+
+test('3.64.0 AC-6: --set takes a provider for plan and review once it has a key, and a hand edit with no key for its provider falls back', T, async (t) => {
   const m = modelsProject(t);
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
-  assert.equal(m.run(['--set', `code=${MODEL_VALUE}`]).status, 0, 'a provider role is allowed for code');
+  assert.equal(m.run(['--set', `plan=${MODEL_VALUE}`]).status, 1, 'no key yet');
+  assert.equal(fs.existsSync(m.modelsFile), false);
+  await addKey(t, m);
+  assert.equal(m.run(['--set', `code=${MODEL_VALUE}`]).status, 0);
   for (const role of ['plan', 'review', 'PLAN']) {
-    const before = fs.readFileSync(m.modelsFile, 'utf8');
     const r = m.run(['--set', `${role}=${MODEL_VALUE}`]);
-    assert.equal(r.status, 1, role);
-    assert.equal(fs.readFileSync(m.modelsFile, 'utf8'), before, `${role}: nothing written`);
+    assert.equal(r.status, 0, `${role} ${r.stderr}`);
+    assert.equal(JSON.parse(fs.readFileSync(m.modelsFile, 'utf8'))[role.toLowerCase()], MODEL_VALUE, role);
   }
   assert.equal(m.run(['--set', 'plan=sonnet:high', 'review=opus:high']).status, 0, 'plain forms still work');
   write(m.modelsFile, JSON.stringify({ code: MODEL_VALUE, plan: MODEL_VALUE, review: 'kimi/kimi-k2:high' }));
   const show = m.run(['--show']).stdout;
   assert.match(line(show, 'code'), /openrouter/);
-  assert.match(line(show, 'plan'), /^plan: opus \/ high/);
-  assert.match(line(show, 'review'), /^review: sonnet \/ high/);
+  assert.match(line(show, 'plan'), /openrouter/, 'a provider with a key is kept on plan');
+  assert.match(line(show, 'review'), /^review: sonnet \/ high/, 'a provider with no key falls back');
 });
 
-test('3.60.0 AC-6: ATTACK: the CLI refuses plan, review, board and unknown roles even with a provider written into models.json', T, async (t) => {
-  const p = await project(t, { models: { plan: MODEL_VALUE, review: MODEL_VALUE, code: MODEL_VALUE, 'security-auditor': MODEL_VALUE, board: MODEL_VALUE } });
+
+test('3.64.0 AC-6: ATTACK: the CLI refuses main and unknown roles even with a provider written into models.json; plan and review run with read tools only', T, async (t) => {
+  const p = await project(t, { models: { plan: MODEL_VALUE, review: MODEL_VALUE, code: MODEL_VALUE, 'security-auditor': MODEL_VALUE, board: MODEL_VALUE, tasks: { main: MODEL_VALUE } } });
   assertRan(await cli(p, ['code', 'p.md']));
-  for (const role of ['plan', 'review', 'security-auditor', 'board', 'board-chair', 'nope'])
-    assertRefused(await cli(p, [role, 'p.md']), /role|plan|review|provider/i);
+  for (const role of ['main', 'security-auditor', 'board', 'board-chair', 'nope'])
+    assertRefused(await cli(p, [role, 'p.md']), /run-session\.mjs|Unknown role or job/i);
+  for (const role of ['plan', 'review']) {
+    const r = await cli(p, [role, 'p.md']);
+    assertRan(r);
+    const args = r.spawned[0].args;
+    assert.deepEqual(flagList(args, '--allowedTools'), ['Read(./**)'], role);
+    for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash', 'Agent']) assert.equal(flagList(args, '--disallowedTools').includes(tool), true, `${role}: ${tool} is off`);
+  }
 });
 
 // ---- AC-7 ----
@@ -1380,11 +1375,13 @@ test('3.60.0 AC-7: setLimit keeps only a positive finite number', T, async (t) =
   assert.equal(readStore(file).limits.openrouter, 0.001);
 });
 
-test('3.60.0 AC-7: addSpend adds up by provider and day, and spentOn reads it back', T, async (t) => {
-  const { addSpend, spentOn, setKey, readStore } = await load('providers.mjs');
+
+test('3.64.0 AC-7: addSpend adds up by provider and day, and spentOn reads it back', T, async (t) => {
+  const { addSpend, spentOn, setProvider, readStore } = await load('providers.mjs');
   const file = path.join(tmpDir(t, 'rr-spend-'), 'providers.json');
+  ownVault(t, tmpDir(t, 'rr-spend-vault-'));
   assert.equal(spentOn('openrouter', '2026-11-01', file), 0, 'nothing yet');
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
+  assert.equal(setProvider('openrouter', ADDR.openrouter, OR_KEY, file), null);
   addSpend('openrouter', 0.25, '2026-11-01', file);
   addSpend('openrouter', 0.5, '2026-11-01', file);
   addSpend('openrouter', 3, '2026-11-02', file);
@@ -1394,7 +1391,8 @@ test('3.60.0 AC-7: addSpend adds up by provider and day, and spentOn reads it ba
   close(spentOn('deepseek', '2026-11-01', file), 7, 'other provider');
   assert.equal(spentOn('kimi', '2026-11-01', file), 0);
   assert.equal(spentOn('openrouter', '2026-10-31', file), 0);
-  assert.equal(readStore(file).keys.openrouter, OR_KEY, 'the ledger keeps the key');
+  assert.equal(readStore(file).keyMeta.openrouter.host, 'openrouter.ai', 'the ledger keeps the key metadata');
+  assert.equal(fs.readFileSync(file, 'utf8').includes(OR_KEY), false, 'and never the key');
 });
 
 test('3.60.0 AC-7: --set-limit sets the daily limit and refuses a bad one', T, async (t) => {
@@ -1411,10 +1409,15 @@ test('3.60.0 AC-7: --set-limit sets the daily limit and refuses a bad one', T, a
   assert.equal(fs.existsSync(path.join(m.root, '.claude', 'state', 'models.json')), false, 'the limit stays out of the project');
 });
 
-test('3.60.0 AC-7: the CLI refuses with no daily limit or a spent one, and sends nothing; under the limit it runs', T, async (t) => {
+
+test('3.64.0 AC-7: the CLI runs with no daily limit (it is optional); with a limit it refuses a spent one and sends nothing', T, async (t) => {
   const under = await project(t, { limit: 5, spent: 1 });
   assertRan(await cli(under, ['code', 'p.md']));
-  assertRefused(await cli(await project(t, { limit: null }), ['code', 'p.md']), /limit/i);
+  const none = await project(t, { limit: null });
+  const r = await cli(none, ['code', 'p.md']);
+  assertRan(r);
+  assert.doesNotMatch(r.stdout, /of \$/, 'no limit, so no "of $x" in the summary');
+  assertRan(await cli(await project(t, { limit: null, spent: 1000 }), ['code', 'p.md']), 'spend with no limit is not stopped');
   assertRefused(await cli(await project(t, { limit: 5, spent: 5 }), ['code', 'p.md']), /limit|spent/i);
   assertRefused(await cli(await project(t, { limit: 5, spent: 50 }), ['code', 'p.md']), /limit|spent/i);
 });
@@ -1442,11 +1445,12 @@ test('3.60.0 AC-7: going over the limit in a run cuts the next request, keeps th
   assert.match(r.stdout + r.stderr, /limit/i);
 });
 
-test('3.60.0 AC-7: the CLI refuses a role with no provider or a provider with no key, and sends nothing', T, async (t) => {
+
+test('3.64.0 AC-7: the CLI refuses a role with no external model or a provider with no key, and sends nothing', T, async (t) => {
   assertRan(await cli(await project(t), ['code', 'p.md']));
-  assertRefused(await cli(await project(t, { models: { code: 'sonnet:high' } }), ['code', 'p.md']), /provider/i);
-  assertRefused(await cli(await project(t, { models: null }), ['code', 'p.md']), /provider/i);
-  assertRefused(await cli(await project(t, { key: false }), ['code', 'p.md']), /key/i);
+  assertRefused(await cli(await project(t, { models: { code: 'sonnet:high' } }), ['code', 'p.md']), /no external model/i);
+  assertRefused(await cli(await project(t, { models: null }), ['code', 'p.md']), /no external model/i);
+  assertRefused(await cli(await project(t, { key: false }), ['code', 'p.md']), /No openrouter key[^\n]*--set-key openrouter/);
 });
 
 test('3.60.0 AC-7: costOf prices cache writes at cacheWrite; cacheWrite and cache each fall back to input', T, async () => {
@@ -1604,7 +1608,9 @@ const BAD_RULE = (rule) => {
   if (!c || c.includes('*') || /\)\s*,|,\s*Bash\(/.test(c)) return true;
   return c.split(/&&|\|\||[;|&\n`]|\$\(/).map((s) => s.trim()).some((s) => /^(curl|wget|sh|bash)(\s|$)/i.test(s) || /^(node|npx)$/i.test(s) || /^node\s+(-e|--eval|-p|--print)\b/i.test(s));
 };
-const FILE_TOOLS = ['Edit', 'Glob', 'Grep', 'Read', 'Write'];
+// 3.64.0: file rules go by path (Read covers Grep and Glob, Edit covers Write). A bare tool name would also allow files outside the project.
+const FILE_TOOLS = ['Edit(./**)', 'Read(./**)'];
+const BARE_FILE_TOOLS = ['Edit', 'Glob', 'Grep', 'Read', 'Write', 'MultiEdit', 'NotebookEdit'];
 const COMMANDS = { test: 'npm test', lint: 'npm run lint', typecheck: 'npm run typecheck', build: 'npm run build' };
 
 test('3.60.0 AC-8: docs has the file tools and no shell, test adds its command only, code adds the commands given, Agent is always disallowed', T, async () => {
@@ -1615,7 +1621,10 @@ test('3.60.0 AC-8: docs has the file tools and no shell, test adds its command o
   for (const f of FILE_TOOLS) assert.equal(code.includes(f), true, f);
   assert.deepEqual(Object.values(COMMANDS).filter((c) => !code.includes(`Bash(${c})`)), [], 'every command has its rule');
   assert.deepEqual(code.filter(BAD_RULE), []);
-  for (const role of ['docs', 'test', 'code']) assert.equal(roleTools(role, COMMANDS).disallowed.includes('Agent'), true, role);
+  for (const role of ['docs', 'test', 'code']) {
+    assert.equal(roleTools(role, COMMANDS).disallowed.includes('Agent'), true, role);
+    assert.deepEqual(roleTools(role, COMMANDS).allowed.filter((r) => BARE_FILE_TOOLS.includes(r)), [], `${role}: no bare file tool name, which would reach files outside the project`);
+  }
 });
 
 test('3.60.0 AC-8: with no command given there is no shell rule at all', T, async () => {
@@ -1654,7 +1663,7 @@ test('3.60.0 AC-8: childArgs is a string array with the fixed flags', T, async (
   assert.deepEqual(JSON.parse(value('--mcp-config')), { mcpServers: {} });
   assert.equal(flagList(args, '--disallowedTools').includes('Agent'), true);
   const allowed = flagList(args, '--allowedTools');
-  assert.equal(allowed.includes('Read'), true);
+  assert.equal(allowed.includes('Read(./**)'), true);
   assert.equal(allowed.includes('Bash(npm test)'), true);
 });
 
@@ -1706,16 +1715,18 @@ test('3.60.0 AC-8: a real run: claude by array without a shell, from the project
 
 // ---- AC-9 ----
 
-test('3.60.0 AC-9: checkRun refuses an unknown provider and a model id that fails the pattern', T, async (t) => {
+
+test('3.64.0 AC-9: checkRun refuses a provider name that is not well formed and a model id that fails the pattern', T, async (t) => {
   const { checkRun } = await load('run-role.mjs');
   const root = tmpDir(t, 'rr-model-id-');
   write(path.join(root, 'p.md'), 'x');
   const run = (over) => checkRun({ role: 'code', provider: 'openrouter', model: MODEL, promptFile: 'p.md', root, ...over });
   for (const model of [MODEL, 'kimi-k2', 'deepseek/deepseek-r1:free', '~vendor/model', 'Kimi-K2.5', '0model']) assert.equal(run({ model }), null, model);
-  for (const provider of ['openrouter', 'deepseek', 'kimi']) assert.equal(run({ provider }), null, provider);
+  // The name is the user's own: any well-formed one passes here, and whether it has a key is the next step
+  for (const provider of ['openrouter', 'deepseek', 'kimi', 'evil', 'my-llm-2']) assert.equal(run({ provider }), null, provider);
   const badModels = ['', '-x', '--dangerously-skip-permissions', '.x', '/x', ':x', 'a b', 'a;b', 'a$b', 'a`b', 'a\nb', 'a\n', 'modelş', undefined, null];
   assert.deepEqual(badModels.filter((model) => typeof run({ model }) !== 'string'), [], 'model ids');
-  const badProviders = ['evil', '', 'OPENROUTER', '__proto__', 'constructor', 'toString', 'https://evil.example', undefined];
+  const badProviders = ['', 'OPENROUTER', 'Evil', '__proto__', 'constructor', 'toString', 'con', 'nul', 'com1', 'https://evil.example', 'a/b', '../x', undefined, null];
   assert.deepEqual(badProviders.filter((provider) => typeof run({ provider }) !== 'string'), [], 'providers');
 });
 
@@ -1990,50 +2001,69 @@ function externalSection(file) {
 }
 const within = (a, b, n = 300) => new RegExp(`(${a})[\\s\\S]{0,${n}}(${b})|(${b})[\\s\\S]{0,${n}}(${a})`, 'i');
 
+// 3.64.0: the section is built around --set-key <name>, --set-limit <name> 5, --remove-key <name> and run-session.mjs. The ready-made providers,
+// the key variables (setx), the fixed role list and the .env advice are gone from it on purpose; the checks below pin what replaced them.
 const COMMANDS_IN_DOCS = {
   'adding with --set-key': /models\.mjs --set-key/,
   'removing with --remove-key': /models\.mjs --remove-key/,
-  'adding with setx': /\bsetx (OPENROUTER|DEEPSEEK|MOONSHOT)_API_KEY\b/,
-  'removing a wrongly named variable': /\[Environment\]::SetEnvironmentVariable\('DEEPSEEK_API_KEY', \$null, 'User'\)/,
   'the daily limit command': /models\.mjs --set-limit/,
+  'the main session command': /run-session\.mjs/,
   'the proxy': /\bproxy\b/i,
   '.env named': /\.env\b/,
 };
 const PROSE_EN = {
-  'it is possible': within('external (models?|providers?)|outside (models?|providers?)', '\\b(can|possible|may|lets? you)\\b'),
-  'roles that can be given: code, test, docs': /\bcode\b[\s\S]{0,60}\btest\b[\s\S]{0,60}\bdoc(s|umentation)\b/i,
-  'plan cannot be given': within('\\bplan(ning)?\\b', "\\b(cannot|can't|not|never|stays?|remains?|keeps?)\\b"),
-  'review cannot be given': within('\\breview\\b', "\\b(cannot|can't|not|never|stays?|remains?|keeps?)\\b"),
-  'board cannot be given': within('\\bboard\\b|security-auditor', "\\b(cannot|can't|not|never|stays?|remains?|keeps?)\\b"),
-  'the daily limit': within('\\bdaily\\b', '\\blimit\\b', 60),
+  'any provider can be added': /any provider that accepts the Anthropic Messages format/i,
+  'any job can run on a model you added': /any job can run on a model you added/i,
+  'Claude stays the recommendation for main, planning and review': /recommend[^.]{0,80}main job, planning and review|main job, planning and review[^.]{0,80}recommend/i,
+  'address and key sealed together in the vault': /sealed together in the system key vault/i,
+  'a key goes only to the address it was entered with': /goes only to the address it was entered with/i,
+  'no vault, no external models': /no vault[^.]{0,60}not available/i,
+  'system variables and .env are not read': /(system variables|\.env)[^.]{0,40}\bnot read\b/i,
+  'the panel never takes a key': /panel never takes a key/i,
+  'copy something else after pasting': /copy something else/i,
+  'the main job opens in your own terminal': within('main job', 'own terminal', 60),
+  'a job set to a Claude model stops there': /Claude model stops/i,
+  'the daily limit is optional': /limit is optional|optional[^.]{0,30}limit/i,
+  'with no limit the ceiling is the provider account': /no limit[^.]{0,80}(ceiling|provider account)/i,
+  'plan and review can only read': /plan and review[^.]{0,80}only read/i,
   'the provider sees the data': within('\\b(provider|model)\\b', '\\b(sees?|receives?|reads?|gets?)\\b', 120),
+  'the provider sees everything the job can see': /sees everything the job can see/i,
   'the user name in the path': within('\\b(folder|path)\\b', '\\buser ?name\\b', 120),
   'sent data does not come back': /(cannot|can't|can not|never)[^.]{0,60}(taken back|undone|undo|recall|retriev|deleted|returned|comes? back)|irreversib|one-way/i,
-  'an allowed command can run code that reads': /\ballowed\b[^.]{0,40}\bcommand[\s\S]{0,300}\bread\b/i,
-  'project files at risk': /\bproject files\b/i,
-  'the user\'s own files at risk': /\b(your|user's)( own)? files\b|\bown files\b/i,
-  '.env is not used': within('\\.env\\b', "\\b(not used|not read|isn't used|isn't read|never (used|read)|does not (use|read)|doesn't (use|read)|not supported|unsupported)\\b"),
-  'why not .env': within('\\.env\\b', '\\b(dotenv|loads?|framework)\\b'),
-  '.env: take the key out': within('\\.env\\b', '\\b(remove|delete|take)\\b'),
-  '.env: replace the key': within('\\.env\\b', '\\b(rotate|revoke|regenerate|replace|renew|new key)\\b'),
+  'the remaining risk is named': /remaining risk/i,
+  'a program running as you can open the vault': /program running as you[^.]{0,60}\bopen it\b/i,
+  'the guards only make it harder': /only make that harder/i,
+  'an allowed command runs code the model wrote': /allowed command[^.]{0,60}runs code the model wrote/i,
+  'there is no sandbox': /no sandbox/i,
+  'no code and test jobs where real secrets are': /real secrets/i,
+  'the panel address is editable and the run line shows the real one': /plain file[\s\S]{0,120}address the key really went to/i,
 };
 const PROSE_TR = {
-  'mümkün olduğu': within('dış (model|sağlayıcı)', 'mümkün|verilebilir|verebilir|kullanılabilir|kullanabilir|çalıştırılabilir|çalıştırabilir'),
-  'verilebilen roller: kod, test, doküman': /\bkod[\s\S]{0,60}\btest[\s\S]{0,60}(doküman|belge)/i,
-  'plan verilemez': within('\\bplan', 'verilemez|verilmez|kalır|olmaz'),
-  'inceleme verilemez': within('inceleme|\\breview\\b', 'verilemez|verilmez|kalır|olmaz'),
-  'kurul verilemez': within('kurul|security-auditor', 'verilemez|verilmez|kalır|olmaz'),
-  'günlük sınır': within('günlük', 'sınır|limit', 60),
+  'her sağlayıcı eklenebilir': /her sağlayıcıyı ekleyebilirsin/i,
+  'eklenen model her işte çalışır': /her işte çalışabilir/i,
+  'ana iş, planlama ve inceleme için Claude': /ana iş, planlama ve inceleme için[^.]{0,40}Claude|Claude[^.]{0,40}ana iş, planlama ve inceleme/i,
+  'adres ve anahtar kasada birlikte mühürlenir': /birlikte mühürlenir/i,
+  'anahtar yalnız girildiği adrese gider': /yalnız girildiği adrese gider/i,
+  'kasa yoksa dış model olmaz': /kasa yoksa dış model kullanılamaz/i,
+  'sistem değişkenleri ve .env okunmaz': /(sistem değişkenleri|\.env)[^.]{0,40}okunmaz/i,
+  'panel anahtar almaz': /panel anahtar almaz/i,
+  'yapıştırdıktan sonra başka bir şey kopyala': /başka bir şey kopyala/i,
+  'ana iş kendi terminalinde açılır': within('ana iş', 'kendi terminal', 60),
+  'Claude modeli seçili iş durur': /Claude modeli seçili bir iş durur/i,
+  'günlük sınır isteğe bağlı': /sınır[^.]{0,30}isteğe bağlı|isteğe bağlı[^.]{0,30}sınır/i,
+  'sınır yoksa tek tavan sağlayıcı hesabı': /sınır yoksa[^.]{0,80}sağlayıcı hesab/i,
+  'plan ve inceleme yalnız okur': /plan ve inceleme işleri yalnız okuyabilir/i,
   'sağlayıcı veriyi görür': within('sağlayıcı', 'görür|görebilir|alır|okur', 120),
+  'işin görebildiği her şeyi görür': /işin görebildiği her şeyi görür/i,
   'yoldaki kullanıcı adı': within('klasör|yol', 'kullanıcı ad', 120),
   'gönderilen geri dönmez': /geri (alınamaz|alınmaz|dönmez|gelmez|getirilemez)/i,
-  'izinli komutun çalıştırdığı kod okur': /[iİ]zin(li| verilen)[^.]{0,40}komut[\s\S]{0,300}oku/i,
-  'proje dosyaları risk altında': /proje dosyalar/i,
-  'kullanıcının kendi dosyaları risk altında': /kendi dosyalar/i,
-  '.env kullanılmaz': within('\\.env\\b', 'kullanılmaz|okunmaz|desteklenmez|kullanmaz|okumaz'),
-  '.env neden yok': within('\\.env\\b', 'dotenv|yükle|framework'),
-  '.env: anahtarı çıkar': within('\\.env\\b', 'kaldır|sil|çıkar'),
-  '.env: anahtarı yenile': within('\\.env\\b', 'yenile|iptal|değiştir|yeni (bir )?anahtar'),
+  'kalan risk anılır': /kalan risk/i,
+  'senin adınla çalışan program kasayı açabilir': /adınla çalışan[^.]{0,40}kasayı/i,
+  'korumalar yalnız zorlaştırır': /yalnız zorlaştırır/i,
+  'izinli komut modelin yazdığı kodu çalıştırır': /izinli[^.]{0,40}komut[^.]{0,60}kodu çalıştırır/i,
+  'sandbox yok': /sandbox yok/i,
+  'gerçek sır olan projede kod ve test işi verilmez': /gerçek sır/i,
+  'paneldeki adres düz dosyadan, çalıştırma satırı gerçeği gösterir': /düz bir dosya[\s\S]{0,120}gerçekten gittiği adres/i,
 };
 
 for (const [file, prose] of [['README.md', PROSE_EN], ['kit/guide.html', PROSE_EN], ['README.tr.md', PROSE_TR], ['kit/guide.tr.html', PROSE_TR]]) {
@@ -2044,6 +2074,14 @@ for (const [file, prose] of [['README.md', PROSE_EN], ['kit/guide.html', PROSE_E
     assert.deepEqual(gaps, []);
   });
 }
+
+test('3.64.0 AC-11: no external models section teaches a key variable, setx or a plain key file: keys come only from --set-key', T, () => {
+  for (const file of ['README.md', 'README.tr.md', 'kit/guide.html', 'kit/guide.tr.html']) {
+    const section = externalSection(file);
+    assert.equal(typeof section, 'string', file);
+    assert.doesNotMatch(section, /_API_KEY|\bsetx\b|SetEnvironmentVariable|VIBE_KIT_VAULT|openrouter\.ai|api\.deepseek|moonshot/i, file);
+  }
+});
 
 test('3.60.0 AC-11: the Turkish sections are written in Turkish around the commands, not copied from English', T, () => {
   for (const file of ['README.tr.md', 'kit/guide.tr.html']) {
@@ -2395,7 +2433,8 @@ test('3.60.0 AC-7: spendAllowed is true only when the store reads cleanly and th
   assert.equal(spendAllowed('openrouter', 5, DAY, file), false, 'over the limit');
   assert.equal(spendAllowed('openrouter', 5, '2026-11-02', file), true, 'another day is its own');
   assert.equal(spendAllowed('deepseek', 5, DAY, file), true, 'another provider is its own');
-  for (const limit of [0, -1, NaN, undefined]) assert.equal(spendAllowed('deepseek', limit, DAY, file), false, `limit ${limit}`);
+  for (const limit of [0, -1, NaN]) assert.equal(spendAllowed('deepseek', limit, DAY, file), false, `limit ${limit}`);
+  assert.equal(spendAllowed('openrouter', undefined, DAY, file), true, 'no limit set: nothing to stop (3.64.0)');
 });
 
 test('3.60.0 AC-7: ATTACK: spendAllowed is false for a missing or broken store', T, async (t) => {
@@ -2436,10 +2475,11 @@ function spendScript(t) {
 }
 
 test('3.60.0 AC-7: ATTACK: concurrent addSpend calls from separate processes lose nothing and leave no lock behind', T, async (t) => {
-  const { setKey, setLimit, spentOn, readStore } = await load('providers.mjs');
+  const { setProvider, setLimit, spentOn, readStore } = await load('providers.mjs');
   const dir = tmpDir(t, 'rr-race-');
   const file = path.join(dir, 'providers.json');
-  assert.equal(setKey('openrouter', OR_KEY, file), null);
+  ownVault(t, tmpDir(t, 'rr-race-vault-'));
+  assert.equal(setProvider('openrouter', ADDR.openrouter, OR_KEY, file), null);
   setLimit('openrouter', 5, file);
   const script = spendScript(t);
   const start = Date.now() + 1500;
@@ -2452,7 +2492,7 @@ test('3.60.0 AC-7: ATTACK: concurrent addSpend calls from separate processes los
   })));
   close(spentOn('openrouter', DAY, file), 0.8, 'the ledger');
   assert.deepEqual(runs.filter((r) => r.status !== 0).map((r) => r.err.split('\n').find((l) => /Error/.test(l))), [], 'every process ends well');
-  assert.equal(readStore(file).keys.openrouter, OR_KEY, 'the key stays');
+  assert.equal(readStore(file).keyMeta.openrouter.host, 'openrouter.ai', 'the key metadata stays');
   assert.equal(readStore(file).limits.openrouter, 5, 'the limit stays');
   assert.deepEqual(fs.readdirSync(dir), ['providers.json'], 'no lock or temp file stays behind');
 });
@@ -2528,7 +2568,7 @@ test('3.60.0 AC-1: ATTACK: parseExternal returns null without a known provider, 
   const bad = [
     'openrouter/foo', 'openrouter/foo:bar', 'openrouter/foo:', 'openrouter/foo:HIGH', 'openrouter/foo:high ', 'openrouter/foo:high\n', 'openrouter/foo:max', 'openrouter/a/b:batch',
     'openrouter/:high', 'openrouter:high', 'openrouter', '/foo:high', ':high', '', ' ', 'sonnet:high',
-    'evil/x/y:high', 'OPENROUTER/x:high', '__proto__/x:high', 'constructor/x:high', 'toString/x:high', 'https://evil.example/x:high',
+    'Evil/x/y:high', 'con/x/y:high', 'nul/x/y:high', 'OPENROUTER/x:high', '__proto__/x:high', 'constructor/x:high', 'toString/x:high', 'https://evil.example/x:high',
     'openrouter/-x:high', 'openrouter/--dangerously-skip-permissions:high', 'openrouter/a b:high', 'openrouter/a;b:high', 'openrouter/modelş:high', 'openrouter/a\nb:high',
     undefined, null, 12, {}, [], ['openrouter/foo:high'],
   ];
@@ -2554,11 +2594,13 @@ test('3.60.0 AC-1: the CLI passes the model and effort of a good value, with a c
   assert.equal(env.CLAUDE_CODE_EFFORT_LEVEL, 'high');
 });
 
-test('3.60.0 AC-1: models.mjs --set and parseExternal read a value the same way', T, async (t) => {
-  const { parseExternal, setKey } = await load('providers.mjs');
+
+test('3.64.0 AC-1: models.mjs --set and parseExternal read a value the same way', T, async (t) => {
+  const { parseExternal } = await load('providers.mjs');
   const m = modelsProject(t);
-  assert.equal(setKey('openrouter', OR_KEY, m.file), null);
-  for (const value of ['openrouter/a/b:batch:high', MODEL_VALUE, 'openrouter/foo', 'openrouter/foo:bar', 'openrouter/foo:', 'evil/x/y:high', 'openrouter/-x:high', 'openrouter/a;b:high'])
+  await addKey(t, m);
+  await addKey(t, m, 'evil', DS_KEY, 'https://evil.example/anthropic'); // a well-formed name with a key of its own
+  for (const value of ['openrouter/a/b:batch:high', MODEL_VALUE, 'evil/x/y:high', 'openrouter/foo', 'openrouter/foo:bar', 'openrouter/foo:', 'Evil/x/y:high', 'con/x/y:high', 'openrouter/-x:high', 'openrouter/a;b:high'])
     assert.equal(m.run(['--set', `code=${value}`]).status === 0, parseExternal(value) !== null, value);
 });
 
