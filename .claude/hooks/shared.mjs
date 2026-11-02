@@ -11,8 +11,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// The name of the model panel's temporary page (it holds the one-time token), also spelled with a glob. A text check: a search of the whole temp folder by content stays a known limit.
-export const PANEL_TOKEN = /vibe-panel-|panel-open(?:\.html|(?![\w.-]))|vib[^\s/\\;&|]*[*?]|v[*?]be|[*?][^\s/\\;&|]*panel-|panel-o[^\s/\\;&|]*[*?]/i;
+// The name of the model panel's temporary page (it holds the one-time token), also spelled with a glob or a Windows 8.3 short name. A text check: a search of the whole temp folder by content stays a known limit.
+export const PANEL_TOKEN = /vibe-panel-|panel-open(?:\.html|(?![\w.-]))|vib[^\s/\\;&|]*[*?]|v[*?]be|[*?][^\s/\\;&|]*panel-|panel-o[^\s/\\;&|]*[*?]|\b(?:vibe-p|panel-|vi[\da-f]{4}|pa[\da-f]{4})~\d/i;
 
 // Was this file started as the program (not imported)? Compared as real paths: a project opened through a symlink or a
 // junction (macOS /tmp, linked folders, npx's node_modules/.bin) starts the script by its linked path, while

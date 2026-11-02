@@ -7,7 +7,7 @@ Items with an "Adapt by hand" note concern files owned by the project; the updat
 
 ### Fixed
 - The panel opens the browser only through a program in the real system folder: a `SystemRoot` set by a project is checked first, and Linux calls `/usr/bin/xdg-open` by full path.
-- The panel's one-time page is now also out of reach of the Grep and Glob tools and of glob spellings in commands, and a command sending a panel token to a local address asks first.
+- The panel's one-time page is now also out of reach of the Grep and Glob tools and of glob and Windows short-name spellings in commands, and a command sending a panel token to a local address asks first.
 
 ## [3.63.0] - 2026-11-02
 

@@ -3073,3 +3073,38 @@ test('AC-63.28 ATTACK: the guard asks on globs of the panel folder and on a pane
     assert.deepEqual(free.filter((c) => evaluate(c, ctx) !== null), [], `free (${JSON.stringify(ctx)})`);
   }
 });
+
+// ---- Windows 8.3 short names of the panel's temporary page (AC-63.29) ----
+
+test('AC-63.29 ATTACK: doc-guard denies the 8.3 short spellings of the panel folder and file, in any case, in Read, Grep and Glob', T, () => {
+  const short = ['VIBE-P~1', 'vibe-p~2', String.raw`C:\Temp\VIBE-P~1\PANEL-~1.HTM`, '/tmp/VIBE-P~1/x', 'VI3A2F~1', 'PANEL-~1.HTM', 'panel-~1'];
+  const names = [...new Set(short.flatMap((n) => [n, n.toLowerCase(), n.toUpperCase()]))];
+  const slots = [['Read', 'file_path'], ['Grep', 'path'], ['Grep', 'glob'], ['Glob', 'path'], ['Glob', 'pattern']];
+  const missed = [];
+  for (const [tool, field] of slots) for (const name of names) {
+    if (docGuardDecision(tool, { [field]: name, ...(tool === 'Grep' ? { pattern: 'x' } : {}), ...(tool === 'Glob' && field === 'path' ? { pattern: '*' } : {}) }) !== 'deny') missed.push(`${tool}.${field}=${name}`);
+  }
+  assert.deepEqual(missed, []);
+});
+
+test('AC-63.29 ATTACK: the guard asks on a command that names the 8.3 short spelling of the panel folder or file', T, async () => {
+  const { evaluate } = await load('destructive-guard.mjs');
+  const asked = [String.raw`type C:\Temp\VIBE-P~1\PANEL-~1.HTM`, 'cat /c/Temp/VIBE-P~1/PANEL-~1.HTM', 'dir VI3A2F~1'];
+  for (const ctx of GUARD_CTXS) {
+    assert.deepEqual(asked.filter((c) => evaluate(c, ctx)?.decision !== 'ask'), [], `asked (${JSON.stringify(ctx)})`);
+  }
+});
+
+test('AC-63.29 no false alarm: doc-guard passes other ~1 names, and the guard leaves git revisions like HEAD~1 alone', T, async () => {
+  const ok = [
+    ['Read', { file_path: 'src/file~1.txt' }], ['Read', { file_path: 'docs/PROGRA~1/a.md' }], ['Read', { file_path: String.raw`C:\PROGRA~1\x` }], ['Read', { file_path: 'README.md' }],
+    ['Grep', { pattern: 'x', path: 'docs/PROGRA~1' }], ['Glob', { pattern: 'src/file~1.txt' }],
+  ];
+  for (const [tool, input] of ok) assert.equal(docGuardDecision(tool, input), null, `${tool} ${JSON.stringify(input)} must pass`);
+
+  const { evaluate } = await load('destructive-guard.mjs');
+  const free = ['git diff HEAD~1', 'git show main~2', 'git log review~3'];
+  for (const ctx of GUARD_CTXS) {
+    assert.deepEqual(free.filter((c) => evaluate(c, ctx) !== null), [], `free (${JSON.stringify(ctx)})`);
+  }
+});
