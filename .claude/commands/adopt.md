@@ -19,7 +19,7 @@ This is a **9-step alignment wizard** (0-9). It is the counterpart of `/start` f
 
 0. **Language (before anything else):** Apply the language question at the start of `/start` Step 0 exactly (question in English, Turkish / English / Other, `node .claude/hooks/lang.mjs --set <code>`, translation if needed). If a language is already chosen, do not ask again.
 1. `docs/workflow/progress.md` → `**Active phase:** Setup (adopt)`, `**Setup step:** 0/9`.
-2. Apply these items from `/start` Step 0 exactly: Profile (0), narrator mode (0b), tool (0c), auto memory (0d), model and effort (0e, `docs/workflow/models.md`), environment check (1), plugins (2), caveman (3), code map (5), notifications (6), dashboard (6b). The code map is even more useful in an existing project; make "Install" the recommended option.
+2. Apply these items from `/start` Step 0 exactly: Profile (0), narrator mode (0b), tool (0c), auto memory (0d), model and effort (0e, the one question: the recommended setup, your saved default, or the panel; `docs/workflow/models.md`), environment check (1), plugins (2), caveman (3), code map (5), notifications (6), dashboard (6b). The code map is even more useful in an existing project; make "Install" the recommended option.
 3. **Scan depth:** Read the limit and ask. Show the estimated costs:
    - **Quick scan (Recommended, on Pro):** Structure, stack, tests, git history, docs. About 10-20% of the 5-hour limit.
    - **Deep scan:** In addition to the quick scan, the selected findings reports (`/findings-tech`, `-security`, `-ux` etc.). About 8-15% more per report. Ask which reports to run with multi-select.

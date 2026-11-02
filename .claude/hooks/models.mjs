@@ -8,10 +8,12 @@
 // External model for a role: code=openrouter/deepseek/deepseek-v4.1-flash-1017:high (runs through run-role.mjs). Run these in your own terminal:
 //   node .claude/hooks/models.mjs --set-key <provider>      asks for the key, hidden       --remove-key <provider>      --set-limit <provider> <usd per day>
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { findRoot, isMain } from './shared.mjs';
 import { t } from './lang.mjs';
-import { PROVIDERS, EXTERNAL_ROLES, EFFORTS, parseExternal, isProvider, resolveKey, setKey, removeKey, setLimit } from './providers.mjs';
+import { PROVIDERS, EXTERNAL_ROLES, EFFORTS, parseExternal, isProvider, hasKey, setKey, removeKey, setLimit } from './providers.mjs';
 
 export { EFFORTS };
 
@@ -40,13 +42,13 @@ export const JOBS = {
 };
 export const isJob = (job) => Object.hasOwn(ROLES, String(job)) || Object.hasOwn(JOBS, String(job));
 export const roleOf = (job) => { const head = job.split('.')[0]; return head === 'findings' || head === 'board' ? 'review' : head; };
-const recommendedFor = (job) => (job === 'board.commit' ? 'haiku:low' : RECOMMENDED[job === 'main' ? 'plan' : roleOf(job)]);
+export const recommendedFor = (job) => (job === 'board.commit' ? 'haiku:low' : RECOMMENDED[job === 'main' ? 'plan' : roleOf(job)]);
 
 export const modelsFile = (root = findRoot()) => path.join(root, '.claude', 'state', 'models.json');
 
 function validExternal(role, value) {
   const choice = parseExternal(value);
-  return Boolean(choice) && EXTERNAL_ROLES.includes(role) && resolveKey(choice.provider) !== null;
+  return Boolean(choice) && EXTERNAL_ROLES.includes(role) && hasKey(choice.provider);
 }
 
 // max works in a subagent call but not in the effortLevel setting that main writes to
@@ -61,7 +63,7 @@ const pretty = (value) => { const i = value.lastIndexOf(':'); return i < 0 ? val
 const clean = (x) => String(x).replace(/[\p{Cc}\u2028\u2029]/gu, ' ').slice(0, 40);
 const isObject = (x) => Boolean(x) && typeof x === 'object' && !Array.isArray(x);
 
-function readSaved(file) {
+export function readSaved(file) {
   let parsed;
   try { parsed = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) {
     return { saved: {}, tasks: {}, problem: e.code === 'ENOENT' ? null : `${file} is unreadable` };
@@ -79,20 +81,20 @@ export function readModels(file = modelsFile()) {
 const links = (job) => [job, ...(JOBS[job] ?? [])];
 const savedAt = ({ saved, tasks }, link) => (Object.hasOwn(ROLES, link) ? saved[link] : tasks[link]);
 
-// A link with a bad value is skipped and the reason kept: job, its links, then the recommended value
+// A link with a bad value is skipped and the reason kept: job, its links, then the recommended value. source: the link that gave the value, or 'recommended'.
 export function resolveJob(job, file = modelsFile()) {
   const store = readSaved(file);
   const notes = store.problem ? [store.problem] : [];
-  let value = recommendedFor(job);
+  let value = recommendedFor(job), source = 'recommended';
   for (const link of links(job)) {
     const candidate = savedAt(store, link);
     if (candidate === undefined) continue;
-    if (validFor(job, candidate) && validFor(link, candidate)) { value = candidate; break; }
+    if (validFor(job, candidate) && validFor(link, candidate)) { value = candidate; source = link; break; }
     const external = parseExternal(candidate);
-    notes.push(`${link}: "${clean(candidate)}" skipped, ${external && EXTERNAL_ROLES.includes(roleOf(job)) && resolveKey(external.provider) === null ? `no key for ${external.provider}` : `invalid for ${job}`}`);
+    notes.push(`${link}: "${clean(candidate)}" skipped, ${external && EXTERNAL_ROLES.includes(roleOf(job)) && !hasKey(external.provider) ? `no key for ${external.provider}` : `invalid for ${job}`}`);
   }
   if (job === 'code.simple' && value === resolveJob('main', file).value) value = MAIN_SENTINEL;
-  return { value, notes };
+  return { value, notes, source };
 }
 
 // The first saved value on the chain, checked or not: run-role reports what is wrong with it (no key, no limit)
@@ -105,6 +107,17 @@ export function savedChoice(job, file = modelsFile()) {
 export const customJobs = (file = modelsFile()) => Object.entries(readSaved(file).tasks).filter(([job, value]) => Object.hasOwn(JOBS, job) && validFor(job, value));
 
 const forLine = (job, value) => (parseExternal(value) ? `${value} · node .claude/hooks/run-role.mjs ${job} <prompt file>` : value);
+
+// A file is replaced whole: a write that fails halfway leaves the old one as it was
+export function replaceFile(file, text) {
+  const tmp = `${file}.${process.pid}.tmp`;
+  try {
+    fs.writeFileSync(tmp, text);
+    fs.renameSync(tmp, file);
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
+}
 
 // Runs before models.json is written, so a broken settings file stops the whole --set. value null removes the choice, only if it is still the one the kit wrote (previous).
 function writeMainSession(file, value, previous) {
@@ -122,19 +135,22 @@ function writeMainSession(file, value, previous) {
   else return null;
   try {
     fs.mkdirSync(path.dirname(settingsFile), { recursive: true });
-    fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n');
+    replaceFile(settingsFile, JSON.stringify(settings, null, 2) + '\n');
   } catch (e) {
     return `Could not write the file (${e.code ?? e.message}): ${settingsFile}`;
   }
   return null;
 }
 
-function writeSaved(file, saved, tasks) {
+const serialize = (saved, tasks) => {
   const { tasks: _, ...rest } = saved;
-  const next = Object.keys(tasks).length ? { ...rest, tasks } : rest;
+  return JSON.stringify(Object.keys(tasks).length ? { ...rest, tasks } : rest, null, 2) + '\n';
+};
+
+function writeSaved(file, saved, tasks) {
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
+    replaceFile(file, serialize(saved, tasks));
   } catch (e) {
     return `Could not write the file (${e.code ?? e.message}): ${file}`;
   }
@@ -178,6 +194,84 @@ export function resetModels(names, file = modelsFile()) {
     if (error) return error;
   }
   return writeSaved(file, next, nextTasks);
+}
+
+// A string that changes when the file does: the panel sends it back with a write, so a page that is out of date cannot overwrite a newer choice
+export function modelsVersion(file = modelsFile()) {
+  try { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex').slice(0, 16); } catch { return 'none'; }
+}
+
+const refuse = (code, message) => ({ ok: false, code, message });
+
+// The panel's write: all or nothing. changes is { job or role: value | null }, null resets it. The file is replaced whole (temp file, then rename),
+// and a main change writes settings.local.json too, before the rename, so a broken settings file stops the whole call.
+export function applyChanges({ changes, ifVersion, clearJobsUnder, overwriteBroken } = {}, file = modelsFile()) {
+  if (!isObject(changes)) return refuse('invalid', 'changes must be an object of job: value pairs.');
+  if (clearJobsUnder !== undefined && !Object.hasOwn(ROLES, clearJobsUnder)) return refuse('invalid', `Unknown role: ${clean(clearJobsUnder)}`);
+  const picked = new Map();
+  for (const [name, raw] of Object.entries(changes)) {
+    if (!isJob(name)) return refuse('invalid', `Unknown job: ${clean(name)}`);
+    // A model id keeps its case; an alias is lower case
+    const value = typeof raw === 'string' && !raw.includes('/') ? raw.toLowerCase() : raw;
+    if (value !== null && !validFor(name, value)) return refuse('invalid', `${name}: ${clean(JSON.stringify(raw))} is not a valid choice here.`);
+    picked.set(name, value);
+  }
+  if (ifVersion !== undefined && ifVersion !== modelsVersion(file)) return refuse('conflict', 'The choice was changed somewhere else since this page loaded. Reload it, then try again.');
+  const { saved, tasks, problem } = readSaved(file);
+  if (problem && overwriteBroken !== true) return refuse('broken', problem);
+  const next = { ...saved }, nextTasks = { ...tasks };
+  if (clearJobsUnder) for (const job of Object.keys(nextTasks)) if (Object.hasOwn(JOBS, job) && job !== 'board.commit' && roleOf(job) === clearJobsUnder) delete nextTasks[job];
+  for (const [name, value] of picked) {
+    const target = Object.hasOwn(ROLES, name) ? next : nextTasks;
+    if (value === null) delete target[name]; else target[name] = value;
+  }
+  let tmp = null;
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    tmp = `${file}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, serialize(next, nextTasks));
+    if (picked.has('main')) {
+      const error = writeMainSession(file, picked.get('main'), tasks.main);
+      if (error) return refuse('invalid', error);
+    }
+    fs.renameSync(tmp, file);
+    tmp = null;
+  } catch (e) {
+    return refuse('failed', `Could not write the file (${e.code ?? 'error'}): ${file}`);
+  } finally {
+    if (tmp) fs.rmSync(tmp, { force: true });
+  }
+  return { ok: true, version: modelsVersion(file) };
+}
+
+// The global default: what this user prefers for new projects (/start offers it)
+const defaultsFile = () => path.join(os.homedir(), '.vibe-kit', 'models-default.json');
+export function readDefaults() {
+  try { const d = JSON.parse(fs.readFileSync(defaultsFile(), 'utf8')); return isObject(d) ? d : null; } catch { return null; }
+}
+export function setDefaults(file = modelsFile()) {
+  const { saved, tasks, problem } = readSaved(file);
+  if (problem) return problem;
+  const roles = Object.fromEntries(Object.keys(ROLES).filter((r) => saved[r] !== undefined).map((r) => [r, saved[r]]));
+  const jobs = Object.fromEntries(Object.entries(tasks).filter(([job]) => Object.hasOwn(JOBS, job)));
+  try {
+    fs.mkdirSync(path.dirname(defaultsFile()), { recursive: true, mode: 0o700 });
+    const tmp = `${defaultsFile()}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, serialize(roles, jobs), { mode: 0o600 });
+    fs.renameSync(tmp, defaultsFile());
+  } catch (e) {
+    return `Could not write the default (${e.code ?? 'error'}).`;
+  }
+  return null;
+}
+// This command runs without approval, and an external model spends money and sends the project out: external values stay out, the user picks them in the panel
+export function useDefaults(file = modelsFile()) {
+  const d = readDefaults();
+  if (!d) return 'There is no saved default yet. Save one in the panel first.';
+  const changes = {};
+  for (const [name, value] of [...Object.entries(d).filter(([k]) => Object.hasOwn(ROLES, k)), ...Object.entries(isObject(d.tasks) ? d.tasks : {})]) if (isJob(name) && validFor(name, value) && !parseExternal(value)) changes[name] = value;
+  const r = applyChanges({ changes }, file);
+  return r.ok ? null : r.message;
 }
 
 // '' when a saved choice is in use; otherwise why the recommended values are shown (the dashboard shows it, so project language)
@@ -239,18 +333,27 @@ if (isMain(import.meta.url)) {
     console.log(forLine(rest[0], value));
   } else if (mode === '--show') {
     console.log(showModels());
+  } else if (mode === '--show-default') {
+    const d = readDefaults();
+    if (!d) { console.error('There is no saved default.'); process.exit(1); }
+    console.log(Object.entries({ ...Object.fromEntries(Object.entries(d).filter(([k]) => Object.hasOwn(ROLES, k))), ...(isObject(d.tasks) ? d.tasks : {}) }).map(([name, value]) => `${clean(name)}: ${pretty(clean(value))}`).join('\n') || '(empty)');
+  } else if (mode === '--save-default' || mode === '--use-default') {
+    const error = mode === '--save-default' ? setDefaults() : useDefaults();
+    if (error) { console.error(error); process.exit(1); }
+    console.log(showModels());
   } else if (mode === '--set-key') {
     await setKeyFromTerminal(rest[0]);
   } else if (mode === '--remove-key') {
     if (!isProvider(rest[0])) { console.error(`Provider: ${Object.keys(PROVIDERS).join(', ')}`); process.exit(1); }
-    removeKey(rest[0]);
+    const error = removeKey(rest[0]);
+    if (error) { console.error(error); process.exit(1); }
     console.log(`${rest[0]} key removed. If you also set ${PROVIDERS[rest[0]].env} in your system, remove that too.`);
   } else if (mode === '--set-limit') {
     const error = setLimit(rest[0], Number(rest[1]));
     if (error) { console.error(error); process.exit(1); }
     console.log(`${rest[0]} daily limit: $${Number(rest[1])}`);
   } else {
-    console.error('Usage: --for <job> | --show | --set <role or job>=<model>:<effort> … | --reset <role or job> … | --set-key <provider> | --remove-key <provider> | --set-limit <provider> <usd per day>');
+    console.error('Usage: --for <job> | --show | --set <role or job>=<model>:<effort> … | --reset <role or job> … | --show-default | --save-default | --use-default | --set-key <provider> | --remove-key <provider> | --set-limit <provider> <usd per day>');
     process.exit(1);
   }
 }

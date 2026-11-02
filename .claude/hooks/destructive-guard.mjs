@@ -52,7 +52,14 @@ const NEEDS_APPROVAL = [
   [/run-role\.mjs/i, 'guard.models.run'],
   [/models\.mjs\b[^;&|\n]*\s--(set-key|remove-key|set-limit)\b/i, 'guard.models.keys'],
   [/models\.mjs\b[^;&|\n]*\s--set\b[^;&|\n]*=[^\s;&|]*\//i, 'guard.models.provider'],
-  [/\.vibe-kit(?![\w-])(?![\\/](?:preferences|gate-approval))|\.vib(?:e-?[\w-]{0,3})?[*?[]|\.vib[^;&|\n]{0,200}providers\.json/i, 'guard.models.store'],
+  // Reading a key back out of the system vault (Linux, macOS, Windows): the panel does that, the AI does not
+  // security reads its commands from stdin too (security -i, a pipe), so those count as well; flags may come before the subcommand, and a glob can spell it
+  // A name split inside a script ('resolve' + 'Key') stays a known limit of a text check
+  [/\bsecret-tool\s+(?:lookup|search)\b|\bsecurity\s(?:[^;&|\n]{0,100}\s)?(?:find-(?:generic|internet)-pass|dump-keychain|find-[\w-]*[*?[])|\bsecurity\s+-i(?![\w-])|\|\s*(?:\S*\/)?security(?![\w-])|Unprotect|\b(?:resolveKey|vaultRead)\b|\bkeyring\s+get\b|\b(?:import|from)\s+keyring\b/i, 'guard.models.vault'],
+  [/OPENROUTER_API_KEY|DEEPSEEK_API_KEY|MOONSHOT_API_KEY/i, 'guard.models.keyVar'],
+  [/\.vibe-kit(?![\w-])(?![\\/](?:preferences|gate-approval))|\.vib(?:e-?[\w-]{0,3})?[*?[]|\.vib[^;&|\n]{0,200}providers\.json|(?:~|\bHOME\b["'}]*|\bUSERPROFILE\b[%"'}]*)[\/]\.[\w-]{0,6}[*?[]/i, 'guard.models.store'],
+  // The panel's one-time token (its temporary page) and session header open the key page: the AI never reads or sends them
+  [/panel-open\.html|vibe-panel-|panel-session/i, 'guard.models.panelToken'],
   // unquote() opens quoted spellings; here only what the shell sees
   [/\b(vercel|vc)\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'guard.destructive.prodDeploy'],
   // The subcommand can also come after flags: vercel --scope team promote <url>

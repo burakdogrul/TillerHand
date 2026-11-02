@@ -21,6 +21,8 @@ const T = { timeout: 180000 };
 const TMP_HOME = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mj-top-home-')));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
+// 3.63.0: a plain key entry is read only when the machine has no vault. These tests store plain keys, so they run with no vault.
+process.env.VIBE_KIT_VAULT = 'none';
 process.on('exit', () => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* temp */ } });
 
 // Split up so this file does not trip the secret scan
@@ -61,6 +63,7 @@ const storeOf = (home) => path.join(home, '.vibe-kit', 'providers.json');
 function cleanEnv() {
   const env = { ...process.env };
   for (const k of Object.keys(env)) if (/^(ANTHROPIC|CLAUDE)|^(OPENROUTER|DEEPSEEK|MOONSHOT)_API_KEY$/i.test(k)) delete env[k];
+  env.VIBE_KIT_VAULT = 'none'; // 3.63.0: the child reads the plain store these tests write
   return env;
 }
 function mk(t) {
@@ -431,8 +434,9 @@ test('AC-62.3 release.md step 0 and start.md step 0e no longer mention asking or
   const lineOf = (file, re) => read(file).split('\n').find((l) => re.test(l));
   const rel = lineOf('.claude/commands/release.md', /^0\./);
   const start = lineOf('.claude/commands/start.md', /^0e\./);
-  for (const [name, line] of [['release step 0', rel], ['start step 0e', start]])
-    if (line !== undefined) assert.doesNotMatch(line, /\bask|screens?\b|AskUserQuestion/i, name);
+  // 3.63.0 (AC-63.20): start 0e asks one question (recommended setup or the panel), so only the two-screens wording stays forbidden there. Release stays strict.
+  if (rel !== undefined) assert.doesNotMatch(rel, /\bask|screens?\b|AskUserQuestion/i, 'release step 0');
+  if (start !== undefined) assert.doesNotMatch(start, /screens?\b/i, 'start step 0e');
   for (const c of ['build', 'release', 'start', 'adopt']) {
     const text = read(`.claude/commands/${c}.md`);
     assert.doesNotMatch(text, /two screens/i, c);

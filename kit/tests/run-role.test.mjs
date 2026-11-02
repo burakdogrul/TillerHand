@@ -24,6 +24,8 @@ const T = { timeout: 45000 };
 const TMP_HOME = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rr-top-home-')));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
+// 3.63.0: a plain key entry is read only when the machine has no vault. These tests store plain keys, so they run with no vault.
+process.env.VIBE_KIT_VAULT = 'none';
 process.on('exit', () => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* temp */ } });
 
 // Test values are split up so this file itself does not trip the secret scan
@@ -292,6 +294,7 @@ function cleanEnv() {
   const env = { ...process.env };
   // The provider variables too: a key on the machine running the tests must not reach a test
   for (const k of Object.keys(env)) if (/^(ANTHROPIC|CLAUDE)|^(OPENROUTER|DEEPSEEK|MOONSHOT)_API_KEY$/i.test(k)) delete env[k];
+  env.VIBE_KIT_VAULT = 'none'; // 3.63.0: the child reads the plain store these tests write
   return env;
 }
 const b64 = (s) => Buffer.from(s).toString('base64');
@@ -506,7 +509,8 @@ test('3.60.0 AC-2: the run token and the port differ per run, and the prompt rea
 test('3.60.0 AC-2: storePath is under the home folder, the store shape is tolerant of a missing or broken file', T, async (t) => {
   const { storePath, readStore } = await load('providers.mjs');
   assert.equal(storePath(), path.join(TMP_HOME, '.vibe-kit', 'providers.json'));
-  const empty = { keys: {}, limits: {}, spend: {} };
+  // 3.63.0: readStore also returns keyMeta, modelSpend and catalog
+  const empty = { keys: {}, limits: {}, spend: {}, keyMeta: {}, modelSpend: {}, catalog: {} };
   const dir = tmpDir(t, 'rr-store-');
   assert.deepEqual(readStore(path.join(dir, 'none.json')), empty);
   assert.deepEqual(readStore(), empty, 'default path, nothing there yet');
@@ -747,7 +751,7 @@ test('3.60.0 AC-3: removing a key that is absent is not an error and changes not
   const dir = tmpDir(t, 'rr-remove-');
   const missing = path.join(dir, 'none', 'providers.json');
   assert.doesNotThrow(() => removeKey('openrouter', missing), 'no file');
-  assert.deepEqual(readStore(missing), { keys: {}, limits: {}, spend: {} });
+  assert.deepEqual(readStore(missing), { keys: {}, limits: {}, spend: {}, keyMeta: {}, modelSpend: {}, catalog: {} }); // 3.63.0 shape
   const file = path.join(dir, 'providers.json');
   assert.equal(setKey('deepseek', DS_KEY, file), null);
   setLimit('openrouter', 2.5, file);

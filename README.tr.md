@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.62.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.63.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -52,7 +52,7 @@
 | **Geri alma** | `/rollback` son çalışan hale döner; geçmiş silinmez, yarım iş saklanır. |
 | **Anlatıcı mod** | İstersen her değişikliği yazılım bilmeyen birine anlatır gibi sade bir dille açıklar. |
 | **Seni tanır** | Nasıl çalışmak istediğini (konuşma, soru, rapor, kod tarzı) öğrenir. Onayladığın tercihler tüm projelerinde geçerli olur ve bilgisayarında kalır. |
-| **Rol bazlı model** | Planlama, kod, test, inceleme ve doküman için modeli ve effort'u `/models` ile seçersin, istersen tek bir iş için de (arayüz kodu, kritik kod, bir kurul üyesi). Komutlar artık durup sormaz; her koşu kullanılan modeli tek satırda gösterir. Testleri ayrı bir ajan yazar; güvenlik, ödeme veya veri silen işlerde kodla aynı kör noktayı paylaşmasın diye Opus önerilir. |
+| **Rol bazlı model** | Planlama, kod, test, inceleme ve doküman için modeli ve effort'u yerel bir panelde (`/models`) seçersin, istersen tek bir iş için de. Panel kullanımını da gösterir; Claude planın ve dış modeller ayrı durur. Komutlar artık durup sormaz; her koşu kullanılan modeli tek satırda gösterir. Testleri ayrı bir ajan yazar; güvenlik, ödeme veya veri silen işlerde kodla aynı kör noktayı paylaşmasın diye Opus önerilir. |
 | **Hatadan öğrenir** | Aynı türden hata tekrar edince onu önleyecek tek bir kural önerir; sen onaylarsan eklenir. |
 
 ## Hiç bilmiyorsan: adım adım
@@ -280,7 +280,9 @@ Tüm komutlar, ayarlar, araçlar ve skill'ler **[rehberde](https://burakdogrul.g
 
 `/models` ile hangi işi hangi modelin yapacağını seçersin. Dış model kullanabilirsin: kod, test ve doküman rolleri OpenRouter, DeepSeek veya Kimi'den aldığın bir modelde çalışır. Planlama ve inceleme Claude planında kalır. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.
 
-**Anahtar ekle.** Bunu sohbette değil, kendi terminalinde çalıştır. Anahtarı göstermeden ister ve proje dışında tutar (`~/.vibe-kit/providers.json`):
+Panel `/models` ile ya da terminalden `node .claude/hooks/models-panel.mjs` ile açılır. Dört sekmeli yerel bir sayfadır. **Kullanım**, Claude planını ve her dış modeli ayrı ayrı, gün ve hafta olarak gösterir. **İşler**, her iş için model ve effort seçtirir. **Modeller**, dış model listeni tutar. **Anahtarlar**, sağlayıcı anahtarlarını ve günlük sınırları alır. Anahtarlar varsa sistem kasasına gider; bir rolün sağlayıcısına gönderdiği dışında makinenden hiçbir şey çıkmaz.
+
+**Anahtar ekle.** Bunu sohbette değil, kendi terminalinde çalıştır. Anahtarı göstermeden ister ve sistem kasasında tutar, kasa yoksa `~/.vibe-kit/providers.json` içinde. Paneldeki Anahtarlar sekmesi de aynısını yapar:
 
 ```bash
 node .claude/hooks/models.mjs --set-key openrouter

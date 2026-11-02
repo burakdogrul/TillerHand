@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.62.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.63.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -52,7 +52,7 @@
 | **Rollback** | `/rollback` returns to the last working state; history is kept, unfinished work is saved. |
 | **Narrator mode** | Optionally explains every change in plain language, as if to someone who doesn't code. |
 | **Learns how you work** | Picks up how you like to work (tone, questions, reports, code style). Preferences you approve apply to all your projects and stay on your computer. |
-| **Model per role** | You pick the model and effort for planning, coding, testing, review and docs with `/models`, and for a single job if you want (UI code, critical code, one board member). Commands no longer stop to ask; each run shows the model in one line. Tests come from a separate agent; for security, payment or data-deleting work, Opus is suggested so they do not share the coding model's blind spots. |
+| **Model per role** | You pick the model and effort for planning, coding, testing, review and docs in a local panel (`/models`), and for any single job if you want. The panel also shows your usage, with your Claude plan and external models kept apart. Commands no longer stop to ask; each run shows the model in one line. Tests come from a separate agent; for security, payment or data-deleting work, Opus is suggested so they do not share the coding model's blind spots. |
 | **Learns from bugs** | When the same kind of bug comes back, it proposes one rule to prevent it; the rule is added only if you approve. |
 
 ## Step by step for beginners
@@ -280,7 +280,9 @@ Every command, setting, tool and skill is in the **[guide](https://burakdogrul.g
 
 With `/models` you choose which model does which job. The code, test and docs roles can run on a model you bought from OpenRouter, DeepSeek or Kimi, while planning and review stay on your Claude plan. Available in Claude Code; Codex not yet, Antigravity not supported.
 
-**Add a key.** Run this in your own terminal, never in the chat. It asks for the key without showing it and keeps it outside the project (`~/.vibe-kit/providers.json`):
+The panel opens with `/models`, or with `node .claude/hooks/models-panel.mjs` from a terminal. It is a local page with four tabs. **Usage** shows your Claude plan and each external model separately, by day and week. **Jobs** lets you pick the model and effort for every job. **Models** holds your external model list. **Keys** takes provider keys and daily limits. Keys go to the system key vault where one exists, and nothing leaves your machine except what a role sends to its provider.
+
+**Add a key.** Run this in your own terminal, never in the chat. It asks for the key without showing it and keeps it in the system key vault, or in `~/.vibe-kit/providers.json` where there is none. The Keys tab in the panel does the same:
 
 ```bash
 node .claude/hooks/models.mjs --set-key openrouter

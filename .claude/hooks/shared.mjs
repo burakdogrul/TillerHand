@@ -38,6 +38,9 @@ const isText = (x) => typeof x === 'string';
 // Every string inside nested arrays and objects (the read guard sees a path wherever it sits in the arguments)
 const texts = (x) => (isText(x) ? [x] : x && typeof x === 'object' ? Object.values(x).flatMap(texts) : []);
 
+// The environment a child process may inherit (run-role.mjs, cost.mjs): names only, so a key or token in the environment never reaches it
+export const ENV_ALLOWED = /^(?:PATH|PATHEXT|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|TEMP|TMP|TMPDIR|HOME|HOMEDRIVE|HOMEPATH|USERPROFILE|USERNAME|USER|LOGNAME|APPDATA|LOCALAPPDATA|PROGRAMDATA|PROGRAMFILES|PROGRAMFILES\(X86\)|PROGRAMW6432|COMMONPROGRAMFILES(?:\(X86\))?|COMMONPROGRAMW6432|OS|PROCESSOR_[A-Z0-9_]+|NUMBER_OF_PROCESSORS|LANG|LC_[A-Z]+|TZ|TERM|SHELL|XDG_[A-Z_]+|CLAUDE_CODE_GIT_BASH_PATH)$/i;
+
 // Project root comes from the script's own location (<project>/.claude/hooks/): it does not depend on cwd or on
 // marker files the agent could create (.git), so it stays right when Codex opens in a subfolder.
 const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');

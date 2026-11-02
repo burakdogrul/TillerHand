@@ -3,6 +3,24 @@
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
 
+## [3.63.0] - 2026-11-02
+
+### Added
+- **Model panel.** `/models` now opens a local page, or run `node .claude/hooks/models-panel.mjs` from a terminal. Light and dark theme, in your project language, and it works offline.
+  - **Usage:** your Claude plan and each external model apart, by day and week, per project or across projects. Claude money is an API equivalent and is never added to external spend.
+  - **Jobs:** a model and effort for every one of the 39 jobs, a change count before saving, and search.
+  - **Models:** your external model list, with OpenRouter's list to pick from. A saved price replaces the high default used for spend counting.
+  - **Keys:** add, try and remove keys, and set daily limits.
+- **Keys in the system vault.** Windows DPAPI, macOS Keychain or Linux `secret-tool`. Where there is no vault the key stays in a plain file and the panel says so. A vault read now needs approval from the AI's shell.
+- `run-role.mjs` records input and output tokens, and spend is kept per model.
+- `usage.mjs --record` saves the limit on the desktop app, and `cost.mjs --all` reads usage across projects.
+- A saved default for new projects: `/start` and `/adopt` offer it. External models in a default are left out, so you choose them yourself.
+
+### Changed
+- `/start` and `/adopt` ask one question: start with the recommended setup, or open the panel.
+- Opening the panel again closes the earlier one, so unsaved choices there are lost.
+- **Adapt by hand:** a key saved before this version in `~/.vibe-kit/providers.json` is no longer read where a vault exists. Enter it once more in the panel.
+
 ## [3.62.0] - 2026-11-02
 
 ### Added

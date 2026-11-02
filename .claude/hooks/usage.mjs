@@ -4,6 +4,8 @@
 // this script reads it and reports the level (green/yellow/red). Thresholds match docs/workflow/usage-limits.md.
 //   node .claude/hooks/usage.mjs          human-readable summary
 //   node .claude/hooks/usage.mjs --json   machine-readable
+//   node .claude/hooks/usage.mjs --record <5h percent> <5h reset, epoch seconds> <weekly percent> <weekly reset, epoch seconds>
+//       the desktop app has no status line, so usage.json stays empty; the AI records what get_usage returned
 import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot, isMain } from './shared.mjs';
@@ -85,8 +87,22 @@ export function summary(data, now = Date.now(), root = findRoot()) {
   return t(root, 'usage.summary', { parts: parts.join(' · '), level: t(root, `usage.level.${level(data)}`), age: data.ageMin, stale });
 }
 
+// Strict digits: no sign, no exponent, no Infinity. Percent is 0..100.
+const plain = /^\d+(\.\d+)?$/;
+function record(root, args) {
+  const [p5, r5, pw, rw] = args;
+  const ok = args.length === 4 && args.every((a) => plain.test(a) && Number.isFinite(Number(a))) && Number(p5) <= 100 && Number(pw) <= 100 && Number(r5) > 0 && Number(rw) > 0;
+  if (!ok) {
+    console.error('Usage: --record <5-hour percent 0-100> <5-hour reset, epoch seconds> <weekly percent 0-100> <weekly reset, epoch seconds>');
+    process.exit(1);
+  }
+  writeLimits(root, { five_hour: { used_percentage: Number(p5), resets_at: Number(r5) }, seven_day: { used_percentage: Number(pw), resets_at: Number(rw) } });
+}
+
 if (isMain(import.meta.url)) {
   const root = findRoot();
+  const at = process.argv.indexOf('--record');
+  if (at > -1) { record(root, process.argv.slice(at + 1)); process.exit(0); }
   const data = readLimits(root);
   if (process.argv.includes('--json')) console.log(JSON.stringify({ ...data, level: level(data), thresholds: THRESHOLDS }));
   else console.log(summary(data));

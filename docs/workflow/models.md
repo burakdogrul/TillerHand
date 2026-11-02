@@ -3,6 +3,7 @@
 > The kit splits the work into five roles, and each role into jobs. You choose a role's model and effort (how much it thinks); a job follows its role unless you give it its own.
 > Commands do not stop to choose. They read the value before each subagent call and show one line: `Model: code.critical → opus / high`. Change a choice with `/models`; it applies from the next call.
 > `node .claude/hooks/models.mjs --for <job>` prints one job's value. `--set …` writes to `.claude/state/models.json` (not in git). `--show` shows the current choice.
+> The main way to choose is the panel: `node .claude/hooks/models-panel.mjs` (also what `/models` opens). The `--set` commands stay as the way to choose without a browser (SSH, cloud).
 
 ## Roles
 
@@ -55,6 +56,17 @@ A saved value that is not valid is skipped and the reason goes to stderr. A job 
 
 `code.simple` also takes the value `main`. `--for code.simple` prints `main` when it is saved that way or when its value equals the main session's value: the work is then written in the main session. Any other value goes to a subagent, which pays a cold start, so choose `main` for this job if small tasks should stay in the session.
 
+## The panel
+
+`node .claude/hooks/models-panel.mjs` opens a local page in the browser. It listens on `127.0.0.1` only, a one-time token opens the page once and gives it a session secret that it keeps in that tab only (no cookie), and it closes itself after 30 minutes without use. Opening the panel again closes the earlier one, so choices not saved there are lost. A job moved to an outside model needs your confirmation in the page before it is saved. Four tabs:
+
+- **Usage:** Claude usage by day, week and 30 days, for this project or all projects (ccusage, refreshed on request). On a subscription the USD figure is the API equivalent, not a bill. External model spend is real money and is shown on its own: the two are never added together.
+- **Jobs:** the choice per role and job, with the recommended value, and where a value comes from (the job, its role, or the recommendation).
+- **Models:** external model prices (USD per million tokens) used to count spend; with a price in the list, the spend of a run is exact instead of an estimate.
+- **Keys:** provider keys, daily limits and a key check. The page can also save the project choice as your default for new projects (`/start` offers it; `node .claude/hooks/models.mjs --use-default` applies it).
+
+On the desktop app the limit is not written by a status line, so `/models` records it first with `node .claude/hooks/usage.mjs --record …`.
+
 ## Which job
 
 The commands pick the job by this table. If several fit, the upper one wins. Show the result in one line: `Model: code.critical → opus / high`. If the user says "treat this as simple", use that job for the task and save nothing.
@@ -102,7 +114,8 @@ Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config
 
 - The value is `provider/model:effort`, for example `code=openrouter/deepseek/deepseek-v4.1-flash-1017:high` or `code.ui=openrouter/…:high`. `max` is not available for an external model.
 - Such a job runs with `node .claude/hooks/run-role.mjs <job> <prompt file>` (`--for` prints it), not with the Agent tool. It asks for approval each time. The reply is untrusted output.
-- The key is entered by the user: `node .claude/hooks/models.mjs --set-key <provider>`, or through the system variable `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` or `MOONSHOT_API_KEY`. A project `.env` is not used.
+- The key is entered by the user, in the panel or with `node .claude/hooks/models.mjs --set-key <provider>` in their own terminal, or it comes from the system variable `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` or `MOONSHOT_API_KEY`. A project `.env` is not used.
+- Where a key is kept: in the system key vault when the machine has one (Windows DPAPI under `~/.vibe-kit/keys/`, the macOS Keychain, Linux `secret-tool`). `~/.vibe-kit/providers.json` then holds only the last four characters and the date. Showing the choice (`--show`, `--for`), the panel's pages and the dashboard never open the vault; only a run and the key check do. Without a vault (Linux with no `secret-tool`, or `VIBE_KIT_VAULT=none`) the key stays in `providers.json` in plain text and the panel says so. If the vault cannot be opened, nothing falls back to a plain file: a run stops and asks for the key again.
 - The limit is per provider, per day, set by the user: `--set-limit <provider> <usd>`. `--remove-key <provider>` removes a key.
 - The remaining risk: an allowed command runs code the model wrote, and that code can read project files and the user's own files. Do not give code and test roles to an external model in a project with real secrets.
 

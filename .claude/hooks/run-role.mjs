@@ -8,10 +8,10 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn, execFileSync } from 'node:child_process';
 import { Readable } from 'node:stream';
-import { findRoot, isMain } from './shared.mjs';
+import { findRoot, isMain, ENV_ALLOWED } from './shared.mjs';
 import { PATTERNS, findSecrets } from './guard-secrets.mjs';
 import { isJob, roleOf, savedChoice, modelsFile } from './models.mjs';
-import { PROVIDERS, EXTERNAL_ROLES, MODEL_ID, isProvider, parseExternal, readStore, resolveKey, spendAllowed, spentOn, addSpend, today } from './providers.mjs';
+import { PROVIDERS, EXTERNAL_ROLES, MODEL_ID, isProvider, parseExternal, readStore, resolveKey, keyInfo, validPrice, spendAllowed, spentOn, addSpend, addModelSpend, today } from './providers.mjs';
 
 // Used when a model's price is unknown: too high on purpose, so a daily limit still fires
 export const DEFAULT_PRICE = { input: 5, output: 25 };
@@ -47,8 +47,6 @@ export function roleTools(role, commands = {}) {
   // Agent: a subagent named test-writer would pass the test guard. git commit and the hook scripts: the role could approve its own work.
   return { allowed: [...new Set(allowed)], disallowed: [...(role === 'docs' ? ['Bash'] : []), 'Agent', 'Bash(git add:*)', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(node *.claude/hooks/*)'] };
 }
-
-const ENV_ALLOWED = /^(?:PATH|PATHEXT|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|TEMP|TMP|TMPDIR|HOME|HOMEDRIVE|HOMEPATH|USERPROFILE|USERNAME|USER|LOGNAME|APPDATA|LOCALAPPDATA|PROGRAMDATA|PROGRAMFILES|PROGRAMFILES\(X86\)|PROGRAMW6432|COMMONPROGRAMFILES(?:\(X86\))?|COMMONPROGRAMW6432|OS|PROCESSOR_[A-Z0-9_]+|NUMBER_OF_PROCESSORS|LANG|LC_[A-Z]+|TZ|TERM|SHELL|XDG_[A-Z_]+|CLAUDE_CODE_GIT_BASH_PATH)$/i;
 
 export function childEnv(baseEnv, { port, token, model, root }) {
   const env = Object.fromEntries(Object.entries(baseEnv).filter(([k]) => ENV_ALLOWED.test(k)));
@@ -194,7 +192,9 @@ async function main([job, promptFile]) {
   const problem = checkRun({ role, provider, model, promptFile, root });
   if (problem) fail(problem);
   const key = resolveKey(provider);
-  if (!key) fail(`No valid ${provider} key. Add one in your own terminal: node .claude/hooks/models.mjs --set-key ${provider}`);
+  // The metadata says the key is in the vault, so it is the vault that failed, not the user who forgot a key
+  if (!key && keyInfo(provider).source === 'vault') fail(`The key vault could not be opened, so the ${provider} key cannot be read. Enter the key again in the panel (node .claude/hooks/models-panel.mjs).`);
+  if (!key) fail(`No valid ${provider} key. Add one in the panel (node .claude/hooks/models-panel.mjs), or in your own terminal: node .claude/hooks/models.mjs --set-key ${provider}`);
   const limit = Number(readStore().limits[provider]);
   if (!(limit > 0)) fail(`${provider} has no daily limit. Set one: node .claude/hooks/models.mjs --set-limit ${provider} <usd>`);
   const day = today();
@@ -204,12 +204,26 @@ async function main([job, promptFile]) {
   const secrets = findSecrets(prompt);
   if (secrets.length) fail(`The prompt holds what looks like a secret (${secrets.join(', ')}). Nothing was sent.`);
 
-  const known = KNOWN_PRICES[model];
-  let spent = 0;
+  // A price the user put in the catalog wins, then the built-in list; otherwise the high default. A hand-edited price that fails the check (negative, huge, zero on a paid model) is not trusted.
+  const listed = readStore().catalog[provider]?.[model];
+  const known = validPrice(listed, model) ? { input: listed.input, output: listed.output } : (Object.hasOwn(KNOWN_PRICES, model) ? KNOWN_PRICES[model] : undefined);
+  let spent = 0, tokensIn = 0, tokensOut = 0, costBroken = false, child = null;
   const token = `run-${crypto.randomBytes(24).toString('hex')}`;
   const proxy = await startProxy({ key, token, model, upstream: PROVIDERS[provider].url, prices: known ?? DEFAULT_PRICE,
     canSpend: () => spendAllowed(provider, limit, day),
-    onUsage: ({ cost }) => { spent += cost; addSpend(provider, cost, day); } });
+    onUsage: ({ usage, cost }) => {
+      // A cost that is not a number cannot be added up: the day counts as spent up to the limit, so no run goes on unmetered
+      if (!Number.isFinite(cost)) {
+        costBroken = true;
+        addSpend(provider, limit, day);
+        child?.kill();
+        return;
+      }
+      spent += cost;
+      tokensIn += (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0);
+      tokensOut += usage.output_tokens ?? 0;
+      addSpend(provider, cost, day);
+    } });
 
   // Only commands the user approved: in a project from elsewhere, AGENTS.md could name anything
   const { approvedCommands, isApproved } = await import('./gate.mjs');
@@ -219,7 +233,7 @@ async function main([job, promptFile]) {
   const env = { ...childEnv(process.env, { port: proxy.port, token, model, root }), ...(effort ? { CLAUDE_CODE_EFFORT_LEVEL: effort } : {}) };
   const started = Date.now();
   const { code, out, err } = await new Promise((done) => {
-    const child = spawn('claude', childArgs({ model, prompt, role, tools: roleTools(role, commands) }), { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], shell: false });
+    child = spawn('claude', childArgs({ model, prompt, role, tools: roleTools(role, commands) }), { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], shell: false });
     let stdout = '', stderr = '';
     child.stdout.on('data', (d) => { stdout += d; });
     child.stderr.on('data', (d) => { stderr += d; });
@@ -237,13 +251,15 @@ async function main([job, promptFile]) {
   // No content here: role, model, time and spend only
   try {
     fs.mkdirSync(path.join(root, '.claude', 'state'), { recursive: true });
-    fs.appendFileSync(path.join(root, '.claude', 'state', 'role-runs.jsonl'), `${JSON.stringify({ date: new Date().toISOString(), job, role, provider, model, seconds, usd: +spent.toFixed(4), priceKnown: Boolean(known), exit: code })}\n`);
+    fs.appendFileSync(path.join(root, '.claude', 'state', 'role-runs.jsonl'), `${JSON.stringify({ date: new Date().toISOString(), job, role, provider, model, seconds, usd: +spent.toFixed(4), priceKnown: Boolean(known), exit: code, input: tokensIn, output: tokensOut })}\n`);
   } catch { /* the run still reports */ }
+  try { addModelSpend(`${provider}/${model}`, { usd: spent, input: tokensIn, output: tokensOut, seconds, priceKnown: Boolean(known) }, day); } catch { /* the run still reports */ }
   const hidden = [key, token];
   console.log(wrapResult(scrub(result?.result ?? (scrub(err, hidden).slice(0, 500) || 'No result.'), hidden)));
   console.log(`\nRole ${role} on ${provider}/${model}: ${seconds} s, $${spent.toFixed(4)}${known ? '' : ' (estimate: the price of this model is unknown, a high default was used)'}, today $${spentOn(provider, day).toFixed(4)} of $${limit}.`);
   console.log(`Changed files: ${changed.join(', ') || 'none'}`);
-  if (spentOn(provider, day) >= limit) console.log(`The daily limit is reached and the role may have stopped early. Ask the user how to go on.`);
+  if (costBroken) console.log(`The cost of this run could not be counted (the provider reported a token count that is not a number), so the daily limit for ${provider} counts as reached and the run was stopped. Ask the user how to go on.`);
+  else if (spentOn(provider, day) >= limit) console.log(`The daily limit is reached and the role may have stopped early. Ask the user how to go on.`);
   process.exit(code ?? 1);
 }
 
