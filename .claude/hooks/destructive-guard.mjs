@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readInput, decide, isMain, findRoot } from './shared.mjs';
+import { readInput, decide, isMain, findRoot, PANEL_TOKEN } from './shared.mjs';
 import { t } from './lang.mjs';
 import { isTestFile, isTestConfig } from './test-guard.mjs';
 import { readLock, readPlan, allowedInLock, inScope, realPath, relPath, protectedRule } from './freeze-guard.mjs';
@@ -59,7 +59,8 @@ const NEEDS_APPROVAL = [
   [/OPENROUTER_API_KEY|DEEPSEEK_API_KEY|MOONSHOT_API_KEY/i, 'guard.models.keyVar'],
   [/\.vibe-kit(?![\w-])(?![\\/](?:preferences|gate-approval))|\.vib(?:e-?[\w-]{0,3})?[*?[]|\.vib[^;&|\n]{0,200}providers\.json|(?:~|\bHOME\b["'}]*|\bUSERPROFILE\b[%"'}]*)[\/]\.[\w-]{0,6}[*?[]/i, 'guard.models.store'],
   // The panel's one-time token (its temporary page) and session header open the key page: the AI never reads or sends them
-  [/panel-open\.html|vibe-panel-|panel-session/i, 'guard.models.panelToken'],
+  [PANEL_TOKEN, 'guard.models.panelToken'],
+  [/panel-session|(?:127\.0\.0\.1|localhost)\S*[?&]t=[\w-]{16,}/i, 'guard.models.panelToken'],
   // unquote() opens quoted spellings; here only what the shell sees
   [/\b(vercel|vc)\b[^;&|]*(--prod\b|--target(=|\s+)prod(uction)?\b)/i, 'guard.destructive.prodDeploy'],
   // The subcommand can also come after flags: vercel --scope team promote <url>

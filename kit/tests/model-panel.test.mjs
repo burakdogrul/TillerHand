@@ -2960,3 +2960,116 @@ test('AC-63.27 ATTACK: the guard asks on secret-tool search, security with a fla
     assert.deepEqual(free.filter((c) => evaluate(c, ctx) !== null), [], `free (${JSON.stringify(ctx)})`);
   }
 });
+
+// ---- Third audit pass (AC-63.28): the opener path, the token out of Read/Grep/Glob, globs and the token address in commands ----
+
+// openerArgs in a child process, on a platform of our choosing and with a SystemRoot of our choosing
+const OPENER_PROBE = path.join(TMP_HOME, 'mp-opener-probe.mjs');
+fs.writeFileSync(OPENER_PROBE, String.raw`
+Object.defineProperty(process, 'platform', { value: process.env.MP_PLATFORM });
+if (process.env.MP_SYSTEMROOT !== undefined) { delete process.env.SYSTEMROOT; process.env.SystemRoot = process.env.MP_SYSTEMROOT; }
+const mod = await import(process.env.MP_PANEL);
+console.log(JSON.stringify({ result: mod.openerArgs(process.env.MP_FILE) }));
+`);
+const MP_OPEN_FILE = path.join(os.tmpdir(), 'vibe-panel-Zz9', 'panel-open.html');
+function openerProbe(t, { platform, systemRoot, root }) {
+  const home = tmpDir(t, 'mp-open-home-');
+  const env = { ...cleanEnv(), HOME: home, USERPROFILE: home, CLAUDE_PROJECT_DIR: root, MP_PLATFORM: platform, MP_PANEL: pathToFileURL(path.join(HOOKS, 'models-panel.mjs')).href, MP_FILE: MP_OPEN_FILE };
+  if (systemRoot !== undefined) env.MP_SYSTEMROOT = systemRoot;
+  const r = spawnSync(process.execPath, [OPENER_PROBE], { cwd: root, encoding: 'utf8', timeout: 30000, env });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+  return JSON.parse(r.stdout.trim().split('\n').at(-1)).result;
+}
+const withRundll = (dir) => { write(path.join(dir, 'System32', 'rundll32.exe'), ''); return dir; };
+
+test('AC-63.28 openerArgs on win32: a SystemRoot that is absolute, outside the project and holding System32\\rundll32.exe gives that full path; the args are the url.dll handler and the file only', T, async (t) => {
+  const root = tmpDir(t, 'mp-op-root-');
+  const outside = withRundll(path.join(tmpDir(t, 'mp-op-outside-'), 'okwin'));
+  const r = openerProbe(t, { platform: 'win32', systemRoot: outside, root });
+  assert.deepEqual(r && { command: path.normalize(r.command), args: r.args }, { command: path.normalize(path.join(outside, 'System32', 'rundll32.exe')), args: ['url.dll,FileProtocolHandler', MP_OPEN_FILE] });
+  assert.equal(path.isAbsolute(r.command), true, 'a full path, not a bare name');
+  assert.equal(r.args.some((a) => /https?:|127\.0\.0\.1|[?&]t=/i.test(a)), false, 'no address and no token in the args');
+});
+
+test('AC-63.28 ATTACK: on win32 a relative SystemRoot, one inside the project, or one with no System32\\rundll32.exe gives null, never a command under that folder', T, async (t) => {
+  const root = tmpDir(t, 'mp-op-root-');
+  withRundll(path.join(root, 'fakewin'));
+  withRundll(path.join(root, 'nested', 'deeper', 'win'));
+  withRundll(root);
+  const outsideEmpty = path.join(tmpDir(t, 'mp-op-outside-'), 'emptywin');
+  fs.mkdirSync(outsideEmpty, { recursive: true });
+  for (const [label, systemRoot] of [['relative', 'fakewin'], ['relative with dot', `.${path.sep}fakewin`], ['relative upward', `..${path.sep}${path.basename(root)}${path.sep}fakewin`],
+    ['inside the root', path.join(root, 'fakewin')], ['deep inside the root', path.join(root, 'nested', 'deeper', 'win')], ['the root itself', root], ['absolute, outside, no rundll32.exe', outsideEmpty]]) {
+    assert.equal(openerProbe(t, { platform: 'win32', systemRoot, root }), null, label);
+  }
+});
+
+test('AC-63.28 openerArgs with the real SystemRoot (win32 hosts only) gives the full path to the real rundll32.exe', T, (t) => {
+  if (process.platform !== 'win32') { t.skip('needs a Windows host'); return; }
+  const root = tmpDir(t, 'mp-op-root-');
+  const real = process.env.SystemRoot ?? process.env.SYSTEMROOT;
+  const r = openerProbe(t, { platform: 'win32', root });
+  assert.equal(path.normalize(r.command).toLowerCase(), path.normalize(path.join(real, 'System32', 'rundll32.exe')).toLowerCase());
+  assert.equal(fs.existsSync(r.command), true);
+});
+
+test('AC-63.28 openerArgs on linux and darwin: the full paths /usr/bin/xdg-open and /usr/bin/open, the file as the only argument', T, async (t) => {
+  const root = tmpDir(t, 'mp-op-root-');
+  assert.deepEqual(openerProbe(t, { platform: 'linux', root }), { command: '/usr/bin/xdg-open', args: [MP_OPEN_FILE] });
+  assert.deepEqual(openerProbe(t, { platform: 'darwin', root }), { command: '/usr/bin/open', args: [MP_OPEN_FILE] });
+});
+
+// doc-guard on Read, Grep and Glob
+function docGuardDecision(toolName, toolInput) {
+  const r = spawnSync(process.execPath, [path.join(HOOKS, 'doc-guard.mjs')], {
+    input: JSON.stringify({ hook_event_name: 'PreToolUse', cwd: ROOT, session_id: 'mp-test', tool_name: toolName, tool_input: toolInput }),
+    encoding: 'utf8', timeout: 30000, env: { ...cleanEnv(), CLAUDE_PROJECT_DIR: ROOT },
+  });
+  assert.equal(r.status, 0, r.stderr);
+  try { return JSON.parse(r.stdout).hookSpecificOutput?.permissionDecision ?? null; } catch { return null; }
+}
+
+test('AC-63.28 settings.json: a PreToolUse matcher covering Read, Grep and Glob runs doc-guard.mjs', T, () => {
+  const blocks = JSON.parse(read('.claude/settings.json')).hooks.PreToolUse;
+  for (const tool of ['Read', 'Grep', 'Glob']) {
+    const hit = blocks.filter((b) => new RegExp(`^(?:${b.matcher})$`).test(tool) && b.hooks.some((h) => /hooks[\\/]doc-guard\.mjs/.test(h.command)));
+    assert.equal(hit.length, 1, `doc-guard must be on ${tool}`);
+  }
+});
+
+test('AC-63.28 ATTACK: doc-guard denies a Read file_path, a Grep path or glob and a Glob path or pattern that names the panel files, in any case, or spells them with a glob', T, () => {
+  const names = [
+    'vibe-panel-', 'VIBE-PANEL-x', 'panel-open', 'Panel-Open.html', '/tmp/vibe-panel-Ab12/panel-open.html', '/tmp/vibe-panel-*', '/tmp/*/panel-open.html',
+    'vib*', '/tmp/vib*/x', '*panel-*', '/tmp/*panel-*/x', 'panel-o*', '/tmp/*/panel-o*', 'v?be-panel*', '/tmp/V?BE-PANEL*/x', 'VIB*', '*PANEL-*', 'Panel-O*',
+  ];
+  const slots = [['Read', 'file_path'], ['Grep', 'path'], ['Grep', 'glob'], ['Glob', 'path'], ['Glob', 'pattern']];
+  const missed = [];
+  for (const [tool, field] of slots) for (const name of names) {
+    if (docGuardDecision(tool, { [field]: name, ...(tool === 'Grep' ? { pattern: 'x' } : {}), ...(tool === 'Glob' && field === 'path' ? { pattern: '*' } : {}) }) !== 'deny') missed.push(`${tool}.${field}=${name}`);
+  }
+  assert.deepEqual(missed, []);
+});
+
+test('AC-63.28 doc-guard lets ordinary Read, Grep and Glob calls through, and keeps the PDF rule', T, () => {
+  const ok = [
+    ['Read', { file_path: 'README.md' }], ['Read', { file_path: 'docs/vibe-panel.md' }], ['Read', { file_path: '/tmp/panel-open.txt' }],
+    ['Grep', { pattern: 'todo', path: 'src' }], ['Grep', { pattern: 'todo', glob: '*.ts' }], ['Grep', { pattern: 'todo', path: 'src', glob: '**/*.mjs' }],
+    ['Glob', { pattern: '**/*.md' }], ['Glob', { pattern: 'src/**/*.ts', path: 'src' }],
+  ];
+  for (const [tool, input] of ok) assert.equal(docGuardDecision(tool, input), null, `${tool} ${JSON.stringify(input)} must pass`);
+  assert.equal(docGuardDecision('Read', { file_path: 'docs/a.pdf' }), 'deny', 'a whole PDF is still refused');
+  assert.equal(docGuardDecision('Read', { file_path: 'docs/a.pdf', pages: '1-3' }), null, 'a PDF with pages still passes');
+});
+
+test('AC-63.28 ATTACK: the guard asks on globs of the panel folder and on a panel address carrying a long token, and leaves short values and other commands alone', T, async () => {
+  const { evaluate } = await load('destructive-guard.mjs');
+  const asked = [
+    'cat /tmp/vib*/*', 'cat /tmp/*panel-*/x',
+    'curl http://127.0.0.1:5000/?t=abcdefghijklmnopqrstuvwxyz', 'curl "http://127.0.0.1:5000/?t=abc123def456ghi789jkl"',
+  ];
+  const free = ['git commit -m "fix: panel ?t= handling"', 'ls src', 'curl https://example.com/?t=1'];
+  for (const ctx of GUARD_CTXS) {
+    assert.deepEqual(asked.filter((c) => evaluate(c, ctx)?.decision !== 'ask'), [], `asked (${JSON.stringify(ctx)})`);
+    assert.deepEqual(free.filter((c) => evaluate(c, ctx) !== null), [], `free (${JSON.stringify(ctx)})`);
+  }
+});

@@ -150,12 +150,17 @@ test('3.53.0 AC-2: ATTACK: settings.json allows no bare uvx wildcard, and the pa
 
 // ---------- AC-3 Hook ----------
 
-test('3.53.0 AC-3: doc-guard is wired in settings.json under PreToolUse with a matcher of exactly Read', () => {
+test('3.53.0 AC-3: doc-guard is wired in settings.json under PreToolUse only to Read, Grep and Glob', () => {
   const blocks = settings().hooks.PreToolUse.filter((b) => b.hooks.some((h) => /doc-guard\.mjs/.test(h.command)));
-  assert.deepEqual(blocks.map((b) => b.matcher), ['Read']);
-  const hook = blocks[0].hooks.find((h) => /doc-guard\.mjs/.test(h.command));
-  assert.equal(hook.type, 'command');
-  assert.equal(hook.command, 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/doc-guard.mjs"');
+  // Each tool is matched by exactly one block; the matcher is a full-string regex.
+  const matchers = (tool) => blocks.filter((b) => new RegExp(`^(?:${b.matcher})$`).test(tool)).length;
+  for (const tool of ['Read', 'Grep', 'Glob']) assert.equal(matchers(tool), 1, `${tool} is matched by exactly one doc-guard block`);
+  for (const tool of ['Bash', 'Write', 'Edit']) assert.equal(matchers(tool), 0, `${tool} is matched by no doc-guard block`);
+  for (const b of blocks) {
+    const hook = b.hooks.find((h) => /doc-guard\.mjs/.test(h.command));
+    assert.equal(hook.type, 'command');
+    assert.equal(hook.command, 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/doc-guard.mjs"');
+  }
 });
 
 test('3.53.0 AC-3: report.pdf with no pages is denied; the reason names document-to-markdown and pages', () => {

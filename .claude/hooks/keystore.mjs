@@ -16,18 +16,20 @@ const check = (provider) => { if (!PROVIDER_ID.test(String(provider))) throw new
 const SECURITY = '/usr/bin/security';
 const SECRET_TOOL = '/usr/bin/secret-tool';
 
-// SystemRoot comes from the environment, which a project's settings can set: it counts only when absolute, outside the project, and holding powershell.exe
-function powershell() {
+// SystemRoot comes from the environment, which a project's settings can set: it counts only when absolute, outside the project, and holding the program
+export function systemExe(...parts) {
   const system = process.env.SystemRoot ?? process.env.SYSTEMROOT ?? String.raw`C:\Windows`;
   if (!path.isAbsolute(system)) return null;
   try {
-    const exe = path.join(system, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    const exe = path.join(system, ...parts);
     const rel = path.relative(fs.realpathSync(findRoot()), fs.realpathSync(exe));
     return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel)) ? null : exe;
   } catch {
     return null;
   }
 }
+
+const powershell = () => systemExe('System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 
 // Constant scripts: the key or the ciphertext comes in on stdin
 const PS = ['-NoProfile', '-NonInteractive', '-Command'];

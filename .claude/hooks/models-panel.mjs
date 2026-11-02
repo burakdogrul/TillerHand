@@ -16,6 +16,7 @@ import { t, readLang, locale } from './lang.mjs';
 import { MESSAGES } from './messages.mjs';
 import { ROLES, JOBS, MODELS, roleOf, recommendedFor, resolveJob, readSaved, modelsFile, modelsVersion, applyChanges, setDefaults, replaceFile } from './models.mjs';
 import { PROVIDERS, EXTERNAL_ROLES, EFFORTS, MODEL_ID, parseExternal, isProvider, keyFormatOk, readStore, keyInfo, resolveKey, setKey, removeKey, setLimit, checkKey, addCatalog, removeCatalog, today } from './providers.mjs';
+import { systemExe } from './keystore.mjs';
 import { rangeOf, claudeUsage, externalFromRuns, externalFromStore } from './panel-data.mjs';
 import { readLimits } from './usage.mjs';
 
@@ -333,14 +334,16 @@ export function bootstrapPage(port, token) {
 // The opener gets a file path, never an address or a token, so neither shows in a process list
 export function openerArgs(file) {
   if (process.platform === 'win32') {
-    const system = process.env.SystemRoot ?? process.env.SYSTEMROOT ?? String.raw`C:\Windows`;
-    return { command: path.join(system, 'System32', 'rundll32.exe'), args: ['url.dll,FileProtocolHandler', file] };
+    const command = systemExe('System32', 'rundll32.exe');
+    return command ? { command, args: ['url.dll,FileProtocolHandler', file] } : null;
   }
-  return { command: process.platform === 'darwin' ? '/usr/bin/open' : 'xdg-open', args: [file] };
+  return { command: process.platform === 'darwin' ? '/usr/bin/open' : '/usr/bin/xdg-open', args: [file] };
 }
 
 function openBrowser(file) {
-  const { command, args } = openerArgs(file);
+  const opener = openerArgs(file);
+  if (!opener) return;
+  const { command, args } = opener;
   try {
     const child = spawn(command, args, { detached: true, stdio: 'ignore', shell: false });
     child.on('error', () => { /* no browser here (SSH, cloud): the address is printed on a terminal */ });
