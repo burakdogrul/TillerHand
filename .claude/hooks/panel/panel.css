@@ -194,6 +194,7 @@ select:disabled{opacity:.6}
 .nm{color:var(--ink)}
 .name code{color:var(--ink3)}
 .note{font-size:12px;color:var(--ink3);flex-basis:100%}
+.note code{white-space:nowrap}
 .note.bad{color:var(--bad);font-weight:500}
 .tagC{font-size:11px;font-weight:600;color:var(--ext-ink)}
 .tagA{font-size:11px;font-weight:600;color:var(--ink2);margin-left:6px}
@@ -282,7 +283,8 @@ dialog li{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;pad
 
 /* 1024 and below */
 @media (max-width:1100px){
-  .top{padding:0 24px}main{padding:22px 24px 96px}.saveBar{padding:11px 24px}
+  .top{padding:0 24px;column-gap:14px}main{padding:22px 24px 96px}.saveBar{padding:11px 24px}
+  .tab{padding:0 10px}.tab[aria-current]::after{left:6px;right:6px}.who{max-width:14ch}
   .md{grid-template-columns:270px minmax(0,1fr)}
   .colHead,.job,.roleHead{grid-template-columns:minmax(0,1fr) 170px 100px 128px}
   .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -298,6 +300,7 @@ dialog li{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;pad
   .name{padding-top:0}
   select{min-height:40px}.btn,.prim,.sec{min-height:40px}.acts .btn{min-height:32px}
   .tab{min-height:44px}
+  .who{display:none}
 }
 /* 375 */
 @media (max-width:600px){

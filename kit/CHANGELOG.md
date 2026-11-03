@@ -2,6 +2,13 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.64.3] - 2026-11-03
+
+### Changed
+- Model panel, Jobs tab: the main job now names the role it follows ("Follows Planning and architecture", "Back to Planning and architecture").
+- The outside model warning for the main job no longer repeats the `run-session.mjs` command; the note above it shows the command unbroken on one line.
+- The top bar stays on one row down to tablet width. Below 860 px the project name is hidden.
+
 ## [3.64.2] - 2026-11-03
 
 ### Fixed

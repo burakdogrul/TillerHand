@@ -613,6 +613,7 @@
       [...S.choices.efforts, 'max'].map((x) => h('option', { value: x }, x)));
   }
   const labelOf = (name) => T(isRole(name) ? `panel.role.${name}` : `panel.job.${name}`);
+  const RUN_SESSION = 'node .claude/hooks/run-session.mjs';
   function onModel(name) {
     const r = rows.get(name);
     const model = r.model.value;
@@ -637,7 +638,8 @@
     r.note = h('span', { class: 'note' });
     r.note2 = h('span', { class: 'note' });
     r.bad = h('span', { class: 'note bad', role: 'status' });
-    const backText = T(name === 'board.commit' ? 'panel.jobs.backRecommended' : 'panel.jobs.back');
+    // The main job has no heading above it: it follows the planning role, so the text names it
+    const backText = name === 'main' ? T('panel.jobs.backToRole', { role: labelOf('plan') }) : T(name === 'board.commit' ? 'panel.jobs.backRecommended' : 'panel.jobs.back');
     const applyLabel = T('panel.jobs.applyFor', { action: T('panel.jobs.applyAll'), job: labelOf(name) });
     r.back = h('button', { class: 'btn', type: 'button', id: `b-${name}`, 'aria-label': T('panel.jobs.backFor', { action: backText, job: labelOf(name) }), onclick: () => { document.getElementById(`m-${name}`)?.focus(); setOwn(name, null); } }, backText);
     r.consent = h('div', { class: 'consent', role: 'group', 'aria-label': T('panel.consent.title') });
@@ -692,7 +694,7 @@
     const shown = shownOwn ? o : res.value;
     const { model, effort } = splitValue(shown);
     const { model: followModel } = splitValue(res.value);
-    const followText = name === 'board.commit' ? T('panel.jobs.recommendedOpt', { model: followModel }) : T('panel.jobs.follows', { model: followModel });
+    const followText = name === 'board.commit' ? T('panel.jobs.recommendedOpt', { model: followModel }) : name === 'main' ? T('panel.jobs.followsRole', { role: labelOf('plan'), model: followModel }) : T('panel.jobs.follows', { model: followModel });
     if (!isRole(name)) r.model.options[0].textContent = followText;
     r.model.value = shownOwn || kind === 'role' ? model : '';
     r.effort.value = effort ?? 'high';
@@ -739,6 +741,7 @@
       r.fold.setAttribute('aria-expanded', String(!isFolded(name)));
     }
     r.note.textContent = note; r.note.hidden = !note;
+    if (name === 'main' && parseExt(shown)) r.note.append(' ', h('code', {}, RUN_SESSION));
     r.note2.textContent = note2; r.note2.hidden = !note2;
     fillConsent(r);
   }
@@ -913,7 +916,7 @@
       const main = splitValue(mainValue);
       // /model cannot reach an outside model: it runs through run-session.mjs
       if (!had) toast(T('panel.saved'));
-      else if (parseExt(mainValue)) toast(`${T('panel.saved')}. ${T('panel.jobs.mainExternal')}`);
+      else if (parseExt(mainValue)) toast(`${T('panel.saved')}. ${T('panel.jobs.mainExternal')} ${RUN_SESSION}`);
       else toast(T('panel.jobs.savedMain', { model: main.model, effort: main.effort ?? '' }));
       document.getElementById('jobSearch')?.focus();
       return;
