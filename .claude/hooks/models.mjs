@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import readline from 'node:readline/promises';
-import { findRoot, isMain } from './shared.mjs';
+import { findRoot, isMain, renameWithRetry } from './shared.mjs';
 import { t } from './lang.mjs';
 import { EFFORTS, parseExternal, parseProviderUrl, isProvider, hasKey, setProvider, removeKey, setLimit, purgePlainKeys, unsafeEnv } from './providers.mjs';
 
@@ -118,7 +118,7 @@ export function replaceFile(file, text) {
   const tmp = `${file}.${process.pid}.tmp`;
   try {
     fs.writeFileSync(tmp, text);
-    fs.renameSync(tmp, file);
+    renameWithRetry(tmp, file);
   } finally {
     fs.rmSync(tmp, { force: true });
   }
@@ -241,7 +241,7 @@ export function applyChanges({ changes, ifVersion, clearJobsUnder, overwriteBrok
       const error = writeMainSession(file, picked.get('main'), tasks.main);
       if (error) return refuse('invalid', error);
     }
-    fs.renameSync(tmp, file);
+    renameWithRetry(tmp, file);
     tmp = null;
   } catch (e) {
     return refuse('failed', `Could not write the file (${e.code ?? 'error'}): ${file}`);
@@ -265,7 +265,7 @@ export function setDefaults(file = modelsFile()) {
     fs.mkdirSync(path.dirname(defaultsFile()), { recursive: true, mode: 0o700 });
     const tmp = `${defaultsFile()}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, serialize(roles, jobs), { mode: 0o600 });
-    fs.renameSync(tmp, defaultsFile());
+    renameWithRetry(tmp, defaultsFile());
   } catch (e) {
     return `Could not write the default (${e.code ?? 'error'}).`;
   }

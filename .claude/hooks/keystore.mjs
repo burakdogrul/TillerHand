@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import cp from 'node:child_process';
-import { findRoot } from './shared.mjs';
+import { findRoot, renameWithRetry } from './shared.mjs';
 
 const SERVICE = 'tillerhand';
 const PROVIDER_ID = /^[a-z][a-z0-9-]{0,31}$/; // becomes a file name on Windows
@@ -47,7 +47,7 @@ const dpapi = {
     const cipher = run(powershell(), [...PS, PS_PROTECT], key);
     fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
     const tmp = `${file}.${process.pid}.tmp`;
-    try { fs.writeFileSync(tmp, cipher, { mode: 0o600 }); fs.renameSync(tmp, file); } finally { fs.rmSync(tmp, { force: true }); }
+    try { fs.writeFileSync(tmp, cipher, { mode: 0o600 }); renameWithRetry(tmp, file); } finally { fs.rmSync(tmp, { force: true }); }
   },
   read(provider) {
     const file = keyFile(provider);

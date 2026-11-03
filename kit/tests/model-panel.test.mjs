@@ -2516,7 +2516,11 @@ async function startCli(t, root) {
   child.stderr.on('data', (d) => { out += d; });
   t.after(() => { try { child.kill(); } catch { /* gone */ } });
   const panelFile = path.join(root, '.claude', 'state', 'panel.json');
-  await until(() => readJson(panelFile)?.pid === child.pid, `the CLI to write panel.json (output so far: ${out})`);
+  // A CLI that has died never writes panel.json: fail at once, with what it printed
+  await until(() => {
+    assert.equal(child.exitCode, null, `the CLI exited with code ${child.exitCode} before it wrote panel.json (output: ${out})`);
+    return readJson(panelFile)?.pid === child.pid;
+  }, 'the CLI to write panel.json');
   return {
     child, tmp, panelFile, output: () => out,
     spied: () => (fs.existsSync(spyFile) ? fs.readFileSync(spyFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []),
@@ -2941,4 +2945,64 @@ test('AC-63.29 no false alarm: doc-guard passes other ~1 names, and the guard le
   for (const ctx of GUARD_CTXS) {
     assert.deepEqual(free.filter((c) => evaluate(c, ctx) !== null), [], `free (${JSON.stringify(ctx)})`);
   }
+});
+
+// ---- a file replace survives a reader on Windows (64.46, 64.47) ----
+
+test('AC-64.46 replaceFile keeps working while another process reads the file', T, async (t) => {
+  const { replaceFile } = await load('models.mjs');
+  const dir = tmpDir(t, 'mp-replace-');
+  const file = path.join(dir, 'panel.json');
+  write(file, 'first');
+  const reader = cp.spawn(process.execPath, ['-e', `
+    const fs = require('node:fs');
+    console.log('started');
+    for (;;) { try { fs.readFileSync(process.argv[1], 'utf8'); } catch { /* being replaced */ } }
+  `, file], { stdio: ['ignore', 'pipe', 'ignore'] });
+  t.after(() => { try { reader.kill(); } catch { /* gone */ } });
+  let started = false;
+  reader.stdout.on('data', () => { started = true; });
+  await until(() => started || reader.exitCode !== null, 'the reader process to start', 15000);
+  assert.equal(reader.exitCode, null, 'the reader is still running');
+
+  const writes = 60;
+  for (let i = 0; i < writes; i++) replaceFile(file, `text ${i}`);
+  assert.equal(fs.readFileSync(file, 'utf8'), `text ${writes - 1}`);
+  assert.deepEqual(fs.readdirSync(dir).filter((f) => f.endsWith('.tmp')), [], 'no temp file is left');
+});
+
+test('AC-64.47 ATTACK: renameWithRetry gives up on a refusal that does not clear, and keeps the source', T, async (t) => {
+  const shared = await load('shared.mjs');
+  assert.equal(typeof shared.renameWithRetry, 'function', 'shared.mjs exports renameWithRetry');
+  const dir = tmpDir(t, 'mp-rename-');
+  const from = path.join(dir, 'from.tmp');
+  const to = path.join(dir, 'target');
+  write(from, 'new');
+  write(path.join(to, 'inside.txt'), 'x'); // a non-empty folder as the target: this rename can never work
+  const start = Date.now();
+  assert.throws(() => shared.renameWithRetry(from, to), (e) => e instanceof Error && typeof e.code === 'string');
+  assert.ok(Date.now() - start < 5000, `it returned after ${Date.now() - start} ms, not hanging`);
+  assert.equal(fs.readFileSync(from, 'utf8'), 'new', 'the source file still exists, untouched');
+  assert.equal(fs.readFileSync(path.join(to, 'inside.txt'), 'utf8'), 'x', 'the target was not damaged');
+});
+
+test('AC-64.47 renameWithRetry throws ENOENT at once for a missing source: only the transient refusal is retried', T, async (t) => {
+  const shared = await load('shared.mjs');
+  assert.equal(typeof shared.renameWithRetry, 'function', 'shared.mjs exports renameWithRetry');
+  const dir = tmpDir(t, 'mp-rename-');
+  const start = Date.now();
+  assert.throws(() => shared.renameWithRetry(path.join(dir, 'missing.tmp'), path.join(dir, 'to')), { code: 'ENOENT' });
+  assert.ok(Date.now() - start < 250, `it threw after ${Date.now() - start} ms, not after retries`);
+});
+
+test('AC-64.47 replaceFile removes its temp file when the rename fails for good, and the target stays', T, async (t) => {
+  const { replaceFile } = await load('models.mjs');
+  const dir = tmpDir(t, 'mp-replace-');
+  const file = path.join(dir, 'models.json');
+  write(path.join(file, 'inside.txt'), 'x'); // a non-empty folder where the file should go
+  const start = Date.now();
+  assert.throws(() => replaceFile(file, 'new'), (e) => e instanceof Error && typeof e.code === 'string');
+  assert.ok(Date.now() - start < 5000, `it returned after ${Date.now() - start} ms, not hanging`);
+  assert.deepEqual(fs.readdirSync(dir), ['models.json'], 'no temp file is left');
+  assert.equal(fs.readFileSync(path.join(file, 'inside.txt'), 'utf8'), 'x');
 });

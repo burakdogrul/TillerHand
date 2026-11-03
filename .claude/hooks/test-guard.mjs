@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
-import { readInput, decide, isMain, findRoot } from './shared.mjs';
+import { readInput, decide, isMain, findRoot, renameWithRetry } from './shared.mjs';
 import { t } from './lang.mjs';
 
 // Also mobile flows (Maestro, XCTest), snapshots and test setup files: they decide what a test sees
@@ -154,7 +154,7 @@ function record() {
   try {
     fs.mkdirSync(path.dirname(tmp), { recursive: true });
     fs.writeFileSync(tmp, JSON.stringify({ files }, null, 2));
-    fs.renameSync(tmp, recordPath(g.root));
+    renameWithRetry(tmp, recordPath(g.root));
   } catch { fs.rmSync(tmp, { force: true }); /* the commit gate then asks for test-writer again */ }
   process.exit(0);
 }

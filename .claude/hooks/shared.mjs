@@ -17,6 +17,18 @@ export const PANEL_TOKEN = /vibe-panel-|panel-open(?:\.html|(?![\w.-]))|vib[^\s/
 // Was this file started as the program (not imported)? Compared as real paths: a project opened through a symlink or a
 // junction (macOS /tmp, linked folders, npx's node_modules/.bin) starts the script by its linked path, while
 // import.meta.url is the target. A plain comparison would skip the guard silently there.
+// Windows refuses a rename while another process has the target open for a moment, so a reader must not make a write fail
+export function renameWithRetry(from, to) {
+  // Measured against a process reading in a tight loop: refused for up to 720 ms, about 46 tries
+  const end = Date.now() + 3000;
+  for (;;) {
+    try { return fs.renameSync(from, to); } catch (e) {
+      if (process.platform !== 'win32' || Date.now() >= end || !['EPERM', 'EACCES', 'EBUSY'].includes(e.code)) throw e;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+    }
+  }
+}
+
 export function isMain(metaUrl) {
   try {
     return Boolean(process.argv[1]) && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(metaUrl));

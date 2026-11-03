@@ -9,6 +9,9 @@ Items with an "Adapt by hand" note concern files owned by the project; the updat
 - The outside model warning for the main job no longer repeats the `run-session.mjs` command; the note above it shows the command unbroken on one line.
 - The top bar stays on one row down to tablet width. Below 860 px the project name is hidden.
 
+### Fixed
+- On Windows, saving a file failed with `EPERM` when another program had it open for a moment. The model panel could die at start, and saving a model choice could fail. These writes now retry briefly.
+
 ## [3.64.2] - 2026-11-03
 
 ### Fixed

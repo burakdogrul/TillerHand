@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { vaultKind, vaultSave, vaultRead, vaultDelete } from './keystore.mjs';
+import { renameWithRetry } from './shared.mjs';
 
 export const MODEL_ID = /^[A-Za-z0-9~][\w.~:/-]*$/;
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh'];
@@ -58,10 +59,7 @@ function update(file, change) {
     change(store);
     const tmp = `${file}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(store, null, 2), { mode: 0o600 });
-    // Windows refuses a rename while another process has the file open for a moment
-    for (let tries = 0; ; tries++) {
-      try { fs.renameSync(tmp, file); break; } catch (e) { if (tries >= 50 || e.code !== 'EPERM') throw e; sleep(10); }
-    }
+    renameWithRetry(tmp, file);
     fs.chmodSync(file, 0o600);
   } finally {
     fs.rmSync(lock, { force: true });
