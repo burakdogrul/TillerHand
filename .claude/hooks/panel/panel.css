@@ -180,6 +180,7 @@ select:disabled{opacity:.6}
 .fold[aria-expanded="false"]::before{transform:rotate(-45deg)}
 .fold b{font-size:15px;font-weight:600}
 .roleTitle small{font-weight:400;color:var(--bar-soft);font-size:12px}
+.roleTitle .tagA,.roleTitle .tagU{color:var(--bar-soft)}
 .roleNote{grid-column:1 / -1;font-size:12px;color:var(--bar-soft);padding-left:36px}
 .roleNote.bad{color:#f2b3aa}
 

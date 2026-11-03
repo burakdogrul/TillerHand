@@ -2,6 +2,12 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.64.2] - 2026-11-03
+
+### Fixed
+- After saving an outside model for the main job, the model panel showed a `/model` command that cannot reach it. It now shows the `run-session.mjs` command.
+- The "Claude recommended" tag on section headings in the Jobs tab was too faint to read in the light theme.
+
 ## [3.64.1] - 2026-11-03
 
 ### Fixed

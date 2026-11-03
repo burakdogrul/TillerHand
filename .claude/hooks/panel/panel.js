@@ -909,8 +909,12 @@
       consented = new Set();
       await load({ rebase: true });
       renderTab();
-      const main = splitValue(resolve('main').value);
-      toast(had ? T('panel.jobs.savedMain', { model: main.model, effort: main.effort ?? '' }) : T('panel.saved'));
+      const mainValue = resolve('main').value;
+      const main = splitValue(mainValue);
+      // /model cannot reach an outside model: it runs through run-session.mjs
+      if (!had) toast(T('panel.saved'));
+      else if (parseExt(mainValue)) toast(`${T('panel.saved')}. ${T('panel.jobs.mainExternal')}`);
+      else toast(T('panel.jobs.savedMain', { model: main.model, effort: main.effort ?? '' }));
       document.getElementById('jobSearch')?.focus();
       return;
     }
