@@ -11,9 +11,10 @@ import { t } from './lang.mjs';
 // Windows opens "a.pdf." and "a.pdf " as a.pdf
 const PDF = /\.pdf[\s.]*$/i;
 // The two parts the kit itself reads from here stay open, as in destructive-guard.mjs
-const KEY_STORE = /(?:^|[\\/])\.vibe-kit(?:[\\/](?!preferences|gate-approval)|$)/i;
+const KEY_STORE = /(?:^|[\\/])\.vibe-kit(?:[\\/](?!(?:preferences\.md|gate-approval)(?:[\\/]|$))|$)/i;
 const inKeyStore = (p) => {
-  if (KEY_STORE.test(p)) return true;
+  // A glob or a missing file has no real path, so "preferences.md/../keys" is resolved by hand first
+  if (KEY_STORE.test(p) || KEY_STORE.test(path.resolve(p))) return true;
   try { return KEY_STORE.test(fs.realpathSync.native(path.resolve(p))); } catch { return false; }
 };
 

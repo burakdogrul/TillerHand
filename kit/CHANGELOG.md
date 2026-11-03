@@ -2,6 +2,11 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.64.1] - 2026-11-03
+
+### Fixed
+- Reading the key store is refused for more spellings: a path that climbs out through `..` from an open part, and names that only start like `preferences.md` or `gate-approval`.
+
 ## [3.64.0] - 2026-11-03
 
 ### Changed
