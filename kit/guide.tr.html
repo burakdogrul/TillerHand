@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.65.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.66.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -831,10 +831,10 @@ npx tillerhand init
   <div class="phase">
     <div class="n">1</div>
     <div>
-      <p class="when">İlk gün · Faz 0</p>
-      <h3>Kurulum ve ilk deploy</h3>
-      <div class="chips"><span>/build G-001</span><span>… G-007</span><span>CI yeşil</span><span>prod URL</span><span>Sentry</span><span>belirteçler kodda</span></div>
-      <div class="gate"><b>Çıkış kapısı</b><ul><li>dev, test, lint, build komutları çalışıyor</li><li>Sır içeren deneme commit'i reddediliyor, GitHub'da CI yeşil</li><li>"Merhaba dünya" prod URL'de açılıyor, hata takibi çalışıyor</li></ul></div>
+      <p class="when">İlk oturum · kendi bilgisayarında</p>
+      <h3>Kurulum ve ilk deneme</h3>
+      <div class="chips"><span>/start</span><span>/try</span><span>localhost</span><span>sahte parçalar</span><span>/lock</span></div>
+      <div class="gate"><b>Çıkış kapısı</b><ul><li>Ana akışı kendi bilgisayarında tıkladın</li><li>Beğenene kadar tur tur değiştirdin</li><li><code>/lock</code> kodu denetledi, sağlamlaştırdı ve main'e aldı</li></ul></div>
     </div>
   </div>
   <div class="phase">
@@ -1213,6 +1213,8 @@ Bekleyen karar: e-posta servisi</pre>
       <tr><td class="f">/start [fikir]</td><td>Dokuz adımlı sihirbaz: fikir, tip, kurulum, teknoloji, mimari, kurul, tasarım, yol haritası</td></tr>
       <tr><td class="f">/adopt</td><td>Var olan projeyi kite alır: tarar, belgeleri koddan çıkarır, AGENTS.md ve CLAUDE.md'yi yeniden yazar, kritik akış testleri ve özellik özellik taşıma ile uyum yol haritası</td></tr>
       <tr><td class="f">/plan-task [görev]</td><td>Karar noktalarını sorar, kurul görüşüyle plan çıkarır, onay alır; 3+ dosyalık işte spec yazar</td></tr>
+      <tr><td class="f">/try [ne]</td><td>Kendi dalında, sahte parçalarla, tıklayabileceğin hızlı bir dilim. Dış serviste seçim senin: sahte yanıt ya da kendi anahtarın. Yalnız sen, kendi bilgisayarında görürsün</td></tr>
+      <tr><td class="f">/lock</td><td>Denenen kodu korur: dosya dosya denetler, kabul ölçütü ve test ekler, sahte parçaları gerçeğe çevirir, kurul denetiminden sonra main'e alır</td></tr>
       <tr><td class="f">/build [görev]</td><td>Önce kabul ve saldırgan testlerini ayrı bir ajan (<code>test-writer</code>) yazar, sonra kod; yeni karar çıkarsa durur; kanıt (arayüzde masaüstü ve mobil ekran görüntüsü) ve kurul denetimi</td></tr>
       <tr><td class="f">/design [kapsam]</td><td>Görsel önizlemeli tasarım kararları ve uygulama</td></tr>
       <tr><td class="f">/review-changes [aralık]</td><td>code-reviewer + security-auditor + ponytail-review; düzeltilecekleri çoklu seçimle sorar</td></tr>
@@ -1271,7 +1273,7 @@ Bekleyen karar: e-posta servisi</pre>
     <li><b>Önce yaz, sonra kodlat.</b><span>PRD ve kapsam dışı listesi olmadan kod yok.</span></li>
     <li><b>Tek görev, tek oturum.</b><span>Büyük görevi böl.</span></li>
     <li><b>Her çalışan adım bir commit.</b><span>AI yolunu kaybederse oraya dönersin.</span></li>
-    <li><b>İlk gün canlıya al.</b><span>Deploy hattı ve CI baştan çalışsın.</span></li>
+    <li><b>İlk gün dene, MVP'de aç.</b><span>Ürünü ilk oturumda tıklarsın. Başkaları MVP bitince görür.</span></li>
     <li><b>Bağlam dosyada yaşar.</b><span><code>/wrap-up</code> ve <code>/clear</code> alışkanlık olsun.</span></li>
     <li><b>"Çalışıyor" değil, kanıt.</b><span>Ekran görüntüsü, istek/yanıt, test çıktısı.</span></li>
     <li><b>İki deneme kuralı.</b><span>Aynı hata iki kez çözülmediyse dur, geri al, yeniden planla.</span></li>
@@ -1289,7 +1291,7 @@ Bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.65.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.66.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

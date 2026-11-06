@@ -527,6 +527,22 @@ test('AC-49.12 session-start: the language note says labels, headings, keys and 
   }
 });
 
+test('AC-21 session-start: on try/notes the context names the branch and docs/product/try/notes.md; on main it does not mention docs/product/try/', () => {
+  const p = project({ '.kit.json': kitJson({ lang: 'en' }), 'a.txt': 'x' });
+  const git = (c) => spawnSync('git', c, { cwd: p, encoding: 'utf8' });
+  assert.equal(git(['init', '-q']).status, 0);
+  git(['symbolic-ref', 'HEAD', 'refs/heads/main']);
+  git(['config', 'user.email', 't@t']);
+  git(['config', 'user.name', 't']);
+  git(['add', '-A']);
+  assert.equal(git(['commit', '-qm', 'init']).status, 0);
+  assert.equal(session(p).includes('docs/product/try/'), false, 'main');
+  assert.equal(git(['checkout', '-q', '-b', 'try/notes']).status, 0);
+  const context = session(p);
+  assert.equal(context.includes('try/notes'), true, 'names the branch');
+  assert.equal(context.includes('docs/product/try/notes.md'), true, 'names the trial note');
+});
+
 test('session-start: no language chosen says so and gives no language line', () => {
   for (const p of [project(PENDING), project({ '.kit.json': kitJson({ type: null }) })]) {
     const c = session(p);

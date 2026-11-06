@@ -17,6 +17,7 @@
     ".mcp.json",
     ".kit.json",
     "docs/**",
+    "docs/product/try/*.md",
     ".claude/**",
     ".agents/**",
     ".codex/**",

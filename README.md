@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.65.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.66.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -82,7 +82,9 @@ The first question is the language: Turkish, English or another one. Claude then
 
 | When | What to type |
 |---|---|
-| Starting work | `/build` (picks up the next task and tests it) |
+| Trying a feature | `/try` (a quick slice you click on your own computer) |
+| You like it | `/lock` (reviews the code, hardens it, merges it) |
+| Other work | `/build` (picks up the next task and tests it) |
 | Checking status | `where are we?` or `/dashboard` |
 | Something breaks | `/rollback` |
 | Stopping | `/wrap-up`, then `/clear` |
@@ -146,10 +148,10 @@ If you already have code, the install is the same and only the first command cha
 
 ```mermaid
 flowchart LR
-    A["/start<br/>idea → plan"] --> B["Phase 0<br/>setup, CI, first deploy"]
-    B --> C{"Each task"}
-    C --> D["/plan-task<br/>decisions + board"]
-    D --> E["/build<br/>acceptance tests first"]
+    A["/start<br/>idea → first screens"] --> B["/try<br/>click it, change it"]
+    B --> C{"Each feature"}
+    C --> D["/try<br/>fake parts, your computer"]
+    D --> E["/lock<br/>review, tests, real parts"]
     E --> F["/review-changes<br/>+ commit gate"]
     F --> G["/wrap-up"]
     G --> C
@@ -158,7 +160,7 @@ flowchart LR
     I --> J["/maintain"]
 ```
 
-**The `/start` wizard** turns an idea into a plan in nine steps:
+**The `/start` wizard** turns an idea into a plan in nine steps. You click the first version after step 4; `/lock` runs the rest:
 
 | Step | What happens |
 |---|---|
@@ -256,6 +258,8 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | `/start [idea]` | Nine-step kickoff wizard |
 | `/adopt` | Brings an existing project into the kit with an alignment roadmap |
 | `/plan-task [task]` | Asks the decisions, plans with the board |
+| `/try [what]` | A quick slice to click, on its own branch with fake parts |
+| `/lock` | Keeps the tried code: review, tests, real parts, merge |
 | `/build [task]` | Acceptance tests first, then code, proof and board review |
 | `/design` | Design decisions with visual previews |
 | `/review-changes` | Independent review and security agents |

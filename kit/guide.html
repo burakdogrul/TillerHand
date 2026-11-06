@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.65.0</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.66.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -831,10 +831,10 @@ npx tillerhand init
   <div class="phase">
     <div class="n">1</div>
     <div>
-      <p class="when">Day one · Phase 0</p>
-      <h3>Setup and first deploy</h3>
-      <div class="chips"><span>/build G-001</span><span>… G-007</span><span>CI green</span><span>prod URL</span><span>Sentry</span><span>tokens in code</span></div>
-      <div class="gate"><b>Exit gate</b><ul><li>dev, test, lint and build commands work</li><li>A trial commit containing a secret is rejected, CI is green on GitHub</li><li>"Hello world" opens at the prod URL, error tracking works</li></ul></div>
+      <p class="when">First session · on your computer</p>
+      <h3>Setup and first try</h3>
+      <div class="chips"><span>/start</span><span>/try</span><span>localhost</span><span>fake parts</span><span>/lock</span></div>
+      <div class="gate"><b>Exit gate</b><ul><li>You clicked the main flow on your own computer</li><li>You changed it round by round until you liked it</li><li><code>/lock</code> reviewed the code, hardened it and merged it into main</li></ul></div>
     </div>
   </div>
   <div class="phase">
@@ -856,7 +856,7 @@ npx tillerhand init
   <div class="phase">
     <div class="n">3</div>
     <div>
-      <p class="when">Launch · and every release</p>
+      <p class="when">When the MVP is done · and every release</p>
       <h3>Going live</h3>
       <div class="chips"><span>/release first</span><span>/release</span><span>security-auditor</span><span>security-review</span><span>ponytail-audit</span><span>impeccable audit</span></div>
       <p><code>/release first</code> walks you through the hosting, environment variables, domain and DNS, backup and point-in-time recovery (PITR), and rollback rehearsal for your provider (Vercel, Supabase, Railway, EAS) at the first launch. The steps come from the official docs, with source and date; you enter the secret in the dashboard of the provider.</p>
@@ -1213,6 +1213,8 @@ Pending decision: email service</pre>
       <tr><td class="f">/start [idea]</td><td>The nine-step wizard: idea, type, install, technology, architecture, board, design, roadmap</td></tr>
       <tr><td class="f">/adopt</td><td>Brings an existing project into the kit: scans it, derives the docs from the code, rewrites AGENTS.md and CLAUDE.md, and builds an alignment roadmap with critical-flow tests and a feature-by-feature move</td></tr>
       <tr><td class="f">/plan-task [task]</td><td>Asks the decision points, produces a plan with the board's opinion, gets approval; writes a spec for work of 3+ files</td></tr>
+      <tr><td class="f">/try [what]</td><td>A quick slice you can click, on its own branch with fake parts. For an outside service you choose: a fake response or your own key. Only you see it, on your computer</td></tr>
+      <tr><td class="f">/lock</td><td>Keeps the tried code: reviews it file by file, adds acceptance criteria and tests, replaces the fake parts, then merges into main after the board review</td></tr>
       <tr><td class="f">/build [task]</td><td>A separate agent (<code>test-writer</code>) writes the acceptance and adversarial tests first, then the code; stops if a new decision comes up; proof (desktop and mobile screenshots on an interface) and the board review</td></tr>
       <tr><td class="f">/design [scope]</td><td>Design decisions with visual previews, and applying them</td></tr>
       <tr><td class="f">/review-changes [range]</td><td>code-reviewer + security-auditor + ponytail-review; asks what to fix with a multi-select</td></tr>
@@ -1271,7 +1273,7 @@ Pending decision: email service</pre>
     <li><b>Write first, then have it coded.</b><span>No code without a PRD and an out-of-scope list.</span></li>
     <li><b>One task, one session.</b><span>Split a big task.</span></li>
     <li><b>Every working step is a commit.</b><span>If the AI loses its way, you go back to there.</span></li>
-    <li><b>Go live on day one.</b><span>Have the deploy pipeline and CI working from the start.</span></li>
+    <li><b>Try on day one, open up at the MVP.</b><span>You click the product in the first session. Other people see it when the MVP is done.</span></li>
     <li><b>Context lives in files.</b><span>Make <code>/wrap-up</code> and <code>/clear</code> a habit.</span></li>
     <li><b>Proof, not "it works".</b><span>A screenshot, a request/response, test output.</span></li>
     <li><b>The two-attempt rule.</b><span>If the same error isn't solved in two attempts, stop, go back, and re-plan.</span></li>
@@ -1289,7 +1291,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.65.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.66.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

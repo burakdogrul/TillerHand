@@ -31,6 +31,9 @@ Before `/start`, `/plan-task`, `/build`, `/board convene` and `/release` begin:
 | Small task (1-2 files) | 3–6% |
 | Medium task (3-6 files + tests) | 8–15% |
 | Large task (many files, new module) | 20%+ (suggest splitting first) |
+| `/start` first pass + first `/try` | 15–30% |
+| `/try` round | 3–8% |
+| `/lock` of one slice (without the `/start` second pass) | 20–40% |
 | Board meeting at plan or task end | 2–5% |
 | Commit review (light) | 1% |
 | Full board meeting (phase end, go-live) | 8–15% |

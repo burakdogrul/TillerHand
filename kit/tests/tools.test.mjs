@@ -125,7 +125,7 @@ test('F-10 settings: non-core kit commands ship name-only, core commands keep th
   const s = json(path.join(ROOT, '.claude/settings.json'));
   const commands = fs.readdirSync(path.join(ROOT, '.claude/commands')).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3));
   assert.deepEqual([...CORE_COMMANDS, ...LIGHT_COMMANDS].sort(), commands.sort(), 'every kit command is either core or light');
-  assert.equal(CORE_COMMANDS.length, 10);
+  assert.equal(CORE_COMMANDS.length, 12);
   assert.deepEqual(s.skillOverrides, Object.fromEntries(LIGHT_COMMANDS.map((c) => [c, 'name-only'])));
 });
 

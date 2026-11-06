@@ -8,6 +8,7 @@
 //   the commit on a red or stale result. A green check's output is not written, the last 30 lines of a red one are.
 //   If no check passed (commands empty, no Semgrep) the result is EMPTY: the commit gate stays closed.
 //   "Absolute path": an added line with this machine's project or home path is red; a generic C:\Users\<name>, /home/<name> is a note.
+//   "Trial code": a try:fake marker or a *.fake.* file outside a try/* branch is red (whole repo).
 //   node .claude/hooks/gate.mjs --approve   saves the commands with user approval. A new or changed command does not run unapproved:
 //   an untrusted repo's AGENTS.md must not run code through the gate. The approval lives in the user folder (~/.vibe-kit/).
 import fs from 'node:fs';
@@ -17,7 +18,8 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { changes } from './commit-gate.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
-import { findRoot, isMain } from './shared.mjs';
+import { findRoot, isMain, TRIAL_BRANCH } from './shared.mjs';
+import { isTestFile } from './test-guard.mjs';
 import { specInvariants } from './dashboard-data.mjs';
 
 // Keys of the AGENTS.md → Commands block
@@ -162,6 +164,42 @@ export function absPathCheck(root, files) {
   return { name, status: 'passed', ...(notes.length && { note: `${notes.length} lines have a path that looks like a user folder; fix it if it is machine-specific (does not block)`, output: list(notes) }) };
 }
 
+// Fake parts from /try must not leave a try/* branch. The whole repo is read, not the diff: after a merge the diff is empty.
+// A file that takes no comment (a JSON fixture) carries the name *.fake.* instead of the marker.
+// The kit's own files name the marker; a test fixture may carry the *.fake.* name, but never the marker.
+// shortcut: fake code with neither the marker nor the name passes; /lock reads the deleted markers, a test cannot see intent.
+// shortcut: submodules, sparse (skip-worktree) files and files over 10 MB are not read; add them if a project needs it.
+const TRIAL_EXEMPT = /(^|\/)\.(claude|agents|codex)\/|\.md$/i;
+// Read here, not with git grep: dropping NULs also finds the marker in a UTF-16 file.
+function markerLine(file) {
+  if (fs.statSync(file).size > 1e7) return 0;
+  const lines = fs.readFileSync(file, 'latin1').replace(/\0/g, '').split('\n');
+  return lines.findIndex((l) => /try:\s*fake/i.test(l)) + 1;
+}
+export function fakeCheck(root) {
+  const name = 'Trial code';
+  const git = (cwd, ...a) => spawnSync('git', a, { cwd, encoding: 'utf8', maxBuffer: BUFFER });
+  const head = git(root, 'branch', '--show-current');
+  if (head.status !== 0) return { name, status: 'skipped', note: 'not a git repository' };
+  if (TRIAL_BRANCH.test(head.stdout.trim())) return { name, status: 'passed', trial: true, note: 'try branch, fake parts allowed' };
+  const top = git(root, 'rev-parse', '--show-toplevel').stdout?.trim() || root; // a project in a monorepo subfolder: read the whole repo
+  const files = git(top, 'ls-files', '-co', '--exclude-standard', '-z');
+  // A scan that did not finish says nothing, so it is never a pass
+  if (files.status !== 0) return { name, status: 'failed', note: 'git could not list the repo', output: (files.stderr ?? '').trim().slice(0, 500) };
+  const scanned = [...new Set(files.stdout.split('\0'))].filter((f) => f && !TRIAL_EXEMPT.test(f));
+  const found = scanned.filter((f) => /\.fake\.[^/]+$/.test(f) && !isTestFile(f));
+  for (const f of scanned) {
+    try {
+      const at = markerLine(path.join(top, f));
+      if (at) found.push(`${f}:${at}`);
+    } catch (e) {
+      if (!['ENOENT', 'EISDIR'].includes(e.code)) found.push(`${f}: could not be read (${e.code})`); // deleted file or submodule: nothing to read
+    }
+  }
+  if (!found.length) return { name, status: 'passed' };
+  return { name, status: 'failed', note: 'fake parts from /try; replace them through /lock', output: [...found.slice(0, 15), found.length > 15 ? `… and ${found.length - 15} more` : ''].filter(Boolean).join('\n') };
+}
+
 export const approvalNeeded = (list, unknown = []) => `command approval needed\nAGENTS.md → Commands is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
   (unknown.length ? `Keys the gate does not read (they never run; use dev, preview, test, lint, type check, build): ${unknown.join(', ')}\n` : '') +
   'Show the commands to the user and ask. If they approve: node .claude/hooks/gate.mjs --approve, then run the command again.';
@@ -196,11 +234,13 @@ export function runGate(root) {
   const empty = !checks.some((k) => CHECKS.includes(k.name) && k.status === 'passed'); // Semgrep alone does not fill a gate
   const spec = specCheck(root, start); // after the test command, which may have refreshed the JUnit report; it does not fill an empty gate
   if (spec) checks.push(spec);
-  checks.push(absPathCheck(root, files)); // after "empty": it does not fill a gate with no lint/test either
+  const fake = fakeCheck(root);
+  checks.push(absPathCheck(root, files), fake); // after "empty": they do not fill a gate with no lint/test either
   const passed = !empty && checks.every((k) => k.status !== 'failed');
   const file = path.join(root, '.claude', 'state', 'gate.json');
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify({ signature, date: new Date().toISOString(), passed, empty, checks }, null, 2));
+  // The commit gate compares content, not the branch: a green run on try/* must not count after a switch to main
+  fs.writeFileSync(file, JSON.stringify({ signature: fake.trial ? `try:${signature}` : signature, date: new Date().toISOString(), passed, empty, checks }, null, 2));
   const result = checks.some((k) => k.status === 'failed') ? 'Result: RED. The commit gate stays closed: fix it and run the gate again.'
     : empty ? 'Result: EMPTY, no check ran. Fill in AGENTS.md → Commands; the commit gate stays closed (if the user wants, commit-gate.mjs --skip).'
     : 'Result: GREEN.';

@@ -7,6 +7,8 @@ Target: $ARGUMENTS
 
 The user may not know git. Explain everything in plain language; if you use a git term, say what it means in one sentence.
 
+On a `try/*` branch each round is a commit (`wip: try <topic> round <n>`): offer the rounds as the points to go back to.
+
 1. Run `node .claude/hooks/checkpoint.mjs --list`.
 2. **If no target was given, ask** (AskUserQuestion), at most 4 options:
    - The newest **working point** (Recommended). Those with a `checkpoint/...` tag are saved by `/build` and `/wrap-up` when tests are green. Write its note and date in the description.

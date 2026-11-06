@@ -3,6 +3,8 @@ description: Implements the next (or given) roadmap task, tests it, marks it don
 argument-hint: [task id, empty = next task]
 ---
 
+A new user-visible feature starts with `/try` and reaches `main` through `/lock`, which uses the steps below. Run `/build` directly for real sign-in, payment, personal data, data deletion and infrastructure tasks.
+
 Task: $ARGUMENTS
 If empty, take `docs/workflow/progress.md` → "Next step" (next step), or the first unchecked task in `docs/product/roadmap.md`.
 

@@ -14,6 +14,9 @@ import { fileURLToPath } from 'node:url';
 // The name of the model panel's temporary page (it holds the one-time token), also spelled with a glob or a Windows 8.3 short name. A text check: a search of the whole temp folder by content stays a known limit.
 export const PANEL_TOKEN = /vibe-panel-|panel-open(?:\.html|(?![\w.-]))|vib[^\s/\\;&|]*[*?]|v[*?]be|[*?][^\s/\\;&|]*panel-|panel-o[^\s/\\;&|]*[*?]|\b(?:vibe-p|panel-|vi[\da-f]{4}|pa[\da-f]{4})~\d/i;
 
+// A /try branch: fake parts are allowed only here. Lower case only, so a look-alike name gets no exemption.
+export const TRIAL_BRANCH = /^try\/[a-z0-9][\w.-]*$/;
+
 // Was this file started as the program (not imported)? Compared as real paths: a project opened through a symlink or a
 // junction (macOS /tmp, linked folders, npx's node_modules/.bin) starts the script by its linked path, while
 // import.meta.url is the target. A plain comparison would skip the guard silently there.

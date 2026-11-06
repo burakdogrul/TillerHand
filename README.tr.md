@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.65.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.66.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -82,7 +82,9 @@ Kod yazmayı bilmen gerekmez. Git, terminal ve kurulum işlerini Claude yapar; s
 
 | Ne zaman | Ne yazarsın |
 |---|---|
-| Çalışmaya başlarken | `/build` (sıradaki görevi kendisi alır, test eder) |
+| Bir özelliği denerken | `/try` (kendi bilgisayarında tıkladığın hızlı dilim) |
+| Beğenince | `/lock` (kodu denetler, sağlamlaştırır, main'e alır) |
+| Diğer işlerde | `/build` (sıradaki görevi kendisi alır, test eder) |
 | Durumu merak edersen | `ne durumdayız?` veya `/dashboard` |
 | Bir şey bozulursa | `/rollback` |
 | Bırakırken | `/wrap-up`, sonra `/clear` |
@@ -146,10 +148,10 @@ Kodun zaten varsa kurulum aynı, başlangıç komutu farklı. Projenin kökünde
 
 ```mermaid
 flowchart LR
-    A["/start<br/>fikir → plan"] --> B["Faz 0<br/>kurulum, CI, ilk deploy"]
-    B --> C{"Her görev"}
-    C --> D["/plan-task<br/>kararlar + kurul"]
-    D --> E["/build<br/>önce kabul testleri"]
+    A["/start<br/>fikir → ilk ekranlar"] --> B["/try<br/>tıkla, değiştir"]
+    B --> C{"Her özellik"}
+    C --> D["/try<br/>sahte parçalar, kendi bilgisayarın"]
+    D --> E["/lock<br/>denetim, test, gerçek parçalar"]
     E --> F["/review-changes<br/>+ commit kapısı"]
     F --> G["/wrap-up"]
     G --> C
@@ -158,7 +160,7 @@ flowchart LR
     I --> J["/maintain"]
 ```
 
-**`/start` sihirbazı** fikri dokuz adımda plana çevirir:
+**`/start` sihirbazı** fikri dokuz adımda plana çevirir. İlk sürümü 4. adımdan sonra tıklarsın, kalanını `/lock` çalıştırır:
 
 | Adım | Ne olur |
 |---|---|
@@ -256,6 +258,8 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 | `/start [fikir]` | Dokuz adımlı başlangıç sihirbazı |
 | `/adopt` | Var olan projeyi kite alır, uyum yol haritası çıkarır |
 | `/plan-task [görev]` | Kararları sorar, kurul görüşüyle plan çıkarır |
+| `/try [ne]` | Kendi dalında, sahte parçalarla tıklanacak hızlı dilim |
+| `/lock` | Denenen kodu korur: denetim, test, gerçek parçalar, birleştirme |
 | `/build [görev]` | Önce kabul testleri, sonra kod, kanıt ve kurul denetimi |
 | `/design` | Görsel önizlemeli tasarım kararları |
 | `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |

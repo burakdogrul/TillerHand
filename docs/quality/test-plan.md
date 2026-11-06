@@ -19,6 +19,7 @@ Status column (the dashboard reads it; English in every language): `✅` when th
 ## 1a. Acceptance tests (living specification)
 
 Every acceptance criterion in the PRD (like `AC-01.1`) becomes a runnable test **before any code is written**, and it is red first.
+Exception: code tried on a `try/*` branch comes first. `/lock` writes the criteria and tests from the approved behavior; a test that is green on first run must go red on broken code before it counts.
 The test name contains the criterion id. Examples:
 
 ```ts

@@ -26,6 +26,7 @@ Source lists: `docs/operations/release-checklist.md`, `docs/architecture/stack.m
    - Do `.env.example` and the environment variable uses in the code match?
    - **Clean install test:** `git clone . "<temp folder>/clean"` (committed files only). There, run in order the dependency install from `README.md` → "Installation", the build and the tests (do not create `.env`; count steps that need environment variables as 👤). ❌ if the lock file, the version file (`.nvmrc` / `.python-version`) or a README step is missing. Delete the temp folder.
    - Are there uncommitted changes?
+   - **Trial code (blocking):** Is any branch left under `try/` or `origin/try/` (`git branch -a --list "try/*" "*/try/*"`)? Does the gate's "Trial code" check report a `try:fake` marker or a `*.fake.*` file? ❌ if so: finish it with `/lock` or drop it.
    - Is `CHANGELOG.md` current?
    - Is there a pending DB migration?
 2. **Ask about what you cannot check** (panel settings, backup, domain, legal texts, store settings) with AskUserQuestion: Done / Not done / Not applicable to this project. For each, write in one line how I would check it. For multi-step setups I must do by hand (DNS, SPF/DKIM, store account, prod environment variables), prepare a step-by-step guide with `mattpocock-skills:wizard`.

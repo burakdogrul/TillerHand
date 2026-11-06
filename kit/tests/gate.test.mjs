@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { readCommands, approvalPath, unknownCommandKeys } from '../../.claude/hooks/gate.mjs';
 import { permissionEquivalent, evaluate } from '../../.claude/hooks/destructive-guard.mjs';
 import { maskOwnHook } from '../../.claude/hooks/commit-gate.mjs';
+// Namespace import: a missing export fails the trial-code tests alone, not the whole file
+import * as gateModule from '../../.claude/hooks/gate.mjs';
 
 const HOOKS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.claude', 'hooks');
 let p;
@@ -1393,3 +1395,340 @@ test('3.50.1 AC-15: ATTACK: a very long command gets a decision within 5 seconds
     sh('git checkout -- a.js');
   }
 });
+
+// ---------- fast lane (/try → /lock): the gate refuses trial code on main ----------
+
+// Imported as a namespace above, so a missing export is a red test with this message
+const fakeCheck = (root) => {
+  assert.equal(typeof gateModule.fakeCheck, 'function', 'gate.mjs exports fakeCheck(root)');
+  return gateModule.fakeCheck(root);
+};
+// A fresh repo on main with a green gate and no trial code. `p` is swapped for the run so the shared helpers work on it.
+function inTrialRepo(fn, { board = false } = {}) {
+  const outer = p;
+  p = fs.mkdtempSync(path.join(os.tmpdir(), 'trial-'));
+  try {
+    sh('git init -q && git config user.email t@t && git config user.name t && git symbolic-ref HEAD refs/heads/main');
+    write('.gitignore', '.claude/state/\nignored/\n');
+    agents('node -e "process.exit(0)"');
+    if (board) {
+      write('docs/workflow/board.md', '**Commit review:** on\n');
+      write('.claude/agents/board-qa.md', '---\nname: board-qa\n---\n');
+    }
+    write('src/app.js', 'export const app = 1;\n');
+    sh('git add -A && git commit -qm init');
+    fn();
+  } finally {
+    fs.rmSync(approvalPath(p), { force: true });
+    fs.rmSync(p, { recursive: true, force: true });
+    p = outer;
+  }
+}
+const commitAll = (msg) => sh(`git add -A && git commit -qm ${msg}`);
+const branch = () => execSync('git branch --show-current', { cwd: p, encoding: 'utf8' }).trim();
+const trialCheck = () => JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8')).checks.find((k) => k.name === 'Trial code');
+const expectRed = (r, file, why) => {
+  assert.equal(r.status, 1, `${why}: gate exit code\n${r.stdout}`);
+  assert.match(r.stdout, /❌ Trial code/, why);
+  if (file) assert.equal(r.stdout.includes(file), true, `${why}: the output names ${file}\n${r.stdout}`);
+};
+const expectGreen = (r, why, statuses = ['passed']) => {
+  assert.equal(r.status, 0, `${why}\n${r.stdout}`);
+  assert.equal(statuses.includes(trialCheck()?.status), true, `${why}: Trial code is in the gate result as ${statuses.join(' or ')}, got ${trialCheck()?.status}`);
+};
+const MARK = '// try:fake\n';
+
+test('AC-12.1 trial code: on main, a tracked code file with // try:fake turns the gate red and the output names the file', () => inTrialRepo(() => {
+  expectGreen(runGate(), 'no trial code: green with a Trial code check');
+  write('src/features/a/store.ts', 'export const a = 1;\n');
+  commitAll('store');
+  write('src/features/a/store.ts', `export const a = 1;\n${MARK}`);
+  expectRed(runGate(), 'src/features/a/store.ts', 'tracked file, marker added');
+  const r = fakeCheck(p);
+  assert.equal(r.name, 'Trial code');
+  assert.equal(r.status, 'failed');
+  assert.equal(JSON.stringify(r).includes('src/features/a/store.ts'), true, 'fakeCheck result names the file');
+}));
+
+test('AC-12.1 trial code: on main, an untracked (not ignored) file with the marker turns the gate red too', () => inTrialRepo(() => {
+  write('src/features/b/new.ts', `export const b = 2;\n${MARK}`);
+  expectRed(runGate(), 'src/features/b/new.ts', 'untracked file');
+}));
+
+test('AC-12.1 trial code: case and spacing variants of the marker count; plain code that merely says try does not', () => inTrialRepo(() => {
+  write('src/ok.js', 'const retryCount = 1; // try this later\nexport const trying = "fake";\n');
+  expectGreen(runGate(), 'near-miss text is not a marker');
+  fs.rmSync(path.join(p, 'src/ok.js'));
+  for (const text of ['// TRY: FAKE', '// Try:Fake', '//try:fake', '# try:   fake', '/* Try: fake */']) {
+    write('src/variant.js', `export const v = 1;\n${text}\n`);
+    expectRed(runGate(), 'src/variant.js', text);
+  }
+}));
+
+test('AC-12.2 trial code: a file named *.fake.* turns the gate red on main even with no marker inside', () => inTrialRepo(() => {
+  write('src/features/a/store.fake.ts', 'export const store = [];\n');
+  expectRed(runGate(), 'src/features/a/store.fake.ts', 'untracked fake-named file');
+  commitAll('fake-store');
+  expectRed(runGate(), 'src/features/a/store.fake.ts', 'committed fake-named file');
+  fs.rmSync(path.join(p, 'src/features/a/store.fake.ts'));
+  commitAll('drop-fake-store');
+  expectGreen(runGate(), 'after removing it');
+  write('src/data/seed.fake.json', '[]\n');
+  expectRed(runGate(), 'src/data/seed.fake.json', 'another extension');
+}));
+
+test('AC-12.3 trial code: on try/<topic> the same marker, untracked and fake-named files do not turn the gate red; back on main they do', () => inTrialRepo(() => {
+  write('src/features/a/store.ts', `export const a = 1;\n${MARK}`);
+  commitAll('marker');
+  write('src/features/b/new.ts', `export const b = 2;\n${MARK}`);
+  write('src/features/a/store.fake.ts', 'export const store = [];\n');
+  for (const name of ['try/notes', 'try/a-1_b.c', 'try/0']) {
+    sh(`git checkout -q -b "${name}"`);
+    assert.equal(branch(), name, 'precondition: on the trial branch');
+    expectGreen(runGate(), name, ['passed', 'skipped']);
+    sh('git checkout -q main');
+    sh(`git branch -q -D "${name}"`);
+  }
+  expectRed(runGate(), 'src/features/a/store.ts', 'main');
+}));
+
+test('AC-12.4 trial code: a committed marker with an empty diff still turns the gate red (the merge case)', () => inTrialRepo(() => {
+  sh('git checkout -q -b try/notes');
+  write('src/features/a/store.ts', `export const a = 1;\n${MARK}`);
+  write('src/features/a/seed.fake.ts', 'export const seed = [];\n');
+  commitAll('slice');
+  sh('git checkout -q main');
+  sh('git merge -q --squash try/notes');
+  commitAll('merged');
+  assert.equal(execSync('git status --porcelain', { cwd: p, encoding: 'utf8' }), '', 'precondition: empty diff');
+  expectRed(runGate(), 'src/features/a/store.ts', 'committed marker');
+  fs.rmSync(path.join(p, 'src/features/a/store.ts'));
+  commitAll('drop-marker');
+  assert.equal(execSync('git status --porcelain', { cwd: p, encoding: 'utf8' }), '', 'precondition: empty diff');
+  expectRed(runGate(), 'src/features/a/seed.fake.ts', 'committed fake-named file');
+}));
+
+test('AC-12.5 trial code: .claude, .agents, .codex at any depth, *.md and ignored files are not scanned; test files may carry *.fake.* names', () => inTrialRepo(() => {
+  const quiet = ['.claude/notes.js', '.agents/notes.js', '.codex/notes.js', 'app/.claude/hooks/x.mjs', 'packages/web/.agents/notes.js', 'a/b/c/.codex/notes.js',
+    'README.md', 'src/notes.md', 'docs/guide.md', 'kit/README.md', 'src/seed.fake.md'];
+  for (const f of quiet) write(f, `export const x = 1;\n${MARK}`);
+  write('.claude/seed.fake.json', '[]\n');
+  write('src/a.fake.test.ts', 'export const fixture = [];\n');
+  write('tests/fixtures/seed.fake.json', '[]\n');
+  write('src/__tests__/data.fake.json', '[]\n');
+  write('ignored/hidden.js', `export const h = 1;\n${MARK}`);
+  expectGreen(runGate(), 'untracked excluded files');
+  commitAll('excluded');
+  expectGreen(runGate(), 'committed excluded files');
+  assert.equal(fs.existsSync(path.join(p, 'ignored/hidden.js')) && !execSync('git ls-files', { cwd: p, encoding: 'utf8' }).includes('ignored/'), true, 'precondition: the ignored file stays untracked');
+  write('src/real.js', `export const r = 1;\n${MARK}`); // control: the scan is alive
+  expectRed(runGate(), 'src/real.js', 'control file');
+}));
+
+test('AC-12.5 trial code: docs/ and kit/ are ordinary folders in a product: a marker or a *.fake.* name there turns the gate red', () => inTrialRepo(() => {
+  expectGreen(runGate(), 'control: clean');
+  for (const f of ['docs/notes.js', 'kit/notes.js', 'docs/deep/x.ts', 'packages/kit/y.js']) {
+    write(f, `export const x = 1;\n${MARK}`);
+    expectRed(runGate(), f, `marker in ${f}`);
+    fs.rmSync(path.join(p, f));
+  }
+  for (const f of ['docs/a.fake.json', 'kit/a.fake.json']) {
+    write(f, '[]\n');
+    expectRed(runGate(), f, `fake-named ${f}`);
+    commitAll('fake');
+    expectRed(runGate(), f, `committed fake-named ${f}`);
+    fs.rmSync(path.join(p, f));
+    commitAll('drop');
+    expectGreen(runGate(), `after removing ${f}`);
+  }
+  write('docs/committed.js', `export const x = 1;\n${MARK}`);
+  commitAll('docs-marker');
+  expectRed(runGate(), 'docs/committed.js', 'committed marker in docs');
+}));
+
+test('AC-12.5 ATTACK trial code: near-miss exemptions do not silence the scan (.claudex/, a.md.js)', () => inTrialRepo(() => {
+  for (const f of ['src/.claudex/y.js', 'src/claude/z.js', 'src/a.md.js', 'src/.codexx/w.js']) {
+    write(f, `export const x = 1;\n${MARK}`);
+    expectRed(runGate(), f, `marker in ${f}`);
+    fs.rmSync(path.join(p, f));
+  }
+}));
+
+test('AC-12.5 trial code: a try:fake marker inside a test file is red, a *.fake.* name in a test file is allowed', () => inTrialRepo(() => {
+  for (const f of ['src/a.test.ts', 'tests/helper.js', 'src/__tests__/b.spec.ts']) {
+    write(f, `export const x = 1;\n${MARK}`);
+    expectRed(runGate(), f, `marker in test file ${f}`);
+    fs.rmSync(path.join(p, f));
+  }
+  write('src/a.fake.test.ts', 'export const fixture = [];\n');
+  write('tests/fixtures/seed.fake.json', '[]\n');
+  expectGreen(runGate(), 'fake-named fixtures in test files');
+  write('tests/fixtures/seed.fake.json', `[]\n${MARK}`);
+  expectRed(runGate(), 'tests/fixtures/seed.fake.json', 'the marker inside a fixture is still red');
+}));
+
+test('AC-12 ATTACK trial code: with git grep broken (grep.column notabool) a marker is still found and the check is failed, naming the file; with none it passes', () => inTrialRepo(() => {
+  sh('git config grep.column notabool'); // makes only "git grep" die
+  const probe = (a) => spawnSync('git', a, { cwd: p, stdio: 'ignore' }).status;
+  assert.equal(probe(['grep', '--untracked', '-n', 'x']), 128, 'precondition: grep dies');
+  assert.equal(probe(['ls-files', '-co', '--exclude-standard', '-z']), 0, 'precondition: ls-files works');
+  assert.equal(fakeCheck(p).status, 'passed', 'no marker: passed');
+  write('src/features/a/store.ts', `export const a = 1;
+${MARK}`);
+  const marked = fakeCheck(p);
+  assert.equal(marked.status, 'failed', 'marker in an untracked file');
+  assert.equal(JSON.stringify(marked).includes('src/features/a/store.ts'), true, 'the result names the file');
+  commitAll('marker');
+  assert.equal(fakeCheck(p).status, 'failed', 'marker in a committed file');
+  expectRed(runGate(), 'src/features/a/store.ts', 'gate with a broken git grep');
+}));
+
+test('AC-12 ATTACK trial code: git ls-files failing (corrupt index) makes the check failed, never passed', () => inTrialRepo(() => {
+  assert.equal(fakeCheck(p).status, 'passed', 'control: healthy repo, no trial code');
+  fs.writeFileSync(path.join(p, '.git/index'), 'garbage');
+  const probe = (a) => spawnSync('git', a, { cwd: p, stdio: 'ignore' }).status;
+  assert.equal(probe(['ls-files', '-co', '--exclude-standard', '-z']), 128, 'precondition: ls-files dies');
+  assert.equal(probe(['branch', '--show-current']), 0, 'precondition: branch works');
+  assert.equal(fakeCheck(p).status, 'failed');
+  expectRed(runGate(), null, 'gate with a broken git ls-files');
+}));
+
+test('AC-12 ATTACK trial code: a file git treats as binary (.gitattributes), with a NUL byte, or in UTF-16 LE is still scanned', () => inTrialRepo(() => {
+  write('.gitattributes', '*.dat binary\nsrc/a.js -diff\n');
+  commitAll('attrs');
+  expectGreen(runGate(), 'control: attributes alone are clean');
+  const cases = [
+    ['src/data.dat', Buffer.from('seed\n// try:fake\n')],
+    ['src/a.js', Buffer.from(MARK)],
+    ['src/null-byte.js', Buffer.from('export const n = 1;\0\n// try:fake\n')], // not nul.js: NUL is a reserved device name on Windows
+    ['src/nul-first.ts', Buffer.from('\0// TRY: FAKE\n')],
+    ['src/utf16.ts', Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('export const u = 1;\n// try:fake\n', 'utf16le')])], // BOM + UTF-16 LE
+  ];
+  for (const [f, body] of cases) {
+    fs.mkdirSync(path.dirname(path.join(p, f)), { recursive: true });
+    fs.writeFileSync(path.join(p, f), body);
+    expectRed(runGate(), f, `untracked ${f}`);
+    commitAll('bin');
+    expectRed(runGate(), f, `committed ${f}`);
+    fs.rmSync(path.join(p, f));
+    commitAll('drop');
+    expectGreen(runGate(), `after removing ${f}`);
+  }
+}));
+
+test('AC-12 ATTACK trial code: a project root in a monorepo subfolder sees a marker at the repo top; its own .claude stays exempt', () => inTrialRepo(() => {
+  const app = path.join(p, 'app');
+  write('app/.claude/hooks/x.mjs', `export const x = 1;\n${MARK}`);
+  write('app/src/ok.js', 'export const ok = 1;\n');
+  commitAll('app');
+  assert.equal(fakeCheck(app).status, 'passed', 'control: only the exempt marker exists');
+  write('lib/x.js', `export const x = 1;\n${MARK}`);
+  const marked = fakeCheck(app);
+  assert.equal(marked.status, 'failed', 'marker in ../lib/x.js');
+  assert.equal(JSON.stringify(marked).includes('lib/x.js'), true, 'the result names lib/x.js');
+  fs.rmSync(path.join(p, 'lib/x.js'));
+  assert.equal(fakeCheck(app).status, 'passed', 'back to clean');
+  write('lib/y.fake.json', '[]\n');
+  const named = fakeCheck(app);
+  assert.equal(named.status, 'failed', 'fake-named file at the repo top');
+  assert.equal(JSON.stringify(named).includes('lib/y.fake.json'), true, 'the result names lib/y.fake.json');
+}));
+
+test('AC-12 ATTACK trial code: a gate result written on try/<topic> does not count on main: the commit gate stops, the gate on main is red', () => inTrialRepo(() => {
+  sh('git checkout -q -b try/x');
+  write('src/x.js', `export const x = 1;\n${MARK}`);
+  const onTry = runGate();
+  assert.equal(onTry.status, 0, onTry.stdout);
+  const saved = JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8'));
+  assert.equal(saved.passed, true);
+  assert.equal(saved.signature.startsWith('try:'), true, `signature marks the trial run, got ${saved.signature}`);
+  sh('git switch -q main');
+  assert.equal(branch(), 'main', 'precondition: on main with the same HEAD');
+  assert.equal(fs.existsSync(path.join(p, 'src/x.js')), true, 'precondition: the dirty tree came along');
+  assert.equal(approve('board-qa').status, 0);
+  const stopped = commit();
+  assert.equal(stopped.status, 2, 'the try result must not open the commit gate');
+  assert.match(stopped.stderr, /gate has not run/);
+  const onMain = runGate();
+  expectRed(onMain, 'src/x.js', 'gate on main');
+  const after = JSON.parse(fs.readFileSync(path.join(p, '.claude/state/gate.json'), 'utf8'));
+  assert.equal(after.passed, false);
+  assert.equal(after.signature.startsWith('try:'), false, 'a main run carries a plain signature');
+  assert.equal(commit().status, 2, 'still stopped after the red run');
+}, { board: true }));
+
+test('AC-12.3 ATTACK trial code: look-alike branch names do not silence the check', () => inTrialRepo(() => {
+  write('src/features/a/store.ts', `export const a = 1;\n${MARK}`);
+  commitAll('marker');
+  assert.equal(gate('--approve').status, 0);
+  for (const name of ['try', 'xtry/a', 'Try/x', 'try/A', 'try/-x', 'try/_x', 'try/a/b', 'try/a+b', 'feature/try/x', 'try-x/y', 'trial/x', 'main-try/x']) {
+    sh(`git checkout -q -b "${name}"`);
+    assert.equal(branch(), name, 'precondition: on the look-alike branch');
+    expectRed(gate('--run'), 'src/features/a/store.ts', name);
+    sh('git checkout -q main');
+    sh(`git branch -q -D "${name}"`);
+  }
+}));
+
+test('AC-12.3 ATTACK trial code: a detached HEAD does not silence the check, even at the tip of a try branch', () => inTrialRepo(() => {
+  sh('git checkout -q -b try/notes');
+  write('src/features/a/store.ts', `export const a = 1;\n${MARK}`);
+  commitAll('marker');
+  expectGreen(runGate(), 'on try/notes', ['passed', 'skipped']);
+  sh('git checkout -q --detach');
+  assert.equal(branch(), '', 'precondition: detached');
+  expectRed(runGate(), 'src/features/a/store.ts', 'detached at the tip of try/notes');
+}));
+
+test('AC-12 trial code ATTACK: a folder that is not a git repo makes fakeCheck neither throw nor fail', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'nogit-'));
+  try {
+    fs.mkdirSync(path.join(d, 'src'));
+    fs.writeFileSync(path.join(d, 'src/a.js'), 'export const a = 1;\n');
+    assert.notEqual(spawnSync('git', ['rev-parse', '--git-dir'], { cwd: d, stdio: 'ignore' }).status, 0, 'precondition: not a git repo');
+    let r;
+    assert.doesNotThrow(() => { r = fakeCheck(d); });
+    assert.notEqual(r?.status, 'failed');
+  } finally { fs.rmSync(d, { recursive: true, force: true }); }
+});
+
+// ---------- AC-18: the commit gate treats a trial merge like any other change (characterization, existing behaviour) ----------
+
+test('AC-18 commit gate: after git merge --squash try/x a plain commit is stopped until the gate is green and the board approved', () => inTrialRepo(() => {
+  sh('git checkout -q -b try/x');
+  write('src/feature.js', 'export const f = 1;\n');
+  commitAll('slice');
+  sh('git checkout -q main');
+  sh('git merge -q --squash try/x');
+  const none = commit();
+  assert.equal(none.status, 2, 'no gate, no approval');
+  assert.match(none.stderr, /gate\.mjs --run/);
+  assert.equal(runGate().status, 0);
+  assert.equal(commit().status, 2, 'green gate, no board approval');
+  assert.equal(approve('board-qa').status, 0);
+  assert.equal(commit().status, 0, 'green gate and approval');
+}, { board: true }));
+
+test('AC-18 commit gate: a test file written outside test-writer in the squash stops the commit even with a green gate and approval', () => inTrialRepo(() => {
+  sh('git checkout -q -b try/x');
+  write('src/feature.js', 'export const f = 1;\n');
+  write('src/feature.test.js', "test('f', () => { expect(1).toBe(1); });\n");
+  commitAll('slice');
+  sh('git checkout -q main');
+  sh('git merge -q --squash try/x');
+  ready();
+  const r = commit();
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /src\/feature\.test\.js/);
+  assert.match(r.stderr, /test-writer/);
+}, { board: true }));
+
+test('AC-18 commit gate: on try/x a commit is stopped without --skip and passes after --skip "try round"', () => inTrialRepo(() => {
+  sh('git checkout -q -b try/x');
+  write('src/feature.js', 'export const f = 1;\n');
+  assert.equal(commit().status, 2, 'without the skip');
+  assert.equal(skip('try round').status, 0);
+  assert.equal(commit().status, 0, 'after the skip, same changes');
+  write('src/other.js', 'export const o = 1;\n');
+  assert.equal(commit().status, 2, 'a change made after the skip is not covered');
+}, { board: true }));

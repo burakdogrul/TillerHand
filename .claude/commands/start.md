@@ -7,6 +7,10 @@ Idea: $ARGUMENTS
 
 This is a **9-step wizard** (0-9). Act as if the user knows nothing. Ask every decision per `docs/workflow/decision-protocol.md` (AskUserQuestion, recommended option first, each option explains when it is better). Never decide on your own, except on topics closed in question mode (`docs/workflow/decision-protocol.md` §4): there pick the recommended option, log it as `automatic` and list it under "Auto decisions"; the language question and the §4 always-ask list are still asked. Write no application code in this session. Classify every decision as a one-way / two-way door (`docs/workflow/decision-protocol.md` §2a). For one-way decisions such as database, auth, payment and data model, get the board's opinion first (decision council for database and auth; profile rule in `.claude/board/council.md`).
 
+**Two passes.** The user clicks the product before the planning is finished.
+- **First pass (this command, in one go):** language, 0b, 0c, the Step 0 checks that need no question, Step 1 first pass, Steps 2-3, Step 4 first pass, Steps 4a-4c. That is at most 7 question rounds.
+- **Second pass (`/lock` runs it):** the other Step 0 items, the rest of Step 1, 1b, then Steps 5-9. They use what the trial showed. Until then: Light profile on the Pro plan, Standard on Max; Standard depth; the recommended model setup. Say so in one line.
+
 **Resuming:** If `docs/workflow/progress.md` → `**Setup step:**` is greater than 0, resume from that step and tell the user. When a step ends, update this line (`N/9`) and the `**Last updated:**` line; then write the status block. After heavy steps (1b research, 4, 6, 7), suggest `/clear` in one line before the next step, and say that afterwards the user only writes "continue" in the conversation language: do not tell them to run `/start` again, it reads as starting a new idea. The step's result is in files and the next step reads them; a clean session is cheap because every turn rereads the whole context. Saying "continue" or calling `/start` both resume from the saved step.
 
 **Decisions are logged immediately:** Write each decision to `docs/decisions/log.md` → decision log the moment it is made (do not wait for the step end). The dashboard shows decisions and step progress live from there.
@@ -66,6 +70,8 @@ This is a **9-step wizard** (0-9). Act as if the user knows nothing. Ask every d
 
 Question the idea with the `mattpocock-skills:grilling` approach. Ask questions **with AskUserQuestion, in rounds** (at most 4 questions per round). For every question where possible, give 2-4 concrete options drawn from the idea, plus your recommendation; ask an open-ended question only if you cannot produce options.
 
+**First pass:** One round: the problem, the target user and the one flow they most want to see working. Write them as a draft in `docs/product/prd.md`. Everything else in this step is second pass.
+
 Clarify in this order:
 1. Problem and target user (who, in which situation, what do they use now?)
 2. Value proposition and difference from competitors
@@ -106,6 +112,8 @@ Report the output. From now on `docs/architecture/stack.md` is the chosen type's
 
 ## Step 4: Technology decisions → `docs/architecture/stack.md`
 
+**First pass:** Ask only what the app needs to run (language, framework, UI library), on one screen with the recommended set, then do items 1-3a below for those. Database, sign-in, payment and external services are second pass: `/try` fakes them, so no one-way door opens yet.
+
 Ask every decision in the **"Decision points"** section of `docs/architecture/stack.md` in order (dependent ones in sequence, independent ones in the same round, at most 4).
 - From the catalog options, pick the 2-4 best suited to this project. Base your recommendation on the PRD (audience, budget, scale, team knowledge, SEO need etc.).
 - For options that depend on version, price or free-tier information, verify only what changes: do not re-research a claim whose `(source: <url>, YYYY-MM-DD)` note in the catalog is newer than 90 days. Gather the claims without a note or with an old note, limited to the options you will present to the user, in a single `source-research` round at the start of the step (no separate research per decision). Next to a claim you verified, write the source and date note in this project's `stack.md`.
@@ -119,6 +127,18 @@ When all decisions are done:
 3b. **Stack skills:** For web (React/Next) run `npx -y skills@1.7.2 add vercel-labs/agent-skills --skill react-best-practices --skill composition-patterns -a claude-code -y --copy`, for mobile with `--skill react-native-guidelines`. Read the incoming SKILL.md files before installing them (third-party content). For mobile, if the Maestro CLI is not installed, tell the user how to install it (`docs/workflow/mcp-catalog.md`).
 3c. **3D (web, if the PRD has a 3D scene, product visualization or a WebGL effect):** three.js is asked as a `tech` decision. If chosen, three skills are copied from a pinned commit of `CloudAI-X/threejs-skills` (MIT, community): `threejs-fundamentals`, `threejs-performance` and, in React, `threejs-react-three-fiber`. For each: `curl -fsSL https://raw.githubusercontent.com/CloudAI-X/threejs-skills/0e181866f095b5f06d005133876e926515390d95/skills/<ad>/SKILL.md -o .claude/skills/<ad>/SKILL.md` (create the folder first). Read the files before installing them (third-party content). No skill is added for other topics (shader, light, loader); use Context7. 3D rules are in `ui-motion` → "3D".
 4. `docs/decisions/log.md`: Check that no decision is missing from the log, record the technology stack as `docs/decisions/adr-0001-tech-stack.md` (template: `adr-template.md`).
+
+## Step 4a: Style (if there is a UI)
+
+One question with a visual preview: 3-4 style directions that fit the idea. Write the choice to `docs/decisions/log.md`. The full `/design` brief stays mandatory and runs in Step 7.
+
+## Step 4b: Skeleton and first commit
+
+Create the project skeleton with the stack's official generator and check that the `dev` command starts. If there is no repo, run `git init`. Commit on `main`: `chore: project skeleton`. `/try` branches from here.
+
+## Step 4c: First try
+
+Set `**Setup step:**` to `4/9`. Run `.claude/commands/try.md` for the flow from Step 1. Tell the user: "Try it and tell me what to change. When you like it, say `/lock`: it finishes the plan and hardens the code." The first pass ends here.
 
 ## Step 5: Architecture → `docs/architecture/overview.md`, `docs/product/glossary.md`
 
@@ -150,7 +170,7 @@ Expensive step: state the cost first and ask by depth (see "Expensive steps" abo
 
 ## Step 8: Roadmap → `docs/product/roadmap.md`
 
-1. Split the MVP features into single-session tasks; keep the setup tasks in Phase 0. Make the first task of each feature "write the acceptance tests (red)" (`docs/quality/test-plan.md` §1a). For payment, AI, bulk notification and data-deleting features, add a feature flag task (`docs/operations/feature-flags.md`). From Phase 1 on, make the last task of every phase a "Refactor round" (complexity budget clean across the whole repo: `node .claude/hooks/budget.mjs --check`).
+1. Split the MVP features into user-visible slices, each one a single-session task that goes `/try` then `/lock`; the slice already tried is the first one. Keep the setup tasks in Phase 0 and mark G-001 and G-002 done. For a feature that goes straight to `/build` (real sign-in, payment, personal data, data deletion), make its first task "write the acceptance tests (red)" (`docs/quality/test-plan.md` §1a). For payment, AI, bulk notification and data-deleting features, add a feature flag task (`docs/operations/feature-flags.md`). From Phase 1 on, make the last task of every phase a "Refactor round" (complexity budget clean across the whole repo: `node .claude/hooks/budget.mjs --check`).
 2. Ask: "Which feature should we start with in Phase 1?" (suggestion: the riskiest or most valuable one).
 3. Ask: "What is the launch target?" (date / when features are complete / personal use only). If personal use, suggest deleting `docs/product/launch.md`.
 4. Summarize the roadmap and get approval.
@@ -162,3 +182,4 @@ Expensive step: state the cost first and ask by depth (see "Expensive steps" abo
 3. Give the user a summary: number of decisions made, chosen stack, board members, design direction, MVP features, steps left for later, first task, remaining limit.
 4. Suggest a commit: `docs: project plan`.
 5. Last line: "Continue: `/build G-001`".
+6. If a `try/*` branch is open, skip 4 and 5 and go back to `/lock`.

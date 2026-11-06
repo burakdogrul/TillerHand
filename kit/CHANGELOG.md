@@ -2,6 +2,21 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.66.0] - 2026-11-06
+
+### Added
+- `/try`: a quick slice you can click in the first session, on a `try/<topic>` branch with fake parts. Each round is saved, so you can go back or drop the trial. Only you see it, on your own computer.
+- `/try` asks about each outside service: try it with a fake response or with your own key.
+- `/lock`: keeps the tried code. It writes the acceptance criteria with you, reviews each file, adds tests, replaces the fake parts and merges into main after the board review.
+- Gate: a `try:fake` marker or a `*.fake.*` file outside a `try/*` branch turns it red. `/release` also stops on a leftover trial branch.
+
+### Changed
+- `/start` runs in two passes. The first asks at most 7 rounds of questions and ends with the first `/try`; `/lock` runs the rest of the plan.
+- Roadmap: the first deploy and error tracking move to Phase 3, so the product opens to others when the MVP is done. Phase 1 and 2 tasks are slices you can try.
+
+### Adapt by hand
+- `docs/product/roadmap.md` is yours: move G-005 and G-006 to Phase 3 if you want the new order.
+
 ## [3.65.0] - 2026-11-06
 
 ### Added
