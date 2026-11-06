@@ -8,12 +8,13 @@
 // read ($g commit, git $(echo commit)) have nothing to bind an approval to: the user is asked.
 // Exempt: no board set up, "Commit review: off" in docs/workflow/board.md, or only docs changed.
 // On a try/* branch the board and the gate are not required: /lock squashes the branch into main, and that commit needs both.
+// A change inside the fast lane (fastLaneIssues) with a green gate needs no board, for up to 3 commits in a row (/tweak).
 // Commits the user makes from their own terminal are not affected (this is a Claude Code hook).
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { findRoot, isMain, reviewOff, parseInput, decisionText } from './shared.mjs';
+import { findRoot, isMain, reviewOff, parseInput, decisionText, SENSITIVE } from './shared.mjs';
 import { t } from './lang.mjs';
 import { unquote, MAX_COMMAND } from './destructive-guard.mjs';
 import { isTestFile, isTestConfig, digest, readRecord, saveRecord } from './test-guard.mjs';
@@ -115,7 +116,7 @@ export function chainIssue(command, commit = COMMIT) {
     .replace(/\d*>&\d+/g, '');
   if (/\$\(|`/.test(k)) return 'the command has a substitution ($(...) or `...`)';
   const parts = k.split(/&&|\|\||[;|&\n]/).map((s) => s.trim()).filter(Boolean);
-  return parts.every((s) => commit.test(s) || /^git\s+add\b/.test(s) || /^cd\b/.test(s)) ? null : 'the commit is chained with other commands';
+  return parts.every((s) => commit.test(s) || /^git\s+add\b(?!.*\s(-\w*f\w*|--force)(\s|$))/.test(s) || /^cd\b/.test(s)) ? null : 'the commit is chained with other commands';
 }
 
 export const docsOnly = (files) => files.every((f) => /\.(md|txt)$/i.test(f) || f.startsWith('docs/'));
@@ -173,6 +174,74 @@ function acceptTests(reason, names) {
 }
 
 const onTrialBranch = () => { try { return git('symbolic-ref --short -q HEAD').trim().startsWith('try/'); } catch { return false; } };
+
+// Fast lane: measured from the diff, never from what the AI says
+const FAST_FILES = 2, FAST_LINES = 30, FAST_COMMITS = 3;
+const RISKY = /(^|\/)migrations?\/|(^|\/)schema\.(prisma|sql)$|^(prisma|drizzle|supabase|alembic)\/|(^|\/)(package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|requirements[^/]*\.txt|pyproject\.toml|uv\.lock|poetry\.lock|Gemfile(\.lock)?|go\.(mod|sum)|Cargo\.(toml|lock))$|^\.(github|claude|codex|agents)\/|^(AGENTS|CLAUDE)\.md$|(^|\/)Dockerfile|(^|\/)(docker-)?compose\.ya?ml$|(^|\/)(api|routes?|controllers?|handlers?)\/|(^|\/)(route|router|middleware|proxy)\.\w+$|\.(sql|rules)$|^\.(husky|githooks|vscode)\/|^(\.pre-commit-config|lefthook|\.mcp\.json$|\.npmrc$|\.yarnrc|\.gitmodules$|vercel\.json$|firebase\.json$|tsconfig|\.semgrep|(next|eslint|vitest|playwright|jest)\.config\.)/i;
+
+// Added + deleted lines, new files included; null for a binary or unreadable file
+function changedLines(d) {
+  try {
+    const stat = git('diff HEAD --numstat --no-renames -z').split('\0').filter(Boolean).map((l) => l.split('\t'));
+    if (stat.some(([added]) => added === '-')) return null;
+    const tracked = new Set(stat.map(([, , f]) => f));
+    let lines = stat.reduce((n, [added, deleted]) => n + Number(added) + Number(deleted), 0);
+    for (const f of d.files.filter((x) => !tracked.has(x))) {
+      const body = fs.readFileSync(path.join(root, f));
+      if (body.includes(0)) return null;
+      lines += body.toString('utf8').split('\n').filter((l, i, all) => i < all.length - 1 || l).length;
+    }
+    return lines;
+  } catch { return null; }
+}
+
+// numstat shows a mode change as 0 lines and a submodule pointer as 2
+function modeChanged() {
+  try {
+    return git('diff HEAD --raw --no-renames -z').split(' ').some((l) => {
+      const [a, b] = l.slice(1).split(' ');
+      return l.startsWith(':') && (a === '160000' || b === '160000' || (a !== b && a !== '000000' && b !== '000000'));
+    });
+  } catch { return true; }
+}
+
+// Reasons this change is outside the fast lane; empty when it fits
+export function fastLaneIssues(d) {
+  const issues = [];
+  if (d.files.length > FAST_FILES) issues.push(`${d.files.length} files (limit ${FAST_FILES})`);
+  const lines = changedLines(d);
+  if (lines === null) issues.push('a binary or unreadable file');
+  else if (lines > FAST_LINES) issues.push(`${lines} lines (limit ${FAST_LINES})`);
+  const risky = d.files.filter((f) => RISKY.test(f) || SENSITIVE.test(f) || isTestFile(f) || isTestConfig(f));
+  if (risky.length) issues.push(`risky path: ${risky.join(', ')}`);
+  if (Object.values(d.hashes).some((h) => h.includes(':'))) issues.push('a partially staged file');
+  if (modeChanged()) issues.push('a file mode or submodule change');
+  // /lock squashes a whole trial here: its size says nothing, that commit always needs the board
+  try {
+    const dir = path.resolve(root, git('rev-parse --git-dir').trim());
+    if (['MERGE_HEAD', 'SQUASH_MSG'].some((f) => fs.existsSync(path.join(dir, f)))) issues.push('a merge in progress');
+  } catch { issues.push('git could not read the merge state'); }
+  return issues;
+}
+
+const counterFile = path.join(root, '.claude', 'state', 'fast-commits.json');
+// A broken file reads as full: it asks for the board, never for a fresh start
+function fastCount() {
+  let raw;
+  try { raw = fs.readFileSync(counterFile, 'utf8'); } catch { return 0; }
+  const n = readJson(counterFile)?.count;
+  return raw && Number.isInteger(n) && n >= 0 ? n : FAST_COMMITS;
+}
+// Counted before the commit runs, so a failed commit counts too: the safe direction
+function takeFastCommit() {
+  const count = fastCount();
+  if (count >= FAST_COMMITS) return false;
+  try {
+    fs.mkdirSync(path.dirname(counterFile), { recursive: true });
+    fs.writeFileSync(counterFile, JSON.stringify({ count: count + 1 }));
+    return true;
+  } catch { return false; }
+}
 
 const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
 function readGate() {
@@ -307,7 +376,12 @@ async function hook() {
       'use --accept-tests "user changed it" <files>: the board and the gate still run. To skip the whole review, the user must ask: --skip "user request".\n');
   }
   if (onTrialBranch()) process.exit(0);
-  if (approval?.signature === d.signature && (skipped || (gate?.signature === d.signature && gate.passed === true))) process.exit(0);
+  const gateGreen = gate?.signature === d.signature && gate.passed === true;
+  if (approval?.signature !== d.signature && gateGreen && !fastLaneIssues(d).length && takeFastCommit()) process.exit(0);
+  if (approval?.signature === d.signature && (skipped || gateGreen)) {
+    if (!skipped) fs.rmSync(counterFile, { force: true }); // a reviewed commit starts the fast lane over
+    process.exit(0);
+  }
   if (approval?.signature === d.signature) {
     const failed = gate?.signature === d.signature ? gate.checks.filter((k) => k.status === 'failed').map((k) => k.name) : null;
     stop(failed && !failed.length && gate.empty

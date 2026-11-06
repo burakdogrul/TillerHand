@@ -149,6 +149,8 @@ function hook() {
   if (approval) decide(g.tool, 'ask', /preferences[.]md$/i.test(approval)
     ? t(g.root, 'guard.freeze.prefsFile', { path: approval })
     : t(g.root, 'guard.freeze.gateApproval', { path: approval }));
+  // Only commit-gate.mjs writes the fast-lane counter: resetting it would skip the board
+  if (paths.some((p) => relPath(p, groot) === '.claude/state/fast-commits.json')) decide(g.tool, 'ask', t(g.root, 'guard.freeze.protectedAsk'));
   if (g.tool !== 'claude') {
     for (const p of paths) {
       const k = protectedRule(relPath(p, groot), g.root);

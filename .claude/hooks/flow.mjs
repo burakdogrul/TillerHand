@@ -6,8 +6,8 @@
 // limit = usage.mjs. On the desktop app there is no status line: give --context and --limit from get_usage.
 import fs from 'node:fs';
 import path from 'node:path';
-import { findRoot, isMain } from './shared.mjs';
-import { changes } from './commit-gate.mjs';
+import { findRoot, isMain, SENSITIVE } from './shared.mjs';
+import { changes, fastLaneIssues } from './commit-gate.mjs';
 import { readLimits, level, LEVEL_LABEL } from './usage.mjs';
 
 // Board member by changed path (.claude/board/rules.md §3 read from paths); a path may match several
@@ -22,8 +22,6 @@ const MEMBERS = [
   ['board-ai', /prompt|llm|(^|\/)ai\/|(^|\/)evals?\//i],
   ['board-product', /^docs\/product\//i],
 ];
-// Auth, payment, webhook, upload, secrets: security-auditor joins on top of the member count (rules.md §3)
-const SENSITIVE = /auth|login|session|passw|payment|checkout|billing|webhook|upload|secret|token|crypto|\.env|iyzico|paytr|stripe/i;
 
 // Same bands as the cost table in docs/workflow/usage-limits.md §3 (1-2, 3-6, more files)
 export function flow({ files = 0, paths, installed = [], context, level: lvl }) {
@@ -58,7 +56,19 @@ const readContext = (root) => {
   try { const c = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'state', 'context.json'), 'utf8')); return typeof c.percent === 'number' ? c.percent : null; } catch { return null; }
 };
 
-if (isMain(import.meta.url)) {
+// --tweak: does the current change fit the fast lane? The commit gate applies the same check, plus a green gate and the counter.
+function tweakCheck() {
+  let d;
+  try { d = changes(); } catch { console.log('Not a git repository.'); process.exit(1); }
+  if (!d.files.length) { console.log('No changes.'); return; }
+  const issues = fastLaneIssues(d);
+  if (!issues.length) { console.log('This change fits /tweak.'); return; }
+  console.log(`Too big for /tweak: ${issues.join('; ')}. Use /build.`);
+  process.exit(1);
+}
+
+if (isMain(import.meta.url) && process.argv.includes('--tweak')) tweakCheck();
+else if (isMain(import.meta.url)) {
   const root = findRoot();
   const arg = (name) => {
     const i = process.argv.indexOf(name);

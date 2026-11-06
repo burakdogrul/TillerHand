@@ -28,6 +28,7 @@ Before `/start`, `/plan-task`, `/build`, `/board convene` and `/release` begin:
 
 | Work | Estimated 5-hour usage (Pro plan, starting estimate) |
 |---|---|
+| `/tweak` (no subagent, no board) | 1–2% |
 | Small task (1-2 files) | 3–6% |
 | Medium task (3-6 files + tests) | 8–15% |
 | Large task (many files, new module) | 20%+ (suggest splitting first) |

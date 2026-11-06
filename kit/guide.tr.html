@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.67.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.68.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -730,6 +730,7 @@ npx tillerhand init
       <tr><td>Çalışmaya başlarken</td><td><code>/build</code>: görev kodu yazmana gerek yok; sıradaki görevi kendisi alır, test eder</td></tr>
       <tr><td>Durumu merak edersen</td><td><code>ne durumdayız?</code> veya <code>/dashboard</code></td></tr>
       <tr><td>Bir şey bozulursa</td><td><code>/rollback</code>: son çalışan hale güvenle döner</td></tr>
+      <tr><td>Küçük değişiklikte</td><td><code>/tweak değişiklik</code>: en çok 2 dosya ve 30 satır, riskli yollardan uzak; plan, alt ajan ve kurul toplantısı yok, gate yeşil olmalı</td></tr>
       <tr><td>Hata görürsen</td><td><code>/fix-bug belirti</code>: kök nedeni bulur, önce kırmızı test yazar, sonra düzeltir</td></tr>
       <tr><td>Bırakırken</td><td><code>/wrap-up</code> (her şeyi kaydeder), sonra <code>/clear</code>. Temiz ekranda sıradaki komut yazar</td></tr>
     </tbody>
@@ -1218,6 +1219,7 @@ Bekleyen karar: e-posta servisi</pre>
       <tr><td class="f">/build [görev]</td><td>Önce kabul ve saldırgan testlerini ayrı bir ajan (<code>test-writer</code>) yazar, sonra kod; yeni karar çıkarsa durur; kanıt (arayüzde masaüstü ve mobil ekran görüntüsü) ve kurul denetimi</td></tr>
       <tr><td class="f">/design [kapsam]</td><td>Görsel önizlemeli tasarım kararları ve uygulama</td></tr>
       <tr><td class="f">/review-changes [aralık]</td><td>code-reviewer + security-auditor + ponytail-review; düzeltilecekleri çoklu seçimle sorar</td></tr>
+      <tr><td class="f">/tweak [değişiklik]</td><td>Plansız ve alt ajansız küçük, riski düşük değişiklik. Commit kapısı sınırları ve yeşil gate'i denetler; peş peşe 3 commit sonrası sıradaki kurul ister</td></tr>
       <tr><td class="f">/fix-bug [belirti]</td><td>Yeniden üret, kanıtla, hata spec'i; kırmızı testi <code>test-writer</code> yazar, sonra düzelt, kapı; aynı hata sınıfı tekrar ederse kural önerir</td></tr>
       <tr><td class="f">/qa [kriterler]</td><td>Arayüz kriterlerini tarayıcıda Playwright testi olarak koşar; rapor test sonucundan, panoda kart</td></tr>
       <tr><td class="f">/freeze &lt;klasör&gt; | off</td><td>Düzenlemeyi tek klasöre kilitler; iş başka dosyalara yayılmaz</td></tr>
@@ -1291,7 +1293,7 @@ Bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.67.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.68.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

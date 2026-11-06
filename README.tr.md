@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.67.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.68.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -84,6 +84,7 @@ Kod yazmayı bilmen gerekmez. Git, terminal ve kurulum işlerini Claude yapar; s
 |---|---|
 | Bir özelliği denerken | `/try` (kendi bilgisayarında tıkladığın hızlı dilim) |
 | Beğenince | `/lock` (kodu denetler, sağlamlaştırır, main'e alır) |
+| Küçük değişiklikte | `/tweak` (metin, stil, küçük düzeltme) |
 | Diğer işlerde | `/build` (sıradaki görevi kendisi alır, test eder) |
 | Durumu merak edersen | `ne durumdayız?` veya `/dashboard` |
 | Bir şey bozulursa | `/rollback` |
@@ -263,6 +264,7 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 | `/build [görev]` | Önce kabul testleri, sonra kod, kanıt ve kurul denetimi |
 | `/design` | Görsel önizlemeli tasarım kararları |
 | `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |
+| `/tweak [değişiklik]` | Küçük, riski düşük değişiklik: en çok 2 dosya ve 30 satır, plan ve alt ajan yok, gate yeşil |
 | `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme |
 | `/qa` | Arayüz kriterlerini gerçek tarayıcıda test eder |
 | `/findings-<tür>` | Bulgu raporları |

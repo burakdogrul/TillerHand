@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.67.0</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.68.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -730,6 +730,7 @@ npx tillerhand init
       <tr><td>When you start work</td><td><code>/build</code>: you don't need to type a task code; it takes the next task itself and tests it</td></tr>
       <tr><td>If you wonder about the status</td><td><code>where are we?</code> or <code>/dashboard</code></td></tr>
       <tr><td>If something breaks</td><td><code>/rollback</code>: safely returns to the last working state</td></tr>
+      <tr><td>For a small change</td><td><code>/tweak change</code>: up to 2 files and 30 lines, away from risky paths; no plan, subagent or board meeting, and the gate must be green</td></tr>
       <tr><td>If you see a bug</td><td><code>/fix-bug symptom</code>: finds the root cause, writes a red test first, then fixes it</td></tr>
       <tr><td>When you stop</td><td><code>/wrap-up</code> (saves everything), then <code>/clear</code>. On a clean screen the next command is written</td></tr>
     </tbody>
@@ -1218,6 +1219,7 @@ Pending decision: email service</pre>
       <tr><td class="f">/build [task]</td><td>A separate agent (<code>test-writer</code>) writes the acceptance and adversarial tests first, then the code; stops if a new decision comes up; proof (desktop and mobile screenshots on an interface) and the board review</td></tr>
       <tr><td class="f">/design [scope]</td><td>Design decisions with visual previews, and applying them</td></tr>
       <tr><td class="f">/review-changes [range]</td><td>code-reviewer + security-auditor + ponytail-review; asks what to fix with a multi-select</td></tr>
+      <tr><td class="f">/tweak [change]</td><td>A small, low-risk change with no plan or subagent. The commit gate checks the limits and a green gate; after 3 such commits in a row the next one needs the board</td></tr>
       <tr><td class="f">/fix-bug [symptom]</td><td>Reproduce, prove, bug spec; <code>test-writer</code> writes the red test, then fix, gate; suggests a rule if the same error class repeats</td></tr>
       <tr><td class="f">/qa [criteria]</td><td>Runs the interface criteria in the browser as Playwright tests; the report comes from the test result, a card on the dashboard</td></tr>
       <tr><td class="f">/freeze &lt;folder&gt; | off</td><td>Locks editing to a single folder; the work doesn't spread to other files</td></tr>
@@ -1291,7 +1293,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.67.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.68.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

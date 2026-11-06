@@ -83,6 +83,9 @@ export function findProgram(name, root, env = process.env) {
 const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const findRoot = () => process.env.CLAUDE_PROJECT_DIR || SCRIPT_ROOT;
 
+// Auth, payment, webhook, upload, secrets: flow.mjs adds security-auditor, the commit gate keeps them out of the fast lane
+export const SENSITIVE = /auth|login|session|passw|payment|checkout|billing|webhook|upload|secret|token|crypto|\.env|iyzico|paytr|stripe/i;
+
 // Codex patch: "*** Add File: x" new file, "*** Update File: x", "*** Move to: y"; "+" lines are added text,
 // "-" lines are removed text (before). Add can also overwrite an existing file: before is undefined, the script checks the disk.
 // A Move entry also carries the moved file's path (source).

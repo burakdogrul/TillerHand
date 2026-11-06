@@ -2,6 +2,15 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.68.0] - 2026-11-07
+
+### Added
+- `/tweak`: a fast lane for small, low-risk changes. No plan, subagent, new test or board meeting. It fits up to 2 files and 30 lines, away from sign-in, payment, API routes, migrations, packages, build and test config, CI and kit rules, and the gate must be green.
+- Commit gate: it measures those limits from the diff. After 3 fast commits in a row, the next commit needs the board.
+
+### Adapt by hand
+- `AGENTS.md` is yours: add the `/tweak` exception to rules 6 and 7.
+
 ## [3.67.0] - 2026-11-07
 
 ### Added
