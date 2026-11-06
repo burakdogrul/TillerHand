@@ -1723,11 +1723,13 @@ test('AC-18 commit gate: a test file written outside test-writer in the squash s
   assert.match(r.stderr, /test-writer/);
 }, { board: true }));
 
-test('AC-18 commit gate: on try/x a commit is stopped without --skip and passes after --skip "try round"', () => inTrialRepo(() => {
+test('AC-18 commit gate: on try/x a commit passes with no --skip; on main a --skip covers only the changes present when it was given', () => inTrialRepo(() => {
   sh('git checkout -q -b try/x');
   write('src/feature.js', 'export const f = 1;\n');
-  assert.equal(commit().status, 2, 'without the skip');
-  assert.equal(skip('try round').status, 0);
+  assert.equal(commit().status, 0, 'on try/x, no skip needed');
+  sh('git checkout -q main');
+  assert.equal(commit().status, 2, 'on main, without the skip');
+  assert.equal(skip('user request').status, 0);
   assert.equal(commit().status, 0, 'after the skip, same changes');
   write('src/other.js', 'export const o = 1;\n');
   assert.equal(commit().status, 2, 'a change made after the skip is not covered');

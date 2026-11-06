@@ -22,7 +22,7 @@
 
 Commits that contain only documentation changes (`.md`, `docs/`) are exempt from review.
 
-Round commits on a `try/*` branch skip the review only with the user's approval (`commit-gate.mjs --skip "try round"`). The board reviews the whole slice in `/lock`, when it is squashed into `main`.
+Commits on a `try/*` branch are exempt from review. The board reviews the whole slice in `/lock`, when it is squashed into `main`.
 
 **Council (three stages):** The project profile decides which meetings go to the council (`.claude/board/council.md` → "When"). In the Full profile, plan, phase-end and go-live meetings, and task-end meetings that end in REJECT, follow the `.claude/board/council.md` protocol. In Standard, only phase-end and go-live. In Light, none. First opinions are collected first. Then members vote on and rank each other's findings anonymously. Last, `board-chair` decides. Task-end and commit meetings are single-stage.
 

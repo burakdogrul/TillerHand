@@ -27,7 +27,9 @@ const section = (text, heading) => {
 test('fast lane try.md: has a description and every token of the fast-lane contract', () => {
   const text = read('.claude/commands/try.md');
   assert.equal(hasDescription(text), true, 'frontmatter description');
-  assert.deepEqual(missing(text, ['try/<topic>', 'try:fake', '*.fake.*', 'docs/product/try/<topic>.md', '--skip "try round"', 'NODE_ENV', '.env.example', '/rollback', 'AskUserQuestion']), []);
+  assert.deepEqual(missing(text, ['try/<topic>', 'try:fake', '*.fake.*', 'docs/product/try/<topic>.md', 'NODE_ENV', '.env.example', '/rollback', 'AskUserQuestion']), []);
+  // Round commits on try/* are no longer skipped with --skip: the commit gate lets them through by itself
+  assert.equal(text.includes('--skip "try round"'), false);
 });
 
 test('fast lane try.md: names the forbidden things (localhost, Expo, git push) and does not use preview.mjs', () => {

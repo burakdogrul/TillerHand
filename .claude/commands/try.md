@@ -12,7 +12,7 @@ The user sees the product fast and keeps changing it. This is not a shortcut to 
 ## Start
 
 1. If the repo has no commit yet, finish `/start` Step 4b first.
-2. If a `try/*` branch exists, continue on it and read its note. A second feature goes on the same branch. Otherwise, from `main`: `git switch -c try/<topic>` (`<topic>`: lower case, digits, `-`).
+2. If a `try/*` branch exists, continue on it and read its note. A second feature goes on the same branch. Otherwise, from `main`: `git switch -c try/<topic>` (`<topic>`: lower case, digits, `-`). This asks the user once per trial.
 3. Write `docs/product/try/<topic>.md`: one sentence on what the user should be able to do. Later sections: `Rounds`, `Choices`, `Fake parts`. After `/clear`, continue from this note.
 4. **External service:** If the slice needs a service (an AI model, a map, a payment sandbox), ask with AskUserQuestion. The user decides, per service; they can switch in any round:
    - **Fake response (Recommended):** free, no key. The real result stays unknown until `/lock`.
@@ -43,7 +43,7 @@ Say in two lines what to try and what is fake.
 ## Round
 
 1. The user says what to change. Make the change, show it again, add one line to `Rounds`.
-2. Commit each round on the branch. Once the board is set up, the commit gate stops it: run `node .claude/hooks/commit-gate.mjs --skip "try round"` (the user is asked each time). Message: `wip: try <topic> round <n>`.
+2. Commit each round on the branch. The commit gate asks for no review on a `try/*` branch; `/lock` reviews the whole slice. Message: `wip: try <topic> round <n>`.
 3. **Undo a round:** `/rollback`.
 4. **Drop the trial:** ask first. On a yes, switch to `main`, then delete the branch.
 5. **User likes it:** suggest `/lock`.

@@ -68,6 +68,10 @@
     "src/types/**",
     "public/**",
     "tests/**",
+    "prisma/**",
+    "prisma.config.*",
+    "drizzle/**",
+    "drizzle.config.*",
     "supabase/**",
     "CLAUDE-SECURITY-*/**"
   ],

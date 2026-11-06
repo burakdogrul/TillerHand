@@ -77,6 +77,13 @@ const NEEDS_APPROVAL = [
   [cmdRe(String.raw`\bdocker(\.exe)?\s_G_(system|image)\s+prune\b(?=_L_\s(-[a-zA-Z]*a[a-zA-Z]*|--all)(?=\s|$))`), 'guard.destructive.dockerPrune'],
   [/\bgit\s+push\b[^;]*\b(main|master|production)\b/i, 'guard.destructive.pushMain'],
   [/\bgit\s+(rebase|filter-branch|filter-repo)\b/i, 'guard.destructive.rewriteHistory'],
+  // Commits on try/* skip the review (commit-gate.mjs): a ref that moves without a commit must not carry them to main unasked.
+  // shortcut: reads command text, so "git reset <tag>" with no flag passes; a reference-transaction git hook would close it.
+  [cmdRe(String.raw`\bgit(\.exe)?\s_G_branch\b(?=_L_\s(-[a-zA-Z]*f[a-zA-Z]*|--force)(?=\s|$))(?=_L_\s(refs/heads/)?(main|master|production)(?=\s|$))`), 'guard.destructive.moveBranch'],
+  [cmdRe(String.raw`\bgit(\.exe)?\s_G_(update-ref\b|symbolic-ref\s(_L_\s)?(?!-)\S+\s+refs/|(checkout|switch)\s(_L_\s)?(-[a-zA-Z]*[bc][a-zA-Z]*|--create|--force-create|--orphan)\s(_L_\s)?(refs/heads/)?(main|master|production)(?=\s|$)|fetch\s_L_:(refs/heads/)?(main|master|production)(?=\s|$)|pull\s(_L_\s)?\.{1,2}[\\/]?(?=\s|$))`), 'guard.destructive.moveBranch'],
+  // git reset to anything but HEAD, HEAD~n or a path moves the current branch there
+  [cmdRe(String.raw`\bgit(\.exe)?\s_G_reset\s+(--?[a-zA-Z][\w-]*\s+)*(?!-|[;&|]|HEAD([~^]\d*)*(?=\s|$)|\.(?=\s|$)|\S+\.\w{1,6}(?=\s|$))\S`), 'guard.destructive.moveBranch'],
+  [cmdRe(String.raw`\bgit(\.exe)?\s_G_((switch|checkout)\s(_L_\s)?(-[a-zA-Z]*[bc][a-zA-Z]*|--create|--force-create|--orphan)\s(_L_\s)?try/|worktree\s+add\s(_L_\s)?-[a-zA-Z]*b[a-zA-Z]*\s(_L_\s)?try/|branch\s+((?!-[a-zA-Z]*[dl][a-zA-Z]*\s|--delete\s|--list\s)-\S+\s+)*try/|branch\s+(-[a-zA-Z]*[cm][a-zA-Z]*|--copy|--move)\s_L_\stry/)`), 'guard.destructive.openTrial'],
   [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'guard.destructive.migration'],
 ];
 
@@ -340,6 +347,7 @@ const PERMISSION_EQUIVALENT = [
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-save\b/i, 'guard.destructive.perm.planSave'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-end\b/i, 'guard.destructive.perm.planEnd'],
   ['ask', /commit-gate\.mjs\b[^;&|\n]*--skip\b/i, 'guard.destructive.perm.commitSkip'],
+  ['ask', /commit-gate\.mjs\b[^;&|\n]*--accept-tests\b/i, 'guard.destructive.perm.commitAcceptTests'],
   ['ask', /prefs\.mjs['"]?\s+['"]?--(add|remove)\b/i, 'guard.destructive.perm.prefsEdit'],
   ['ask', /(?<!(?:^|[\s'"=])(?:\.[\\/]|\$\{?CLAUDE_PROJECT_DIR\}?[\\/]?)?\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'guard.destructive.perm.gateApprove'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked

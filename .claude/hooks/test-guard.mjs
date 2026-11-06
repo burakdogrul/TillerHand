@@ -149,14 +149,22 @@ function record() {
       if (!key.startsWith('..') && !path.isAbsolute(rel) && isTestFile(key) && !isTestConfig(key)) files[key] = digest(body);
     }
   }
-  // Temp file + rename: a reader never sees half a JSON (it would read {} and drop every record)
-  const tmp = `${recordPath(g.root)}.${process.pid}.tmp`;
+  saveRecord(g.root, files);
+  process.exit(0);
+}
+
+// Temp file + rename: a reader never sees half a JSON (it would read {} and drop every record)
+export function saveRecord(root, files) {
+  const tmp = `${recordPath(root)}.${process.pid}.tmp`;
   try {
     fs.mkdirSync(path.dirname(tmp), { recursive: true });
     fs.writeFileSync(tmp, JSON.stringify({ files }, null, 2));
-    renameWithRetry(tmp, recordPath(g.root));
-  } catch { fs.rmSync(tmp, { force: true }); /* the commit gate then asks for test-writer again */ }
-  process.exit(0);
+    renameWithRetry(tmp, recordPath(root));
+    return true;
+  } catch {
+    fs.rmSync(tmp, { force: true }); // the commit gate then asks for test-writer again
+    return false;
+  }
 }
 
 if (isMain(import.meta.url)) (process.argv.includes('--record') ? record : hook)();

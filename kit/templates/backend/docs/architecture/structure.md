@@ -21,7 +21,7 @@ app/
 │       └── exceptions.py
 ├── shared/                     # helpers used by more than one feature
 └── jobs/                       # scheduled and background jobs (idempotent)
-alembic/                        # migrations
+alembic/                        # migrations (prisma/ or drizzle/ on the Node path)
 tests/
 ├── <feature>/                  # tests by feature (including test_AC_01_1_... acceptance tests)
 └── live/                       # live monitoring tests

@@ -3,9 +3,11 @@
 //   PreToolUse (Bash) hook: without review approval it stops the commit with exit code 2 and says what to do.
 //   node .claude/hooks/commit-gate.mjs --approve "<members who took part, or a note>"   binds the approval to the current changes.
 //   node .claude/hooks/commit-gate.mjs --skip "<reason>"   only when the user asks: skips the board and the gate (always asked).
+//   node .claude/hooks/commit-gate.mjs --accept-tests "<reason>" <file>...   the user changed these test files by hand: accepts their content; the board and the gate still run (always asked).
 // Commands that make commits with no working-tree change to review (git merge, git revert…) and git calls the text cannot
 // read ($g commit, git $(echo commit)) have nothing to bind an approval to: the user is asked.
 // Exempt: no board set up, "Commit review: off" in docs/workflow/board.md, or only docs changed.
+// On a try/* branch the board and the gate are not required: /lock squashes the branch into main, and that commit needs both.
 // Commits the user makes from their own terminal are not affected (this is a Claude Code hook).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +16,7 @@ import { execSync } from 'node:child_process';
 import { findRoot, isMain, reviewOff, parseInput, decisionText } from './shared.mjs';
 import { t } from './lang.mjs';
 import { unquote, MAX_COMMAND } from './destructive-guard.mjs';
-import { isTestFile, isTestConfig, digest, readRecord } from './test-guard.mjs';
+import { isTestFile, isTestConfig, digest, readRecord, saveRecord } from './test-guard.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
 
 // Project root (the script's location) even when called from a subfolder: approval and gate must not be written elsewhere
@@ -151,6 +153,27 @@ function save(note) {
   console.log(`Commit gate opened (${files.length} files). Note: ${note}`);
 }
 
+// A partially staged test keeps its index blob in the hash: the commit would take content the record does not describe
+// The files are arguments so the approval prompt shows exactly what is being accepted
+function acceptTests(reason, names) {
+  const d = changes();
+  const accepted = names.map((f) => path.relative(root, path.resolve(root, f)).split(path.sep).join('/'));
+  const bad = accepted.filter((f) => !d.files.includes(f) || !isTestFile(f) || !isCodeFile(f) || isTestConfig(f) || d.hashes[f] === 'deleted' || d.hashes[f].includes(':'));
+  if (!names.length || bad.length) {
+    console.error(`Nothing accepted. ${bad.length ? `Not a changed test file: ${bad.join(', ')}.` : 'Name the files: --accept-tests "<reason>" <file>...'}`);
+    process.exit(1);
+  }
+  const files = readRecord(root);
+  for (const f of accepted) files[f] = d.hashes[f];
+  if (!saveRecord(root, files)) {
+    console.error('Nothing accepted: the record could not be written.');
+    process.exit(1);
+  }
+  console.log(`Test files accepted (${reason}): ${accepted.join(', ')}. The board review and the gate still run.`);
+}
+
+const onTrialBranch = () => { try { return git('symbolic-ref --short -q HEAD').trim().startsWith('try/'); } catch { return false; } };
+
 const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
 function readGate() {
   const g = readJson(path.join(root, '.claude', 'state', 'gate.json'));
@@ -231,6 +254,7 @@ async function hook() {
   const open = unquote(command);
   const commit = commitPattern(command);
   if (!commit.test(command) && [command, open].some((c) => /commit-gate\.mjs\b[^;&|\n]*--skip\b/i.test(c))) decideOut('ask', t(root, 'guard.commit.skipAsk'));
+  if (!commit.test(command) && [command, open].some((c) => /commit-gate\.mjs\b[^;&|\n]*--accept-tests\b/i.test(c))) decideOut('ask', t(root, 'guard.commit.acceptTestsAsk'));
   // The gate command approval gives the commands in AGENTS.md permission to run: the user is asked (also covers spellings the permission list misses).
   // Only this project's commit-gate.mjs --approve is left out (maskOwnHook); both the raw and unquoted text are tested.
   const masked = maskOwnHook(command, dir);
@@ -279,9 +303,10 @@ async function hook() {
   if (foreign.length && !(skipped && approval.signature === d.signature)) {
     stop(`Commit stopped: test-writer did not write these test files, or they changed after it wrote them, or they were partially staged: ${foreign.join(', ')}.\n` +
       'Only the test-writer agent writes test files with Write/Edit (AGENTS.md rule 7); a test written by patch, script, shell, git mv or Codex/Antigravity does not count.\n' +
-      'If a change is needed, have test-writer review the file and rewrite it with Write/Edit. If the user made the change themselves ' +
-      'and explicitly asks to skip the review for this commit, use --skip "user request".\n');
+      'If a change is needed, have test-writer review the file and rewrite it with Write/Edit. If the user made the change themselves, ' +
+      'use --accept-tests "user changed it" <files>: the board and the gate still run. To skip the whole review, the user must ask: --skip "user request".\n');
   }
+  if (onTrialBranch()) process.exit(0);
   if (approval?.signature === d.signature && (skipped || (gate?.signature === d.signature && gate.passed === true))) process.exit(0);
   if (approval?.signature === d.signature) {
     const failed = gate?.signature === d.signature ? gate.checks.filter((k) => k.status === 'failed').map((k) => k.name) : null;
@@ -312,9 +337,10 @@ async function hook() {
 }
 
 if (isMain(import.meta.url)) {
-  const i = process.argv.indexOf('--approve'), j = process.argv.indexOf('--skip');
+  const i = process.argv.indexOf('--approve'), j = process.argv.indexOf('--skip'), k = process.argv.indexOf('--accept-tests');
   if (i > -1) approve(process.argv[i + 1] || 'unspecified');
   else if (j > -1) save(`skipped: ${process.argv[j + 1] || 'user request'}`);
+  else if (k > -1) acceptTests(process.argv[k + 1] || 'user request', process.argv.slice(k + 2));
   else if (process.argv.includes('--status')) status();
   else hook().catch((e) => decideOut('ask', internalError(e))); // a crash exits 1, which does not block the commit
 }

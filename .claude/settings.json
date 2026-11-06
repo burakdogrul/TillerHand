@@ -36,7 +36,8 @@
       "Bash(node .claude/hooks/models-panel.mjs)",
       "Bash(node .claude/hooks/commit-gate.mjs --status)",
       "Bash(node .claude/hooks/flow.mjs:*)",
-      "Bash(node .claude/hooks/progress.mjs:*)"
+      "Bash(node .claude/hooks/progress.mjs:*)",
+      "Bash(node .claude/hooks/clean.mjs:*)"
     ],
     "ask": [
       "Bash(node .claude/hooks/models.mjs --set-key:*)",
@@ -52,6 +53,7 @@
       "Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)",
       "Bash(node .claude/hooks/freeze-guard.mjs --plan-end)",
       "Bash(node .claude/hooks/commit-gate.mjs --skip:*)",
+      "Bash(node .claude/hooks/commit-gate.mjs --accept-tests:*)",
       "Bash(node .claude/hooks/prefs.mjs --add:*)",
       "Bash(node .claude/hooks/prefs.mjs --remove:*)",
       "Bash(node .claude/hooks/gate.mjs --approve)",

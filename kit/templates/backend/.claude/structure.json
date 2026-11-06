@@ -53,6 +53,10 @@
     "app/features/*/constants.py",
     "alembic/**",
     "tests/**",
+    "prisma/**",
+    "prisma.config.*",
+    "drizzle/**",
+    "drizzle.config.*",
     "CLAUDE-SECURITY-*/**"
   ],
   "deny": [

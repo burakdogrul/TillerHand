@@ -2,6 +2,21 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.67.0] - 2026-11-07
+
+### Added
+- `clean.mjs`: the AI can clear `node_modules`, `.next`, `dist` and other dependency or build folders. It deletes only git-ignored folders from a fixed list. `rm -rf` stays blocked.
+- Commit gate: `--accept-tests "<reason>" <file>...` for a test you changed by hand. It accepts the content of the files you name, you are asked each time, and the board review and the gate still run. Before, the only way through was `--skip`, which dropped the whole review.
+
+### Changed
+- Commits on a `try/*` branch no longer ask for approval each round. Opening the branch asks once. `/lock` reviews the whole slice, and the commit on `main` needs the board and the gate.
+- Moving `main`, `master` or `production` without a commit (`git branch -f`, `git update-ref`, `git checkout -B`, `git fetch . x:main`, `git pull . x`, `git reset <ref>`) is now asked.
+- Structure map: `prisma/`, `drizzle/` and their config files are allowed in web-saas and backend projects, so the first migration does not stop with a question.
+
+### Adapt by hand
+- `.claude/structure.json` is yours: add `prisma/**`, `prisma.config.*`, `drizzle/**`, `drizzle.config.*` if you use them.
+- `AGENTS.md` is yours: add the `clean.mjs` line under "Never".
+
 ## [3.66.0] - 2026-11-06
 
 ### Added

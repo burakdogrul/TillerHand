@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.66.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.67.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -238,13 +238,13 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | Guardrail | What it does |
 |---|---|
 | Secret guard | Blocks API keys written into code or docs |
-| Destructive-command shield | Blocks `DROP`, unconditional `DELETE`, `db reset` and cloud data deletion; asks before prod deploys, rollbacks and publishing |
+| Destructive-command shield | Blocks `DROP`, unconditional `DELETE`, `db reset` and cloud data deletion; asks before prod deploys, rollbacks and publishing; `rm -rf` is blocked, and `clean.mjs` clears git-ignored dependency and build folders |
 | Package gate | Blocks packages that don't exist (on install, on `npx`, `uvx` runs and in dependency files); asks about very new ones, lookalikes of popular ones and sources it can't check (git, URLs, other registries) |
 | Structure guard | Asks about files outside the map, blocks clutter files |
 | Test separation | Only the `test-writer` agent writes test files; the main session and the coding agent are blocked |
 | Test guard | Asks before a test is deleted, skipped or weakened |
 | Deterministic gate | No commit until lint, type check, tests and Semgrep have run; catches machine-specific paths written into code |
-| Commit gate | No commit without a board review and a green gate; a test file changed by a patch or a script stops it too; merge, revert and other commands that make commits are asked |
+| Commit gate | No commit without a board review and a green gate; a test file changed by a patch or a script stops it too; if you changed it by hand, `--accept-tests` accepts it and the review still runs; merge, revert and other commands that make commits are asked; `/try` rounds need no review, `/lock` reviews the whole slice, and moving `main` without a commit is asked |
 | PDF guard | A whole PDF is not read into the context: `document-to-markdown` converts it first; a scanned page or a chart is read with `pages` |
 | Edit lock | With `/freeze <folder>` on, the AI writes only inside that folder |
 | Scope shield | Asks before writing to a file outside the approved plan |
