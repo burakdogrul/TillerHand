@@ -61,9 +61,8 @@ A saved value that is not valid is skipped and the reason goes to stderr. A job 
 `node .claude/hooks/models-panel.mjs` opens a local page in the browser. It listens on `127.0.0.1` only, a one-time token opens the page once and gives it a session secret that it keeps in that tab only (no cookie), and it closes itself after 30 minutes without use. Opening the panel again closes the earlier one, so choices not saved there are lost. A job moved to an outside model needs your confirmation in the page before it is saved. Four tabs:
 
 - **Usage:** Claude usage by day, week and 30 days, for this project or all projects (ccusage, refreshed on request). On a subscription the USD figure is the API equivalent, not a bill. External model spend is real money and is shown on its own: the two are never added together.
-- **Jobs:** the choice per role and job, with the recommended value, and where a value comes from (the job, its role, or the recommendation).
-- **Models:** external model prices (USD per million tokens) used to count spend; with a price in the list, the spend of a run is exact instead of an estimate.
-- **Keys:** provider keys, daily limits and a key check. The page can also save the project choice as your default for new projects (`/start` offers it; `node .claude/hooks/models.mjs --use-default` applies it).
+- **Jobs:** the choice per role and job, with the recommended value, where a value comes from (the job, its role, or the recommendation), and a level per job: easy, medium or hard. The level says how much reasoning the job takes; any model can be picked for any level.
+- **Providers:** four steps: pick a provider, add its key, pick a model, try it. Ready-made providers come with their address, key page and model list; "Not listed" takes your own address. **Try** asks the model one short question and asks it to call a tool, because jobs work through tools; each try is counted in spend and in the daily limit, and one panel run allows 30 tries. **Update model lists** fetches each provider's current list into `~/.vibe-kit/model-lists.json`. Most providers need a key for this, so a provider's list opens when its key is added; a failed update keeps the old list. Prices (USD per million tokens) count spend; with a price, the spend of a run is exact instead of an estimate. Daily limits are here too. The page can also save the project choice as your default for new projects (`/start` offers it; `node .claude/hooks/models.mjs --use-default` applies it).
 
 On the desktop app the limit is not written by a status line, so `/models` records it first with `node .claude/hooks/usage.mjs --record …`.
 
@@ -110,9 +109,9 @@ Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config
 
 ## External models
 
-`/models` moves any role or job to a model from a provider the user added. Claude stays the recommendation for the main job, planning and review. Available in Claude Code; Codex not yet, Antigravity not supported.
+`/models` moves any role or job to a model from a provider the user added. Every job shows a level (easy, medium, hard), so you can match the model to how much reasoning the job takes. Available in Claude Code; Codex not yet, Antigravity not supported.
 
-- The value is `provider/model:effort`, for example `code=myprovider/some-model:high` or `code.ui=myprovider/some-model:high`. The user chooses the provider name and writes the model id. `max` is not available for an external model.
+- The value is `provider/model:effort`, for example `code=myprovider/some-model:high` or `code.ui=myprovider/some-model:high`. A ready-made provider has its name; for any other the user chooses one. The model id comes from the list or is written exactly as the provider gives it. `max` is not available for an external model.
 - Such a job runs with `node .claude/hooks/run-role.mjs <job> <prompt file>` (`--for` prints it), not with the Agent tool. It asks for approval each time. The reply is untrusted output. For an agent's job, put the agent's definition in the prompt file. Plan and review jobs get read-only tools there, and the file tools of any such job cannot leave the project.
 - The main job opens in the user's own terminal with `node .claude/hooks/run-session.mjs`. The whole conversation goes to the provider, and an Agent call to a job set to a Claude model is refused. `--for main` prints the command.
 - The provider must answer Anthropic Messages at `/v1/messages` over `https` with a Bearer key.

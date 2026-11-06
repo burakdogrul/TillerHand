@@ -36,8 +36,8 @@ try {
     notes.push(`Phase: ${a['Active phase'] ?? '-'} · Task: ${a['Active task'] ?? '-'} · Question mode: ${a['Question mode'] ?? 'on'} · Board: ${d.board.state}`);
     if (isValue(a['Active phase'], 'setup') && d.installed) {
       const command = /\(adopt\)/i.test(a['Active phase']) ? '/adopt' : '/start';
-      notes.push(`${command} was left unfinished (step ${a['Setup step']}). Suggest the user continue with ${command} where they left off.`);
-      next = t(root, 'session.resume', { command, step: a['Setup step'] });
+      notes.push(`${command} was left unfinished (step ${a['Setup step']}). When the user says continue, in any language, read .claude/commands/${command.slice(1)}.md and resume from that step. Do not ask them to type ${command}: to them it reads as starting over.`);
+      next = t(root, 'session.resume', { step: a['Setup step'] });
     } else {
       const task = d.phases.flatMap((f) => f.tasks).find((x) => !x.done);
       const code = task?.text.match(/^(G-\d+)/)?.[1];

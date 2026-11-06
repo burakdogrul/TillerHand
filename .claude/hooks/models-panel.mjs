@@ -3,7 +3,7 @@
 //   node .claude/hooks/models-panel.mjs      starts it, opens the browser, closes itself after 30 minutes without use
 // Local only: it listens on 127.0.0.1. A one-time token opens the page once and the page gets a session secret; every /api call sends it
 // in the x-panel-session header. There is no cookie. The token is never on a command line: the CLI opens a temporary file that redirects to it.
-// A key goes from the page to the vault and nowhere else: no response, log, file in the project or output holds it.
+// A key is entered in a terminal, never here. The Try and update buttons use it through provider-test.mjs and provider-models.mjs: no response, log or file holds it.
 import fs from 'node:fs';
 import os from 'node:os';
 import http from 'node:http';
@@ -14,14 +14,18 @@ import { fileURLToPath } from 'node:url';
 import { findRoot, isMain } from './shared.mjs';
 import { t, readLang, locale } from './lang.mjs';
 import { MESSAGES } from './messages.mjs';
-import { ROLES, JOBS, MODELS, roleOf, recommendedFor, resolveJob, readSaved, modelsFile, modelsVersion, applyChanges, setDefaults, replaceFile } from './models.mjs';
-// This file opens no vault and takes no key: keys are entered in a terminal (models.mjs --set-key), and a stolen panel session cannot touch one.
+import { ROLES, JOBS, MODELS, levelOf, roleOf, recommendedFor, resolveJob, readSaved, modelsFile, modelsVersion, applyChanges, setDefaults, replaceFile } from './models.mjs';
+// This file takes no key and opens no vault itself: keys are entered in a terminal (models.mjs --set-key). A panel session can only start the fixed calls in the two files below.
 import { EFFORTS, parseExternal, isProvider, readStore, keyInfo, providerNames, setLimit, addCatalog, removeCatalog, today, purgePlainKeys } from './providers.mjs';
 import { systemExe } from './keystore.mjs';
+import { PRESETS } from './provider-presets.mjs';
+import { testModel } from './provider-test.mjs';
+import { updateModelLists, readModelLists } from './provider-models.mjs';
 import { rangeOf, claudeUsage, externalFromRuns, externalFromStore } from './panel-data.mjs';
 import { readLimits } from './usage.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+const MAX_TRIES = 30;
 const PANEL_DIR = path.join(HERE, 'panel');
 const COST_SCRIPT = path.join(HERE, 'cost.mjs');
 const MAX_BODY = 64 * 1024;
@@ -80,7 +84,7 @@ function readRuns(root) {
 }
 
 // onLogin runs when the one-time token is used (the CLI deletes its temporary file then)
-export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, now = Date.now, onLogin = () => {} } = {}) {
+export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, now = Date.now, onLogin = () => {}, fetchImpl = fetch } = {}) {
   try { purgePlainKeys(); } catch { /* the store is not writable; a plain key in it is never read */ }
   const token = crypto.randomBytes(32).toString('base64url');
   const sessionValue = crypto.randomBytes(32).toString('base64url');
@@ -88,7 +92,7 @@ export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, 
   const panelFile = path.join(stateDir, 'panel.json');
   const running = new Map(); // scope → the cost.mjs child that is reading it
   const failed = new Set(); // scopes whose last read failed
-  let tokenUsed = false, port = 0, idle = null, closing = null;
+  let tokenUsed = false, port = 0, idle = null, closing = null, testing = false, updating = false, tries = 0;
   const text = (key) => t(root, key);
   const fail = (res, status, key, extra = {}) => json(res, status, { ok: false, message: text(`panel.err.${key}`), ...extra });
   // A refused request is answered before its body is read; the body is drained so the client can finish sending it
@@ -135,6 +139,9 @@ export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, 
       saved: problem ? { broken: true } : saved,
       jobs: jobsTree(file),
       recommended: Object.fromEntries(names.map((name) => [name, recommendedFor(name)])),
+      levels: Object.fromEntries(names.map((name) => [name, levelOf(name)])),
+      presets: PRESETS,
+      modelLists: readModelLists(),
       main: resolveJob('main', file).value,
       overrides: OVERRIDES.filter((name) => process.env[name]),
       providers: Object.fromEntries(providerNames().map((p) => [p, { keyInfo: keyInfo(p), limit: Number(store.limits[p]) > 0 ? Number(store.limits[p]) : null, spentToday: Number(store.spend[p]?.[day]) || 0 }])),
@@ -186,6 +193,19 @@ export async function createPanel({ root = findRoot(), idleMs = 30 * 60 * 1000, 
       if (!isProvider(provider) || typeof model !== 'string') return fail(res, 422, 'badRequest');
       removeCatalog(provider, model);
       return json(res, 200, { ok: true });
+    },
+    // One at a time and at most MAX_TRIES per panel: a session can start a paid call, so it cannot start a flood of them
+    'POST /api/test': async (res, { provider, model }) => {
+      if (testing) return fail(res, 429, 'busy', { code: 'busy' });
+      if (tries >= MAX_TRIES) return fail(res, 429, 'busy', { code: 'tooMany' });
+      tries += 1;
+      testing = true;
+      try { return json(res, 200, await testModel({ provider, model, fetchImpl })); } finally { testing = false; }
+    },
+    'POST /api/models-update': async (res) => {
+      if (updating) return fail(res, 429, 'busy', { code: 'busy' });
+      updating = true;
+      try { return json(res, 200, await updateModelLists({ fetchImpl })); } finally { updating = false; }
     },
     'POST /api/default': (res) => (setDefaults(modelsFile(root)) === null ? json(res, 200, { ok: true }) : fail(res, 500, 'failed')),
     'POST /api/refresh': (res, { scope }) => {

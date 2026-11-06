@@ -475,7 +475,8 @@ test('AC-64.1 ATTACK: no provider name, address, key format, check address or pr
   const found = [];
   for (const [file, source] of hookSources()) {
     const code = stripComments(source);
-    if (names.test(code)) found.push(`${file}: a provider name or address`);
+    // 3.65.0: the ready providers are one table of data, in provider-presets.mjs; no other file may name one
+    if (file !== 'provider-presets.mjs' && names.test(code)) found.push(`${file}: a provider name or address`);
     if (file !== 'destructive-guard.mjs' && identifiers.test(code)) found.push(`${file}: ${code.match(identifiers)[0]}`);
     if (/\/api\/openrouter-models|sk-or-|api\.openrouter|\/v1\/key\b/.test(code)) found.push(`${file}: a provider address or key format`);
   }
@@ -495,6 +496,7 @@ test('AC-64.1 providers.mjs and models.mjs no longer export the fixed tables or 
   assert.equal(Object.hasOwn(runRole, 'KNOWN_PRICES'), false);
 });
 
+// 3.65.0: the panel can try a model (POST /api/test), but the vault is opened by provider-test.mjs alone (testModel); these two files still name no vault function
 test('AC-64.5 the panel files never use the vault functions, and keystore.mjs is imported for systemExe only', T, () => {
   const used = [];
   for (const file of ['models-panel.mjs', 'panel-data.mjs']) {

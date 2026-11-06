@@ -7,7 +7,7 @@ Idea: $ARGUMENTS
 
 This is a **9-step wizard** (0-9). Act as if the user knows nothing. Ask every decision per `docs/workflow/decision-protocol.md` (AskUserQuestion, recommended option first, each option explains when it is better). Never decide on your own, except on topics closed in question mode (`docs/workflow/decision-protocol.md` §4): there pick the recommended option, log it as `automatic` and list it under "Auto decisions"; the language question and the §4 always-ask list are still asked. Write no application code in this session. Classify every decision as a one-way / two-way door (`docs/workflow/decision-protocol.md` §2a). For one-way decisions such as database, auth, payment and data model, get the board's opinion first (decision council for database and auth; profile rule in `.claude/board/council.md`).
 
-**Resuming:** If `docs/workflow/progress.md` → `**Setup step:**` is greater than 0, resume from that step and tell the user. When a step ends, update this line (`N/9`) and the `**Last updated:**` line; then write the status block. After heavy steps (1b research, 4, 6, 7), suggest `/clear` in one line before the next step: the step's result is in files and the next step reads them; a clean session is cheap because every turn rereads the whole context. Calling `/start` again resumes from the saved step.
+**Resuming:** If `docs/workflow/progress.md` → `**Setup step:**` is greater than 0, resume from that step and tell the user. When a step ends, update this line (`N/9`) and the `**Last updated:**` line; then write the status block. After heavy steps (1b research, 4, 6, 7), suggest `/clear` in one line before the next step, and say that afterwards the user only writes "continue" in the conversation language: do not tell them to run `/start` again, it reads as starting a new idea. The step's result is in files and the next step reads them; a clean session is cheap because every turn rereads the whole context. Saying "continue" or calling `/start` both resume from the saved step.
 
 **Decisions are logged immediately:** Write each decision to `docs/decisions/log.md` → decision log the moment it is made (do not wait for the step end). The dashboard shows decisions and step progress live from there.
 
@@ -146,7 +146,7 @@ Apply `.claude/board/rules.md` §5:
 
 ## Step 7: Design direction (if there is a UI)
 
-Expensive step: state the cost first and ask by depth (see "Expensive steps" above). Run the `/design general` flow. Style direction, color, font and detail decisions are made with visual previews; at the end `PRODUCT.md`, `DESIGN.md` and `docs/design/design-guide.md` are ready. Skip this step for the backend type.
+Expensive step: state the cost first and ask by depth (see "Expensive steps" above). Run the `/design general` flow. It starts with the Design brief: "Do it light" means fewer previews and never skips the brief, and "Leave for later" only moves it to the `/design general` task, so no interface code is written before it. Style direction, color, font and detail decisions are made with visual previews; at the end `PRODUCT.md`, `DESIGN.md` and `docs/design/design-guide.md` are ready. Skip this step for the backend type.
 
 ## Step 8: Roadmap → `docs/product/roadmap.md`
 

@@ -2,6 +2,26 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.65.0] - 2026-11-06
+
+### Added
+- Model panel, Providers tab: it replaces the Models and Keys tabs with four steps: pick a provider, add its key, pick a model, try it. Each step says what to do and where to find it, and the key step shows what the terminal will ask.
+- Ready-made providers: OpenRouter, DeepSeek, Kimi, Z.ai, MiniMax and Qwen, with their address, key page and model list. "Not listed" takes your own address.
+- **Try** button: it asks a model one short question and asks it to call a tool, then says what a failure means. Each try goes on your provider bill and counts toward the daily limit.
+- **Update model lists** button: it fetches each provider's current models. A provider's list opens when its key is added; a failed update keeps the old list.
+- Jobs tab: every job shows a level (easy, medium, hard), with a filter. Pick the model by how much reasoning the job takes.
+- `/design` and `/start`: a mandatory design brief comes first, with detailed questions on the landing page, motion and style. Design trials follow the answers.
+
+### Changed
+- Jobs tab: the "Claude recommended" advice is gone. Choosing an outside model asks for one confirmation on save.
+- After `/clear`, the note says to type "continue" to pick up setup. It no longer points to `/start`.
+
+### Fixed
+- Dashboard: with Turkish chosen, stage, task, question mode, profile and decision fields stayed in English.
+
+### Adapt by hand
+- `docs/design/design-guide.md` is yours: add a `## Design brief` section to record the brief's answers.
+
 ## [3.64.3] - 2026-11-03
 
 ### Changed

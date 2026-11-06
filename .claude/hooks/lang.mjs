@@ -85,6 +85,12 @@ export function t(root, key, vars = {}) {
   return text.replace(PLACEHOLDER, (m, name) => Object.hasOwn(vars, name) ? String(vars[name]) : m);
 }
 
+// Text that only exists as English in a file (a template, an error from a lower layer): the same text in this language, or itself
+export function tText(root, en) {
+  const key = Object.keys(MESSAGES).find((k) => MESSAGES[k].en === en);
+  return key ? t(root, key) : en;
+}
+
 // Date and number locale for a language code (English when the runtime does not know the code)
 export const locale = (lang) => { try { return Intl.DateTimeFormat.supportedLocalesOf(lang ?? 'en')[0] ?? 'en'; } catch { return 'en'; } };
 

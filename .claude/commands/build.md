@@ -16,7 +16,7 @@ If empty, take `docs/workflow/progress.md` → "Next step" (next step), or the f
    **If a test looks wrong:** The code side does not change the test. It reports the reason; resume `test-writer` with SendMessage and let it decide per the criterion. If the criterion changes, that is a decision: ask the user.
 3. Implement. Rules:
    - **If a new decision point appears while implementing, stop and ask** (`docs/workflow/decision-protocol.md`). Do not guess and continue.
-   - Skills (`docs/workflow/skills.md`): `ponytail:ponytail` for code, `mattpocock-skills:tdd` for critical flows. For UI, the chosen direction skill + `impeccable:impeccable` (stay bound to `DESIGN.md`; if a new design decision is needed, `/design`). `humanizer:humanizer` for user-visible text.
+   - Skills (`docs/workflow/skills.md`): `ponytail:ponytail` for code, `mattpocock-skills:tdd` for critical flows. For UI, the chosen direction skill + `impeccable:impeccable` (stay bound to `DESIGN.md`; if a new design decision is needed, `/design`). A new screen with no brief in `docs/design/design-guide.md` goes through `/design <screen>` first: ask, then design. `humanizer:humanizer` for user-visible text.
    - Only this task's scope. Do not fix problems outside the task; write them to `docs/workflow/progress.md` → "Open issues / blockers".
    - If the code map is connected, explore with it; do not read files wholesale. In a large file, search first (grep), then read only the needed line range.
    - If the package gate warns while installing a package (made-up / too new / rarely used), tell the user; do not try to force it.

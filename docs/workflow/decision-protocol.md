@@ -68,7 +68,7 @@ The state is kept in the `**Question mode:**` line of `docs/workflow/progress.md
 
 ## 5. Visual preview for design decisions
 
-Every `design` decision is asked with visuals. The user chooses an image, not text.
+Every `design` decision is asked with visuals. The user chooses an image, not text. Before the first preview, `/design` records the Design brief: what the user wants is asked in words first, then shown.
 
 1. Produce one sample per option: `.previews/NN-topic/a.html`, `b.html`, `c.html` (NN is the sequence number). Also an `index.html` that shows them all side by side or one below the other.
 2. Build the samples with **real content** (the product name, real titles and texts from the PRD); no lorem ipsum.

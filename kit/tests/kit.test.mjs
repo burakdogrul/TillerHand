@@ -258,7 +258,9 @@ test('session start: the next command is shown to the user (after /clear)', () =
   };
   // 3.49.0: installed without a language choice, the messages are English
   set('Setup step', '4/9');
-  assert.match(session(p).systemMessage, /Continue: \/start \(step 4\/9\)/);
+  // 3.65.0: the screen says what to type in plain words, with no command the user would have to remember
+  assert.match(session(p).systemMessage, /To continue, say "continue" \(setup step 4\/9\)/);
+  assert.doesNotMatch(session(p).systemMessage, /\/start|\/adopt/);
   set('Active phase', 'Phase 0');
   const filePath = path.join(p, 'docs/product/roadmap.md');
   write(filePath, read(filePath).replace('- [ ] G-001', '- [x] G-001'));

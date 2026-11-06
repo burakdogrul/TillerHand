@@ -38,11 +38,11 @@
   let S = null; // the last /api/state
   let side = { today: null, lastWeek: null };
   let draft = {}; // { job: value | null } not saved yet
-  let consented = new Set();
-  let saving = false, pollTimer = null, toastTimer = null, stopped = false;
+  let consented = false; // the box in the save bar: one answer per save
+  let saving = false, pollTimer = null, toastTimer = null, keyWatch = null, stopped = false;
   const refreshTried = new Set();
   const extColors = new Map();
-  const ui = { tab: 'usage', range: 'thisWeek', scope: 'project', source: 'claude', unit: 'usd', q: '' };
+  const ui = { tab: 'usage', range: 'thisWeek', scope: 'project', source: 'claude', unit: 'usd', q: '', level: 'all', wiz: { step: 1, pick: null, name: '', q: '' }, tests: {}, updating: false, listResult: null };
   let folded = new Set();
   try { folded = new Set(JSON.parse(store.get(FOLD_KEY) ?? '[]')); } catch { /* unreadable: nothing folded */ }
   let observers = [], rows = new Map(), els = {};
@@ -175,7 +175,6 @@
   // ---- jobs: the same chain models.mjs walks
   const isRole = (name) => S.jobs.some((r) => r.name === name);
   const roleOf = (name) => { const head = name.split('.')[0]; return head === 'findings' || head === 'board' ? 'review' : head; };
-  const advised = (name) => ['main', 'plan', 'review'].includes(roleOf(name));
   const savedOwn = (name) => (isRole(name) ? S.saved[name] : S.saved.tasks?.[name]);
   const own = (name) => (Object.hasOwn(draft, name) ? draft[name] ?? undefined : savedOwn(name));
   const hasKey = (p) => S.providers[p]?.keyInfo?.present === true;
@@ -207,8 +206,8 @@
     return { model: v.slice(0, i), effort: v.slice(i + 1) };
   }
   const dirty = () => Object.keys(draft).length > 0;
-  const needsConsent = (name) => Boolean(parseExt(own(name))) && Object.hasOwn(draft, name) && !parseExt(savedOwn(name));
-  const blocked = () => Object.keys(draft).some((n) => needsConsent(n) && !consented.has(n));
+  const outsideDraft = () => Object.keys(draft).filter((n) => parseExt(own(n)));
+  const blocked = () => outsideDraft().length > 0 && !consented;
   function pruneDraft() {
     for (const name of Object.keys(draft)) if ((draft[name] ?? undefined) === savedOwn(name)) delete draft[name];
   }
@@ -277,7 +276,7 @@
     document.documentElement.lang = S.lang;
     document.title = T('panel.title');
     els.tabs = {};
-    const tabs = ['usage', 'jobs', 'models', 'keys'].map((id) => (els.tabs[id] = h('button', { class: 'tab', type: 'button', onclick: () => goTo(id) }, T(`panel.tab.${id}`))));
+    const tabs = ['usage', 'jobs', 'providers'].map((id) => (els.tabs[id] = h('button', { class: 'tab', type: 'button', onclick: () => goTo(id) }, T(`panel.tab.${id}`))));
     const themeBtns = ['system', 'light', 'dark'].map((v) => h('button', { type: 'button', 'data-v': v, onclick: () => { store.set(THEME_KEY, v); applyTheme(v); markTheme(); } }, T(`panel.theme.${v}`)));
     function markTheme() {
       const now = document.documentElement.dataset.theme ?? 'system';
@@ -290,7 +289,8 @@
     els.saveErr = h('div', { class: 'saveErr', role: 'alert' });
     els.save = h('button', { class: 'prim', type: 'button', onclick: save }, T('panel.jobs.save'));
     els.discard = h('button', { class: 'sec', type: 'button', onclick: discard }, T('panel.jobs.discard'));
-    els.bar = h('div', { class: 'saveBar', role: 'region', 'aria-label': T('panel.jobs.saveBar') }, els.count, els.saveNote, h('span', { class: 'grow' }), els.discard, els.save, els.saveErr);
+    els.consent = h('div', { class: 'saveConsent' });
+    els.bar = h('div', { class: 'saveBar', role: 'region', 'aria-label': T('panel.jobs.saveBar') }, els.count, els.saveNote, h('span', { class: 'grow' }), els.discard, els.save, els.consent, els.saveErr);
     els.toast = h('div', { class: 'toast', role: 'status' });
     els.overrides = h('div');
     app.replaceChildren(
@@ -315,6 +315,7 @@
   function renderTab() {
     if (stopped) return;
     const focus = document.activeElement?.id;
+    stopKeyWatch();
     observers.forEach((o) => o.disconnect());
     observers = [];
     rows = new Map();
@@ -324,7 +325,7 @@
     els.view.replaceChildren();
     const banner = overridesBanner();
     if (banner) els.view.append(banner);
-    ({ usage: viewUsage, jobs: viewJobs, models: viewModels, keys: viewKeys })[ui.tab](els.view);
+    ({ usage: viewUsage, jobs: viewJobs, providers: viewProviders })[ui.tab](els.view);
     syncBar();
     if (focus) document.getElementById(focus)?.focus({ preventScroll: true });
   }
@@ -443,7 +444,7 @@
     const info = S.providers[p];
     if (!info) return null;
     const name = providerName(p);
-    if (!info.limit) return h('div', { class: 'pl' }, notice('', null, T('panel.usage.noLimit', { provider: name }), linkTo('keys', 'panel.usage.toKeys')));
+    if (!info.limit) return h('div', { class: 'pl' }, notice('', null, T('panel.usage.noLimit', { provider: name }), linkTo('providers', 'panel.usage.toKeys')));
     const full = info.spentToday >= info.limit;
     const fillEl = h('i');
     fillEl.style.width = `${Math.min(100, (info.spentToday / info.limit) * 100)}%`;
@@ -604,7 +605,7 @@
     const keys = externalKeys();
     sel.append(h('optgroup', { label: T('panel.jobs.externalModels') },
       keys.length
-        ? keys.map((k) => { const p = k.slice(0, k.indexOf('/')); return h('option', { value: k, disabled: !hasKey(p) }, hasKey(p) ? k : `${k} ${T('panel.jobs.noKeyTag')}`); })
+        ? keys.map((k) => { const p = k.slice(0, k.indexOf('/')); const m = S.catalog?.[p]?.[k.slice(k.indexOf('/') + 1)]; const price = typeof m?.input === 'number' ? ` · ${fmt.usd(m.input)} / ${fmt.usd(m.output)}` : ''; return h('option', { value: k, disabled: !hasKey(p) }, hasKey(p) ? `${k}${price}` : `${k} ${T('panel.jobs.noKeyTag')}`); })
         : h('option', { disabled: true, value: '-' }, T('panel.jobs.noneYet'))));
     return sel;
   }
@@ -613,6 +614,7 @@
       [...S.choices.efforts, 'max'].map((x) => h('option', { value: x }, x)));
   }
   const labelOf = (name) => T(isRole(name) ? `panel.role.${name}` : `panel.job.${name}`);
+  const levelTag = (name) => h('span', { class: `lvl ${S.levels[name]}` }, T(`panel.level.${S.levels[name]}`));
   const RUN_SESSION = 'node .claude/hooks/run-session.mjs';
   function onModel(name) {
     const r = rows.get(name);
@@ -642,16 +644,13 @@
     const backText = name === 'main' ? T('panel.jobs.backToRole', { role: labelOf('plan') }) : T(name === 'board.commit' ? 'panel.jobs.backRecommended' : 'panel.jobs.back');
     const applyLabel = T('panel.jobs.applyFor', { action: T('panel.jobs.applyAll'), job: labelOf(name) });
     r.back = h('button', { class: 'btn', type: 'button', id: `b-${name}`, 'aria-label': T('panel.jobs.backFor', { action: backText, job: labelOf(name) }), onclick: () => { document.getElementById(`m-${name}`)?.focus(); setOwn(name, null); } }, backText);
-    r.consent = h('div', { class: 'consent', role: 'group', 'aria-label': T('panel.consent.title') });
-    r.tagAdvice = h('span', { class: 'tagA' }, T('panel.jobs.advice'));
-    r.tagAdvice.hidden = !advised(name);
-    r.tagsWrap = [r.tagCustom, r.tagExt, r.tagAdvice, r.tagUnsaved];
+    r.tagsWrap = [r.tagCustom, r.tagExt, r.tagUnsaved];
     if (kind === 'role') {
       r.apply = h('button', { class: 'btn', type: 'button', id: `a-${name}`, 'aria-label': applyLabel, onclick: () => applyToAll(name, countable(role)) }, T('panel.jobs.applyAll'));
       r.fold = h('button', { class: 'fold', type: 'button', id: `f-${name}`, onclick: () => toggleFold(name) }, h('b', {}, labelOf(name)));
       r.counts = h('small');
       r.bad.className = 'roleNote bad';
-      r.el = h('header', { class: 'roleHead' }, h('h2', { class: 'roleTitle' }, r.fold, r.counts, r.tagAdvice), r.model, r.effort, h('div', { class: 'acts' }, r.apply), r.bad, r.consent);
+      r.el = h('header', { class: 'roleHead' }, h('h2', { class: 'roleTitle' }, r.fold, levelTag(name), r.counts), r.model, r.effort, h('div', { class: 'acts' }, r.apply), r.bad);
       return r;
     }
     const cls = { main: 'job mainRow', head: 'job head', mem: 'job mem', free: 'job free', job: 'job' }[kind];
@@ -668,21 +667,9 @@
       r.acts.append(r.apply);
     }
     r.el = h('div', { class: cls }, h('span', { class: 'route' }), h('span', { class: 'tap' }),
-      h('span', { class: 'name' }, title, h('code', {}, name), r.tagsWrap, r.note, r.note2, r.bad), r.model, r.effort, r.acts, r.consent);
+      h('span', { class: 'name' }, levelTag(name), title, h('code', {}, name), r.tagsWrap, r.note, r.note2, r.bad), r.model, r.effort, r.acts);
     r.searchText = lower(`${labelOf(name)} ${name} ${parentLabel}`);
     return r;
-  }
-
-  function fillConsent(r) {
-    const need = needsConsent(r.name);
-    r.consent.hidden = !need;
-    if (!need) { if (r.consent.firstChild) r.consent.replaceChildren(); return; }
-    if (r.consent.firstChild) return; // built already: keep the box the keyboard is on
-    const risky = ['code', 'test'].includes(roleOf(r.name));
-    const extra = [advised(r.name) && T('panel.consent.advised'), r.name === 'main' && T('panel.consent.main'), risky && T('panel.consent.secrets')].filter(Boolean);
-    r.consent.append(h('b', {}, T('panel.consent.title')),
-      [T('panel.consent.sees'), T('panel.consent.final'), ...extra].join(' '),
-      h('label', {}, h('input', { type: 'checkbox', id: `c-${r.name}`, checked: consented.has(r.name), onchange: (e) => { if (e.target.checked) consented.add(r.name); else consented.delete(r.name); syncBar(); } }), T('panel.consent.ok')));
   }
 
   function syncRow(r) {
@@ -712,7 +699,6 @@
       const customs = names.filter((n) => own(n) !== undefined);
       r.counts.textContent = T('panel.jobs.counts', { jobs: fmt.num(names.length), custom: fmt.num(customs.length) });
       r.apply.hidden = customs.length === 0;
-      fillConsent(r);
       r.fold.setAttribute('aria-expanded', String(!isFolded(name)));
       return;
     }
@@ -721,7 +707,6 @@
     r.el.classList.toggle('bad', Boolean(badText));
     r.tagCustom.hidden = !custom;
     r.tagExt.hidden = !parseExt(shown);
-    r.tagAdvice.hidden = !advised(name) || (kind !== 'main' && !parseExt(shown)); // a long list stays quiet until an outside model is picked
     r.tagUnsaved.hidden = !Object.hasOwn(draft, name);
     r.back.hidden = o === undefined;
     let note = '', note2 = '';
@@ -743,12 +728,21 @@
     r.note.textContent = note; r.note.hidden = !note;
     if (name === 'main' && parseExt(shown)) r.note.append(' ', h('code', {}, RUN_SESSION));
     r.note2.textContent = note2; r.note2.hidden = !note2;
-    fillConsent(r);
   }
   function sync() {
     for (const r of rows.values()) syncRow(r);
     syncBar();
     applyFolds();
+  }
+  // One answer per save, whatever the number of jobs: what goes where, as facts
+  function fillConsent() {
+    const names = outsideDraft();
+    const providers = [...new Set(names.map((n) => S.presets[parseExt(own(n)).provider]?.label ?? parseExt(own(n)).provider))].join(', ');
+    const notes = [T('panel.consent.goes', { count: fmt.num(names.length), providers }), T('panel.consent.sees'), T('panel.consent.final'),
+      names.some((n) => ['code', 'test'].includes(roleOf(n))) && T('panel.consent.secrets'), names.includes('main') && T('panel.consent.main')].filter(Boolean).join(' ');
+    if (els.consent.dataset.notes === notes) return; // the box the keyboard is on stays
+    els.consent.dataset.notes = notes;
+    els.consent.replaceChildren(...(names.length ? [h('p', {}, notes), h('label', {}, h('input', { type: 'checkbox', id: 'consentSave', checked: consented, onchange: (e) => { consented = e.target.checked; syncBar(); } }), T('panel.consent.ok'))] : []));
   }
   function syncBar() {
     const count = Object.keys(draft).length;
@@ -761,6 +755,7 @@
     els.saveNote.textContent = blocked() ? T('panel.jobs.needConsent') : mainChanged ? T('panel.jobs.nextJobMain') : T('panel.jobs.nextJob');
     els.save.disabled = saving || blocked();
     els.save.textContent = saving ? T('panel.jobs.saving') : T('panel.jobs.save');
+    fillConsent();
   }
 
   const isFolded = (name) => folded.has(name);
@@ -772,6 +767,8 @@
   }
   function applyFolds() {
     const q = ui.q.trim() ? lower(ui.q.trim()) : '';
+    const filtering = Boolean(q) || ui.level !== 'all';
+    const matches = (name, r) => (!q || r.searchText.includes(q)) && (ui.level === 'all' || S.levels[name] === ui.level);
     let shown = 0, total = 0;
     for (const sec of els.sections ?? []) {
       let any = false;
@@ -781,28 +778,28 @@
         for (const name of part.members) {
           const r = rows.get(name);
           total++;
-          const hit = !q || r.searchText.includes(q);
+          const hit = matches(name, r);
           r.el.hidden = !hit;
           if (hit) { shown++; partAny = true; }
         }
         if (head) {
           total++;
-          const hit = !q || head.searchText.includes(q);
+          const hit = matches(part.head, head);
           if (hit) shown++;
           head.el.hidden = !(hit || partAny);
           partAny = partAny || hit;
-          part.body.hidden = (!q && isFolded(part.head)) || (q && !part.members.some((n) => !rows.get(n).el.hidden));
+          part.body.hidden = (!filtering && isFolded(part.head)) || (filtering && !part.members.some((n) => !rows.get(n).el.hidden));
         }
         any = any || partAny;
       }
-      if (sec.council) sec.council.hidden = Boolean(q);
-      if (sec.el) sec.el.hidden = Boolean(q) && !any;
-      if (sec.body) sec.body.hidden = !q && isFolded(sec.role);
+      if (sec.council) sec.council.hidden = filtering;
+      if (sec.el) sec.el.hidden = filtering && !any;
+      if (sec.body) sec.body.hidden = !filtering && isFolded(sec.role);
     }
     if (els.found) {
-      els.found.textContent = q ? T('panel.jobs.found', { count: fmt.num(shown), total: fmt.num(total) }) : '';
-      els.noMatch.hidden = !(q && shown === 0);
-      els.colHead.hidden = Boolean(q && shown === 0);
+      els.found.textContent = filtering ? T('panel.jobs.found', { count: fmt.num(shown), total: fmt.num(total) }) : '';
+      els.noMatch.hidden = !(filtering && shown === 0);
+      els.colHead.hidden = filtering && shown === 0;
     }
   }
   async function applyToAll(name, names) {
@@ -826,14 +823,16 @@
     v.append(h('div', { class: 'bar' },
       h('h1', {}, T('panel.tab.jobs')), h('span', { class: 'intro' }, T('panel.jobs.intro')), h('span', { class: 'grow' }), els.found,
       h('input', { type: 'search', id: 'jobSearch', value: ui.q, placeholder: T('panel.jobs.search'), 'aria-label': T('panel.jobs.search'), autocomplete: 'off', oninput: (e) => { ui.q = e.target.value; applyFolds(); } }),
+      seg(T('panel.level.label'), [['all', T('panel.level.all')], ...['easy', 'medium', 'hard'].map((x) => [x, T(`panel.level.${x}`)])], ui.level, (x) => { ui.level = x; renderTab(); }, 'level'),
       els.defaultBtn));
+    v.append(h('div', { class: 'legend3' }, ['easy', 'medium', 'hard'].map((x) => h('div', {}, h('span', { class: `lvl ${x}` }, T(`panel.level.${x}`)), h('p', {}, T(`panel.level.${x}Why`)), h('small', {}, T(`panel.level.${x}Pick`))))));
     if (S.saved.broken) v.append(notice('bad', null, T('panel.jobs.broken')));
     else if (!Object.keys(S.saved).some((k) => k !== 'acknowledged')) v.append(notice('', null, T('panel.jobs.noChoice')));
     const known = new Set(S.jobs.flatMap((r) => r.jobs.map((j) => j.name)));
     const unknown = Object.keys(S.saved.tasks ?? {}).filter((k) => !known.has(k));
     if (unknown.length) v.append(notice('', null, T('panel.jobs.unknown', { names: unknown.map(clip).join(', ') })));
     const keyless = Object.keys(S.catalog ?? {}).filter((p) => !hasKey(p) && Object.keys(S.catalog[p] ?? {}).length);
-    if (keyless.length) v.append(notice('', null, T('panel.jobs.noKeyNote', { providers: keyless.join(', ') }), linkTo('keys', 'panel.usage.toKeys')));
+    if (keyless.length) v.append(notice('', null, T('panel.jobs.noKeyNote', { providers: keyless.join(', ') }), linkTo('providers', 'panel.usage.toKeys')));
     els.colHead = h('div', { class: 'colHead', 'aria-hidden': 'true' }, h('span', {}, T('panel.jobs.colJob')), h('span', {}, T('panel.jobs.colModel')), h('span', {}, T('panel.jobs.colEffort')), h('span'));
     els.noMatch = h('div', { hidden: true }, notice('', null, T('panel.jobs.noMatch'), h('button', { class: 'btn', type: 'button', onclick: () => { ui.q = ''; document.getElementById('jobSearch').value = ''; applyFolds(); document.getElementById('jobSearch').focus(); } }, T('panel.jobs.clearSearch'))));
     v.append(els.colHead, els.noMatch);
@@ -890,26 +889,24 @@
   }
   function discard() {
     draft = {};
-    consented = new Set();
+    consented = false;
     els.saveErr.replaceChildren();
     if (ui.tab === 'jobs') renderTab(); else syncBar();
     document.getElementById('jobSearch')?.focus();
   }
-  async function save({ overwriteBroken, confirmExternal } = {}) {
+  async function save({ overwriteBroken } = {}) {
     if (saving || blocked() || !dirty()) return;
     saving = true;
     els.saveErr.replaceChildren();
     syncBar();
     const had = Object.hasOwn(draft, 'main');
-    // Only when every outside model in this save has its box ticked (or the user just confirmed in the dialog below)
-    const outside = Object.keys(draft).filter((n) => parseExt(own(n)));
-    const confirmed = confirmExternal === true || (outside.length > 0 && outside.every((n) => consented.has(n)));
+    const confirmed = outsideDraft().length > 0 && consented;
     const r = await api('POST', '/api/jobs', { changes: draft, ifVersion: S.version, ...(overwriteBroken === true ? { overwriteBroken: true } : {}), ...(confirmed ? { confirmExternal: true } : {}) });
     saving = false;
     if (stopped) return;
     if (r.ok) {
       draft = {};
-      consented = new Set();
+      consented = false;
       await load({ rebase: true });
       renderTab();
       const mainValue = resolve('main').value;
@@ -923,12 +920,7 @@
     }
     syncBar();
     if (r.data.code === 'broken') {
-      if (await ask({ title: T('panel.jobs.overwriteTitle'), body: T('panel.jobs.overwriteBody'), ok: T('panel.jobs.overwriteOk'), danger: true })) return save({ overwriteBroken: true, confirmExternal });
-      return;
-    }
-    if (r.data.code === 'confirm') {
-      // An outside model that was already saved and is being changed has no box: the same warning comes as a question
-      if (await ask({ title: T('panel.consent.title'), body: [T('panel.consent.sees'), T('panel.consent.final'), T('panel.consent.secrets')].join(' '), ok: T('panel.consent.ok'), danger: true })) return save({ overwriteBroken, confirmExternal: true });
+      if (await ask({ title: T('panel.jobs.overwriteTitle'), body: T('panel.jobs.overwriteBody'), ok: T('panel.jobs.overwriteOk'), danger: true })) return save({ overwriteBroken: true });
       return;
     }
     if (r.data.code === 'conflict') {
@@ -943,88 +935,220 @@
     if (await load({ rebase: true })) renderTab();
   }
 
-  // ---- Models
+  // ---- Providers: one guided way to add an outside model. There is no key field here on purpose: a key is entered in the user's own terminal.
+  const SET_KEY = 'node .claude/hooks/models.mjs --set-key', REMOVE_KEY = 'node .claude/hooks/models.mjs --remove-key';
   const ALIAS_NOTE = { opus: 'panel.models.aliasOpus', sonnet: 'panel.models.aliasSonnet', haiku: 'panel.models.aliasHaiku', fable: 'panel.models.aliasFable' };
-  function viewModels(v) {
-    v.append(h('div', { class: 'bar' }, h('h1', {}, T('panel.tab.models')), h('span', { class: 'intro' }, T('panel.models.intro'))));
+  const NAME_RULE = /^[a-z][a-z0-9-]{0,31}$/;
+  const MAX_ROWS = 120; // a long list stays quick; the search reaches the rest
+  const KEY_WATCH_MS = 10 * 60e3;
+  const wizName = () => (ui.wiz.pick === 'custom' ? ui.wiz.name.trim() : ui.wiz.pick);
+  const listOf = (p) => S.modelLists?.[p]?.models ?? S.presets?.[p]?.models ?? [];
+  const listDate = (p) => S.modelLists?.[p]?.at ?? S.presets?.[p]?.checkedAt;
+  const money = (x) => (typeof x === 'number' ? fmt.usd(x) : '-');
+  const link = (href) => h('a', { href, target: '_blank', rel: 'noreferrer' }, href.replace(/^https:\/\//, ''));
+  const textOr = (key) => (S.strings[key] === undefined ? null : T(key));
+
+  function commandRow(label, text) {
+    const copy = async () => {
+      try { await navigator.clipboard.writeText(text); toast(T('panel.keys.copied')); } catch { /* the command is on screen to copy by hand */ }
+    };
+    return h('div', { class: 'cmdRow' }, label ? h('span', { class: 'help' }, label) : null,
+      h('div', { class: 'cmdLine' }, h('code', {}, text), h('button', { class: 'btn', type: 'button', 'aria-label': `${T('panel.keys.copy')}: ${text}`, onclick: copy }, T('panel.keys.copy'))));
+  }
+  const stopKeyWatch = () => { clearInterval(keyWatch); keyWatch = null; };
+  // Waits for the key the user enters in the terminal. It ends by itself: a forgotten page must not keep the panel alive
+  function watchKey() {
+    if (keyWatch) return;
+    const until = Date.now() + KEY_WATCH_MS;
+    keyWatch = setInterval(async () => {
+      if (stopped || Date.now() > until) return stopKeyWatch();
+      if (!(await load()) || !hasKey(wizName())) return;
+      stopKeyWatch();
+      renderTab();
+      updateLists(); // a key opens the provider's own list
+    }, 4000);
+  }
+  const showProviders = () => { if (ui.tab === 'providers') renderTab(); };
+  async function updateLists() {
+    if (ui.updating) return;
+    ui.updating = true;
+    showProviders();
+    const r = await api('POST', '/api/models-update', {});
+    ui.updating = false;
+    if (stopped) return;
+    if (r.ok) { ui.listResult = r.data.results; await load(); } else if (r.status) toast(r.data.message ?? T('panel.err.failed'));
+    showProviders();
+  }
+  function listSummary() {
+    if (!ui.listResult) return null;
+    const rows = Object.entries(ui.listResult);
+    const label = (p) => S.presets[p]?.label ?? p;
+    const noKey = rows.filter(([, r]) => r.code === 'noKey').map(([p]) => label(p));
+    return h('section', { class: 'card' }, h('h2', {}, T('panel.update.title')),
+      h('div', { class: 'errs' }, rows.filter(([, r]) => r.code !== 'noKey').map(([p, r]) => h('div', {}, h('b', {}, label(p)),
+        h('span', { class: r.ok ? 'ok' : null }, r.ok ? T('panel.update.ok', { count: fmt.num(r.count), added: fmt.num(r.added) }) : T(`panel.update.${r.code}`))))),
+      noKey.length ? h('p', { class: 'help' }, T('panel.update.noKey', { names: noKey.join(', ') })) : null);
+  }
+  function viewProviders(v) {
+    v.append(h('div', { class: 'bar' }, h('h1', {}, T('panel.tab.providers')), h('span', { class: 'intro' }, T('panel.providers.intro')), h('span', { class: 'grow' }),
+      h('button', { class: 'btn', type: 'button', id: 'updateLists', disabled: ui.updating, onclick: updateLists }, ui.updating ? [h('i', { class: 'spin', 'aria-hidden': 'true' }), T('panel.update.running')] : T('panel.update.button'))));
+    const summary = listSummary();
+    if (summary) v.append(summary);
+    v.append(h('nav', { class: 'steps', 'aria-label': T('panel.providers.stepsLabel') }, [1, 2, 3, 4].map((n) => h('button', { class: `step${n < ui.wiz.step && (n !== 2 || hasKey(wizName())) ? ' done' : ''}`, type: 'button', id: `step-${n}`, 'aria-current': n === ui.wiz.step ? 'step' : null, onclick: () => goStep(n) }, h('b', {}, n < ui.wiz.step && (n !== 2 || hasKey(wizName())) ? '✓' : fmt.num(n)), T(`panel.providers.step${n}`)))));
+    v.append([stepPick, stepKey, stepModel, stepTry][ui.wiz.step - 1]());
+    for (const p of Object.keys(S.providers)) v.append(providerCard(p));
     v.append(h('section', { class: 'card' },
       h('h2', {}, T('panel.models.claudeTitle')),
       h('p', { class: 'intro' }, T('panel.models.claudeIntro')),
       h('table', { class: 'data aliases' }, h('tbody', {}, S.choices.models.map((m) => h('tr', {}, h('th', { scope: 'row' }, h('code', {}, m)), h('td', { class: 'left' }, ALIAS_NOTE[m] ? T(ALIAS_NOTE[m]) : '')))))));
-    v.append(addModelCard());
-    for (const p of Object.keys(S.catalog ?? {}).sort()) if (Object.keys(S.catalog[p] ?? {}).length) v.append(providerModels(p));
   }
-  function addModelCard() {
+  function goStep(n) { ui.wiz.step = n; renderTab(); window.scrollTo(0, 0); }
+  const nextBtn = (n, key) => h('div', { class: 'wizNext' }, h('button', { class: 'prim', type: 'button', onclick: () => goStep(n) }, T(key)));
+
+  function stepPick() {
+    const card = (id, title) => h('button', { class: 'pcard', type: 'button', id: `pick-${id}`, 'aria-pressed': String(ui.wiz.pick === id), onclick: () => { ui.wiz.pick = id; ui.wiz.q = ''; renderTab(); } },
+      h('b', {}, title), h('span', {}, T(`panel.preset.${id}.tag`)), h('small', {}, T(`panel.preset.${id}.note`)), hasKey(id) ? h('small', { class: 'ok' }, T('panel.keys.has')) : null);
+    return h('section', { class: 'card' }, h('h2', {}, T('panel.providers.pickTitle')), h('p', { class: 'help' }, T('panel.providers.pickHelp')),
+      h('div', { class: 'pgrid' }, Object.entries(S.presets).map(([id, x]) => card(id, x.label)), card('custom', T('panel.preset.custom.name'))),
+      nextBtn(2, 'panel.providers.toKey'));
+  }
+
+  function stepKey() {
+    const preset = S.presets[ui.wiz.pick];
+    const name = wizName();
+    const host = preset ? new URL(preset.url).host : T('panel.providers.exampleHost');
+    const command = h('div');
+    const paint = () => { const n = wizName(); command.replaceChildren(commandRow('', `${SET_KEY} ${NAME_RULE.test(n) ? n : `<${T('panel.keys.namePlaceholder')}>`}`)); };
+    paint();
+    const custom = preset ? null : h('div', { class: 'two' },
+      h('div', {}, h('label', { class: 'field' }, T('panel.providers.nameLabel'), h('input', { type: 'text', id: 'wizName', value: ui.wiz.name, autocomplete: 'off', spellcheck: 'false', oninput: (e) => { ui.wiz.name = e.target.value; paint(); } })),
+        h('p', { class: 'rule' }, T('panel.providers.nameRule'))),
+      h('div', {}, h('b', {}, T('panel.providers.addressTitle')), h('p', { class: 'rule' }, T('panel.providers.addressRule'))));
+    const shownName = preset ? ui.wiz.pick : (NAME_RULE.test(name) ? name : T('panel.keys.namePlaceholder'));
+    const ask = preset ? T('panel.cli.addressPreset', { provider: shownName, url: preset.url }) : T('panel.cli.addressAsk', { provider: shownName });
+    const term = h('div', { class: 'term' },
+      h('div', {}, h('i', {}, ask), h('u', {}, T(preset ? 'panel.providers.termEnter' : 'panel.providers.termAddress'))),
+      h('div', {}, h('i', {}, T('panel.cli.confirm', { host })), h('u', {}, T('panel.providers.termYes'))),
+      h('div', {}, h('i', {}, T('panel.cli.hidden', { provider: shownName })), h('u', {}, T('panel.providers.termPaste'))),
+      h('div', {}, T('panel.providers.termSaved')));
+    const ready = hasKey(name);
+    if (!ready) watchKey();
+    return h('section', { class: 'card' }, h('h2', {}, T('panel.providers.keyTitle', { provider: preset?.label ?? shownName })),
+      h('p', { class: 'help' }, T('panel.providers.keyHelp')), custom,
+      h('ol', { class: 'ol' },
+        h('li', {}, h('b', {}, T('panel.providers.key1')), ' ', preset ? [T('panel.providers.key1Open'), ' ', link(preset.keyUrl), ' ', T('panel.providers.key1Rest')] : T('panel.providers.key1Custom')),
+        h('li', {}, h('b', {}, T('panel.providers.key2')), ' ', T('panel.providers.key2Rest')),
+        h('li', {}, h('b', {}, T('panel.providers.key3')), ' ', T('panel.providers.key3Rest')),
+        h('li', {}, h('b', {}, T('panel.providers.key4')), command),
+        h('li', {}, h('b', {}, T('panel.providers.key5')), term),
+        h('li', {}, h('b', {}, T('panel.providers.key6')), ' ', T('panel.providers.key6Rest'))),
+      ready
+        ? notice('good', T('panel.keys.has'), host, h('button', { class: 'btn', type: 'button', onclick: () => goStep(3) }, T('panel.providers.toModel')))
+        : notice('', null, h('span', {}, h('i', { class: 'spin', 'aria-hidden': 'true' }), T('panel.providers.waitingKey'))));
+  }
+
+  async function addToCatalog(p, row, errEl) {
+    const r = await api('POST', '/api/catalog', { provider: p, model: row.id, input: row.input ?? null, output: row.output ?? null, context: row.context ?? null });
+    if (r.ok) { await load(); renderTab(); toast(T('panel.saved')); } else if (r.status) errEl.textContent = r.data.message ?? T('panel.err.catalog');
+  }
+  function stepModel() {
+    const p = wizName();
+    const preset = S.presets[p];
+    const locked = !hasKey(p);
     const err = h('div', { class: 'formErr', role: 'alert' });
-    const text = (id, extra) => h('input', { type: 'text', id, required: true, autocomplete: 'off', spellcheck: 'false', ...extra });
-    const provider = text('addProvider', { pattern: '[a-z][a-z0-9\\-]{0,31}' }), id = text('addModel');
-    const num = (name) => h('input', { type: 'number', id: name, min: '0', step: 'any', inputmode: 'decimal' });
-    const input = num('addIn'), output = num('addOut'), context = num('addCtx');
+    const box = h('div', { class: 'mlist' });
+    const paint = () => {
+      const q = lower(ui.wiz.q.trim());
+      const found = listOf(p).filter((m) => !q || lower(m.id).includes(q));
+      box.replaceChildren(...[h('div', { class: 'mrow head' }, h('span', {}, T('panel.col.model')), h('span', {}, T('panel.col.input')), h('span', {}, T('panel.col.output')), h('span', { class: 'ctx' }, T('panel.col.context')), h('span', { class: 'acts' })),
+        found.slice(0, MAX_ROWS).map((m) => {
+          const added = Boolean(S.catalog?.[p]?.[m.id]);
+          return h('div', { class: 'mrow' }, h('code', {}, m.id), h('span', {}, money(m.input)), h('span', {}, money(m.output)), h('span', { class: 'ctx' }, typeof m.context === 'number' ? fmt.short(m.context) : '-'),
+            h('span', { class: 'acts' }, h('button', { class: 'btn', type: 'button', disabled: locked || added, onclick: () => addToCatalog(p, m, err) }, T(added ? 'panel.providers.added' : 'panel.models.add'))));
+        }),
+        found.length > MAX_ROWS ? h('div', { class: 'mrow more' }, T('panel.providers.moreRows', { count: fmt.num(found.length - MAX_ROWS) })) : null].flat().filter(Boolean));
+    };
+    paint();
+    const total = listOf(p).length;
+    const dated = listDate(p) ? T('panel.providers.listDate', { date: fmt.date(listDate(p)), count: fmt.num(total) }) : '';
+    const num = (id) => h('input', { type: 'number', id, min: '0', step: 'any', inputmode: 'decimal', disabled: locked });
+    const typed = h('input', { type: 'text', id: 'addModel', required: true, autocomplete: 'off', spellcheck: 'false', disabled: locked });
+    const input = num('addIn'), output = num('addOut');
     const optional = (n) => (Number.isNaN(n) ? null : n);
-    return h('section', { class: 'card' },
-      h('h2', {}, T('panel.models.addTitle')),
-      h('form', { onsubmit: async (e) => {
-        e.preventDefault();
-        err.textContent = '';
-        const r = await api('POST', '/api/catalog', { provider: provider.value.trim(), model: id.value.trim(), input: optional(input.valueAsNumber), output: optional(output.valueAsNumber), context: optional(context.valueAsNumber) });
-        if (r.ok) { await load(); renderTab(); toast(T('panel.saved')); } else if (r.status) err.textContent = r.data.message ?? T('panel.err.catalog');
-      } },
-      h('div', { class: 'formRow' },
-        h('label', { class: 'field' }, T('panel.models.providerLabel'), provider),
-        h('label', { class: 'field wide' }, T('panel.models.idLabel'), id),
-        h('label', { class: 'field num' }, T('panel.models.inputLabel'), input),
-        h('label', { class: 'field num' }, T('panel.models.outputLabel'), output),
-        h('label', { class: 'field num' }, T('panel.models.contextLabel'), context),
-        h('button', { class: 'btn', type: 'submit', id: 'addModelBtn' }, T('panel.models.add'))),
-      h('p', { class: 'help' }, T('panel.models.typedHelp'))),
-      err);
+    return h('section', { class: 'card' }, h('h2', {}, T('panel.providers.modelTitle', { provider: preset?.label ?? p })),
+      locked ? notice('warn', null, T('panel.providers.locked'), h('button', { class: 'btn', type: 'button', onclick: () => goStep(2) }, T('panel.providers.toKey'))) : null,
+      total ? [h('p', { class: 'help' }, [T('panel.providers.modelHelp'), dated, textOr(`panel.preset.${p}.priceNote`)].filter(Boolean).join(' ')),
+        h('div', { class: 'wizSearch' }, h('input', { type: 'search', id: 'wizSearch', value: ui.wiz.q, placeholder: T('panel.providers.search'), 'aria-label': T('panel.providers.search'), autocomplete: 'off', oninput: (e) => { ui.wiz.q = e.target.value; paint(); } })), box] : null,
+      h('div', { class: 'divide' }, h('h3', {}, T('panel.providers.typedTitle')),
+        h('p', { class: 'rule' }, T('panel.providers.typedRule'), ' ', preset ? [T(`panel.preset.${p}.form`), ' ', T('panel.providers.typedWhere'), ' ', link(preset.modelsUrl)] : T('panel.providers.typedCustom')),
+        h('form', { onsubmit: (e) => { e.preventDefault(); err.textContent = ''; addToCatalog(p, { id: typed.value.trim(), input: optional(input.valueAsNumber), output: optional(output.valueAsNumber) }, err); } },
+          h('div', { class: 'formRow' },
+            h('label', { class: 'field wide' }, T('panel.models.idLabel'), typed),
+            h('label', { class: 'field num' }, T('panel.models.inputLabel'), input),
+            h('label', { class: 'field num' }, T('panel.models.outputLabel'), output),
+            h('button', { class: 'btn', type: 'submit', id: 'addModelBtn', disabled: locked }, T('panel.models.add')))),
+        h('p', { class: 'rule' }, T('panel.providers.noPrice'))),
+      err, nextBtn(4, 'panel.providers.toTry'));
   }
-  function providerModels(p) {
+
+  // One model's Try button and its result: the result stays on the page while the list is redrawn
+  function tryParts(p, id) {
+    const key = `${p}/${id}`;
+    const res = h('div', { role: 'status', class: 'resWrap' });
+    const paint = () => {
+      const r = ui.tests[key];
+      if (!r) return res.replaceChildren();
+      res.replaceChildren(h('div', { class: `res ${r.ok ? 'good' : 'bad'}` }, r.ok ? T('panel.test.ok', { seconds: fmt.num(Math.round(r.seconds * 10) / 10), usd: fmt.usd(r.usd) }) : T(`panel.test.${r.code}`), r.detail ? h('code', {}, ` ${clip(r.detail)}`) : null));
+    };
+    const btn = h('button', { class: 'btn', type: 'button', id: `t-${key}`, disabled: !hasKey(p), onclick: async () => {
+      btn.disabled = true;
+      btn.replaceChildren(h('i', { class: 'spin', 'aria-hidden': 'true' }), T('panel.test.running'));
+      const r = await api('POST', '/api/test', { provider: p, model: id });
+      btn.disabled = false;
+      btn.replaceChildren(T('panel.test.try'));
+      if (r.ok) ui.tests[key] = r.data; else if (r.status) ui.tests[key] = { code: ['busy', 'tooMany'].includes(r.data.code) ? r.data.code : 'other' };
+      paint();
+    } }, T('panel.test.try'));
+    paint();
+    return { btn, res };
+  }
+  function stepTry() {
+    const p = wizName();
+    const ids = Object.keys(S.catalog?.[p] ?? {});
+    return h('section', { class: 'card' }, h('h2', {}, T('panel.providers.tryTitle')), h('p', { class: 'help' }, T('panel.providers.tryHelp')),
+      ids.length
+        ? h('div', { class: 'mlist' }, ids.map((id) => { const { btn, res } = tryParts(p, id); return h('div', { class: 'mrow two' }, h('code', {}, id), h('span', { class: 'acts' }, btn), res); }))
+        : notice('warn', null, T('panel.providers.tryEmpty'), h('button', { class: 'btn', type: 'button', onclick: () => goStep(3) }, T('panel.providers.step3'))),
+      h('div', { class: 'divide' }, h('h3', {}, T('panel.providers.errorsTitle')),
+        h('div', { class: 'errs' }, ['auth', 'balance', 'model', 'rate', 'noTools'].map((c) => h('div', {}, h('b', {}, T(`panel.test.name.${c}`)), h('span', {}, T(`panel.test.${c}`)))))),
+      h('div', { class: 'wizNext' }, h('button', { class: 'prim', type: 'button', onclick: () => goTo('jobs') }, T('panel.providers.toJobs'))));
+  }
+
+  function providerCard(p) {
+    const info = S.providers[p], k = info.keyInfo;
     const err = h('div', { class: 'formErr', role: 'alert' });
     const remove = async (id) => {
       const r = await api('DELETE', '/api/catalog', { provider: p, model: id });
       if (r.ok) { await load(); renderTab(); toast(T('panel.saved')); } else if (r.status) err.textContent = r.data.message ?? T('panel.err.failed');
     };
-    const shown = (x, format) => (typeof x === 'number' ? format(x) : '-');
+    const models = Object.entries(S.catalog?.[p] ?? {});
     return h('section', { class: 'card' },
-      h('h2', {}, p),
-      hasKey(p) ? null : notice('warn', null, T('panel.models.noKey'), linkTo('keys', 'panel.usage.toKeys')),
-      table(
-        [{ label: T('panel.col.model') }, { label: T('panel.col.input') }, { label: T('panel.col.output') }, { label: T('panel.col.context') }, { label: '' }],
-        Object.entries(S.catalog[p]).map(([id, m]) => [h('code', {}, id), shown(m?.input, fmt.usd), shown(m?.output, fmt.usd), shown(m?.context, fmt.short),
-          h('button', { class: 'btn', type: 'button', 'aria-label': T('panel.models.removeLabel', { model: id }), onclick: () => remove(id) }, T('panel.models.remove'))]),
-        { stack: true }),
-      h('p', { class: 'help' }, `${T('panel.models.perMillion')} ${T('panel.models.removeEffect')}`),
-      err);
-  }
-  // ---- Keys: status and commands only. There is no field here on purpose: a key is entered in the user's own terminal.
-  const SET_KEY = 'node .claude/hooks/models.mjs --set-key', REMOVE_KEY = 'node .claude/hooks/models.mjs --remove-key';
-  function commandRow(label, text) {
-    const copy = async () => {
-      try { await navigator.clipboard.writeText(text); toast(T('panel.keys.copied')); } catch { /* the command is on screen to copy by hand */ }
-    };
-    return h('div', { class: 'cmdRow' }, h('span', { class: 'help' }, label),
-      h('div', { class: 'cmdLine' }, h('code', {}, text), h('button', { class: 'btn', type: 'button', 'aria-label': `${T('panel.keys.copy')}: ${text}`, onclick: copy }, T('panel.keys.copy'))));
-  }
-  function viewKeys(v) {
-    const refresh = async () => { await load(); renderTab(); };
-    v.append(h('div', { class: 'bar' }, h('h1', {}, T('panel.tab.keys')), h('span', { class: 'intro' }, T('panel.keys.intro')), h('span', { class: 'grow' }),
-      h('button', { class: 'btn', type: 'button', id: 'keysRefresh', onclick: refresh }, T('panel.keys.refresh'))));
-    v.append(h('section', { class: 'card' },
-      h('h2', {}, T('panel.keys.addTitle')),
-      h('p', { class: 'help' }, T('panel.keys.addHelp')),
-      commandRow('', `${SET_KEY} <${T('panel.keys.namePlaceholder')}>`)));
-    for (const p of Object.keys(S.providers)) v.append(keyCard(p));
-  }
-  function keyCard(p) {
-    const info = S.providers[p], k = info.keyInfo;
-    return h('section', { class: 'card' },
-      h('div', { class: 'keyHead' }, h('h2', {}, p), h('span', { class: `status${k.present ? ' on' : ''}` }, T(k.present ? 'panel.keys.has' : 'panel.key.none'))),
+      h('div', { class: 'keyHead' }, h('h2', {}, S.presets[p]?.label ?? p), h('span', { class: `status${k.present ? ' on' : ''}` }, T(k.present ? 'panel.keys.has' : 'panel.key.none'))),
       k.present
         ? h('dl', { class: 'kv' },
           h('div', {}, h('dt', {}, T('panel.keys.address')), h('dd', {}, k.host ?? '-')),
           h('div', {}, h('dt', {}, T('panel.keys.added')), h('dd', {}, k.addedAt ? fmt.date(k.addedAt) : '-')))
         : null,
+      models.length
+        ? [h('div', { class: 'mlist' }, h('div', { class: 'mrow head' }, h('span', {}, T('panel.col.model')), h('span', {}, T('panel.col.input')), h('span', {}, T('panel.col.output')), h('span', { class: 'ctx' }, T('panel.col.context')), h('span', { class: 'acts' })),
+          models.map(([id, m]) => {
+            const { btn, res } = tryParts(p, id);
+            return h('div', { class: 'mrow' }, h('code', {}, id), h('span', {}, money(m?.input)), h('span', {}, money(m?.output)), h('span', { class: 'ctx' }, typeof m?.context === 'number' ? fmt.short(m.context) : '-'),
+              h('span', { class: 'acts' }, btn, h('button', { class: 'btn', type: 'button', 'aria-label': T('panel.models.removeLabel', { model: id }), onclick: () => remove(id) }, T('panel.models.remove'))), res);
+          })),
+        h('p', { class: 'help' }, `${T('panel.models.perMillion')} ${T('panel.models.removeEffect')}`)]
+        : null,
+      err,
       commandRow(T(k.present ? 'panel.keys.change' : 'panel.keys.add'), `${SET_KEY} ${p}`),
       k.present ? commandRow(T('panel.keys.removeCmd'), `${REMOVE_KEY} ${p}`) : null,
       limitForm(p, info));
@@ -1057,8 +1181,10 @@
   // ---- start
   document.addEventListener('DOMContentLoaded', async () => {
     const fromHash = location.hash.slice(1); // read here: the secret was stripped when this script started
-    if (['usage', 'jobs', 'models', 'keys'].includes(fromHash)) ui.tab = fromHash;
+    if (['usage', 'jobs', 'providers'].includes(fromHash)) ui.tab = fromHash;
+    if (['models', 'keys'].includes(fromHash)) ui.tab = 'providers'; // addresses from before the two tabs became one
     if (!(await load({ withSide: true }))) return;
+    ui.wiz.pick = Object.keys(S.presets)[0];
     shell();
     renderTab();
     refreshIfOld();

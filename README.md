@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.64.3-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.65.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -278,9 +278,9 @@ Every command, setting, tool and skill is in the **[guide](https://burakdogrul.g
 
 ## External models
 
-With `/models` you choose which model does which job. You can add any provider that accepts the Anthropic Messages format, and any job can run on a model you added. Claude stays the recommendation for the main job, planning and review. Available in Claude Code; Codex not yet, Antigravity not supported.
+With `/models` you choose which model does which job. You can add any provider that accepts the Anthropic Messages format, and any job can run on a model you added. Every job shows a level (easy, medium, hard), so you can match the model to how much reasoning the job takes. Available in Claude Code; Codex not yet, Antigravity not supported.
 
-The panel opens with `/models`, or with `node .claude/hooks/models-panel.mjs` from a terminal. It is a local page with four tabs. **Usage** shows your Claude plan and each external model separately, by day and week. **Jobs** lets you pick the model and effort for every job. **Models** is where you write a provider and a model. **Keys** shows whether a key exists and gives you the commands; the panel never takes a key.
+The panel opens with `/models`, or with `node .claude/hooks/models-panel.mjs` from a terminal. It is a local page with three tabs. **Usage** shows your Claude plan and each external model separately, by day and week. **Jobs** lets you pick the model and effort for every job and shows each job's level: easy, medium or hard. **Providers** walks you through four steps: pick a provider, add its key, pick a model, try it. OpenRouter, DeepSeek, Kimi, Z.ai, MiniMax and Qwen are ready to pick; any other provider takes its own address. The panel never takes a key.
 
 **Add a provider and its key.** Run this in a separate terminal from the project folder, never in the chat, with a name you choose:
 
@@ -292,7 +292,9 @@ It asks for the provider's address, shows you the host, then asks for the key wi
 
 The address and the key are sealed together in the system key vault (Windows DPAPI, macOS Keychain, Linux `secret-tool`), so a key goes only to the address it was entered with. With no vault, external models are not available. System variables and `.env` are not read.
 
-**Add the model.** Write the provider name and the model id on the Models tab. Prices and context are optional; with no price, a run says its cost is an estimate. Without a browser, use `node .claude/hooks/models.mjs --set docs=<name>/<model>:high`.
+**Add the model.** Once the key is saved, the provider's list opens on the Providers tab. Add a model from it, or write the id exactly as the provider gives it. **Update model lists** fetches the current lists. Prices and context are optional; with no price, a run says its cost is an estimate. Without a browser, use `node .claude/hooks/models.mjs --set docs=<name>/<model>:high`.
+
+**Try it.** The Try button asks the model one short question and asks it to call a tool, because jobs work through tools. The result says what a failure means. Each try goes on your provider bill and counts toward the daily limit.
 
 **Choose it for a job** on the Jobs tab. Every model you added is listed for every job. A model whose provider has no key is shown but cannot be chosen.
 

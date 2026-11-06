@@ -2014,7 +2014,7 @@ const COMMANDS_IN_DOCS = {
 const PROSE_EN = {
   'any provider can be added': /any provider that accepts the Anthropic Messages format/i,
   'any job can run on a model you added': /any job can run on a model you added/i,
-  'Claude stays the recommendation for main, planning and review': /recommend[^.]{0,80}main job, planning and review|main job, planning and review[^.]{0,80}recommend/i,
+  'every job shows a level (easy, medium, hard)': /every job shows a level \(easy, medium, hard\)/i,
   'address and key sealed together in the vault': /sealed together in the system key vault/i,
   'a key goes only to the address it was entered with': /goes only to the address it was entered with/i,
   'no vault, no external models': /no vault[^.]{0,60}not available/i,
@@ -2041,7 +2041,7 @@ const PROSE_EN = {
 const PROSE_TR = {
   'her sağlayıcı eklenebilir': /her sağlayıcıyı ekleyebilirsin/i,
   'eklenen model her işte çalışır': /her işte çalışabilir/i,
-  'ana iş, planlama ve inceleme için Claude': /ana iş, planlama ve inceleme için[^.]{0,40}Claude|Claude[^.]{0,40}ana iş, planlama ve inceleme/i,
+  'her işin yanında bir seviye yazar (kolay, orta, zor)': /Her işin yanında bir seviye yazar \(kolay, orta, zor\)/i,
   'adres ve anahtar kasada birlikte mühürlenir': /birlikte mühürlenir/i,
   'anahtar yalnız girildiği adrese gider': /yalnız girildiği adrese gider/i,
   'kasa yoksa dış model olmaz': /kasa yoksa dış model kullanılamaz/i,

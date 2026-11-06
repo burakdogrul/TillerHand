@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.64.3-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.65.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -278,9 +278,9 @@ Tüm komutlar, ayarlar, araçlar ve skill'ler **[rehberde](https://burakdogrul.g
 
 ## Dış modeller
 
-`/models` ile hangi işi hangi modelin yapacağını seçersin. Anthropic Messages biçimini kabul eden her sağlayıcıyı ekleyebilirsin ve eklediğin modeller her işte çalışabilir. Ana iş, planlama ve inceleme için önerimiz Claude'da kalmak. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.
+`/models` ile hangi işi hangi modelin yapacağını seçersin. Anthropic Messages biçimini kabul eden her sağlayıcıyı ekleyebilirsin ve eklediğin modeller her işte çalışabilir. Her işin yanında bir seviye yazar (kolay, orta, zor), modeli işin istediği akla göre seçersin. Claude Code'da var; Codex'te henüz yok, Antigravity desteklenmiyor.
 
-Panel `/models` ile ya da terminalden `node .claude/hooks/models-panel.mjs` ile açılır. Dört sekmeli yerel bir sayfadır. **Kullanım**, Claude planını ve her dış modeli ayrı ayrı, gün ve hafta olarak gösterir. **İşler**, her iş için model ve effort seçtirir. **Modeller**, sağlayıcıyı ve modeli yazdığın yerdir. **Anahtarlar**, anahtar var mı onu gösterir ve komutları verir; panel anahtar almaz.
+Panel `/models` ile ya da terminalden `node .claude/hooks/models-panel.mjs` ile açılır. Üç sekmeli yerel bir sayfadır. **Kullanım**, Claude planını ve her dış modeli ayrı ayrı, gün ve hafta olarak gösterir. **İşler**, her iş için model ve effort seçtirir, her işin seviyesini gösterir: kolay, orta, zor. **Sağlayıcılar** seni dört adımda götürür: sağlayıcı seç, anahtarı ekle, modeli seç, dene. OpenRouter, DeepSeek, Kimi, Z.ai, MiniMax ve Qwen hazır gelir; başka bir sağlayıcı kendi adresiyle eklenir. Panel anahtar almaz.
 
 **Sağlayıcı ve anahtar ekle.** Bunu sohbette değil, ayrı bir terminalde proje klasöründen, kendi seçtiğin adla çalıştır:
 
@@ -292,7 +292,9 @@ node .claude/hooks/models.mjs --set-key <ad>
 
 Adres ve anahtar sistem anahtar kasasında birlikte mühürlenir (Windows DPAPI, macOS Keychain, Linux `secret-tool`), bu yüzden anahtar yalnız girildiği adrese gider. Kasa yoksa dış model kullanılamaz. Sistem değişkenleri ve `.env` okunmaz.
 
-**Modeli ekle.** Sağlayıcı adını ve model kimliğini Modeller sekmesine yaz. Fiyat ve bağlam isteğe bağlı; fiyat yoksa çalıştırma maliyetin tahmin olduğunu söyler. Tarayıcı yoksa `node .claude/hooks/models.mjs --set docs=<ad>/<model>:high` kullan.
+**Modeli ekle.** Anahtar kaydedilince sağlayıcının listesi Sağlayıcılar sekmesinde açılır. Modeli listeden ekle ya da kimliğini sağlayıcının yazdığı gibi yaz. **Model listelerini güncelle** güncel listeleri çeker. Fiyat ve bağlam isteğe bağlı; fiyat yoksa çalıştırma maliyetin tahmin olduğunu söyler. Tarayıcı yoksa `node .claude/hooks/models.mjs --set docs=<ad>/<model>:high` kullan.
+
+**Dene.** Dene düğmesi modele kısa bir soru sorar ve araç çağırmasını ister, çünkü işler araçla çalışır. Sonuç, hatanın ne demek olduğunu da söyler. Her deneme sağlayıcı faturana yazılır ve günlük sınıra sayılır.
 
 **İşe seç.** İşler sekmesinde eklediğin her model her işte listelenir. Sağlayıcısının anahtarı olmayan model görünür ama seçilemez.
 

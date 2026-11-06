@@ -12,7 +12,8 @@ import { readLimits, summary, level, THRESHOLDS } from './usage.mjs';
 import { packageStatus, commandMode } from './tools.mjs';
 import { readModels, modelsFile, modelsNote, roleLabel, customJobs } from './models.mjs';
 import { readStore, spentOn } from './providers.mjs';
-import { readLang, t, locale } from './lang.mjs';
+import { readLang, t, tText, locale } from './lang.mjs';
+import { MESSAGES } from './messages.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
@@ -23,6 +24,15 @@ const root = path.resolve(args.find((a) => !a.startsWith('--')) ?? process.env.C
 const file = (f) => path.join(root, f);
 // Every visible text comes from messages.mjs in the project language (L = t with this project's root)
 const L = (key, vars) => t(root, key, vars);
+// Project files keep their English words (tools read them), so only what is shown here changes
+const fromTemplate = (text) => tText(root, text);
+const phaseName = (name = '') => { const x = fromTemplate(name); return x !== name ? x : name.replace(/^Phase (\d+)/, (m, n) => L('dashboard.phaseN', { n })); };
+const taskText = (text = '') => { const x = fromTemplate(text); return x !== text ? x : text.replace(' — done when:', ` — ${L('dashboard.doneWhen')}:`); };
+const stageName = (x = '') => (isValue(x, 'setup') ? x.replace(/^setup/i, L('dashboard.stageSetup')) : phaseName(x));
+const modeLine = (x = '') => x.replace(/^on\b/i, L('dashboard.on')).replace(/^off\b/i, L('dashboard.off')).replace(/closed topics/i, L('dashboard.closedTopics')).replace(/:\s*none\b/i, `: ${L('dashboard.none')}`);
+const profileLine = (x = '') => x.replace(/\b(Light|Standard|Full|Quick|Detailed)\b/g, (m) => L(`dashboard.profile.${m.toLowerCase()}`));
+const topicName = (x = '') => { const k = x.trim().toLowerCase(); return Object.hasOwn(MESSAGES, `dashboard.topic.${k}`) ? L(`dashboard.topic.${k}`) : x; };
+const whoDecided = (x) => (isValue(x, 'automatic') ? L('dashboard.automatic') : isValue(x, 'user') ? L('dashboard.user') : x);
 const dateKind = (k) => (k === 'expiry' ? L('dashboard.dateExpiry') : L('dashboard.dateKeyRotation'));
 const kindName = (k) => (Object.hasOwn(FINDING_KINDS, k) ? L(`dashboard.findingKind.${k}`) : k);
 // The dashboard is made in the user's language: none before /start or /adopt asks it
@@ -178,7 +188,7 @@ const fixRatio = (kindCounts.feat ?? 0) + (kindCounts.fix ?? 0) ? Math.round(((k
 
 const feed = [
   ...(git?.commits ?? []).slice(0, 60).map((c) => ({ time: c.date, kind: 'commit', title: c.message, extra: c.hash })),
-  ...d.decisions.map((k) => ({ time: k.date, kind: 'decision', title: `${k.question} → ${k.chosen}`, extra: `${k.topic} · ${k.decidedBy}` })),
+  ...d.decisions.map((k) => ({ time: k.date, kind: 'decision', title: `${k.question} → ${k.chosen}`, extra: `${topicName(k.topic)} · ${whoDecided(k.decidedBy)}` })),
   ...d.board.meetings.map((t) => ({ time: t.date, kind: 'board', title: `${t.kind}: ${t.scope} → ${t.result}`, extra: t.attendees })),
   ...maintenance.map((b) => ({ time: b.date, kind: 'maintenance', title: `${b.kind}: ${b.findings}`, extra: b.work })),
 ].filter((x) => x.time && !Number.isNaN(toDate(x.time).getTime()))
@@ -223,11 +233,11 @@ const activePhase = a['Active phase'] ?? '';
 const activeIndex = Math.max(0, [{ name: 'Setup' }, ...d.phases].findIndex((f) => activePhase.toLowerCase().startsWith(f.name.toLowerCase().split(' ').slice(0, 2).join(' '))));
 const start = (a['Setup step'] ?? '0/9').split('/').map(Number);
 const stageStrip = `<ol class="steps">${[{ name: 'Setup', done: start[0] || 0, total: start[1] || 9 }, ...d.phases].map((f, i) =>
-  `<li class="step${i === activeIndex ? ' now' : ''}${f.total && f.done === f.total ? ' done' : ''}"><span class="step-n">${i === 0 ? e(L('dashboard.stageStartLetter')) : i - 1}</span><div class="step-b"><b>${e(i === 0 ? L('dashboard.stageStart') : f.name.replace(/\s*\(.*\)$/, ''))}</b>${progressBar(f.done, f.total)}<span class="muted num">${f.done}/${f.total}</span></div></li>`).join('')}</ol>`;
+  `<li class="step${i === activeIndex ? ' now' : ''}${f.total && f.done === f.total ? ' done' : ''}"><span class="step-n">${i === 0 ? e(L('dashboard.stageStartLetter')) : i - 1}</span><div class="step-b"><b>${e(i === 0 ? L('dashboard.stageStart') : phaseName(f.name).replace(/\s*\(.*\)$/, ''))}</b>${progressBar(f.done, f.total)}<span class="muted num">${f.done}/${f.total}</span></div></li>`).join('')}</ol>`;
 
 const overview = `
 <div class="grid2">
-  <section class="card"><h3>${L('dashboard.statusSummary')}</h3>${d.state ? `<p>${md(d.state)}</p>` : empty(L('dashboard.noSummary'))}
+  <section class="card"><h3>${L('dashboard.statusSummary')}</h3>${d.state ? `<p>${md(fromTemplate(d.state))}</p>` : empty(L('dashboard.noSummary'))}
     <h4>${L('dashboard.lastSession')}</h4>${d.lastSession.length ? `<ul>${d.lastSession.map((s) => `<li>${md(s)}</li>`).join('')}</ul>` : empty(L('dashboard.noRecords'))}</section>
   <section class="card"><h3>${L('dashboard.recentActivity')}</h3>${feed.length ? `<ul class="feed compact">${feed.slice(0, 7).map(feedRow).join('')}</ul>` : empty(L('dashboard.noActivity'))}</section>
 </div>
@@ -239,14 +249,14 @@ function feedRow(x) {
 
 const roadmapSection = d.phases.length ? d.phases.map((f) => `
 <details class="card phase" ${f.name.toLowerCase().startsWith((activePhase || '#').toLowerCase().split(' ').slice(0, 2).join(' ')) ? 'open' : ''}>
-  <summary><b>${e(f.name)}</b><span class="phase-bar">${progressBar(f.done, f.total)}<span class="num muted">${f.done}/${f.total}</span></span></summary>
-  <ul class="tasks">${f.tasks.map((g) => `<li class="${g.done ? 'ok' : ''}${(a['Active task'] && g.text.startsWith(a['Active task'])) ? ' active' : ''}"><span class="chk" aria-hidden="true">${g.done ? '✓' : ''}</span><span>${md(g.text)}</span></li>`).join('')}</ul>
+  <summary><b>${e(phaseName(f.name))}</b><span class="phase-bar">${progressBar(f.done, f.total)}<span class="num muted">${f.done}/${f.total}</span></span></summary>
+  <ul class="tasks">${f.tasks.map((g) => `<li class="${g.done ? 'ok' : ''}${(a['Active task'] && g.text.startsWith(a['Active task'])) ? ' active' : ''}"><span class="chk" aria-hidden="true">${g.done ? '✓' : ''}</span><span>${md(taskText(g.text))}</span></li>`).join('')}</ul>
 </details>`).join('') : empty(L('dashboard.noRoadmap'));
 
 const decisionTable = d.decisions.length ? `
 <div class="filters" role="group" aria-label="${e(L('dashboard.topicFilter'))}"><button class="chip on" data-k="all">${L('dashboard.all')} (${d.decisions.length})</button>${TOPICS.filter((k) => d.decisions.some((x) => topicKey(x.topic) === k)).map((k) => `<button class="chip" data-k="${k}">${k} (${d.decisions.filter((x) => topicKey(x.topic) === k).length})</button>`).join('')}<button class="chip" data-k="automatic">${L('dashboard.auto')} (${autoDecisions})</button><button class="chip" data-k="one-way">${L('dashboard.oneWay')} (${d.decisions.filter((k) => isValue(k.door, 'oneWay')).length})</button></div>
 <div class="tw"><table id="decision-table"><thead><tr><th>#</th><th>${L('dashboard.th.date')}</th><th>${L('dashboard.th.stage')}</th><th>${L('dashboard.th.topic')}</th><th>${L('dashboard.th.question')}</th><th>${L('dashboard.th.chosen')}</th><th>${L('dashboard.th.door')}</th><th>${L('dashboard.th.decidedBy')}</th></tr></thead><tbody>
-${[...d.decisions].reverse().map((k) => `<tr data-k="${e(topicKey(k.topic))}" data-v="${isValue(k.decidedBy, 'automatic') ? 'automatic' : ''}" data-door="${isValue(k.door, 'oneWay') ? 'one-way' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.date)}</td><td>${e(k.stage)}</td><td><span class="tag">${e(k.topic)}</span></td><td>${md(k.question)}</td><td><b>${md(k.chosen)}</b></td><td>${isValue(k.door, 'oneWay') ? badge('warn', L('dashboard.oneWay')) : k.door ? `<span class="muted small">${e(k.door)}</span>` : ''}</td><td>${isValue(k.decidedBy, 'automatic') ? badge('warn', L('dashboard.auto')) : badge('good', L('dashboard.user'))}</td></tr>`).join('')}
+${[...d.decisions].reverse().map((k) => `<tr data-k="${e(topicKey(k.topic))}" data-v="${isValue(k.decidedBy, 'automatic') ? 'automatic' : ''}" data-door="${isValue(k.door, 'oneWay') ? 'one-way' : ''}"><td class="num">${e(k.no)}</td><td class="num nw">${e(k.date)}</td><td>${e(stageName(k.stage))}</td><td><span class="tag">${e(topicName(k.topic))}</span></td><td>${md(k.question)}</td><td><b>${md(k.chosen)}</b></td><td>${isValue(k.door, 'oneWay') ? badge('warn', L('dashboard.oneWay')) : k.door ? `<span class="muted small">${e(isValue(k.door, 'twoWay') ? L('dashboard.twoWay') : k.door)}</span>` : ''}</td><td>${isValue(k.decidedBy, 'automatic') ? badge('warn', L('dashboard.auto')) : badge('good', L('dashboard.user'))}</td></tr>`).join('')}
 </tbody></table></div>` : empty(L('dashboard.noDecisions'));
 
 const boardSection = `
@@ -277,7 +287,7 @@ const quality = `
 ${qa ? `<section class="card"><h3>${L('dashboard.lastQa', { name: e(qa.name) })}</h3><div class="kpis mini">${kpi(L('dashboard.passed'), qa.passed)}${kpi(L('dashboard.failed'), qa.failed, qa.failed ? badge('critical', L('dashboard.withEvidence')) : '')}${kpi(L('dashboard.notRun'), qa.notRun)}</div>${qa.failures.length ? `<ul>${qa.failures.slice(0, 5).map((x) => `<li>${md(x.criterion)}${x.note ? ` <span class="muted small">${e(x.note)}</span>` : ''}</li>`).join('')}</ul>` : ''}<p class="muted small"><a href="${e(qa.file)}" target="_blank" rel="noopener">${L('dashboard.openReport')}</a></p></section>` : ''}
 <section class="card"><h3>${L('dashboard.acceptanceTests')}</h3>${acceptance.total ? `<div class="kpis mini">${kpi(L('dashboard.th.criterion'), acceptance.total)}${kpi(L('dashboard.kpiTested'), `${acceptance.tested}/${acceptance.total}`, '', progressBar(acceptance.tested, acceptance.total))}${kpi(L('dashboard.kpiPassing'), `${acceptance.passing}/${acceptance.total}`, acceptance.reportTime ? L('dashboard.reportTime', { when: new Date(acceptance.reportTime).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }) : L('dashboard.noJunit'), progressBar(acceptance.passing, acceptance.total, 'good'))}</div>` : empty(L('dashboard.noAcceptanceIds'))}</section>
 <section class="card"><h3>${L('dashboard.metricsMonthly')}</h3>${metricRecords.length ? `<div class="tw"><table><thead><tr><th>${L('dashboard.th.period')}</th><th>${L('dashboard.th.task')}</th><th>${L('dashboard.th.avgMinutes')}</th><th>${L('dashboard.th.avgLimit')}</th><th>${L('dashboard.th.fixes')}</th><th>${L('dashboard.th.reverts')}</th><th>${L('dashboard.th.duplicateCode')}</th><th>${L('dashboard.th.openCritical')}</th><th>${L('dashboard.th.acceptance')}</th></tr></thead><tbody>${[...metricRecords].reverse().slice(0, 8).map((m) => `<tr><td class="nw">${e(m.period)}</td><td class="num">${e(m.taskCount)}</td><td class="num">${e(m.duration)}</td><td class="num">${e(m.limit)}</td><td class="num">${e(m.fixes)}</td><td class="num">${e(m.reverts)}</td><td class="num">${e(m.duplicates)}</td><td class="num">${e(m.critical)}</td><td class="num">${e(m.acceptance)}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noMetrics'))}</section>
-<section class="card"><h3>${L('dashboard.criticalFlowTests')}</h3>${criticalFlows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.flow')}</th><th>${L('dashboard.th.testKind')}</th><th>${L('dashboard.th.file')}</th><th>${L('dashboard.status')}</th></tr></thead><tbody>${criticalFlows.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(k.feed)}</td><td>${e(k.kind)}</td><td>${md(k.fileName)}</td><td>${/✅|green|present/i.test(k.state) ? badge('good', L('dashboard.present')) : badge('warn', L('dashboard.missing'))}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noTestPlan'))}</section>
+<section class="card"><h3>${L('dashboard.criticalFlowTests')}</h3>${criticalFlows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>${L('dashboard.th.flow')}</th><th>${L('dashboard.th.testKind')}</th><th>${L('dashboard.th.file')}</th><th>${L('dashboard.status')}</th></tr></thead><tbody>${criticalFlows.map((k) => `<tr><td class="num">${e(k.no)}</td><td>${md(fromTemplate(k.feed))}</td><td>${e(k.kind)}</td><td>${md(k.fileName)}</td><td>${/✅|green|present/i.test(k.state) ? badge('good', L('dashboard.present')) : badge('warn', L('dashboard.missing'))}</td></tr>`).join('')}</tbody></table></div>` : empty(L('dashboard.noTestPlan'))}</section>
 <section class="card"><h3>${L('dashboard.maintenanceLog')}</h3>${maintenance.length ? `<ul class="feed compact">${[...maintenance].reverse().slice(0, 8).map((b) => feedRow({ time: b.date, kind: 'maintenance', title: `${b.kind}: ${b.findings}`, extra: b.work })).join('')}</ul>` : empty(L('dashboard.noMaintenance'), '/maintain weekly')}
 ${lastRetro ? `<p class="muted small">${L('dashboard.lastRetro', { value: e(lastRetro) })}</p>` : ''}</section>`;
 
@@ -367,7 +377,7 @@ const TABS = [
   ['product', L('dashboard.tabProduct'), product], ['operations', L('dashboard.tabOperations'), operations], ['limit', L('dashboard.tabLimit'), limitSection],
 ];
 
-const next = d.next[0] ?? (d.kitPending ? L('dashboard.startIdeaCode') : '-');
+const next = fromTemplate(d.next[0] ?? '') || (d.kitPending ? L('dashboard.startIdeaCode') : '-');
 const html = `<!doctype html>
 <html lang="${e(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${e(d.project)} · ${e(L('dashboard.title'))}</title>
@@ -468,15 +478,15 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
 <div class="hero">
   <section class="card" aria-labelledby="now">
     <div class="now-l" id="now">${L('dashboard.now')}</div>
-    <div class="now-v">${e(a['Active phase'] ?? '-')} · ${md(a['Active task'] ?? '-')}</div>
+    <div class="now-v">${e(stageName(a['Active phase'] ?? '-'))} · ${md(a['Active task'] ?? '-')}</div>
     <div class="now-grid">
-      <div><div class="now-l">${L('dashboard.questionMode')}</div><div>${e(a['Question mode'] ?? '-')}</div></div>
-      <div><div class="now-l">${L('dashboard.profile')}</div><div>${e(a['Profile'] ?? '-')}</div></div>
+      <div><div class="now-l">${L('dashboard.questionMode')}</div><div>${e(modeLine(a['Question mode'] ?? '-'))}</div></div>
+      <div><div class="now-l">${L('dashboard.profile')}</div><div>${e(profileLine(a['Profile'] ?? '-'))}</div></div>
       <div><div class="now-l">${L('dashboard.lastUpdate')}</div><div class="num">${e(a['Last updated'] ?? '-')}</div></div>
       ${isValue(a['Active phase'], 'setup') ? `<div><div class="now-l">${L('dashboard.startStep')}</div><div class="num">${e(a['Setup step'] ?? '-')}</div></div>` : ''}
     </div>
     <div class="next"><div class="now-l">${L('dashboard.nextStep')}</div><div>${md(next)}${copyBtn(next)}</div>${cmdOf(next) ? `<div class="muted small">${e(L('dashboard.pasteHint'))}</div>` : ''}</div>
-    ${d.state ? `<div class="now-l" style="margin-top:14px">${L('dashboard.status')}</div><p style="margin-top:4px">${md(d.state)}</p>` : ''}
+    ${d.state ? `<div class="now-l" style="margin-top:14px">${L('dashboard.status')}</div><p style="margin-top:4px">${md(fromTemplate(d.state))}</p>` : ''}
     ${d.lastSession.length ? `<div class="now-l" style="margin-top:10px">${L('dashboard.lastSession')}</div><ul style="margin-top:4px">${d.lastSession.slice(0, 4).map((x) => `<li>${md(x)}</li>`).join('')}</ul>` : ''}
   </section>
   <section class="card" aria-labelledby="attention">

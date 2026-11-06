@@ -13,7 +13,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import readline from 'node:readline/promises';
 import { findRoot, isMain, renameWithRetry } from './shared.mjs';
-import { t } from './lang.mjs';
+import { t, tText } from './lang.mjs';
+import { PRESETS } from './provider-presets.mjs';
 import { EFFORTS, parseExternal, parseProviderUrl, isProvider, hasKey, setProvider, removeKey, setLimit, purgePlainKeys, unsafeEnv } from './providers.mjs';
 
 export { EFFORTS };
@@ -43,6 +44,10 @@ export const JOBS = {
 };
 export const isJob = (job) => Object.hasOwn(ROLES, String(job)) || Object.hasOwn(JOBS, String(job));
 export const roleOf = (job) => { const head = job.split('.')[0]; return head === 'findings' || head === 'board' ? 'review' : head; };
+// How much thought a job takes: the panel shows it so a model can be picked per job
+const HARD = ['main', 'plan', 'plan.task', 'plan.architecture', 'code.critical', 'test.adversarial', 'test.critical', 'review.security', 'findings.security'];
+const EASY = ['code.simple', 'test.simple', 'board.commit'];
+export const levelOf = (job) => (HARD.includes(job) ? 'hard' : EASY.includes(job) || String(job).split('.')[0] === 'docs' ? 'easy' : 'medium');
 export const recommendedFor = (job) => (job === 'board.commit' ? 'haiku:low' : RECOMMENDED[job === 'main' ? 'plan' : roleOf(job)]);
 
 export const modelsFile = (root = findRoot()) => path.join(root, '.claude', 'state', 'models.json');
@@ -315,25 +320,28 @@ function readHidden(prompt) {
   });
 }
 
-const PROVIDER_NAME_HELP = 'The provider name is your own: lower case letters, digits and "-", starting with a letter.';
+// A ready-made provider takes its address from an empty answer
+export const addressFor = (provider, answer) => answer.trim() || (Object.hasOwn(PRESETS, provider) ? PRESETS[provider].url : '');
 
 // The address is sealed with the key, so it is asked every time: there is no way to change one and keep the other
 async function setKeyFromTerminal(provider, extra) {
   // Whatever else is on the line may be the key, and it is already in the shell history: it is never printed
-  if (extra.length) { console.error('Do not put the key on the command line: it stays in your shell history. Clear that entry, and replace the key if it was a real one.'); process.exit(1); }
-  if (!isProvider(provider)) { console.error(PROVIDER_NAME_HELP); process.exit(1); }
+  const root = findRoot();
+  if (extra.length) { console.error(t(root, 'models.key.onCommandLine')); process.exit(1); }
+  if (!isProvider(provider)) { console.error(t(root, 'models.key.nameHelp')); process.exit(1); }
   const unsafe = unsafeEnv();
-  if (unsafe.length) { console.error(`Not saving: ${unsafe.join(', ')} is set, which can send the key to another machine. Remove it first.`); process.exit(1); }
-  if (!process.stdin.isTTY) { console.error('Run this in your own terminal: it asks for the address and the key. The AI cannot enter a key.'); process.exit(1); }
+  if (unsafe.length) { console.error(t(root, 'models.key.unsafe', { names: unsafe.join(', ') })); process.exit(1); }
+  if (!process.stdin.isTTY) { console.error(t(root, 'models.key.noTerminal')); process.exit(1); }
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const parsed = parseProviderUrl(await rl.question(`${provider} address (https, Anthropic Messages API, for example https://example.com/api): `));
-  if (!parsed) { rl.close(); console.error('The address must be https, at most 200 characters, with no user name, query or fragment. Nothing was saved.'); process.exit(1); }
-  const answer = await rl.question(`The key will be sent to ${parsed.host}. Every job on this provider sends its prompts and the files it reads there too. Type yes to go on: `);
+  const ready = addressFor(provider, '');
+  const parsed = parseProviderUrl(addressFor(provider, await rl.question(ready ? t(root, 'panel.cli.addressPreset', { provider, url: ready }) : t(root, 'panel.cli.addressAsk', { provider }))));
+  if (!parsed) { rl.close(); console.error(t(root, 'models.key.badAddress')); process.exit(1); }
+  const answer = await rl.question(t(root, 'panel.cli.confirm', { host: parsed.host }));
   rl.close();
-  if (!/^(?:y|yes|e|evet)$/i.test(answer.trim())) { console.log('Nothing was saved.'); return; }
-  const error = setProvider(provider, parsed.url, (await readHidden(`${provider} key (hidden): `)).trim());
-  if (error) { console.error(error); process.exit(1); }
-  console.log(`${provider} key saved. Copy something else now: a pasted key stays in the clipboard. Remove it with: node .claude/hooks/models.mjs --remove-key ${provider}`);
+  if (!/^(?:y|yes|e|evet)$/i.test(answer.trim())) { console.log(t(root, 'models.key.notSaved')); return; }
+  const error = setProvider(provider, parsed.url, (await readHidden(t(root, 'panel.cli.hidden', { provider }))).trim());
+  if (error) { console.error(tText(root, error)); process.exit(1); }
+  console.log(t(root, 'models.key.saved', { provider }));
 }
 
 if (isMain(import.meta.url)) {
@@ -365,7 +373,7 @@ if (isMain(import.meta.url)) {
   } else if (mode === '--set-key') {
     await setKeyFromTerminal(rest[0], rest.slice(1));
   } else if (mode === '--remove-key') {
-    if (!isProvider(rest[0])) { console.error(PROVIDER_NAME_HELP); process.exit(1); }
+    if (!isProvider(rest[0])) { console.error(t(findRoot(), 'models.key.nameHelp')); process.exit(1); }
     const error = removeKey(rest[0]);
     if (error) { console.error(error); process.exit(1); }
     console.log(`${rest[0]} key removed.`);
