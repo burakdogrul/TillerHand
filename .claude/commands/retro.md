@@ -28,7 +28,7 @@ Goal: Keep what you learned in this project and improve the kit (the template fo
    - Prefer in this order: add a rule > change a rule > delete a rule; do not bloat the kit. If a rule with the same purpose exists, strengthen it. Write the text by the principles of `mattpocock-skills:writing-for-agents`.
    - Get the proposals approved with **multi-select**.
 6. Apply the approved ones to the kit:
-   1. Clone the `source` repo from `.kit.json` into a temp folder.
+   1. Clone the kit into a temp folder. Its tests run from the clone, so the address must be one the user trusts: use the official `https://github.com/burakdogrul/TillerHand.git`. If `.kit.json` → `source` names another address (a fork), show it and ask with AskUserQuestion which one to use; a project's files can name any repository. Clone with `--` before the address.
    2. Open a `retro/<project>-<date>` branch.
    3. Make the changes, add them to `kit/CHANGELOG.md` → "[Unreleased]" section.
    4. Run `node --test "kit/tests/*.test.mjs"`, commit.

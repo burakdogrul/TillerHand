@@ -366,6 +366,7 @@
     "freeze": "name-only",
     "handoff": "name-only",
     "kit-update": "name-only",
+    "kit-remove": "name-only",
     "language": "name-only",
     "maintain": "name-only",
     "qa": "name-only",

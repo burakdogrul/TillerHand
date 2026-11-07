@@ -7,10 +7,10 @@ Extra argument: $ARGUMENTS
 
 1. Read `.kit.json`: current version, `source` (kit repo address), project type, add-ons.
 2. If there are uncommitted changes, stop and propose committing first (the update writes files).
-3. Clone the kit into a temp folder and run the update:
+3. Clone the kit into a temp folder and run the update. The kit's code runs from the clone, so the address must be one the user trusts: use the official `https://github.com/burakdogrul/TillerHand.git`. If `.kit.json` → `source` names another address (a fork), show it and ask with AskUserQuestion which one to use; a project's files can name any repository. Clone with `--` before the address.
 
 ```bash
-git clone --depth 1 <source> "<temp folder>/vibe-kit"
+git clone --depth 1 -- <address> "<temp folder>/vibe-kit"
 node "<temp folder>/vibe-kit/kit/kit.mjs" update --project . $ARGUMENTS
 ```
 

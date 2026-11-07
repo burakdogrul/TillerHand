@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.70.0</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.71.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -1248,6 +1248,7 @@ Pending decision: email service</pre>
       <tr><td class="f">/models</td><td>Opens the panel: usage, a model for each role and job, external models you add, key status and limits</td></tr>
       <tr><td class="f">/tools [on|off|measure|commands]</td><td>Shows, turns on or turns off context packs; measures the skill load; makes the command list light or full</td></tr>
       <tr><td class="f">/kit-update</td><td>Brings the project to TillerHand's latest version; asks about conflicts; adds a tool with <code>--tool</code> and an add-on with <code>--addons</code></td></tr>
+      <tr><td class="f">/kit-remove</td><td>Removes TillerHand from the project. It first lists what goes and what stays, then asks. Files you wrote or changed stay; nothing is committed, so <code>git checkout .</code> brings back the files git tracks</td></tr>
       <tr><td class="f">/language [language]</td><td>Changes the conversation language (Turkish, English or another language); refreshes the translation of the hook messages and the dashboard</td></tr>
     </tbody>
   </table></div>
@@ -1271,6 +1272,7 @@ Pending decision: email service</pre>
       <tr><td>The project's files: AGENTS.md, CLAUDE.md, PRD, stack, design, settings.json…</td><td>Not touched. The "adapt by hand" items in the CHANGELOG are asked one by one.</td></tr>
       <tr><td>Codex and Antigravity skill copies (<code>.agents/skills/</code>)</td><td>Regenerated from the commands on every update.</td></tr>
       <tr><td>A file newly added to the kit</td><td>Added if the project doesn't have it. If you deleted it on purpose before, it is not brought back.</td></tr>
+      <tr><td>Removing the kit (<code>/kit-remove</code> or <code>kit.mjs remove --project .</code>)</td><td>A kit file you did not change is deleted; one you changed stays. The kit's lines leave <code>settings.json</code> and <code>.env.example</code>, yours stay. <code>.gitignore</code> stays so <code>.env</code> stays out of git. Without <code>--yes</code> it only lists. It refuses while there are uncommitted changes.</td></tr>
     </tbody>
   </table></div>
   <div class="note"><b>Evaluation:</b> <code>node kit/eval/run.mjs</code> runs the same task with and without the kit and scores it with hidden acceptance and adversarial tests. The latest measurement is above, in <a href="#measurement">Results</a>.</div>
@@ -1303,7 +1305,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.70.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.71.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

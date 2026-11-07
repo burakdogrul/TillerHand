@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.70.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.71.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -1248,6 +1248,7 @@ Bekleyen karar: e-posta servisi</pre>
       <tr><td class="f">/models</td><td>Paneli açar: kullanım, her rol ve iş için model, eklediğin dış modeller, anahtar durumu ve sınırlar</td></tr>
       <tr><td class="f">/tools [on|off|measure|commands]</td><td>Bağlam paketlerini gösterir, açar veya kapatır; skill yükünü ölçer; komut listesini hafif veya tam yapar</td></tr>
       <tr><td class="f">/kit-update</td><td>Projeyi TillerHand'in son sürümüne çeker; çakışmaları sorar; <code>--tool</code> ile araç, <code>--addons</code> ile ek ekler</td></tr>
+      <tr><td class="f">/kit-remove</td><td>TillerHand'i projeden çıkarır. Önce neyin gideceğini ve neyin kalacağını listeler, sonra sorar. Yazdığın ya da değiştirdiğin dosyalar kalır; commit atılmaz, <code>git checkout .</code> git'in izlediği dosyaları geri getirir</td></tr>
       <tr><td class="f">/language [dil]</td><td>Konuşma dilini değiştirir (Türkçe, İngilizce ya da başka bir dil); hook metinlerinin çevirisini ve panoyu yeniler</td></tr>
     </tbody>
   </table></div>
@@ -1271,6 +1272,7 @@ Bekleyen karar: e-posta servisi</pre>
       <tr><td>Projenin dosyaları: AGENTS.md, CLAUDE.md, PRD, stack, tasarım, settings.json…</td><td>Dokunulmaz. CHANGELOG'daki "elle uyarla" maddeleri tek tek sorulur.</td></tr>
       <tr><td>Codex ve Antigravity skill kopyaları (<code>.agents/skills/</code>)</td><td>Her güncellemede komutlardan yeniden üretilir.</td></tr>
       <tr><td>Kitte yeni eklenmiş dosya</td><td>Projede yoksa eklenir. Daha önce bilerek sildiysen geri getirilmez.</td></tr>
+      <tr><td>Kiti kaldırma (<code>/kit-remove</code> ya da <code>kit.mjs remove --project .</code>)</td><td>Değiştirmediğin kit dosyası silinir, değiştirdiğin kalır. Kitin satırları <code>settings.json</code> ve <code>.env.example</code>'dan çıkar, seninkiler kalır. <code>.gitignore</code> kalır, <code>.env</code> git'in dışında kalsın diye. <code>--yes</code> olmadan yalnız listeler. Commit edilmemiş değişiklik varsa çalışmaz.</td></tr>
     </tbody>
   </table></div>
   <div class="note"><b>Değerlendirme:</b> <code>node kit/eval/run.mjs</code> aynı görevi kitli ve kitsiz çalıştırır, gizli kabul ve saldırgan testleriyle puanlar. Son ölçüm yukarıda, <a href="#olcum">Ölçüm</a> bölümünde.</div>
@@ -1303,7 +1305,7 @@ Bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.70.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.71.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

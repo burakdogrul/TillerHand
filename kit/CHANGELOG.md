@@ -2,6 +2,16 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.71.0] - 2026-11-07
+
+### Added
+- `/kit-remove` and `node <kit>/kit/kit.mjs remove --project <path> [--yes]`: take the kit out of a project. A file the kit placed and you did not change is deleted (line endings do not count as a change); a file you changed stays, `AGENTS.md` and `CLAUDE.md` included. The kit's lines leave `.claude/settings.json` and `.env.example`, your own lines stay; a hook or permission that calls a script being removed goes too. `.gitignore` stays (it keeps `.env` out of git) and only loses the project type's block. `.kit.json`, `.kit.local.json`, `.kit-new` files, `.claude/state/`, the commit gate approval record and folders left empty go too.
+- Without `--yes` it only lists what would go and what stays. `--yes` refuses outside a git repository and while there are uncommitted changes. Nothing is committed: `git checkout .` brings the tracked files back (git-ignored kit state such as `.claude/state/` does not come back). `/kit-remove` shows the list and asks before it deletes.
+- A path in `.kit.json` that leaves the project, points into `.git`, is a link or goes through a linked folder is skipped and reported. A `.kit-new` file goes only when it sits beside a kit file; other worktrees are not touched.
+
+### Changed
+- `/kit-update`, `/retro` and `/kit-remove` clone the kit from its official address. If `.kit.json` → `source` names another one, they show it and ask: the kit's code runs from that clone, and a project's files can name any repository.
+
 ## [3.70.0] - 2026-11-07
 
 ### Added

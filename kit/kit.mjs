@@ -10,6 +10,8 @@
 //       Places the type into a project set up by init. Run by /start and /adopt.
 //   node <kit-clone>/kit/kit.mjs update --project <path> [--addons ai,tr]
 //       Brings the project to this kit version. Run by /kit-update.
+//   node <kit-clone>/kit/kit.mjs remove --project <path> [--yes]
+//       Takes the kit out of a project; files the user changed stay. Without --yes it only lists. Run by /kit-remove.
 //
 // Layers: repo root (common) -> kit/templates/<type> -> kit/templates/addons/<addon>; a later one overrides an earlier one.
 // Special files: "x.append" -> appended to x in the project; "x.merge.json" -> merged into x.json.
@@ -471,6 +473,201 @@ function update({ project, addons: newAddons, tool }) {
   console.log(`Release notes: ${SOURCE.replace(/\.git$/, '')}/blob/main/kit/CHANGELOG.md (see the "Adapt by hand" items)`);
 }
 
+// The reverse of merge: what the kit merged in comes out, what the project added or changed stays.
+// Arrays lose the kit's items (JSON equality); a key whose value equals the kit's is dropped; a key emptied this way is dropped.
+export function unmerge(a, b) {
+  const isObject = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+  if (Array.isArray(a) && Array.isArray(b)) return a.filter((x) => !b.some((y) => same(x, y)));
+  if (!isObject(a) || !isObject(b)) return a;
+  const r = {};
+  for (const [k, v] of Object.entries(a)) {
+    if (k === '__proto__') continue; // as in merge: a JSON "__proto__" key would replace the result's prototype
+    if (!Object.hasOwn(b, k)) { r[k] = v; continue; }
+    if (same(v, b[k])) continue;
+    const u = unmerge(v, b[k]);
+    if ((Array.isArray(u) && !u.length) || (isObject(u) && !Object.keys(u).length)) continue;
+    r[k] = u;
+  }
+  return r;
+}
+
+// Removes what the kit placed: a recorded file whose hash still matches goes, a changed one stays. settings.json and
+// .env.example lose the kit's lines; .gitignore only loses the type's block (it keeps .env out of git). Without --yes it
+// only lists. Nothing is committed: git checkout . brings the tracked files back.
+async function remove({ project, yes }) {
+  const projectDir = path.resolve(project ?? process.cwd());
+  const real = (p) => { try { return fs.realpathSync.native(p); } catch { return p; } };
+  if (real(projectDir).toLowerCase() === real(ROOT).toLowerCase()) throw new Error('The target is the kit\'s own folder; give the project with --project <path>.');
+  const recordPath = path.join(projectDir, '.kit.json');
+  if (!fs.existsSync(recordPath)) throw new Error(`.kit.json not found: ${projectDir} was not set up with the kit.`);
+  const j = JSON.parse(read(recordPath));
+  if (!j.files || typeof j.files !== 'object' || Array.isArray(j.files)) throw new Error('.kit.json has no files record; the kit cannot tell which files it placed.');
+  if (yes) {
+    // GIT_DIR and the like would answer for another repository; cwd is the kit's folder so no git.exe in the project is picked
+    const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^GIT_/i.test(k)));
+    const st = spawnSync('git', ['-C', projectDir, 'status', '--porcelain'], { cwd: KIT, env, encoding: 'utf8' });
+    if (st.status !== 0) throw new Error('Not a git repository: --yes needs git so the removal can be undone. Run git init and commit first.');
+    if (st.stdout.trim()) throw new Error('Uncommitted changes found. Commit first or save with git stash; the removal is then undone with git checkout .');
+  }
+
+  const realRoot = real(projectDir);
+  const inside = (r) => r && r !== '..' && !r.startsWith('..' + path.sep) && !path.isAbsolute(r);
+  const underGit = (r) => r.split(path.sep)[0].toLowerCase() === '.git';
+  // A recorded path is data from the project: outside the root, under .git, a link or a path through a linked folder is skipped
+  const safeTarget = (rel) => {
+    if (typeof rel !== 'string' || path.isAbsolute(rel) || path.win32.isAbsolute(rel)) return null;
+    const target = path.resolve(projectDir, rel);
+    const r = path.relative(projectDir, target);
+    if (!inside(r) || underGit(r)) return null;
+    let st;
+    try { st = fs.lstatSync(target); } catch { return { target, missing: true }; }
+    // The real path catches a linked folder on the way and Windows aliases of .git (.git., GIT~1)
+    const realRel = path.relative(realRoot, real(target));
+    if (!st.isFile() || !inside(realRel) || underGit(realRel)) return null;
+    return { target };
+  };
+
+  const notes = [];
+  let copies, patches;
+  try { ({ copies, patches } = layers(ROOT, j.type ? layerNames(j.type, j.addons ?? []) : [])); } catch {
+    ({ copies, patches } = layers(ROOT, []));
+    notes.push(`this kit has no template for ${j.type} + ${(j.addons ?? []).join(', ') || 'no add-ons'}; those files were judged by their record only`);
+  }
+  const plan = { remove: [], clean: [], changed: [], missing: [], unsafe: [] };
+  const writes = new Map(); // rel -> new content (kit lines taken out)
+  const lf = (s) => s.replace(/\r\n/g, '\n');
+  const sha = (s) => crypto.createHash('sha256').update(lf(s)).digest('hex');
+  const eol = (orig, text) => (orig.includes('\r\n') ? text.replace(/\n/g, '\r\n') : text); // keep the file's line endings
+  const appendTargets = [...new Set(patches.filter((p) => p.kind === 'append').map((p) => p.target))];
+  const SETTINGS = '.claude/settings.json';
+  // An append target the kit did not record (the project's own .env.example under /adopt) still got the kit's block
+  for (const rel of [...new Set([...Object.keys(j.files), ...appendTargets])].filter((r) => r !== SETTINGS)) {
+    const recorded = j.files[rel];
+    const t = safeTarget(rel);
+    if (!t) { plan.unsafe.push(rel); continue; }
+    if (t.missing) { if (recorded) plan.missing.push(rel); continue; }
+    if (rel === '.gitignore' || appendTargets.includes(rel)) {
+      if (rel !== '.gitignore' && recorded && hash(t.target) === recorded) { plan.remove.push(rel); continue; }
+      const orig = read(t.target);
+      let text = lf(orig);
+      for (const p of patches.filter((x) => x.kind === 'append' && x.target === rel)) {
+        const block = lf(read(p.source));
+        text = text.includes('\n' + block) ? text.replace('\n' + block, '') : text.replace(block, '');
+      }
+      if (rel !== '.gitignore' && recorded && sha(text) === recorded) plan.remove.push(rel);
+      else if (text !== lf(orig)) { writes.set(rel, eol(orig, text)); plan.clean.push(rel); }
+      else if (rel !== '.gitignore') plan.changed.push(rel);
+      if (rel === '.gitignore') notes.push('.gitignore stays: it keeps .env and other secrets out of git; delete the kit\'s lines yourself if you want');
+      continue;
+    }
+    // A Codex/Antigravity skill generated from the project's own command or skill belongs to the project
+    const skill = rel.match(/^\.agents\/skills\/(.+)$/);
+    if (skill) {
+      const sources = [`.claude/skills/${skill[1]}`, ...(skill[1].endsWith('/SKILL.md') ? [`.claude/commands/${skill[1].slice(0, -'/SKILL.md'.length)}.md`] : [])];
+      if (sources.some((s) => !(s in j.files) && fs.existsSync(path.join(projectDir, s)))) { plan.changed.push(`${rel} (made from your own command)`); continue; }
+    }
+    if (hash(t.target) === recorded) plan.remove.push(rel);
+    else plan.changed.push(rel);
+  }
+
+  // settings.json last: a hook or rule that calls a script now leaving (an older kit's line, or one inside a group the user
+  // edited) goes too, so no hook is left pointing at a deleted file
+  if (SETTINGS in j.files) {
+    const t = safeTarget(SETTINGS);
+    if (!t) plan.unsafe.push(SETTINGS);
+    else if (t.missing) plan.missing.push(SETTINGS);
+    else {
+      try {
+        const kit = patches.filter((p) => p.kind === 'merge' && p.target === SETTINGS)
+          .reduce((acc, p) => merge(acc, JSON.parse(read(p.source))), JSON.parse(read(copies.get(SETTINGS))));
+        const left = unmerge(JSON.parse(read(t.target)), kit);
+        const gone = (s) => typeof s === 'string' && [...s.matchAll(/\.claude\/hooks\/[\w.-]+/g)]
+          .some(([m]) => plan.remove.includes(m) || !fs.existsSync(path.join(projectDir, m)));
+        const kept = [];
+        if (left.hooks && typeof left.hooks === 'object') {
+          for (const [event, groups] of Object.entries(left.hooks)) {
+            const g = (Array.isArray(groups) ? groups : []).map((x) => ({ ...x, hooks: (Array.isArray(x?.hooks) ? x.hooks : []).filter((h) => !gone(h?.command)) })).filter((x) => x.hooks.length);
+            if (g.length) { left.hooks[event] = g; kept.push(...g.flatMap((x) => x.hooks.map((h) => `hooks.${event}: ${h.command}`))); } else delete left.hooks[event];
+          }
+          if (!Object.keys(left.hooks).length) delete left.hooks;
+        }
+        if (left.permissions && typeof left.permissions === 'object') {
+          for (const k of Object.keys(left.permissions)) {
+            if (!Array.isArray(left.permissions[k])) continue;
+            left.permissions[k] = left.permissions[k].filter((r) => !gone(r));
+            if (left.permissions[k].length) kept.push(...left.permissions[k].map((r) => `permissions.${k}: ${r}`)); else delete left.permissions[k];
+          }
+          if (!Object.keys(left.permissions).length) delete left.permissions;
+        }
+        if (gone(left.statusLine?.command)) delete left.statusLine;
+        kept.push(...Object.keys(left).filter((k) => !['hooks', 'permissions'].includes(k)));
+        if (!Object.keys(left).length) plan.remove.push(SETTINGS);
+        else { writes.set(SETTINGS, JSON.stringify(left, null, 2) + '\n'); plan.clean.push(`${SETTINGS}, stays: ${kept.join(' · ')}`); }
+      } catch { plan.changed.push(`${SETTINGS} (could not be read as JSON)`); }
+    }
+  }
+
+  // Kit traces outside the record
+  const toolFiles = new Set(TOOLS.filter((x) => x !== 'claude').flatMap((x) => listFiles(path.join(KIT, 'tools', x))));
+  const readme = path.join(projectDir, 'README.md');
+  if (!('README.md' in j.files) && fs.existsSync(readme) && fs.lstatSync(readme).isFile() && hash(readme) === hash(path.join(KIT, 'project', 'README.md'))) plan.remove.push('README.md');
+  for (const rel of ['.kit.json', '.kit.local.json']) if (safeTarget(rel) && !safeTarget(rel).missing) plan.remove.push(rel);
+  (function walk(dir, rel) {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      // other worktrees keep their own files; links are not followed (a link is not a directory entry here)
+      if (e.isDirectory() && !['.git', 'node_modules'].includes(e.name) && r !== '.claude/worktrees') walk(path.join(dir, e.name), r);
+      else if (e.isFile() && e.name.endsWith('.kit-new')) {
+        // Only the kit's own: the .kit-new of a kit file or a generated skill, never a project file that happens to end so
+        const base = r.slice(0, -'.kit-new'.length);
+        if ((copies.has(base) || Object.hasOwn(j.files, base) || toolFiles.has(base) || base.startsWith('.agents/skills/')) && safeTarget(r)) plan.remove.push(r);
+      }
+    }
+  })(projectDir, '');
+  const stateDir = path.join(projectDir, '.claude', 'state');
+  const stateOk = fs.existsSync(stateDir) && !fs.lstatSync(path.join(projectDir, '.claude')).isSymbolicLink() && fs.lstatSync(stateDir).isDirectory();
+  const stateCount = stateOk ? fs.readdirSync(stateDir, { recursive: true }).length : 0;
+  const { approvalPath } = await import('../.claude/hooks/gate.mjs');
+  const approval = approvalPath(projectDir);
+  // Checked before anything goes, so the dry run and the real run say the same
+  const claude = path.join(projectDir, 'CLAUDE.md');
+  if (!plan.remove.includes('CLAUDE.md') && fs.existsSync(claude)) {
+    const lost = [...read(claude).matchAll(/^@(\S+)$/gm)].map((m) => m[1]).filter((f) => plan.remove.includes(f));
+    if (lost.length) notes.push(`CLAUDE.md stays and imports files that ${yes ? 'are' : 'will be'} gone: ${lost.join(', ')}`);
+  }
+
+  // Paths come from .kit.json and the AI reads this output: no control characters, no endless lines
+  const show = (s) => String(s).replace(/[\x00-\x1f\x7f]/g, '?').slice(0, 300);
+  const list = (title, items) => items.length && console.log(`${title} (${items.length}):\n  ${items.map(show).join('\n  ')}`);
+  console.log(`Kit removal${yes ? '' : ' (dry run, nothing changed)'}: ${projectDir}`);
+  list(yes ? 'Removed' : 'Will remove', [...plan.remove,
+    ...(stateOk ? [`.claude/state/ (${stateCount} entries, git-ignored: git does not bring them back)`] : []),
+    ...(fs.existsSync(approval) ? ['commit gate approval record (in your user folder)'] : [])]);
+  list(yes ? 'Kit lines taken out' : 'Kit lines will be taken out', plan.clean);
+  list('Kept: you changed these', plan.changed);
+  list('Recorded but already gone', plan.missing);
+  list('Skipped, unsafe path in .kit.json', plan.unsafe);
+
+  if (yes) {
+    for (const [rel, text] of writes) fs.writeFileSync(path.join(projectDir, rel), text);
+    for (const rel of plan.remove) fs.rmSync(path.join(projectDir, rel), { force: true });
+    if (stateOk) fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(approval, { force: true });
+    // Folders the removal emptied go, up to the root; a folder with anything left in it stays
+    for (const rel of [...plan.remove, '.claude/state/x']) {
+      for (let dir = path.dirname(path.join(projectDir, rel)); dir !== projectDir && inside(path.relative(projectDir, dir)); dir = path.dirname(dir)) {
+        try { if (fs.readdirSync(dir).length) break; fs.rmdirSync(dir); } catch { break; }
+      }
+    }
+  }
+
+  if (typeof j.kit === 'string' && !path.isAbsolute(j.kit) && j.kit !== 'local' && !j.kit.startsWith('npx:')) notes.push(`the kit folder ${j.kit} inside the project is not removed; delete it yourself if you want`);
+  for (const n of notes) console.log(`Note: ${show(n)}`);
+  if (yes) console.log('Nothing was committed: see it with git status, undo it with git checkout . (git-ignored kit state such as .claude/state/ does not come back). Restart open sessions (their hooks are gone).');
+  else console.log('Run again with --yes to remove (needs a clean git tree).');
+}
+
 function parseArgs(argv) {
   const a = { addons: [], tool: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -480,6 +677,7 @@ function parseArgs(argv) {
     else if (k === '--addons') a.addons = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
     else if (k === '--tool') a.tool = argv[++i].split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
     else if (k === '--keep-kit') a.keepKit = true;
+    else if (k === '--yes') a.yes = true;
     else throw new Error(`Unknown argument: ${k}`);
   }
   return a;
@@ -513,8 +711,11 @@ if (process.argv[1] && realArg() === fs.realpathSync(fileURLToPath(import.meta.u
     } else if (command === 'update') {
       if (!a.project) throw new Error('--project required');
       update(a);
+    } else if (command === 'remove') {
+      if (!a.project) throw new Error('--project required');
+      await remove(a);
     } else {
-      console.log('Usage:\n  node kit/kit.mjs install --type <type> [--addons ai,tr] [--keep-kit] [--project <path>] [--tool claude,codex,antigravity]\n  node <kit>/kit/kit.mjs init [--project <path>] [--tool claude,codex,antigravity]\n  node kit/kit.mjs update --project <path> [--addons ai,tr] [--tool ...]');
+      console.log('Usage:\n  node kit/kit.mjs install --type <type> [--addons ai,tr] [--keep-kit] [--project <path>] [--tool claude,codex,antigravity]\n  node <kit>/kit/kit.mjs init [--project <path>] [--tool claude,codex,antigravity]\n  node kit/kit.mjs update --project <path> [--addons ai,tr] [--tool ...]\n  node <kit>/kit/kit.mjs remove --project <path> [--yes]');
       process.exit(command ? 1 : 0);
     }
   } catch (e) {

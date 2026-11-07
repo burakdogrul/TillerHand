@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.70.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.71.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -281,6 +281,7 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | `/retro` | Writes lessons back to the project and the kit |
 | `/handoff` | Hands the project over or takes it over |
 | `/kit-update` | Updates the project to the latest kit |
+| `/kit-remove` | Removes the kit from the project; keeps the files you wrote or changed |
 | `/language` | Changes the conversation language |
 
 Every command, setting, tool and skill is in the **[guide](https://burakdogrul.github.io/TillerHand/kit/guide.html)**.
