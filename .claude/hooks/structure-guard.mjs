@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 // Structure guard: keeps the project's folder layout in line with the .claude/structure.json map.
-//   PreToolUse (Write) hook: asks the user (ask) when a NEW file goes somewhere off the map;
+//   PreToolUse (Write, Edit) hook: asks the user (ask) when a NEW file goes somewhere off the map;
 //     denies when it matches a clutter pattern (.bak, *-old.*, "kopya" etc.). sandbox/ is always free.
 //   node .claude/hooks/structure-guard.mjs --check   checks every file in git (CI and /findings-tech).
 // Without a map (before the kit is set up) it blocks nothing.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readInput, decide, findRoot, isMain } from './shared.mjs';
+import { readInput, decide, findRoot, inLinkedWorktree, isMain, rootFor } from './shared.mjs';
 import { t } from './lang.mjs';
+import { realPath } from './freeze-guard.mjs';
 
 const root = findRoot();
+// Shared docs: a worktree writes its task note; /parallel merge updates these on main (parallel edits would conflict)
+const SHARED_DOCS = ['docs/workflow/progress.md', 'docs/product/roadmap.md', 'docs/decisions/log.md', 'changelog.md', 'docs/workflow/cost-log.md', 'docs/product/prd.md'];
 
 // "**" any depth, "*" any name inside one folder, "?" one character
 export function globRegex(pattern) {
@@ -101,13 +104,18 @@ export function clutterIssue(command, dir, root) {
 function hook() {
   const g = readInput();
   if (!g) process.exit(0);
-  const map = readMap(g.root);
-  for (const { path: file, isNew } of g.files) {
-    const full = path.resolve(g.dir, file);
+  // A file a worktree session writes into the main checkout is checked against the main checkout's map
+  const files = g.files.map(({ path: file, isNew }) => {
+    const full = path.resolve(g.dir, file), owner = rootFor(full, g.root);
+    // Both sides resolved, as rootFor does: a junction in the worktree pointing into main is main's path
+    return { full, isNew, owner, rel: owner && path.relative(realPath(owner), realPath(full)).split(path.sep).join('/') };
+  });
+  const doc = files.find((f) => f.owner && SHARED_DOCS.includes(f.rel.toLowerCase()));
+  if (doc && inLinkedWorktree(g.root)) decide(g.tool, 'ask', t(g.root, 'guard.structure.sharedDoc', { rel: doc.rel }));
+  for (const { full, isNew, owner, rel } of files) {
     if (isNew === false || (isNew === undefined && fs.existsSync(full))) continue; // new files only
-    const rel = path.relative(g.root, full);
-    if (rel.startsWith('..') || path.isAbsolute(rel)) continue; // outside the project
-    const s = check(rel, map);
+    if (!owner) continue; // outside the project
+    const s = check(rel, readMap(owner));
     if (s) decide(g.tool, s.decision, s.decision === 'ask' ? t(g.root, 'guard.structure.prefix', { reason: s.reason }) : `Structure: ${s.reason}`);
   }
   process.exit(0);

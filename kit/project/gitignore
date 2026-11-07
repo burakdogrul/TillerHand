@@ -31,6 +31,8 @@ dashboard.html
 
 # Kit working state (limit, context, approvals, cache)
 .claude/state/
+# Parallel task worktrees (claude -w, /parallel)
+.claude/worktrees/
 
 # Trial and temporary work (outside the structure map)
 sandbox/

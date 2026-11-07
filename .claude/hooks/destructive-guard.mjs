@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readInput, decide, isMain, findRoot, PANEL_TOKEN } from './shared.mjs';
+import { readInput, decide, isMain, findRoot, PANEL_TOKEN, rootFor } from './shared.mjs';
 import { t } from './lang.mjs';
 import { isTestFile, isTestConfig } from './test-guard.mjs';
 import { readLock, readPlan, allowedInLock, inScope, realPath, relPath, protectedRule } from './freeze-guard.mjs';
@@ -85,6 +85,9 @@ const NEEDS_APPROVAL = [
   [cmdRe(String.raw`\bgit(\.exe)?\s_G_reset\s+(--?[a-zA-Z][\w-]*\s+)*(?!-|[;&|]|HEAD([~^]\d*)*(?=\s|$)|\.(?=\s|$)|\S+\.\w{1,6}(?=\s|$))\S`), 'guard.destructive.moveBranch'],
   [cmdRe(String.raw`\bgit(\.exe)?\s_G_((switch|checkout)\s(_L_\s)?(-[a-zA-Z]*[bc][a-zA-Z]*|--create|--force-create|--orphan)\s(_L_\s)?try/|worktree\s+add\s(_L_\s)?-[a-zA-Z]*b[a-zA-Z]*\s(_L_\s)?try/|branch\s+((?!-[a-zA-Z]*[dl][a-zA-Z]*\s|--delete\s|--list\s)-\S+\s+)*try/|branch\s+(-[a-zA-Z]*[cm][a-zA-Z]*|--copy|--move)\s_L_\stry/)`), 'guard.destructive.openTrial'],
   [/\b(alembic\s+upgrade|prisma\s+migrate\s+deploy|supabase\s+db\s+push)\b/i, 'guard.destructive.migration'],
+  // A worktree the agent opens becomes a project root with its own rule files; the user opens them (claude -w, /parallel)
+  [cmdRe(String.raw`\bgit(\.exe)?\s_G_worktree\s+add\b`), 'guard.destructive.worktreeAdd'],
+  [cmdRe(String.raw`\bgh(\.exe)?\s_G_pr\s+(create|merge)\b`), 'guard.destructive.pullRequest'],
 ];
 
 // The test guard runs on file tools; changing a test or test config file from the shell (sed -i, rm, >, mv, git checkout) is asked.
@@ -257,12 +260,14 @@ export function scopeIssue(command, dir, root) {
     if (touchesApproval(h) || touchesApproval(realPath(h))) return { decision: 'ask', reason: /preferences[.]md$/i.test(h)
       ? t(root, 'guard.destructive.prefsFile', { path: h })
       : t(root, 'guard.destructive.gateApproval', { path: h }) };
-    const rel = relPath(realPath(h), groot);
+    // A target in the main checkout from a worktree session is judged by the main checkout's rules
+    const owner = rootFor(realPath(h), root) ?? root;
+    const rel = relPath(realPath(h), realPath(owner));
     // board.md holds the commit review switch; the file tools ask only when that line changes (freeze-guard).
     // A glob target counts as its folder: docs/workflow/b*.md or *.md from a folder above reaches board.md too
     const board = 'docs/workflow/board.md';
     if (rel.toLowerCase() === board || /[*?[]/.test(command) && (rel === '' || board.startsWith(`${rel.toLowerCase()}/`))) return { decision: 'ask', reason: t(root, 'guard.destructive.boardShell') };
-    const k = protectedRule(rel, root) ?? protectedRule(`${rel}/`, root);
+    const k = protectedRule(rel, owner) ?? protectedRule(`${rel}/`, owner);
     if (k) return { decision: k[0], reason: k[0] === 'deny' ? `${rel}: ${k[2]}` : t(root, 'guard.destructive.protectedShell', { rel, text: k[2] }) };
   }
   // The target could not be resolved but the command names a rule/guard file ($D/AGENTS.md, {AGENTS,X}.md): asked even without a lock/plan

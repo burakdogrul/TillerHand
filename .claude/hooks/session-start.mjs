@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import { execSync } from 'node:child_process';
 import { readStatus } from './status-read.mjs';
 import { readLimits, summary } from './usage.mjs';
-import { detectTool, findRoot, sessionNote, TRIAL_BRANCH } from './shared.mjs';
+import { detectTool, findRoot, inLinkedWorktree, sessionNote, TRIAL_BRANCH } from './shared.mjs';
 import { prefsNote } from './prefs.mjs';
 import { readLang, t } from './lang.mjs';
 import { isValue } from './labels.mjs';
@@ -69,13 +69,15 @@ try {
   const branch = git('branch --show-current') || '(detached HEAD)';
   const changed = git('status --porcelain').split('\n').filter(Boolean).length;
   notes.push(`Branch: ${branch} · uncommitted files: ${changed}`);
+  const worktree = inLinkedWorktree(root);
+  if (worktree) notes.push('Parallel worktree session: write status, decisions and changed files to the task note docs/product/tasks/<id>.md only. progress.md, roadmap.md, the decision log and CHANGELOG are updated on main by /parallel merge. When the task is done, suggest /parallel merge in the main checkout.');
   if (TRIAL_BRANCH.test(branch)) {
     const topic = branch.slice('try/'.length);
     notes.push(`Trial in progress: read docs/product/try/${topic}.md and continue per .claude/commands/try.md. Unfinished setup steps wait for /lock.`);
     next = t(root, 'session.try', { topic });
   }
   const lastProgress = git('log -1 --format=%H -- docs/workflow/progress.md');
-  if (lastProgress) {
+  if (lastProgress && !worktree) {
     const since = Number(git(`rev-list --count ${lastProgress}..HEAD`));
     if (since >= 3) notes.push(`WARNING: docs/workflow/progress.md has not been updated for the last ${since} commits. Remind the user to run /wrap-up at the end of the session.`);
   }

@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.69.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.70.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -85,6 +85,7 @@ The first question is the language: Turkish, English or another one. Claude then
 | Trying a feature | `/try` (a quick slice you click on your own computer) |
 | You like it | `/lock` (reviews the code, hardens it, merges it) |
 | Small change | `/tweak` (text, style, a small fix) |
+| Two independent tasks at once | `/parallel` (each in its own worktree session) |
 | Other work | `/build` (picks up the next task and tests it) |
 | Checking status | `where are we?` or `/dashboard` |
 | Something breaks | `/rollback` |
@@ -266,6 +267,7 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | `/design` | Design decisions with visual previews |
 | `/review-changes` | Independent review and security agents |
 | `/tweak [change]` | A small, low-risk change: up to 2 files and 30 lines, no plan or subagent, gate green |
+| `/parallel [merge <branch>]` | Picks independent tasks and gives the start command for a worktree session each (`claude -w <id>` or the desktop Worktree switch). `merge` brings a finished one into `main`: a PR with GitHub, a local `--no-ff` merge without it |
 | `/fix-bug [symptom]` | Root cause, red test, fix |
 | `/qa` | Runs the UI criteria in a real browser |
 | `/findings-<type>` | Findings reports |

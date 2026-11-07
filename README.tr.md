@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.69.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.70.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -85,6 +85,7 @@ Kod yazmayı bilmen gerekmez. Git, terminal ve kurulum işlerini Claude yapar; s
 | Bir özelliği denerken | `/try` (kendi bilgisayarında tıkladığın hızlı dilim) |
 | Beğenince | `/lock` (kodu denetler, sağlamlaştırır, main'e alır) |
 | Küçük değişiklikte | `/tweak` (metin, stil, küçük düzeltme) |
+| Aynı anda iki bağımsız görevde | `/parallel` (her biri kendi worktree oturumunda) |
 | Diğer işlerde | `/build` (sıradaki görevi kendisi alır, test eder) |
 | Durumu merak edersen | `ne durumdayız?` veya `/dashboard` |
 | Bir şey bozulursa | `/rollback` |
@@ -266,6 +267,7 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 | `/design` | Görsel önizlemeli tasarım kararları |
 | `/review-changes` | Bağımsız inceleme ve güvenlik ajanları |
 | `/tweak [değişiklik]` | Küçük, riski düşük değişiklik: en çok 2 dosya ve 30 satır, plan ve alt ajan yok, gate yeşil |
+| `/parallel [merge <dal>]` | Bağımsız görevleri seçer, her biri için worktree oturumunun başlatma komutunu verir (`claude -w <id>` ya da masaüstünde Worktree anahtarı). `merge` biten görevi `main`'e alır: GitHub varsa PR, yoksa yerel `--no-ff` birleştirme |
 | `/fix-bug [belirti]` | Kök neden, kırmızı test, düzeltme |
 | `/qa` | Arayüz kriterlerini gerçek tarayıcıda test eder |
 | `/findings-<tür>` | Bulgu raporları |

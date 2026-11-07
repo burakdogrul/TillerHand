@@ -2,6 +2,23 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.70.0] - 2026-11-07
+
+### Added
+- `/parallel`: runs independent roadmap tasks at the same time, each in its own git worktree session (`claude -w <id>` or the desktop Worktree switch). It picks tasks that touch different feature folders and no migration, package, sign-in or payment code, writes a task note `docs/product/tasks/<id>.md` for each, and gives the start command.
+- `/parallel merge <branch>`: brings a finished task into `main`. With a GitHub remote and `gh` it opens a PR and waits for the checks; without one it merges locally with `git merge --no-ff` after the gate is green on the staged merge. Then it updates progress, roadmap, decision log and CHANGELOG from the task note and removes the worktree once the branch is merged.
+
+### Changed
+- Hooks follow the worktree: in a worktree session the project root is the worktree (same repository only, read from the `.git` file and its back link, no git call), so the structure guard, test guard, commit gate and gate check the worktree's files. A write from a worktree session into the main checkout is still judged by the main checkout's rules. Each worktree approves the gate commands on its own.
+- In a worktree, a write to `progress.md`, `roadmap.md`, the PRD, the decision log, the cost log or `CHANGELOG.md` is asked: the task note holds the status until the merge.
+- `git worktree add`, `gh pr create` and `gh pr merge` are asked.
+- The structure guard now also runs on edits (Claude Code `Edit` and `MultiEdit`).
+- `AGENTS.md` rule 6: one task per session; parallel tasks only through `/parallel`.
+
+### Adapt by hand
+- `.gitignore`: add `.claude/worktrees/`.
+- `AGENTS.md` rule 6: replace "One task at a time." with "One task at a time per session; independent tasks run in parallel only through `/parallel` (each in its own worktree session)."
+
 ## [3.69.0] - 2026-11-07
 
 ### Changed

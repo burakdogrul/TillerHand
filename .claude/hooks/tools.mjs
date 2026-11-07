@@ -37,7 +37,7 @@ export const PACKAGES = {
 
 // Command descriptions are also in the skill list. Light: non-core commands are listed by name only (skillOverrides "name-only"),
 // still in the / menu and callable by name. Kit settings.json ships this list; a test keeps the two in sync.
-export const CORE_COMMANDS = ['start', 'adopt', 'try', 'lock', 'build', 'tweak', 'fix-bug', 'plan-task', 'design', 'tools', 'review-changes', 'wrap-up', 'release'];
+export const CORE_COMMANDS = ['start', 'adopt', 'try', 'lock', 'build', 'tweak', 'fix-bug', 'plan-task', 'design', 'tools', 'review-changes', 'wrap-up', 'release', 'parallel'];
 export const LIGHT_COMMANDS = ['models', 'ask-mode', 'board', 'dashboard', 'findings-all', 'findings-business', 'findings-legal', 'findings-perf',
   'findings-security', 'findings-tech', 'findings-ux', 'freeze', 'handoff', 'kit-update', 'language', 'maintain', 'qa', 'research', 'retro', 'rollback', 'user-feedback'];
 

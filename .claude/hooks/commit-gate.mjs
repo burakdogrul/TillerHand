@@ -14,13 +14,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { findRoot, isMain, reviewOff, parseInput, decisionText, SENSITIVE } from './shared.mjs';
+import { findRoot, isMain, reviewOff, parseInput, decisionText, SENSITIVE, projectBase } from './shared.mjs';
 import { t } from './lang.mjs';
 import { unquote, MAX_COMMAND } from './destructive-guard.mjs';
 import { isTestFile, isTestConfig, digest, readRecord, saveRecord } from './test-guard.mjs';
 import { isCodeFile } from './edit-rounds.mjs';
 
 // Project root (the script's location) even when called from a subfolder: approval and gate must not be written elsewhere
+// shortcut: root comes from the process cwd, which Claude Code sets to the session cwd (the input cwd); read it from the input if they ever differ
 const root = findRoot();
 const approvalFile = path.join(root, '.claude', 'state', 'commit-approval.json');
 const git = (c) => execSync(`git ${c}`, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024, timeout: 20000 });
@@ -281,9 +282,10 @@ const samePath = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b
 const PLAIN_APPROVE = /^\s*node\s+("[^"\n]*"|'[^'\n]*'|[^\s"'`;&|<>(){}]+)\s+--approve(\s+("[^"\n$`]*"|'[^'\n]*'|[^\s"'`$;&|<>(){}]+))?\s*$/;
 export function maskOwnHook(command, dir) {
   if (!PLAIN_APPROVE.test(command)) return command;
-  const own = real(path.join(root, '.claude', 'hooks', 'commit-gate.mjs'));
+  // The kit's own hook is the one Claude Code runs (the main checkout), never a worktree's copy that a branch can change
+  const own = real(path.join(projectBase(), '.claude', 'hooks', 'commit-gate.mjs'));
   return command.replace(/"([^"\n]*commit-gate\.mjs)"|'([^'\n]*commit-gate\.mjs)'|([^\s"';&|]*commit-gate\.mjs)\b/gi, (m, a, b, c) => {
-    const p = (a ?? b ?? c).replace(/\$\{?CLAUDE_PROJECT_DIR\}?|%CLAUDE_PROJECT_DIR%|\$env:CLAUDE_PROJECT_DIR/gi, process.env.CLAUDE_PROJECT_DIR || root);
+    const p = (a ?? b ?? c).replace(/\$\{?CLAUDE_PROJECT_DIR\}?|%CLAUDE_PROJECT_DIR%|\$env:CLAUDE_PROJECT_DIR/gi, projectBase());
     return samePath(real(path.resolve(dir, p)), own) ? 'KIT-COMMIT-HOOK' : m;
   });
 }

@@ -81,7 +81,60 @@ export function findProgram(name, root, env = process.env) {
 // Project root comes from the script's own location (<project>/.claude/hooks/): it does not depend on cwd or on
 // marker files the agent could create (.git), so it stays right when Codex opens in a subfolder.
 const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const findRoot = () => process.env.CLAUDE_PROJECT_DIR || SCRIPT_ROOT;
+// A missing file resolves through its nearest existing parent folder (links, Windows short names)
+const realPath = (p) => {
+  try { return fs.realpathSync.native(p); } catch { /* missing */ }
+  const parent = path.dirname(p);
+  return parent === p ? path.resolve(p) : path.join(realPath(parent), path.basename(p));
+};
+const samePath = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b);
+const inside = (dir, base) => { const r = path.relative(base, dir); return !r.startsWith('..') && !path.isAbsolute(r); };
+const readText = (f) => { try { return fs.readFileSync(f, 'utf8').trim(); } catch { return null; } };
+// The git layout read from the files, without starting git (every hook runs it; old git lacks --path-format).
+// A linked worktree has a .git FILE "gitdir: <common>/worktrees/<name>", that folder a "commondir" file and a "gitdir"
+// back link to <top>/.git: a .git file planted elsewhere does not match the back link and is no worktree.
+// shortcut: reads git's files, not `git worktree list`; if git changes this layout, worktrees fall back to the main root (safe side).
+function gitInfo(start) {
+  for (let d = start; ; d = path.dirname(d)) {
+    const dotGit = path.join(d, '.git');
+    let stat = null; try { stat = fs.statSync(dotGit); } catch { /* not here */ }
+    if (stat?.isDirectory()) return { top: d, common: realPath(dotGit), linked: false };
+    if (stat?.isFile()) {
+      const m = /^gitdir:\s*(.+)$/m.exec(readText(dotGit) ?? '');
+      if (!m) return null;
+      const gitDir = path.resolve(d, m[1].trim());
+      const commondir = readText(path.join(gitDir, 'commondir'));
+      if (!commondir) return { top: d, common: realPath(gitDir), linked: false }; // a submodule or --separate-git-dir
+      const back = readText(path.join(gitDir, 'gitdir'));
+      if (!back || !samePath(realPath(path.resolve(gitDir, back)), realPath(dotGit))) return null;
+      // The admin folder must be the repository's own <common>/worktrees/<name>: one built elsewhere (an outside folder
+      // with a commondir pointing at main's .git) is not registered, and writing under .git is asked
+      const common = realPath(path.resolve(gitDir, commondir));
+      if (!samePath(path.dirname(realPath(gitDir)), path.join(common, 'worktrees'))) return null;
+      return { top: d, common, linked: true };
+    }
+    if (path.dirname(d) === d) return null;
+  }
+}
+export const projectBase = () => process.env.CLAUDE_PROJECT_DIR || SCRIPT_ROOT;
+// A worktree session (claude -w, the desktop Worktree switch) keeps CLAUDE_PROJECT_DIR on the main checkout while its cwd
+// is the worktree: the root is that worktree when it belongs to the same repository (same git common dir), never another repo.
+export function findRoot(cwd = process.cwd()) {
+  const base = projectBase();
+  const dir = realPath(cwd), baseReal = realPath(base);
+  // Fast path: inside the project and not under its worktrees folder
+  if (inside(dir, baseReal) && !inside(dir, path.join(baseReal, '.claude', 'worktrees'))) return base;
+  const own = gitInfo(dir), main = own?.linked && gitInfo(baseReal);
+  return main && samePath(own.common, main.common) && !samePath(own.top, main.top) ? own.top : base;
+}
+export const inLinkedWorktree = (root) => gitInfo(realPath(root))?.linked === true;
+// The root whose rules govern a path: the session root, or the main checkout for a path a worktree session writes there
+// (its rule files, board.md and state must not fall outside every check). null: outside both.
+export function rootFor(full, root) {
+  const f = realPath(full);
+  for (const r of [root, projectBase()]) if (inside(f, realPath(r))) return r;
+  return null;
+}
 
 // Auth, payment, webhook, upload, secrets: flow.mjs adds security-auditor, the commit gate keeps them out of the fast lane
 export const SENSITIVE = /auth|login|session|passw|payment|checkout|billing|webhook|upload|secret|token|crypto|\.env|iyzico|paytr|stripe/i;
@@ -114,7 +167,7 @@ export function patchFiles(patch) {
 // edits: [{ old, new, all }] in order, when the tool gives them one by one (Claude Edit/MultiEdit, Antigravity chunks).
 export function parseInput(g) {
   const tool = detectTool(g);
-  const root = findRoot();
+  const root = findRoot(isText(g.cwd) ? g.cwd : undefined);
   const session = String(g.session_id ?? g.conversationId ?? '');
   // agent: the subagent the call runs in (Claude Code agent_type; '' in the main session and on other tools)
   const agent = tool === 'claude' && isText(g.agent_type) ? g.agent_type : '';

@@ -58,6 +58,7 @@ export function unknownCommandKeys(md) {
 
 // The approval record lives outside the project, in the user folder (keyed by a digest of the project's real path): no repo,
 // archive or .git can carry an approval. The home folder comes from the OS (os.userInfo); HOME/USERPROFILE cannot redirect it.
+// Each worktree has its own record: an approval there must not stand for main after the branch merges.
 export function approvalPath(root) {
   let realRoot = root;
   try { realRoot = fs.realpathSync.native(root); } catch { /* missing: the given path */ }

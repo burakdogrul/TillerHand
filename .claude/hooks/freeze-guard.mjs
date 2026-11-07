@@ -16,7 +16,7 @@
 //   node .claude/hooks/freeze-guard.mjs --plan-end                     close when the task is done (asked)
 import fs from 'node:fs';
 import path from 'node:path';
-import { readInput, decide, findRoot, isMain, reviewOff } from './shared.mjs';
+import { readInput, decide, findRoot, isMain, reviewOff, rootFor } from './shared.mjs';
 import { t } from './lang.mjs';
 
 // Project root even when called from a subfolder: lock and plan are written where the hook reads them; paths are root-relative
@@ -143,6 +143,9 @@ function hook() {
   const g = readInput();
   if (!g) process.exit(0);
   const groot = realPath(g.root);
+  // A path a worktree session writes into the main checkout is judged by the main checkout's rules
+  const owner = (p) => rootFor(p, g.root) ?? g.root;
+  const ownRel = (p) => relPath(p, realPath(owner(p)));
   const paths = g.files.map(({ path: p }) => realPath(path.resolve(g.dir, p)));
   // Gate command approval record (gate.mjs, in the user folder ~/.vibe-kit/): the AI must not write it by hand
   const approval = paths.find((p) => /[\\/]\.vibe-kit([\\/]|$)/i.test(p));
@@ -150,23 +153,23 @@ function hook() {
     ? t(g.root, 'guard.freeze.prefsFile', { path: approval })
     : t(g.root, 'guard.freeze.gateApproval', { path: approval }));
   // Only commit-gate.mjs writes the fast-lane counter: resetting it would skip the board
-  if (paths.some((p) => relPath(p, groot) === '.claude/state/fast-commits.json')) decide(g.tool, 'ask', t(g.root, 'guard.freeze.protectedAsk'));
+  if (paths.some((p) => ownRel(p) === '.claude/state/fast-commits.json')) decide(g.tool, 'ask', t(g.root, 'guard.freeze.protectedAsk'));
   if (g.tool !== 'claude') {
     for (const p of paths) {
-      const k = protectedRule(relPath(p, groot), g.root);
-      if (k) decide(g.tool, k[0], `${relPath(p, groot)}: ${k[2]}`);
+      const k = protectedRule(ownRel(p), owner(p));
+      if (k) decide(g.tool, k[0], `${ownRel(p)}: ${k[2]}`);
     }
     // Reads (view_file etc.): only .env and secrets/ are denied (the counterpart of Read(./.env) in Claude)
     for (const p of g.reads) {
-      const rel = relPath(realPath(path.resolve(g.dir, p)), groot);
-      const k = protectedRule(rel, g.root);
+      const full = realPath(path.resolve(g.dir, p)), rel = ownRel(full);
+      const k = protectedRule(rel, owner(full));
       if (k?.[0] === 'deny') decide(g.tool, 'deny', `${rel}: ${k[2]}`);
     }
   }
   // "**Commit review:** off" in board.md turns the commit review off: changing what the commit gate reads is the user's call.
   // The whole file is rebuilt and read the gate's way, so a short Edit, a second line or a decoy line cannot slip past.
   for (const [i, p] of paths.entries()) {
-    if (relPath(p, groot) !== 'docs/workflow/board.md') continue;
+    if (ownRel(p) !== 'docs/workflow/board.md') continue;
     let disk = ''; try { disk = fs.readFileSync(p, 'utf8'); } catch { /* new file */ }
     const next = boardAfter(disk, g.files[i]);
     // Not rebuildable (old text not found, a Codex patch with gaps): any "off" in the new text is asked
