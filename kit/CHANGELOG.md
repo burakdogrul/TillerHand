@@ -2,6 +2,15 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.69.0] - 2026-11-07
+
+### Changed
+- `/adopt` runs in two passes, like `/start`. The first pass scans, installs, drafts the docs, rewrites `AGENTS.md`, commits the kit install on `main` and ends with one thing you dislike tried on a `try/*` branch. `/lock` runs the second pass: critical flows, deep scan, board, design and the roadmap.
+- `/adopt` changes application code only on a `try/*` branch, never on `main`.
+- `/adopt` roadmap: small Phase 0 tasks go through `/tweak`, new features through `/try` and `/lock`. The closing names the first task's own command.
+- `/adopt` structure move: the `adopt/structure` branch joins `main` with `git merge --no-ff` after the gate is green on the branch and on the staged merge, so every feature keeps its reviewed commit and `main` never holds a red merge. The branch is deleted with `git branch -d` only once it is merged.
+- `/lock` finishes the `/adopt` steps when the phase is `Setup (adopt)`. In an adopted project, checks that were already red on `main` no longer leave the merge stuck: `/lock` drops the staged squash and offers `/fix-bug` first.
+
 ## [3.68.0] - 2026-11-07
 
 ### Added

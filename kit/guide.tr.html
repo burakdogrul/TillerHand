@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.68.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.69.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -681,7 +681,7 @@ node vibe-kit/kit/kit.mjs init</pre>
 <section id="adopt">
   <p class="path">Kodun zaten varsa</p>
   <h2>/adopt: var olan projeyi kite al</h2>
-  <p class="lead"><code>/start</code>'ın var olan kod için karşılığı. Fikirden değil koddan başlar ama kararları yine sen verirsin. Bu oturumda uygulama koduna dokunulmaz ve dosya taşınmaz; taşıma ve düzeltmeler sonradan <code>/build</code> görevleriyle yapılır.</p>
+  <p class="lead"><code>/start</code>'ın var olan kod için karşılığı. Fikirden değil koddan başlar ama kararları yine sen verirsin. İki geçişte çalışır. Birincisi, beğenmediğin bir şeyin <code>try/*</code> dalında denenmesiyle biter; <code>main</code>'deki kod olduğu gibi kalır. İkinci geçişi <code>/lock</code> yapar: kritik akışlar, kurul, tasarım ve yol haritası.</p>
 <pre class="term"><span class="c"># projenin kökünde</span>
 npx tillerhand init
 <span class="c"># aynı klasörde yeni oturum</span>
@@ -691,7 +691,7 @@ npx tillerhand init
     <div>
       <p class="when">Salt okunur</p>
       <h3>Tarar</h3>
-      <p>Stack, klasör yapısı, özellikler, testlerin durumu ve son 30 commit çıkarılır. Hızlı tarama 5 saatlik limitin yaklaşık %10-20'si; derin taramada seçtiğin bulgu raporları da çalışır.</p>
+      <p>Stack, klasör yapısı, özellikler, testlerin durumu ve son 30 commit çıkarılır. Hızlı tarama 5 saatlik limitin yaklaşık %10-20'si; derin taramada, <code>/lock</code>'ta seçtiğin bulgu raporları da çalışır.</p>
     </div>
   </div>
   <div class="phase">
@@ -705,18 +705,26 @@ npx tillerhand init
   <div class="phase">
     <div class="n">3</div>
     <div>
-      <p class="when">Taşımadan önce</p>
-      <h3>Kritik akışlara test</h3>
-      <p>Giriş, ödeme, veri kaydı gibi 3-7 akış seçilir ve her birinin doğru davranışı sana sorulur. Test kodun bugünkü haline göre değil, senin cevabına göre yazılır; ikisi çelişirse bulgu olur.</p>
+      <p class="when">Birinci geçişin sonu</p>
+      <h3>İlk deneme</h3>
+      <p>Kit kurulumu <code>main</code>'e commit edilir. Sonra beğenmediğin bir şey <code>try/*</code> dalında denenir, sen tıklarsın. Giriş, ödeme ve hata düzeltmeleri bunun yerine <code>/build</code> ya da <code>/fix-bug</code> ile yapılır. Beğenince <code>/lock</code> onu sağlamlaştırır ve ikinci geçişi yapar.</p>
     </div>
   </div>
   <div class="phase">
     <div class="n">4</div>
     <div>
+      <p class="when">/lock'ta, taşımadan önce</p>
+      <h3>Kritik akışlara test</h3>
+      <p>Giriş, ödeme, veri kaydı gibi 3-7 akış seçilir ve her birinin doğru davranışı sana sorulur. Test kodun bugünkü haline göre değil, senin cevabına göre yazılır; ikisi çelişirse bulgu olur.</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="n">5</div>
+    <div>
       <p class="when">Yol haritası</p>
       <h3>Uyum görevleri</h3>
       <div class="chips"><span>Faz 0 güvenli zemin</span><span>Faz 1 yapıyı taşı</span><span>Faz 2 bulgular</span><span>Faz 3 yeni özellikler</span></div>
-      <p>Yapı ayrı bir dalda, özellik özellik taşınır. Her görevden sonra testler ve uygulama çalışıyor olmalı; bozulursa <code>/rollback</code>. Sonra her gün olduğu gibi <code>/build</code>.</p>
+      <p>Küçük düzeltmeler <code>/tweak</code> ile, yeni özellikler <code>/try</code> ve <code>/lock</code> ile yapılır. Yapı <code>adopt/structure</code> dalında özellik özellik taşınır. Her görevden sonra testler ve uygulama çalışıyor olmalı; bozulursa <code>/rollback</code>. Dal <code>main</code>'e squash'sız merge ile girer, böylece her özelliğin incelenmiş commit'i ayrı kalır.</p>
     </div>
   </div>
 </section>
@@ -1293,7 +1301,7 @@ Bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.68.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.69.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

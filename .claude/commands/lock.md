@@ -9,7 +9,7 @@ The tried code is not thrown away. It is checked first, then hardened on top. Ru
 
 ## Setup
 
-If `docs/workflow/progress.md` → `**Active phase:**` is Setup, finish the steps `.claude/commands/start.md` left for later before anything else, on this branch. They now use what the trial showed.
+If `docs/workflow/progress.md` → `**Active phase:**` is Setup, finish the steps the setup command left for later before anything else, on this branch: `.claude/commands/adopt.md` if the phase is `Setup (adopt)`, otherwise `.claude/commands/start.md`. They now use what the trial showed.
 
 ## Criteria
 
@@ -39,7 +39,7 @@ Ask the user first. Then, one command each:
 
 1. `git status --porcelain` must print nothing: a dirty tree would travel to `main`. Then `git switch main`.
 2. `git merge --squash try/<topic>`
-3. `node .claude/hooks/gate.mjs --run`: it reads the whole repo for trial code and must be green.
+3. `node .claude/hooks/gate.mjs --run`: it reads the whole repo for trial code and must be green. In an adopted project, if it is red only because of checks that were already red on `main` before the trial, do not commit: `git reset --merge` drops the staged squash and the branch keeps everything. Ask: fix them with `/fix-bug` on `main` first (Recommended), then merge again / commit anyway with `node .claude/hooks/commit-gate.mjs --skip "<reason>"`, which the hook asks every time.
 4. The board reviews the staged change (`.claude/board/rules.md`), then `git commit`. The commit gate requires both and reads who wrote the tests.
 5. Check that nothing was lost: `git diff --quiet try/<topic> main` must exit 0. Only then ask, and delete the branch with `git branch -D try/<topic>` (a squash leaves it looking unmerged).
 

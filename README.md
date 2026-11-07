@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.68.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.69.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -140,10 +140,11 @@ node vibe-kit/kit/kit.mjs init
 
 If you already have code, the install is the same and only the first command changes. Run `npx tillerhand init` in the project root (your files are not overwritten; a conflicting kit file is placed next to yours as `.kit-new`), start a new session and type `/adopt`.
 
-1. **Scans:** stack, folder layout, test status and git history. The code is not touched in this session.
+1. **Scans:** stack, folder layout, test status and git history. Your code on `main` is not touched.
 2. **Derives docs from the code:** PRD, stack and architecture are drafted; you're asked what you don't like, and rules from your old `CLAUDE.md` are moved to `AGENTS.md` one by one with your approval.
-3. **Tests for critical flows:** you're asked how flows like sign-in or payment should behave; the tests follow your answer, not what the code does today.
-4. **Alignment roadmap:** a safe foundation, then the structure is moved feature by feature on a separate branch, then the findings. After that, `/build` every day.
+3. **First try:** one thing you don't like is tried on a `try/*` branch. When you like it, `/lock` hardens it and finishes the plan below.
+4. **Tests for critical flows:** you're asked how flows like sign-in or payment should behave; the tests follow your answer, not what the code does today.
+5. **Alignment roadmap:** a safe foundation, then the structure is moved feature by feature on the `adopt/structure` branch, then the findings. Small fixes go through `/tweak`, new features through `/try` and `/lock`.
 
 ## How it works
 

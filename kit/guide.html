@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.68.0</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.69.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -681,7 +681,7 @@ node vibe-kit/kit/kit.mjs init</pre>
 <section id="adopt">
   <p class="path">If you already have code</p>
   <h2>/adopt: bring an existing project into the kit</h2>
-  <p class="lead">The counterpart of <code>/start</code> for existing code. It starts from the code, not from an idea, but you still make the decisions. This session does not touch the application code or move files; moving and fixing happen later as <code>/build</code> tasks.</p>
+  <p class="lead">The counterpart of <code>/start</code> for existing code. It starts from the code, not from an idea, but you still make the decisions. It runs in two passes. The first ends with one thing you dislike tried on a <code>try/*</code> branch, while <code>main</code> keeps its code. <code>/lock</code> runs the second pass: critical flows, board, design and the roadmap.</p>
 <pre class="term"><span class="c"># in the project root</span>
 npx tillerhand init
 <span class="c"># new session in the same folder</span>
@@ -691,7 +691,7 @@ npx tillerhand init
     <div>
       <p class="when">Read-only</p>
       <h3>Scans</h3>
-      <p>The stack, folder structure, features, test status and the last 30 commits are extracted. A quick scan costs about 10-20% of the 5-hour limit; a deep scan also runs the findings reports you choose.</p>
+      <p>The stack, folder structure, features, test status and the last 30 commits are extracted. A quick scan costs about 10-20% of the 5-hour limit; a deep scan, chosen in <code>/lock</code>, also runs the findings reports you choose.</p>
     </div>
   </div>
   <div class="phase">
@@ -705,18 +705,26 @@ npx tillerhand init
   <div class="phase">
     <div class="n">3</div>
     <div>
-      <p class="when">Before moving</p>
-      <h3>Tests for the critical flows</h3>
-      <p>3-7 flows such as login, payment and data saving are chosen, and the correct behavior of each is asked from you. The test is written from your answer, not from what the code does today; if the two conflict, it becomes a finding.</p>
+      <p class="when">End of the first pass</p>
+      <h3>First try</h3>
+      <p>The kit install is committed on <code>main</code>. Then one thing you dislike is tried on a <code>try/*</code> branch and you click it. Sign-in, payment and bug fixes go to <code>/build</code> or <code>/fix-bug</code> instead. When you like it, <code>/lock</code> hardens it and runs the second pass.</p>
     </div>
   </div>
   <div class="phase">
     <div class="n">4</div>
     <div>
+      <p class="when">In /lock, before moving</p>
+      <h3>Tests for the critical flows</h3>
+      <p>3-7 flows such as login, payment and data saving are chosen, and the correct behavior of each is asked from you. The test is written from your answer, not from what the code does today; if the two conflict, it becomes a finding.</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="n">5</div>
+    <div>
       <p class="when">Roadmap</p>
       <h3>Alignment tasks</h3>
       <div class="chips"><span>Phase 0 safe ground</span><span>Phase 1 move the structure</span><span>Phase 2 findings</span><span>Phase 3 new features</span></div>
-      <p>The structure is moved on a separate branch, feature by feature. After each task the tests and the app must still work; if something breaks, <code>/rollback</code>. Then <code>/build</code> as every day.</p>
+      <p>Small fixes go through <code>/tweak</code>, new features through <code>/try</code> and <code>/lock</code>. The structure is moved feature by feature on the <code>adopt/structure</code> branch. After each task the tests and the app must still work; if something breaks, <code>/rollback</code>. The branch joins <code>main</code> with a plain merge, so each feature keeps its own reviewed commit.</p>
     </div>
   </div>
 </section>
@@ -1293,7 +1301,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.68.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.69.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 
