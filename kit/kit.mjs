@@ -493,7 +493,7 @@ export function unmerge(a, b) {
 }
 
 // Removes what the kit placed: a recorded file whose hash still matches goes, a changed one stays. settings.json and
-// .env.example lose the kit's lines; .gitignore only loses the type's block (it keeps .env out of git). Without --yes it
+// .env.example lose the kit's lines; .gitignore is not touched, its kit lines are listed. Without --yes it
 // only lists. Nothing is committed: git checkout . brings the tracked files back.
 async function remove({ project, yes }) {
   const projectDir = path.resolve(project ?? process.cwd());
@@ -536,6 +536,7 @@ async function remove({ project, yes }) {
   }
   const plan = { remove: [], clean: [], changed: [], missing: [], unsafe: [] };
   const writes = new Map(); // rel -> new content (kit lines taken out)
+  const gitignoreLines = [];
   const lf = (s) => s.replace(/\r\n/g, '\n');
   const sha = (s) => crypto.createHash('sha256').update(lf(s)).digest('hex');
   const eol = (orig, text) => (orig.includes('\r\n') ? text.replace(/\n/g, '\r\n') : text); // keep the file's line endings
@@ -547,18 +548,25 @@ async function remove({ project, yes }) {
     const t = safeTarget(rel);
     if (!t) { plan.unsafe.push(rel); continue; }
     if (t.missing) { if (recorded) plan.missing.push(rel); continue; }
-    if (rel === '.gitignore' || appendTargets.includes(rel)) {
-      if (rel !== '.gitignore' && recorded && hash(t.target) === recorded) { plan.remove.push(rel); continue; }
+    // .gitignore is never written: the type's block also keeps secrets out of git (.vercel/, signing keys); its lines are only listed
+    if (rel === '.gitignore') {
+      const have = new Set(lf(read(t.target)).split('\n').map((l) => l.trim()));
+      for (const p of patches.filter((x) => x.kind === 'append' && x.target === rel)) {
+        for (const l of lf(read(p.source)).split('\n').map((x) => x.trim())) if (l && !l.startsWith('#') && have.has(l) && !gitignoreLines.includes(l)) gitignoreLines.push(l);
+      }
+      continue;
+    }
+    if (appendTargets.includes(rel)) {
+      if (recorded && hash(t.target) === recorded) { plan.remove.push(rel); continue; }
       const orig = read(t.target);
       let text = lf(orig);
       for (const p of patches.filter((x) => x.kind === 'append' && x.target === rel)) {
         const block = lf(read(p.source));
         text = text.includes('\n' + block) ? text.replace('\n' + block, '') : text.replace(block, '');
       }
-      if (rel !== '.gitignore' && recorded && sha(text) === recorded) plan.remove.push(rel);
+      if (recorded && sha(text) === recorded) plan.remove.push(rel);
       else if (text !== lf(orig)) { writes.set(rel, eol(orig, text)); plan.clean.push(rel); }
-      else if (rel !== '.gitignore') plan.changed.push(rel);
-      if (rel === '.gitignore') notes.push('.gitignore stays: it keeps .env and other secrets out of git; delete the kit\'s lines yourself if you want');
+      else plan.changed.push(rel);
       continue;
     }
     // A Codex/Antigravity skill generated from the project's own command or skill belongs to the project
@@ -648,6 +656,7 @@ async function remove({ project, yes }) {
   list('Kept: you changed these', plan.changed);
   list('Recorded but already gone', plan.missing);
   list('Skipped, unsafe path in .kit.json', plan.unsafe);
+  list('.gitignore is not touched (some kit lines keep secrets out of git); kit lines you can delete yourself', gitignoreLines);
 
   if (yes) {
     for (const [rel, text] of writes) fs.writeFileSync(path.join(projectDir, rel), text);

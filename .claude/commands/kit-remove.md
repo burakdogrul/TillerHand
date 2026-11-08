@@ -15,7 +15,8 @@ node "<temp folder>/vibe-kit/kit/kit.mjs" remove --project .
 
 3. Summarize the list in plain language:
    - **Will remove:** the kit's files you did not change (commands, agents, hooks, unchanged templates) and the kit's records (`.kit.json`, `.claude/state/`, `.kit-new` files).
-   - **Kit lines taken out:** `settings.json` and `.env.example` keep your own lines; `.gitignore` stays so `.env` stays out of git.
+   - **Kit lines taken out:** `settings.json` and `.env.example` keep your own lines.
+   - **`.gitignore` is not touched:** some of the kit's lines in it keep secrets out of git (`.env`, `.vercel/`, signing keys). The output lists the kit's lines; the user deletes the ones they do not want by hand.
    - **Kept: you changed these:** stay as they are. Name the important ones (`AGENTS.md`, `CLAUDE.md`, PRD, roadmap).
    - **Skipped, unsafe path:** say that `.kit.json` names a path outside the project or a link, and that nothing there is touched.
 4. Ask with AskUserQuestion: "Remove the kit from this project?" Options: **Remove** (the list above is deleted from the working tree, nothing is committed) / **Cancel**. On Cancel, go to step 7.

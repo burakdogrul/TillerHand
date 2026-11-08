@@ -1272,7 +1272,7 @@ Bekleyen karar: e-posta servisi</pre>
       <tr><td>Projenin dosyaları: AGENTS.md, CLAUDE.md, PRD, stack, tasarım, settings.json…</td><td>Dokunulmaz. CHANGELOG'daki "elle uyarla" maddeleri tek tek sorulur.</td></tr>
       <tr><td>Codex ve Antigravity skill kopyaları (<code>.agents/skills/</code>)</td><td>Her güncellemede komutlardan yeniden üretilir.</td></tr>
       <tr><td>Kitte yeni eklenmiş dosya</td><td>Projede yoksa eklenir. Daha önce bilerek sildiysen geri getirilmez.</td></tr>
-      <tr><td>Kiti kaldırma (<code>/kit-remove</code> ya da <code>kit.mjs remove --project .</code>)</td><td>Değiştirmediğin kit dosyası silinir, değiştirdiğin kalır. Kitin satırları <code>settings.json</code> ve <code>.env.example</code>'dan çıkar, seninkiler kalır. <code>.gitignore</code> kalır, <code>.env</code> git'in dışında kalsın diye. <code>--yes</code> olmadan yalnız listeler. Commit edilmemiş değişiklik varsa çalışmaz.</td></tr>
+      <tr><td>Kiti kaldırma (<code>/kit-remove</code> ya da <code>kit.mjs remove --project .</code>)</td><td>Değiştirmediğin kit dosyası silinir, değiştirdiğin kalır. Kitin satırları <code>settings.json</code> ve <code>.env.example</code>'dan çıkar, seninkiler kalır. <code>.gitignore</code>'a dokunulmaz, çünkü içindeki bazı kit satırları sırları git'in dışında tutar; çıktı kitin satırlarını listeler, istersen kendin silersin. <code>--yes</code> olmadan yalnız listeler. Commit edilmemiş değişiklik varsa çalışmaz.</td></tr>
     </tbody>
   </table></div>
   <div class="note"><b>Değerlendirme:</b> <code>node kit/eval/run.mjs</code> aynı görevi kitli ve kitsiz çalıştırır, gizli kabul ve saldırgan testleriyle puanlar. Son ölçüm yukarıda, <a href="#olcum">Ölçüm</a> bölümünde.</div>

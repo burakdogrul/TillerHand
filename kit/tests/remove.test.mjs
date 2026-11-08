@@ -175,7 +175,9 @@ const appendedLines = (appendFile, baseFile) => {
   return read(appendFile).split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !base.includes(l));
 };
 
-test('AC-71.4 .gitignore and .env.example: user lines stay, kit append blocks go', () => {
+const outLines = (s) => s.split(/\r?\n/);
+
+test('AC-71.4 .gitignore is never modified (kit block lines are listed for manual removal); .env.example: user lines stay, kit block goes', () => {
   const p = mkProject('append', ['ai']);
   const giBlock = appendedLines(path.join(REPO, 'kit/templates/web-saas/.gitignore.append'), path.join(REPO, '.gitignore'));
   const envBlock = appendedLines(path.join(REPO, 'kit/templates/addons/ai/.env.example.append'), path.join(REPO, '.env.example'));
@@ -184,30 +186,44 @@ test('AC-71.4 .gitignore and .env.example: user lines stay, kit append blocks go
   fs.appendFileSync(path.join(p, '.gitignore'), '\nmy-secret-dir/\n');
   fs.appendFileSync(path.join(p, '.env.example'), '\nMY_VAR=\n');
   commitAll(p);
+  const giBefore = read(path.join(p, '.gitignore'));
 
   const r = remove(p, '--yes');
   assert.equal(r.status, 0, r.stderr);
   const gi = read(path.join(p, '.gitignore'));
   const env = read(path.join(p, '.env.example'));
+  assert.equal(gi, giBefore, '.gitignore is byte-identical: it keeps secrets out of git');
   assert.match(gi, /^my-secret-dir\/$/m);
+  for (const l of giBlock) assert.ok(gi.split(/\r?\n/).some((x) => x.trim() === l), `.gitignore kit line still there: ${l}`);
+  const lines = outLines(r.stdout);
+  assert.ok(lines.some((l) => l.includes('.gitignore')), 'output has a line that mentions .gitignore');
+  for (const l of giBlock.filter((x) => !x.startsWith('#'))) assert.ok(lines.some((x) => x.trim() === l), `output lists the kit line for manual removal: ${l}`);
+  assert.ok(lines.some((x) => x === '  supabase/.temp/'), 'listed lines are indented by two spaces');
   assert.match(env, /^MY_VAR=$/m);
-  for (const l of giBlock) assert.ok(!gi.split(/\r?\n/).some((x) => x.trim() === l), `.gitignore kit line gone: ${l}`);
   for (const l of envBlock) assert.ok(!env.includes(l), `.env.example kit line gone: ${l}`);
 });
 
-test('AC-71.4 without user edits: .env.example is deleted, .gitignore stays with the common .env lines and without the kit append block', () => {
+test('AC-71.4 without user edits: .env.example is deleted, .gitignore stays byte-identical, dry run and --yes list the kit block lines', () => {
   const p = mkProject('append-clean', ['ai']);
   const giBlock = appendedLines(path.join(REPO, 'kit/templates/web-saas/.gitignore.append'), path.join(REPO, '.gitignore'));
-  const envLines = read(path.join(REPO, '.gitignore')).split(/\r?\n/).map((l) => l.trim()).filter((l) => /^\.env/.test(l));
-  assert.ok(envLines.includes('.env') && giBlock.length > 0, 'precondition: kit .env ignore lines and an append block exist');
+  assert.ok(giBlock.includes('supabase/.temp/'), 'precondition: an append block with supabase/.temp/ exists');
   commitAll(p);
+  const giBefore = read(path.join(p, '.gitignore'));
+  const snap = snapshot(p);
+
+  const dry = remove(p);
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.deepEqual(snapshot(p), snap, 'dry run changed nothing');
+  const dryLines = outLines(dry.stdout);
+  assert.ok(dryLines.some((l) => l.includes('.gitignore')), 'dry run mentions .gitignore');
+  assert.ok(dryLines.some((l) => l.trim() === 'supabase/.temp/'), 'dry run lists supabase/.temp/');
+
   const r = remove(p, '--yes');
   assert.equal(r.status, 0, r.stderr);
   assert.equal(exists(p, '.env.example'), false);
   assert.equal(exists(p, '.gitignore'), true, 'deleting .gitignore would expose .env to git');
-  const lines = read(path.join(p, '.gitignore')).split(/\r?\n/).map((l) => l.trim());
-  for (const l of envLines) assert.ok(lines.includes(l), `.gitignore keeps: ${l}`);
-  for (const l of giBlock) assert.ok(!lines.includes(l), `.gitignore kit line gone: ${l}`);
+  assert.equal(read(path.join(p, '.gitignore')), giBefore, '.gitignore is byte-identical');
+  assert.ok(outLines(r.stdout).some((l) => l.trim() === 'supabase/.temp/'), '--yes output lists supabase/.temp/');
 });
 
 // ---------- AC-71.5 ----------
@@ -437,7 +453,7 @@ test('AC-71.10 a user hook inside a kit matcher group survives, no command point
 
 // ---------- AC-71.11 ----------
 
-test('AC-71.11 adopt case: the project own .gitignore, settings.json and .env.example keep their content, kit lines go', () => {
+test('AC-71.11 adopt case: .gitignore stays byte-identical (own line and kit block), settings.json and .env.example lose only kit lines', () => {
   const p = path.join(tmp, 'adopt');
   write(path.join(p, '.gitignore'), 'my-own-ignore/\n');
   write(path.join(p, '.claude/settings.json'), JSON.stringify({ permissions: { allow: ['Bash(make x)'] } }, null, 2) + '\n');
@@ -457,8 +473,12 @@ test('AC-71.11 adopt case: the project own .gitignore, settings.json and .env.ex
   const kitRules = ['allow', 'ask', 'deny'].flatMap((k) => kit.permissions?.[k] ?? []);
   const envBlock = appendedLines(path.join(REPO, 'kit/templates/addons/ai/.env.example.append'), '');
 
+  const giBefore = read(path.join(p, '.gitignore'));
+  assert.match(giBefore, /^supabase\/\.temp\/$/m, 'precondition: the web-saas block was appended to the project .gitignore');
+
   const r = remove(p, '--yes');
   assert.equal(r.status, 0, r.stderr);
+  assert.equal(read(path.join(p, '.gitignore')), giBefore, '.gitignore is byte-identical');
   assert.match(read(path.join(p, '.gitignore')), /^my-own-ignore\/$/m);
   const s = JSON.parse(read(path.join(p, '.claude/settings.json')));
   assert.deepEqual(s.permissions.allow, ['Bash(make x)']);
