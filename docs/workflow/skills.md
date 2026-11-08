@@ -37,6 +37,7 @@
 | `ui-motion` | In-app animation and transitions |
 | `motion-video` | Promo video: landing page demo loop, or a 20-second launch clip of a finished project with generated music (renderAt(t) + Playwright + ffmpeg) |
 | `error-tracking` | Roadmap G-006 and `/release`: Sentry or GlitchTip for Next.js, FastAPI or Expo, personal data off, `error_tracking` flag, optional source maps |
+| `memory` | Project memory: "remember this", "what did we decide", person cards, the session receipt the Stop hook asks for; what never goes in |
 
 ## Tools (MCP)
 

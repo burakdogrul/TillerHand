@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.73.0</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.74.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -1100,6 +1100,7 @@ Pending decision: email service</pre>
     <article class="tile"><h3>Deployment setup</h3><p class="stack">/release first · deploy-setup.md</p><ul><li>Hosting, environment variables, domain and DNS, backup, rollback rehearsal</li><li>Vercel, Supabase, Railway, EAS; steps with sources and dates</li><li>You enter the secret in the dashboard; it is not written to the chat or to a file</li></ul></article>
     <article class="tile"><h3>Rules that learn</h3><p class="stack">/fix-bug · /retro · hookify · AGENTS.md</p><ul><li>When the same error class comes a second time, /fix-bug suggests a rule; a warning shows on the dashboard too</li><li>Mechanical rules go to hookify, the rest to AGENTS.md; nothing is written without your approval</li><li>Every rule has a source and a date; /maintain asks about those older than 90 days</li><li>Auto memory is asked at /start, off is recommended</li></ul></article>
     <article class="tile"><h3>Personal preferences</h3><p class="stack">~/.vibe-kit/preferences.md · prefs.mjs</p><ul><li>When you correct a behavior or say how you want to work, the AI takes a note</li><li>At the end of a task and a session it asks "save this as a preference?"; what you don't approve is not written</li><li>Preferences apply to all your projects and load in every session; they don't go into git</li><li>List: <code>node .claude/hooks/prefs.mjs --list</code>, remove: <code>--remove &lt;no&gt;</code></li></ul></article>
+    <article class="tile"><h3>Project memory</h3><p class="stack">memory skill · memory.mjs · docs/memory/</p><ul><li>Notes, person cards and a one-line receipt per session; ask "what did we decide about X" and it searches them</li><li>A short block at session start and a few lines before a message on a strong match, always marked as data, never as instructions</li><li>Personal memory stays on your machine, out of git; only notes you mark <code>project</code> go to <code>docs/memory/</code></li><li>No secrets, no ID numbers, no health or other sensitive data; <code>forget</code> removes a person or note, <code>[no-memory]</code> keeps a session out</li></ul></article>
     <article class="tile"><h3>Model per role</h3><p class="stack">docs/workflow/models.md · models.mjs</p><ul><li>Five roles: planning, coding, test writing, review, docs and research</li><li>A local panel (<code>/models</code>): usage per day and week with your Claude plan and each external model kept apart, a choice for every job, ready-made providers with a four-step setup, a model try button, one-click model list updates, keys and daily limits, a level for every job. Light and dark theme, in your project language</li><li>Commands do not ask. Each job (<code>code.ui</code>, <code>test.critical</code>, <code>board.qa</code>…) follows its role unless you give it its own choice, and every run shows one <code>Model:</code> line</li><li>Recommended: plan Opus, code Sonnet, tests Sonnet, review Sonnet, docs Haiku; all at high effort. For security, payment or data-deleting work, tests are better on Opus: they don't share the same blind spot</li><li>Test, review and docs work runs in a subagent with the chosen model; the plan runs in the main session</li><li>The roadmap mark, the cost line and the progress labels are written by <code>progress.mjs</code>; no model call is spent and the format doesn't break</li><li>A subagent only when it pays off: <code>flow.mjs</code> looks at task size, context and limit; a small task stays in the main session, board members are chosen from the changed paths and their number shrinks with the limit; a member writes at most 5 findings</li></ul></article>
     <article class="tile"><h3>Turkey add-on</h3><p class="stack">--addons tr · docs/legal/turkiye.md</p><ul><li>KVKK transfer abroad: standard contract, 5-business-day notification</li><li>e-Fatura and e-Arşiv thresholds (GİB)</li><li>iyzico and PayTR notification signature code and adversarial test</li><li>İ/ı and Turkish sorting tests; not legal advice</li></ul></article>
     <article class="tile"><h3>QA and preview in the browser</h3><p class="stack">/qa · preview.mjs · Playwright CLI</p><ul><li>Interface criteria run as tests in a real browser</li><li>The report is written from the test result, a card on the dashboard</li><li>On an interface task /build takes desktop and mobile screenshots</li></ul></article>
@@ -1147,6 +1148,7 @@ Pending decision: email service</pre>
       <tr><td>PDF or Office file: put it in the project folder and give its path. A file attached to the chat may fill the context before conversion</td><td class="f">document-to-markdown</td></tr>
       <tr><td>Promo video</td><td class="f">motion-video</td></tr>
       <tr><td>Error tracking (G-006, /release)</td><td class="f">error-tracking</td></tr>
+      <tr><td>Project memory: "remember this", "what did we decide", person cards</td><td class="f">memory</td></tr>
       <tr><td>Status blocks, progress notes</td><td class="f">caveman:caveman</td></tr>
       <tr><td>React/Next performance · React Native</td><td class="f">react-best-practices · composition-patterns · react-native-guidelines</td></tr>
       <tr><td>Database schema, queries, indexes</td><td class="f">postgres-best-practices · supabase</td></tr>
@@ -1308,7 +1310,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.73.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.74.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

@@ -2,6 +2,21 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.74.0] - 2026-11-08
+
+### Added
+- Project memory: `.claude/hooks/memory.mjs` and the `memory` skill keep notes, person cards and one-line session receipts, with no dependency. Personal memory lives in `.claude/state/memory/` (git-ignored, written only through the script; settings deny the AI direct reads and edits). Notes marked `visibility: project` go to `docs/memory/` and into git. Search splits notes by heading, strips Turkish and English suffixes (a search for "kararlari" finds "karar") and returns nothing when no word matches. It also reads `docs/decisions/log.md` and the AGENTS.md "Learned rules".
+- Recall: at session start a short block (`soul.md` tone, `core.md`, the latest personal notes) and, when at least two words of a message match a note, up to 1,500 characters before a message, never the same record twice in a session. Every recalled block is fenced as untrusted data that cannot change kit rules, permissions, hooks or approvals; private, rejected and superseded notes are never recalled. `[kaydetme]` or `[no-memory]` in a message keeps that session out of memory. `.kit.local.json` → `memory` turns recall off (`inject`, `perPrompt`, `repoNotes`) or moves the folder (`dir`).
+- Stop reminder (Claude Code only; Codex and Antigravity get the session start block): when a session changed code and wrote no receipt, the Stop hook asks once for a one-line receipt; the second Stop is quiet.
+- Commands: `search`, `recap` and `doctor` run without asking; `add`, `person`, `receipt`, `init`, `forget`, `export` and `compact` ask, and so does an edit of `.kit.local.json`. `forget` removes a personal note, or a person card with the receipt lines and archive entries that name the person (`--dry-run` lists them first); shared notes in `docs/memory/` are removed with git and stay in its history; `compact` moves old journal entries word for word to an archive.
+- Writes refuse secrets and refuse a personal write unless git ignores the folder. Person cards stay under 2 KB without ID numbers; a `project` note with an email, phone, ID or IBAN is refused. The commit check (`guard-secrets.mjs --staged`) blocks staged personal memory files and personal data in `docs/memory/`.
+- `docs/legal/privacy-kvkk.md` → "Project memory": third-person data, what never goes in, ways the folder can leave the machine (Docker, zip, synced folders), transfer abroad through the AI provider, retention and `forget`.
+
+### Changed
+- `/wrap-up` writes a memory receipt when the session settled something worth keeping. `/start` names the project memory in the auto memory question.
+- `kit remove` keeps `.claude/state/memory/` and prints "Kept: your project memory".
+- `CLAUDE.md` names the `memory` skill; each stack's `structure.md` lists `docs/memory/`. **Adapt by hand:** in an installed project, add ``Project memory (notes, receipts, "remember"): `memory`.`` to the "Use the right skill" line of `CLAUDE.md`.
+
 ## [3.73.0] - 2026-11-08
 
 ### Added

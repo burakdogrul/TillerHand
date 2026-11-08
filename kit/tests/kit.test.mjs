@@ -55,7 +55,7 @@ test('install: web-saas + ai', () => {
   assert.ok(fs.existsSync(path.join(p, '.claude/structure.json')) && fs.existsSync(path.join(p, 'docs/architecture/structure.md')), 'structure map and its guide');
   assert.ok(fs.existsSync(path.join(p, '.claude/findings/protocol.md')) && fs.existsSync(path.join(p, '.claude/commands/findings-business.md')), 'findings system');
   assert.ok(!fs.existsSync(path.join(p, '.github/workflows/kit-tests.yml')), 'the kit-only workflow is not carried into the project');
-  for (const sk of ['source-research', 'logo-design', 'ui-motion', 'motion-video', 'error-tracking']) assert.ok(fs.existsSync(path.join(p, `.claude/skills/${sk}/SKILL.md`)), `skill: ${sk}`);
+  for (const sk of ['source-research', 'logo-design', 'ui-motion', 'motion-video', 'error-tracking', 'memory']) assert.ok(fs.existsSync(path.join(p, `.claude/skills/${sk}/SKILL.md`)), `skill: ${sk}`);
   assert.match(read(path.join(p, 'README.md')), /\[PROJECT NAME\]/, 'README is the project template (English since 3.48.0)');
   const s = JSON.parse(read(path.join(p, '.claude/settings.json')));
   assert.ok(s.hooks.PostToolUse && s.hooks.PreToolUse && s.statusLine && s.enabledPlugins, 'settings merged');

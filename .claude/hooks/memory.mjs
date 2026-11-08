@@ -33,7 +33,7 @@ const isDir = (d) => { try { return fs.statSync(d).isDirectory(); } catch { retu
 const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 const pad = (n) => String(n).padStart(2, '0');
 const ymd = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f​-‏‪-‮⁦-⁩]/g;
+const CONTROL = /(?![\t\n])[\p{Cc}\p{Cf}\u2028\u2029\u{E0000}-\u{E007F}]/gu; // C0/C1 controls, tag characters, zero-width and bidi marks
 const oneLine = (s) => String(s ?? '').normalize('NFC').replace(CONTROL, ' ').replace(/\s+/g, ' ').trim();
 const cut = (s, n) => (s.length <= n ? s : n <= 1 ? '' : `${s.slice(0, n - 1)}…`);
 const posInt = (v, d) => (Number.isInteger(v) && v > 0 ? v : d);
@@ -225,23 +225,26 @@ function gitignoreCovers(root, rel) {
 // Longest first; written with i for the dotless i (stem folds it). Regex-free: endsWith on a short table, at most 3 rounds.
 const SUFFIXES = ['larindan', 'lerinden', 'larinda', 'lerinde', 'larini', 'lerini', 'larin', 'lerin', 'lari', 'leri', 'imiz', 'umuz', '\u00fcm\u00fcz',
   'iniz', 'unuz', '\u00fcn\u00fcz', 'ndan', 'nden', 'lar', 'ler', 'dan', 'den', 'tan', 'ten', 'nda', 'nde', 'nin', 'nun', 'n\u00fcn', 'yla', 'yle',
-  'in', 'un', '\u00fcn', 'i', 'u', '\u00fc', 'm'].sort((a, b) => b.length - a.length);
+  'in', 'un', '\u00fcn', 'i', 'u', '\u00fc'].sort((a, b) => b.length - a.length);
 const SOFTEN = { b: 'p', c: '\u00e7', d: 't', '\u011f': 'k' };
 
 export function stem(word) {
   const w0 = String(word ?? '');
   if (w0.length < 5) return w0;
   let w = w0.replace(/\u0131/g, 'i');
-  let stripped = false;
+  let soften = false;
   for (let round = 0; round < 3; round++) {
     let suf = SUFFIXES.find((s) => w.endsWith(s) && w.length - s.length >= 3);
-    if (!suf && w.endsWith('ies') && w.length > 5) { w = `${w.slice(0, -3)}y`; stripped = true; continue; }
-    if (!suf && w.endsWith('s') && !/(ss|us|is)$/.test(w) && w.length - 1 >= 3) suf = 's';
+    // the possessive m only after i/u/\u00fc (the dotless i is folded): "program" keeps its m
+    if (!suf && /[iu\u00fc]m$/.test(w) && w.length - 1 >= 3) suf = 'm';
+    // an English plural is never softened ("records" stays "record"); stripping goes on so "domains" meets "domain"
+    if (!suf && w.endsWith('ies') && w.length > 5) { w = `${w.slice(0, -3)}y`; soften = false; round--; continue; }
+    if (!suf && w.endsWith('s') && !/(ss|us|is)$/.test(w) && w.length - 1 >= 3) { w = w.slice(0, -1); soften = false; round--; continue; } // the plural does not use up a Turkish round
     if (!suf) break;
     w = w.slice(0, -suf.length);
-    stripped = true;
+    soften = /^[iu\u00fc]/.test(suf); // b/c/d soften only before a vowel suffix: "kitab-i", not "kod-lar"
   }
-  if (stripped && SOFTEN[w.at(-1)]) w = w.slice(0, -1) + SOFTEN[w.at(-1)];
+  if (soften && SOFTEN[w.at(-1)]) w = w.slice(0, -1) + SOFTEN[w.at(-1)];
   return w;
 }
 
@@ -372,7 +375,7 @@ export function addNote(root, { text, meta } = {}) {
 export function addReceipt(root, { session, summary, refs = [] } = {}) {
   if (typeof session !== 'string' || !session.trim() || session.length > 200) throw new Error('receipt: --session is needed');
   if (typeof summary !== 'string' || !summary.trim()) throw new Error('receipt: --summary is needed');
-  if (!Array.isArray(refs) || refs.length > 50 || refs.some((r) => typeof r !== 'string' || r.length > 300)) throw new Error('receipt: refs must be up to 50 file paths');
+  if (!Array.isArray(refs) || refs.length > 50 || refs.some((r) => typeof r !== 'string' || !r.trim() || r.length > 200 || /[\p{Cc}\p{Cf}\u2028\u2029\u{E0000}-\u{E007F}]/u.test(r) || r.split(/[\\/]/).includes('..'))) throw new Error('receipt: refs must be up to 50 file paths, each one line, up to 200 characters, without ..');
   refuseSecrets([session, summary, ...refs].join('\n'));
   const p = memoryPaths(root);
   ensureIgnored(root, p.personal);
@@ -417,7 +420,7 @@ export function addPerson(root, { name, aliases = [], facts = [], text = '' } = 
   const slug = slugify(name);
   const title = oneLine(name);
   const card = frontmatter({ format: FORMAT, id: slug, title, aliases: al, origin: 'user', created: ymd() })
-    + `# ${title}\n\n${text.trim() ? `${text.trim()}\n\n` : ''}## Beyan\n${fa.map((f) => `- ${f}\n`).join('')}\n## \u00c7\u0131kar\u0131m\n\n## Temaslar\n\n## Kaynaklar\n`;
+    + `# ${title}\n\n${text.trim() ? `${text.trim()}\n\n` : ''}## Beyan\n${fa.map((f) => `- ${f}\n`).join('')}\n## Temaslar\n\n## Kaynaklar\n`;
   if (Buffer.byteLength(card) > MAX_PERSON) throw new Error('person: the card is over 2 KB; keep only role, relation and contact');
   const p = memoryPaths(root);
   ensureIgnored(root, p.personal);
@@ -469,6 +472,8 @@ export function compact(root, { dryRun = false } = {}) {
   ensureIgnored(root, p.personal);
   // archive first, journal second: a crash in between leaves a copy twice, never a lost entry
   withLock(p.personal, () => {
+    const now = readSmall(file, 64 * 1024 * 1024); // an edit since the read above would be lost by the rewrite
+    if (!now || now === BIG || now.text !== r.text) throw new Error('compact: journal.md changed meanwhile; nothing moved, run it again');
     fs.mkdirSync(p.archive, { recursive: true });
     for (const [m, text] of byMonth) fs.appendFileSync(path.join(p.archive, `${m}.md`), text);
     writeAtomic(file, blocks.filter((_, i) => !move.has(i)).map((b) => b.text).join(''));
@@ -487,7 +492,7 @@ function mentions(text, terms) {
 }
 
 // Removes a note or person card and every receipt line and archive entry that names it. journal.md is the user's own text: kept.
-export function forget(root, nameOrId) {
+export function forget(root, nameOrId, { dryRun = false } = {}) {
   const none = { removed: [] };
   if (typeof nameOrId !== 'string' || nameOrId.includes('\0')) return none;
   const key = slugSafe(nameOrId);
@@ -500,17 +505,20 @@ export function forget(root, nameOrId) {
     const r = readSmall(f, 1024 * 1024);
     const meta = r && r !== BIG ? parseNote(r.text).meta : {};
     const names = [path.basename(f, '.md'), meta.id, meta.title, ...list(meta.aliases)].filter((x) => typeof x === 'string' && x.trim());
-    if (names.some((n) => slugSafe(n) === key)) matched.push({ f, names });
+    if (names.some((n) => slugSafe(n) === key)) matched.push({ f, names, person: !path.relative(p.people, f).startsWith('..') });
   }
   if (!matched.length) return none;
-  const terms = [...new Set([nameOrId, ...matched.flatMap((m) => m.names)].map((t) => lower(t.trim())).filter((t) => t.length >= 3))];
+  // receipts and archive are scrubbed by a person's names only: a note title such as "auth" would take unrelated lines
+  const people = matched.filter((m) => m.person);
+  const terms = !people.length ? [] : [...new Set([nameOrId, ...people.flatMap((m) => m.names)].map((t) => lower(t.trim())).filter((t) => t.length >= 4))]; // a short alias ("Can") would take every line with that word
   const removed = [];
-  withLock(p.personal, () => {
-    for (const { f } of matched) { fs.rmSync(f, { force: true }); removed.push(relOf(base, f)); }
+  const run = (fn) => (dryRun ? fn() : withLock(p.personal, fn));
+  run(() => {
+    for (const { f } of matched) { if (!dryRun) fs.rmSync(f, { force: true }); removed.push(relOf(base, f)); }
     const scrub = (f, parts, join) => {
       const keep = parts.filter((x) => !mentions(x, terms));
-      if (keep.length === parts.length) return;
-      if (keep.some((x) => x.trim())) writeAtomic(f, join(keep)); else fs.rmSync(f, { force: true });
+      if (!terms.length || keep.length === parts.length) return;
+      if (!dryRun) { if (keep.some((x) => x.trim())) writeAtomic(f, join(keep)); else fs.rmSync(f, { force: true }); }
       removed.push(`${relOf(base, f)} (${parts.length - keep.length} removed)`);
     };
     for (const f of walkFiles(p.receipts, { ext: '.jsonl' })) {
@@ -589,15 +597,15 @@ function collect(base, p, cfg, deadline = Infinity) {
   return { records: records.filter((r) => !r.id || !superseded.has(r.id)), notices };
 }
 
-function rank(base, p, cfg, query, deadline) {
+function rank(base, p, cfg, query, deadline, minHits = 1) {
   const q = queryTokens(query);
   if (!q.length) return [];
   const { records } = collect(base, p, cfg, deadline);
   const n = records.length;
   const idf = new Map(q.map((t) => [t, Math.log(1 + n / Math.max(1, records.filter((r) => r.tokens.has(t)).length))]));
   return records
-    .map((r) => ({ r, score: q.reduce((s, t) => s + (r.tokens.has(t) ? idf.get(t) : 0), 0) }))
-    .filter((x) => x.score > 0)
+    .map((r) => ({ r, hits: q.filter((t) => r.tokens.has(t)).length, score: q.reduce((s, t) => s + (r.tokens.has(t) ? idf.get(t) : 0), 0) }))
+    .filter((x) => x.score > 0 && x.hits >= Math.min(minHits, q.length))
     .sort((a, b) => b.score - a.score || b.r.mtime - a.r.mtime)
     .map((x) => x.r);
 }
@@ -685,9 +693,20 @@ function readState(p) {
 const sessionState = (p, session) => { const s = readState(p).sessions; return Object.hasOwn(s, session) ? s[session] : {}; };
 
 // Holds only record hashes and flags (no note text, no names); the 20 latest sessions are kept
+const ignoredOk = new Map(); // one git check per folder and process: the prompt hook has 300 ms
+function stateWritable(p) {
+  if (!ignoredOk.has(p.personal)) {
+    let ok = true;
+    try { ensureIgnored(path.dirname(path.dirname(p.project)), p.personal); } catch { ok = false; }
+    ignoredOk.set(p.personal, ok);
+  }
+  return ignoredOk.get(p.personal);
+}
+
 function updateState(p, session, change) {
   if (!session) return false;
   try {
+    if (!stateWritable(p)) return false;
     return withLock(p.personal, () => {
       const st = readState(p);
       const s = Object.hasOwn(st.sessions, session) && st.sessions[session] && typeof st.sessions[session] === 'object' ? st.sessions[session] : {};
@@ -752,7 +771,7 @@ export function promptContext(root, prompt, opts) {
     const cfg = readConfig(base);
     if (cfg.inject === false || cfg.perPrompt === false) return '';
     const seen = new Set(session ? sessionState(p, session).keys ?? [] : []);
-    const ranked = rank(base, p, cfg, prompt.slice(0, 500), deadline).filter((r) => !seen.has(r.key)).slice(0, 3);
+    const ranked = rank(base, p, cfg, prompt.slice(0, 500), deadline, 2).filter((r) => !seen.has(r.key)).slice(0, 3);
     if (!ranked.length) return '';
     const { text, included } = fenceWith(ranked, { budget: 1500 });
     if (included.length) updateState(p, session, (s) => { s.keys.push(...included.map((r) => r.key)); });
@@ -808,8 +827,9 @@ export function stagedLeaks(root, files) {
   const out = [];
   for (const f of Array.isArray(files) ? files : []) {
     const rel = String(f).replace(/\\/g, '/').replace(/^\.\//, '');
-    if ([...dirs].some((d) => rel === d || rel.startsWith(`${d}/`))) { out.push(`${rel}: a personal memory file is staged; it must stay out of git (git rm --cached "${rel}")`); continue; }
-    if (!rel.startsWith('docs/memory/')) continue;
+    const low = rel.toLowerCase();
+    if ([...dirs].some((d) => low === d.toLowerCase() || low.startsWith(`${d.toLowerCase()}/`))) { out.push(`${rel}: a personal memory file is staged; it must stay out of git (git rm --cached "${rel}")`); continue; }
+    if (!low.startsWith('docs/memory/')) continue;
     const text = stagedText(base, rel);
     const kinds = [...IDS, ...CONTACT].filter(([, re]) => re.test(text)).map(([k]) => k);
     if (kinds.length) out.push(`${rel}: ${kinds.join(', ')} in a shared memory note`);
@@ -834,6 +854,30 @@ export function recap(root, { days = 7 } = {}) {
   return out;
 }
 
+// Numbers only, for the dashboard (H5): no note text, title or name leaves this function. Never throws.
+export function memoryStats(root) {
+  const zero = { notes: 0, shared: 0, people: 0, receipts: 0, last: null };
+  try {
+    const base = path.resolve(root);
+    const p = memoryPaths(base);
+    let receipts = 0, last = null;
+    for (const f of walkFiles(p.receipts, { ext: '.jsonl' })) {
+      const r = readSmall(f, 16 * 1024 * 1024);
+      const n = r && r !== BIG ? r.text.split('\n').filter((l) => l.trim()).length : 0;
+      receipts += n;
+      const day = /^(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(path.basename(f))?.[1];
+      if (n && day && (!last || day > last)) last = day;
+    }
+    return {
+      notes: walkFiles(p.notes).length,
+      shared: safeInside(base, 'docs/memory') ? walkFiles(p.project).length : 0,
+      people: walkFiles(p.people).length,
+      receipts,
+      last,
+    };
+  } catch { return zero; }
+}
+
 export function doctor(root) {
   const base = path.resolve(root);
   const lines = [];
@@ -842,9 +886,8 @@ export function doctor(root) {
   const cfg = readConfig(base);
   lines.push(`Personal folder: ${relOf(base, p.personal)}${isDir(p.personal) ? '' : ' (not created yet)'}`);
   try { ensureIgnored(base, p.personal); lines.push('Git: the personal folder is ignored and untracked'); } catch (e) { lines.push(`Git: PROBLEM: ${e.message}`); }
-  const count = (d, ext) => walkFiles(d, { ext }).length;
-  const receiptLines = walkFiles(p.receipts, { ext: '.jsonl' }).reduce((s, f) => { const r = readSmall(f, 16 * 1024 * 1024); return s + (r && r !== BIG ? r.text.split('\n').filter(Boolean).length : 0); }, 0);
-  lines.push(`Notes: ${count(p.notes, '.md')} personal, ${safeInside(base, 'docs/memory') ? count(p.project, '.md') : 0} shared (docs/memory) · people: ${count(p.people, '.md')} · receipts: ${receiptLines}`);
+  const s = memoryStats(base);
+  lines.push(`Notes: ${s.notes} personal, ${s.shared} shared (docs/memory) · people: ${s.people} · receipts: ${s.receipts}`);
   const big = [...walkFiles(p.personal, { ext: '.md' }), ...walkFiles(p.project)].filter((f) => readSmall(f) === BIG).map((f) => relOf(base, f));
   if (big.length) lines.push(`Not loaded (over 64 KB): ${big.slice(0, 10).join(', ')}`);
   lines.push(`Settings (.kit.local.json memory): inject ${cfg.inject !== false ? 'on' : 'off'}, perPrompt ${cfg.perPrompt !== false ? 'on' : 'off'}, repoNotes ${cfg.repoNotes !== false ? 'on' : 'off'}`);
@@ -891,8 +934,9 @@ function main(argv) {
       return;
     }
     case 'forget': {
-      const { removed } = forget(root, rest.join(' '));
-      console.log(removed.length ? `Removed:\n  ${removed.join('\n  ')}\njournal.md is not changed: edit it yourself if it names them.` : 'Nothing matched; nothing was removed.');
+      const dryRun = rest.includes('--dry-run');
+      const { removed } = forget(root, rest.filter((x) => x !== '--dry-run').join(' '), { dryRun });
+      console.log(removed.length ? `${dryRun ? 'Would remove (nothing changed yet)' : 'Removed'}:\n  ${removed.join('\n  ')}\njournal.md is not changed: edit it yourself if it names them.` : 'Nothing matched; nothing was removed.');
       return;
     }
     case 'export': console.log(JSON.stringify(exportAll(root), null, 2)); return;

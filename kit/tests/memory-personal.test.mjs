@@ -137,7 +137,7 @@ test('AC-74.115 ATTACK: initPersonal fails closed without git and without a .git
 
 // ---------- addPerson ----------
 
-test('AC-74.116 addPerson writes people/<slug>.md with format: 1, title, aliases and the four sections', async (t) => {
+test('AC-74.116 addPerson writes people/<slug>.md with format: 1, title, aliases and the three sections', async (t) => {
   const { root } = mkRoot(t);
   const m = await api('addPerson');
   const res = await m.addPerson(root, ZEYNEP);
@@ -151,7 +151,7 @@ test('AC-74.116 addPerson writes people/<slug>.md with format: 1, title, aliases
   assert.match(fm[1], /^format: 1\s*$/m);
   assert.match(fm[1], /^title:\s*"?Zeynep Kara"?\s*$/m);
   assert.match(fm[1], /^aliases:[\s\S]*Ayşe hoca/m);
-  for (const h of ['Beyan', 'Çıkarım', 'Temaslar', 'Kaynaklar']) assert.match(text, new RegExp(`^#{1,6}\\s*${h}\\s*$`, 'm'), `section ${h}`);
+  for (const h of ['Beyan', 'Temaslar', 'Kaynaklar']) assert.match(text, new RegExp(`^#{1,6}\\s*${h}\\s*$`, 'm'), `section ${h}`);
   const beyan = text.split(/^#{1,6}\s*Beyan\s*$/m)[1].split(/^#{1,6}\s/m)[0];
   assert.match(beyan, /rol: danışman/);
   assert.match(beyan, /ilişki: komşu/);

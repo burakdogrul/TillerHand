@@ -45,6 +45,7 @@ Dockerfile  pyproject.toml  uv.lock
 │   ├── operations/        # release-checklist, maintenance, accounts, feature-flags
 │   ├── workflow/          # progress, decision-protocol, skills, board, usage-limits, cost-log
 │   ├── findings/          # /findings-* reports (type/date.md, latest.md)
+│   ├── memory/            # shared project memory notes (visibility: project); personal memory is in .claude/state/memory/, git-ignored
 │   └── archive/           # documents that are no longer valid but kept
 ├── sandbox/               # trials, exploration code, temporary scripts (not committed to git)
 ├── AGENTS.md  CLAUDE.md  README.md  CHANGELOG.md

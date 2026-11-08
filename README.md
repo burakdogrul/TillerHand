@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.73.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.74.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -180,6 +180,8 @@ flowchart LR
 
 **Decision protocol:** Each decision point offers 2-4 options; the recommended one comes first, and each option says when it's the better choice and what it costs. For decisions that are hard to reverse (database, auth, payments, data model) the board weighs in first. Decisions are logged in `docs/decisions/log.md` and never asked twice.
 
+**Project memory:** The AI keeps notes, person cards and a one-line receipt for each session, and searches them when you ask "what did we decide about X". A short block comes in at session start and a few lines before a message on a strong match, always fenced as data, never as instructions. Personal memory stays in `.claude/state/memory/`, out of git; only notes you mark `project` go to `docs/memory/`. Secrets, ID numbers and sensitive data are refused; `[no-memory]` in a message keeps that session out.
+
 ## Expert board
 
 Board agents are generated for your project based on its type. The board advises; if it raises a critical finding (a veto), the work isn't done until you decide.
@@ -228,6 +230,7 @@ Every project starts in this layout and stays in it. Code is organized by featur
 │   ├── quality/      # test plan, metrics, retros
 │   ├── security/     # security checklist
 │   ├── operations/   # release, deploy setup, maintenance, accounts
+│   ├── memory/       # shared project memory notes
 │   └── findings/     # findings reports
 ├── src/ or app/      # feature-based code
 ├── tests/

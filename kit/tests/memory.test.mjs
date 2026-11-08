@@ -656,7 +656,8 @@ T('[sessionContext] a record delivered at session start is not delivered again b
 T('[promptContext] a matching note is recalled inside the fence, within 1500 characters', async (t) => {
   const root = mkProject(t);
   seedDb(root);
-  const out = await mem().promptContext(root, 'Hangi kararları almıştık?', { session: 's1' });
+  // a recall needs min(2, query words) matching words: "postgres" and "kararları" both appear in the note
+  const out = await mem().promptContext(root, 'Hangi Postgres kararları almıştık?', { session: 's1' });
   assert.ok(out.includes('Postgres'));
   assert.match(out, /\[Kit memory: 1 notes? recalled\]/);
   assert.match(out, /untrusted/i);
@@ -968,7 +969,8 @@ T('[wiring] session-start.mjs and reminder.mjs import from ./memory.mjs; guard-s
   assert.match(repoText('.claude/hooks/session-start.mjs'), IMPORTS_MEMORY);
   assert.match(repoText('.claude/hooks/reminder.mjs'), IMPORTS_MEMORY);
   const guard = repoText('.claude/hooks/guard-secrets.mjs');
-  assert.match(guard, IMPORTS_MEMORY);
+  // lazy: guard-secrets must keep blocking secrets when memory.mjs cannot be loaded (see memory-fixes.test.mjs)
+  assert.match(guard, /import\(\s*['"]\.\/memory\.mjs['"]\s*\)/);
   assert.match(guard, /stagedLeaks\(/);
 });
 

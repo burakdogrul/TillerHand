@@ -14,6 +14,7 @@ import { readModels, modelsFile, modelsNote, roleLabel, customJobs } from './mod
 import { readStore, spentOn } from './providers.mjs';
 import { readLang, t, tText, locale } from './lang.mjs';
 import { MESSAGES } from './messages.mjs';
+import { memoryStats } from './memory.mjs';
 import { acceptanceStatus, accounts, flags, unitEconomics, feedback, learning, qaSummary, metrics, githubStatus, readContext, findingReports, FINDING_KINDS, producedAssets, costSummary, councilMinutes, spendAlarms, envWarnings, repeatedBugClasses } from './dashboard-data.mjs';
 
 const args = process.argv.slice(2);
@@ -205,6 +206,7 @@ const avgCost = Object.entries(cost.reduce((m, r) => {
 // ---------- helpers ----------
 const e = (s = '') => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const md = (s) => e(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+const mem = memoryStats(root); // numbers only (H5)
 const percent = (b, t) => (t ? Math.round((b / t) * 100) : 0);
 const progressBar = (b, t, cls = '') => `<div class="bar ${cls}" role="img" aria-label="${b}/${t}"><span style="width:${percent(b, t)}%"></span></div>`;
 const empty = (text, action = '') => `<p class="empty">${md(text)}${action ? ` <code>${e(action)}</code>` : ''}</p>`;
@@ -501,6 +503,7 @@ footer{color:var(--muted);font-size:.78rem;padding-top:8px}
   ${kpi(L('dashboard.kpiDecisions'), d.decisions.length, L('dashboard.usersAuto', { user: d.decisions.length - autoDecisions, auto: autoDecisions }))}
   ${kpi(L('dashboard.board'), d.board.meetings.length, rejectCount ? L('dashboard.rejects', { count: rejectCount }) : L('dashboard.membersCount', { count: d.board.members.length }))}
   ${kpi(L('dashboard.kpiCommits7'), git ? last7 : '-', git ? L('dashboard.filesWaiting', { count: git.changed.length }) : L('dashboard.noGit'))}
+  ${mem.notes + mem.shared + mem.people + mem.receipts ? kpi(L('dashboard.kpiMemory'), mem.notes + mem.shared, L('dashboard.memorySub', { people: mem.people, receipts: mem.receipts, last: mem.last ?? '-' })) : ''}
   ${kpi(L('dashboard.kpiLimit'), limit?.five_hour ? `%${Math.round(limit.five_hour.percent)}` : '-', limit?.seven_day ? L('dashboard.weeklyLevel', { percent: Math.round(limit.seven_day.percent), level: limitLevel }) : L('dashboard.unknown'), limit?.five_hour ? progressBar(Math.round(limit.five_hour.percent), 100, limitSeverity(limit.five_hour.percent, 'five_hour')) : '')}
 </div>
 

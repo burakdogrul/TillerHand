@@ -40,6 +40,8 @@
   "dashboard.featuresCount": "{count} özellik",
   "dashboard.kpiDecisions": "Kararlar",
   "dashboard.usersAuto": "{user} kullanıcı · {auto} otomatik",
+  "dashboard.kpiMemory": "Hafıza",
+  "dashboard.memorySub": "{people} kişi · {receipts} kayıt · son {last}",
   "dashboard.board": "Kurul",
   "dashboard.rejects": "{count} ret",
   "dashboard.kpiRejects": "Ret",

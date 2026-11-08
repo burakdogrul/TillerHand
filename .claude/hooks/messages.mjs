@@ -51,6 +51,8 @@ export const MESSAGES = {
   'dashboard.filesWaiting': { en: '{count} files waiting' },
   'dashboard.noGit': { en: 'no git' },
   'dashboard.kpiLimit': { en: 'Limit' },
+  'dashboard.kpiMemory': { en: 'Memory' },
+  'dashboard.memorySub': { en: '{people} people · {receipts} receipts · last {last}' },
   'dashboard.weeklyLevel': { en: 'weekly {percent}% · {level}' },
   'dashboard.unknown': { en: 'unknown' },
   'dashboard.tabsLabel': { en: 'Sections' },

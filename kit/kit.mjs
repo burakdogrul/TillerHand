@@ -638,7 +638,8 @@ async function remove({ project, yes }) {
   // .claude/state/memory is the user's project memory (notes, people, receipts): never removed, its path is printed
   const stateEntries = stateOk ? fs.readdirSync(stateDir).filter((e) => e !== 'memory') : [];
   const stateCount = stateEntries.length;
-  const memoryKept = stateOk && fs.existsSync(path.join(stateDir, 'memory'));
+  // only real memory counts: a folder with just the session state (delivered.json, the lock) is not worth a "Kept" line
+  const memoryKept = stateOk && ['notes', 'people', 'receipts', 'archive', 'core.md', 'soul.md', 'journal.md'].some((x) => fs.existsSync(path.join(stateDir, 'memory', x)));
   const { approvalPath } = await import('../.claude/hooks/gate.mjs');
   const approval = approvalPath(projectDir);
   // Checked before anything goes, so the dry run and the real run say the same
@@ -653,7 +654,7 @@ async function remove({ project, yes }) {
   const list = (title, items) => items.length && console.log(`${title} (${items.length}):\n  ${items.map(show).join('\n  ')}`);
   console.log(`Kit removal${yes ? '' : ' (dry run, nothing changed)'}: ${projectDir}`);
   list(yes ? 'Removed' : 'Will remove', [...plan.remove,
-    ...(stateOk ? [`.claude/state/ (${stateCount} entries, git-ignored: git does not bring them back)`] : []),
+    ...(stateOk && stateCount ? [`.claude/state/ (${stateCount} entries, git-ignored: git does not bring them back)`] : []),
     ...(fs.existsSync(approval) ? ['commit gate approval record (in your user folder)'] : [])]);
   list(yes ? 'Kit lines taken out' : 'Kit lines will be taken out', plan.clean);
   list('Kept: you changed these', plan.changed);

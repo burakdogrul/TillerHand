@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.73.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.74.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -180,6 +180,8 @@ flowchart LR
 
 **Karar protokolü:** Her karar noktasında 2-4 seçenek gelir; önerilen ilk sıradadır ve her seçeneğin ne zaman daha iyi olduğu ve bedeli yazar. Geri dönüşü zor kararlarda (veritabanı, auth, ödeme, veri modeli) önce kurulun görüşü alınır. Kararlar `docs/decisions/log.md`'ye yazılır ve bir daha sorulmaz.
 
+**Proje hafızası:** AI notları, kişi kartlarını ve her oturum için tek satırlık bir kaydı tutar; "X hakkında ne karar vermiştik" diye sorunca bunlarda arar. Oturum başında kısa bir bölüm, güçlü eşleşmede mesajdan önce birkaç satır gelir; hep veri olarak çitlenir, talimat olarak değil. Kişisel hafıza `.claude/state/memory/` altında kalır, git'e girmez; yalnız `project` işaretli notlar `docs/memory/`'ye gider. Sır, kimlik numarası ve hassas veri reddedilir; mesajda `[kaydetme]` o oturumu dışarıda tutar.
+
 ## Uzman kurulu
 
 Ürün tipine göre projene özel kurul ajanları oluşturulur. Kurul danışmandır; kritik bulgu (REJECT) varsa iş bitmez, sana sorulur.
@@ -228,6 +230,7 @@ Her proje bu düzende başlar ve bu düzende kalır. Kod özellik bazlıdır: bi
 │   ├── quality/      # test planı, metrikler, retro
 │   ├── security/     # güvenlik kontrol listesi
 │   ├── operations/   # canlıya alma, dağıtım, bakım, hesaplar
+│   ├── memory/       # paylaşılan proje hafızası notları
 │   └── findings/     # bulgu raporları
 ├── src/ veya app/    # özellik bazlı kod
 ├── tests/

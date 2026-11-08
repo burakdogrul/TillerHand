@@ -10,7 +10,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readInput, decide, isMain } from './shared.mjs';
 import { boardAfter } from './freeze-guard.mjs';
-import { stagedLeaks } from './memory.mjs';
 
 // (?<![A-Za-z0-9]) instead of \b: a key right after _ (OPENAI_sk-…, prod_sk_live_…) is found too.
 // Lookaheads and runs are bounded: an unbounded one is quadratic on a long run (-sb_secret_ × 50 000) and a hook
@@ -71,7 +70,8 @@ function hookMode() {
   }
 }
 
-function stagedMode() {
+// memory.mjs loads only here: a broken memory module must not take the Write/Edit secret check down with it
+async function stagedMode() {
   const diff = execSync('git diff --cached -U0 --no-color', { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   let file = '', hunk = false;
   const findings = [];
@@ -86,6 +86,8 @@ function stagedMode() {
     }
   }
   const git = (args) => execSync(`git ${args}`, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  let stagedLeaks;
+  try { ({ stagedLeaks } = await import('./memory.mjs')); } catch (e) { console.error(`Commit stopped: the project memory check could not load (${e.message}).`); process.exit(1); }
   const leaks = stagedLeaks(git('rev-parse --show-toplevel').trim(), git('diff --cached --name-only --diff-filter=ACMR -z').split('\0').filter(Boolean));
   if (findings.length) {
     console.error('Commit stopped, secret found:\n  ' + findings.join('\n  '));
