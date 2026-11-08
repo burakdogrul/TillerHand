@@ -635,7 +635,10 @@ async function remove({ project, yes }) {
   })(projectDir, '');
   const stateDir = path.join(projectDir, '.claude', 'state');
   const stateOk = fs.existsSync(stateDir) && !fs.lstatSync(path.join(projectDir, '.claude')).isSymbolicLink() && fs.lstatSync(stateDir).isDirectory();
-  const stateCount = stateOk ? fs.readdirSync(stateDir, { recursive: true }).length : 0;
+  // .claude/state/memory is the user's project memory (notes, people, receipts): never removed, its path is printed
+  const stateEntries = stateOk ? fs.readdirSync(stateDir).filter((e) => e !== 'memory') : [];
+  const stateCount = stateEntries.length;
+  const memoryKept = stateOk && fs.existsSync(path.join(stateDir, 'memory'));
   const { approvalPath } = await import('../.claude/hooks/gate.mjs');
   const approval = approvalPath(projectDir);
   // Checked before anything goes, so the dry run and the real run say the same
@@ -654,6 +657,7 @@ async function remove({ project, yes }) {
     ...(fs.existsSync(approval) ? ['commit gate approval record (in your user folder)'] : [])]);
   list(yes ? 'Kit lines taken out' : 'Kit lines will be taken out', plan.clean);
   list('Kept: you changed these', plan.changed);
+  list('Kept: your project memory (delete it yourself if you want it gone)', memoryKept ? [path.join('.claude', 'state', 'memory')] : []);
   list('Recorded but already gone', plan.missing);
   list('Skipped, unsafe path in .kit.json', plan.unsafe);
   list('.gitignore is not touched (some kit lines keep secrets out of git); kit lines you can delete yourself', gitignoreLines);
@@ -661,7 +665,7 @@ async function remove({ project, yes }) {
   if (yes) {
     for (const [rel, text] of writes) fs.writeFileSync(path.join(projectDir, rel), text);
     for (const rel of plan.remove) fs.rmSync(path.join(projectDir, rel), { force: true });
-    if (stateOk) fs.rmSync(stateDir, { recursive: true, force: true });
+    for (const e of stateEntries) fs.rmSync(path.join(stateDir, e), { recursive: true, force: true });
     fs.rmSync(approval, { force: true });
     // Folders the removal emptied go, up to the root; a folder with anything left in it stays
     for (const rel of [...plan.remove, '.claude/state/x']) {

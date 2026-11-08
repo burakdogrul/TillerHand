@@ -2,13 +2,15 @@
 // Blocks writing secrets (API keys, private keys).
 // Two uses:
 //   1) PreToolUse hook (Claude Code, Codex, Antigravity): reads the tool input from stdin, denies if it holds a secret.
-//   2) Git pre-commit: `node .claude/hooks/guard-secrets.mjs --staged` scans the staged changes.
+//   2) Git pre-commit: `node .claude/hooks/guard-secrets.mjs --staged` scans the staged changes, and stops a commit that would
+//      put personal project memory (.claude/state/memory) or personal data in a shared memory note (docs/memory) into git.
 // High-confidence patterns only; no generic "password=" search, to avoid false alarms.
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readInput, decide, isMain } from './shared.mjs';
 import { boardAfter } from './freeze-guard.mjs';
+import { stagedLeaks } from './memory.mjs';
 
 // (?<![A-Za-z0-9]) instead of \b: a key right after _ (OPENAI_sk-…, prod_sk_live_…) is found too.
 // Lookaheads and runs are bounded: an unbounded one is quadratic on a long run (-sb_secret_ × 50 000) and a hook
@@ -83,11 +85,17 @@ function stagedMode() {
       if (f.length) findings.push(`${file}: ${f.join(', ')}`);
     }
   }
+  const git = (args) => execSync(`git ${args}`, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const leaks = stagedLeaks(git('rev-parse --show-toplevel').trim(), git('diff --cached --name-only --diff-filter=ACMR -z').split('\0').filter(Boolean));
   if (findings.length) {
     console.error('Commit stopped, secret found:\n  ' + findings.join('\n  '));
     console.error('Remove the secret and move it to an environment variable. Revoke and replace any key that may have leaked.');
-    process.exit(1);
   }
+  if (leaks.length) {
+    console.error('Commit stopped, project memory would go into git:\n  ' + leaks.join('\n  '));
+    console.error('Personal memory stays in .claude/state/memory (git-ignored). A shared note in docs/memory holds no e-mail, phone, id number or IBAN.');
+  }
+  if (findings.length || leaks.length) process.exit(1);
 }
 
 // Run only when called directly, not when tests import this file

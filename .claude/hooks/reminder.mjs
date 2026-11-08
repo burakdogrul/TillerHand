@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { findRoot } from './shared.mjs';
 import { readLang } from './lang.mjs';
+import { promptContext } from './memory.mjs';
 
 export const INTERVAL = 12; // every 12 messages
 const root = findRoot();
@@ -13,7 +14,12 @@ const counterFile = path.join(root, '.claude', 'state', 'reminder.json');
 
 let data = { session: '', count: 0 };
 let session = '';
-try { session = JSON.parse(fs.readFileSync(0, 'utf8')).session_id ?? ''; } catch { /* no input */ }
+let prompt = '';
+try {
+  const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+  session = input.session_id ?? '';
+  if (typeof input.prompt === 'string') prompt = input.prompt;
+} catch { /* no input */ }
 try { data = JSON.parse(fs.readFileSync(counterFile, 'utf8')); } catch { /* first run */ }
 if (data.session !== session) data = { session, count: 0 };
 data.count++;
@@ -32,5 +38,9 @@ try {
   if (percent >= 70) notes.push(`[Kit] Context is ${percent}% full: answer quality may drop. Finish the current step, then suggest /wrap-up and /clear to the user.`);
   else if (percent >= 50 && data.count % 4 === 0) notes.push(`[Kit] Context is ${percent}%: consider suggesting /wrap-up + /clear at a suitable point.`);
 } catch { /* no context info */ }
+
+// Project memory: notes that match this message, fenced as untrusted data; nothing when nothing matches
+const memory = promptContext(root, prompt, { session: String(session) });
+if (memory) notes.push(memory);
 
 if (notes.length) console.log(notes.join('\n'));

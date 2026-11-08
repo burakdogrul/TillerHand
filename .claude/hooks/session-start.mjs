@@ -13,6 +13,7 @@ import { readLang, t } from './lang.mjs';
 import { isValue } from './labels.mjs';
 import { resolveJob, modelsFile } from './models.mjs';
 import { parseExternal } from './providers.mjs';
+import { sessionContext } from './memory.mjs';
 
 const notes = [];
 let next = '';
@@ -87,5 +88,9 @@ try {
 
 // The user's preferences from every project (~/.vibe-kit/preferences.md), short; a broken file must not stop the session
 try { const p = prefsNote(); if (p) notes.push(p.length > 1500 ? `${p.slice(0, 1500)}…` : p); } catch { /* no preferences */ }
+
+// Project memory: soul, core and the latest notes, fenced as untrusted data within a character budget
+const memory = sessionContext(root, { session: String(input.session_id ?? '') });
+if (memory) notes.push(memory);
 
 if (notes.length) console.log(sessionNote(tool, '[Kit] ' + notes.join('\n[Kit] '), next && `[Kit] ${next}`));
