@@ -22,11 +22,11 @@ Ask with AskUserQuestion which provider to use, Sentry or GlitchTip; recommendat
 |---|---|---|
 | **Sentry, EU region** (Recommended) | Least setup work; the SDKs and the MCP in `.mcp.json` are built for it | Free Developer plan: 1 user, 5k errors per month, 30-day lookback; Team $29 per month with 50k errors ([pricing](https://sentry.io/pricing/), 2026-11-08) |
 | **GlitchTip, hosted in the EU** | Cheaper above the free tier; open source; works with the Sentry SDKs (no sessions) | Free 1,000 events per month; Small $15 per month for 100k events; US and EU (Germany) hosting ([pricing](https://glitchtip.com/pricing), 2026-11-08) |
-| **GlitchTip, self-hosted** | Data stays on your own server, which can be in Türkiye | You run and update it: PostgreSQL 14+, 512 MB RAM recommended ([install](https://glitchtip.com/documentation/install), 2026-11-08) |
+| **GlitchTip, self-hosted** | Data stays on your own server, which can be in Turkey | You run and update it: PostgreSQL 14+, 512 MB RAM recommended ([install](https://glitchtip.com/documentation/install), 2026-11-08) |
 
 - Sentry's data region is chosen when the organization is created and cannot be changed later ([data storage location](https://docs.sentry.io/organization/data-storage-location/), 2026-11-08): pick the EU (Frankfurt) region.
 - Self-hosted GlitchTip needs `SECRET_KEY`, `GLITCHTIP_DOMAIN`, `EMAIL_URL` and `DATABASE_URL` on the server; they are server secrets, set by the user on the host, never in the repository.
-- Record the result: the decision in `docs/decisions/log.md`, the account in `docs/operations/accounts.md`, the cost in `docs/product/unit-economics.md`, the processor row in `docs/legal/privacy-kvkk.md`. A server in the EU is still a transfer abroad from Türkiye; with the `tr` add-on, follow the order in `docs/legal/turkiye.md`. Self-hosted on a server in Türkiye: no transfer row.
+- Record the result: the decision in `docs/decisions/log.md`, the account in `docs/operations/accounts.md`, the cost in `docs/product/unit-economics.md`, the processor row in `docs/legal/privacy-kvkk.md`. A server in the EU is still a transfer abroad from Turkey; with the `tr` add-on, follow the order in `docs/legal/turkiye.md`. Self-hosted on a server in Turkey: no transfer row.
 
 ## 2. On and off: DSN and flag
 
