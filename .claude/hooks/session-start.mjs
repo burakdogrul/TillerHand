@@ -91,6 +91,7 @@ try { const p = prefsNote(); if (p) notes.push(p.length > 1500 ? `${p.slice(0, 1
 
 // Project memory: soul, core and the latest notes, fenced as untrusted data within a character budget
 const memory = sessionContext(root, { session: String(input.session_id ?? '') });
-if (memory) notes.push(memory);
 
-if (notes.length) console.log(sessionNote(tool, '[Kit] ' + notes.join('\n[Kit] '), next && `[Kit] ${next}`));
+// the memory block carries its own [Kit memory: …] line, so it gets no [Kit] prefix
+const text = [notes.length ? '[Kit] ' + notes.join('\n[Kit] ') : '', memory].filter(Boolean).join('\n');
+if (text) console.log(sessionNote(tool, text, next && `[Kit] ${next}`));

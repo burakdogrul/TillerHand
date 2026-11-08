@@ -734,3 +734,89 @@ T('[forget2] dryRun for the person with the "Can" alias lists the card and no re
   assert.equal(lines.length, 1, `only the receipt file with Zeynep and Ayşe lines: ${JSON.stringify(dry.removed)}`);
   assert.match(lines[0], /\(2 removed\)/);
 });
+
+// ================= 14. starter files and hook prefix (AC-74.280 and up) =================
+n = 279;
+
+const SOURCE_SOUL_CORE = /source=\S*(?:soul|core)\.md\b/;
+
+T('[sessionContext] untouched starter soul.md and core.md after initPersonal are not recalled; the result is an empty string', async (t) => {
+  const root = mkProject(t);
+  const { initPersonal, sessionContext } = await mem('initPersonal', 'sessionContext');
+  initPersonal(root);
+  assert.ok(exists(root, `${P}/soul.md`) && exists(root, `${P}/core.md`), 'precondition: starters exist');
+  const out = sessionContext(root, { session: 's1' });
+  assert.doesNotMatch(out, SOURCE_SOUL_CORE);
+  assert.equal(out, '');
+});
+
+T('[sessionContext] untouched starters stay out while a real note is still recalled', async (t) => {
+  const root = mkProject(t);
+  const { initPersonal, sessionContext } = await mem('initPersonal', 'sessionContext');
+  initPersonal(root);
+  noteFile(root, `${P}/notes/a.md`, { title: 'Alpha' }, '## Alpha\nNOTE-MARK the plugin loads late.');
+  const out = sessionContext(root, { session: 's1' });
+  assert.match(out, /NOTE-MARK/);
+  assert.doesNotMatch(out, SOURCE_SOUL_CORE);
+});
+
+T('[sessionContext] a soul.md edited after initPersonal (text appended) is recalled', async (t) => {
+  const root = mkProject(t);
+  const { initPersonal, sessionContext } = await mem('initPersonal', 'sessionContext');
+  initPersonal(root);
+  fs.appendFileSync(path.join(root, P, 'soul.md'), 'Kisa cevap ver.\n');
+  const out = sessionContext(root, { session: 's1' });
+  assert.match(out, /source=\S*soul\.md\b/);
+  assert.match(out, /Kisa cevap ver\./);
+  assert.doesNotMatch(out, /source=\S*core\.md\b/, 'core.md is still untouched');
+});
+
+T('[sessionContext] a core.md edited after initPersonal (text appended) is recalled', async (t) => {
+  const root = mkProject(t);
+  const { initPersonal, sessionContext } = await mem('initPersonal', 'sessionContext');
+  initPersonal(root);
+  fs.appendFileSync(path.join(root, P, 'core.md'), 'Proje Turkce yazilir.\n');
+  const out = sessionContext(root, { session: 's1' });
+  assert.match(out, /source=\S*core\.md\b/);
+  assert.match(out, /Proje Turkce yazilir\./);
+  assert.doesNotMatch(out, /source=\S*soul\.md\b/, 'soul.md is still untouched');
+});
+
+T('[sessionContext] a one-character change in a starter makes it count as edited', async (t) => {
+  const root = mkProject(t);
+  const { initPersonal, sessionContext } = await mem('initPersonal', 'sessionContext');
+  initPersonal(root);
+  const f = path.join(root, P, 'soul.md');
+  fs.writeFileSync(f, fs.readFileSync(f, 'utf8').replace('Tone and', 'Tone And'));
+  assert.match(sessionContext(root, { session: 's1' }), /source=\S*soul\.md\b/);
+});
+
+T('[sessionContext] starters differing only by trailing whitespace or a CRLF/extra newline still count as untouched', async (t) => {
+  const root = mkProject(t);
+  const { initPersonal, sessionContext } = await mem('initPersonal', 'sessionContext');
+  initPersonal(root);
+  const soul = path.join(root, P, 'soul.md'), core = path.join(root, P, 'core.md');
+  fs.writeFileSync(soul, fs.readFileSync(soul, 'utf8').trimEnd());
+  fs.writeFileSync(core, `${fs.readFileSync(core, 'utf8')}\n\n  \n`);
+  const out = sessionContext(root, { session: 's1' });
+  assert.doesNotMatch(out, SOURCE_SOUL_CORE);
+  assert.equal(out, '');
+});
+
+const sessionStart = (root) => spawnSync(process.execPath, [path.join(HOOKS, 'session-start.mjs')], {
+  input: JSON.stringify({ session_id: 's2', source: 'startup' }), encoding: 'utf8', timeout: 20000,
+  env: { ...process.env, CLAUDE_PROJECT_DIR: root, HOME: root, USERPROFILE: root }, // not the developer's preferences
+});
+
+T('[session-start hook] the memory block starts at a line beginning: "[Kit memory:" present, "[Kit] [Kit memory:" absent, other kit lines keep "[Kit] "', async (t) => {
+  const root = mkProject(t);
+  noteFile(root, `${P}/notes/a.md`, { title: 'Alpha' }, '## Alpha\nHOOK-MARK the plugin loads late.');
+  const r = sessionStart(root);
+  assert.equal(r.status, 0, r.stderr);
+  const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+  assert.match(ctx, /HOOK-MARK/);
+  assert.ok(ctx.includes('[Kit memory:'), ctx);
+  assert.ok(!ctx.includes('[Kit] [Kit memory:'), ctx);
+  assert.ok(ctx.split('\n').some((l) => l.startsWith('[Kit memory:')), 'a line begins with the memory count line');
+  assert.ok(ctx.split('\n').some((l) => l.startsWith('[Kit] ')), 'other kit lines still start with "[Kit] "');
+});

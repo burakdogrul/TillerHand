@@ -740,7 +740,8 @@ export function sessionContext(root, opts) {
       const f = path.join(p.personal, name);
       const r = readSmall(f);
       if (r === BIG) notices.push(`${name} not loaded (over 64 KB)`);
-      else if (r?.text.trim()) records.push({ source: relOf(base, f), heading, text: r.text.trim(), origin: 'user', max });
+      // an untouched starter says nothing about the user: not worth its characters
+      else if (r?.text.trim() && r.text.trim() !== STARTERS[name].trim()) records.push({ source: relOf(base, f), heading, text: r.text.trim(), origin: 'user', max });
     }
     const { records: all, notices: more } = collect(base, p, cfg);
     notices.push(...more.filter((n) => !/^docs\/decisions|^AGENTS/.test(n)));

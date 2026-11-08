@@ -2,6 +2,12 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.74.1] - 2026-11-09
+
+### Fixed
+- Project memory at session start leaves out `soul.md` and `core.md` while they still hold only the starter text, so empty files no longer take up the character budget.
+- The session start memory block begins on its own line as `[Kit memory: N notes recalled]`, without a second `[Kit] ` in front of it.
+
 ## [3.74.0] - 2026-11-08
 
 ### Added
