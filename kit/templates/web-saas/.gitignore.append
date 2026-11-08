@@ -12,3 +12,4 @@ test-results/
 tests/e2e/qa/
 test-results-qa/
 supabase/.temp/
+.env.sentry-build-plugin

@@ -38,7 +38,7 @@
 | Test | pytest + httpx | |
 | Packaging | Docker | |
 | Hosting | Railway / Fly.io / Render | |
-| Error tracking | Sentry | |
+| Error tracking | Sentry or GlitchTip (`sentry-sdk`) | Set up with the `error-tracking` skill (G-006) |
 | Cron monitoring | Healthchecks.io (dead man's switch) | Alarm if a job does not run |
 
 ## Commands

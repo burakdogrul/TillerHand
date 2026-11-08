@@ -49,7 +49,7 @@
 - [ ] Prod database is a separate project/instance; automatic backup is on
 - [ ] **Restore from backup was tried once** (an untried backup is not a backup)
 - [ ] Email sending: domain verified (SPF, DKIM, DMARC), does not land in spam
-- [ ] Error tracking (Sentry etc.) is active in prod, the alarm email/notification arrives
+- [ ] Error tracking (Sentry or GlitchTip, set up with the `error-tracking` skill) is active in prod, the alarm email/notification arrives
 - [ ] Uptime monitoring (UptimeRobot, Better Stack etc.) is set up
 - [ ] Log retention period is defined
 

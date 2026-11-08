@@ -18,7 +18,7 @@
 | 7 | Hosting | **Vercel** (recommended for Next.js: zero config, preview environments; the free Hobby plan is for personal, non-commercial use only, a product that takes payments or shows ads needs Pro (source: https://vercel.com/docs/limits/fair-use-guidelines, 2026-10-26)) · Cloudflare (cheap and fast; free Workers are limited to 100,000 requests per day and 10 ms CPU per request (source: https://developers.cloudflare.com/workers/platform/limits/, 2026-10-26)) · Netlify · Your own server + Coolify (fixed cost, maintenance is yours) |
 | 8 | Email | **Resend** (recommended: developer friendly, React email templates; free plan gives 3,000 emails per month, 100 per day (source: https://resend.com/pricing, 2026-10-26)) · Postmark (very high deliverability) · Amazon SES (cheapest, hard to set up) |
 | 9 | Analytics | **Plausible** (cookieless, KVKK friendly; no free plan, starts at 9 dollars per month, 30-day trial (source: https://plausible.io/docs/billing, 2026-10-26)) · PostHog (product analytics, funnels, feature flags) · Umami (self-host, free) · None |
-| 10 | Error tracking | **Sentry** (recommended) · Highlight / Better Stack |
+| 10 | Error tracking | **Sentry** (recommended) · GlitchTip (open source, works with the Sentry SDK, hosted or on your own server) · Highlight / Better Stack |
 | 11 | Language support | **One language: the users' language** (recommended for the MVP) · Two or more languages (next-intl; setting it up from the start is cheaper than adding it later) |
 | 12 | Test | **Vitest + Playwright** (recommended) · Playwright only (little logic, mostly UI) |
 
@@ -37,7 +37,7 @@
 | Payment | Stripe / iyzico / Paddle | Stripe may be restricted for a Turkish company, check |
 | Email | Resend | Domain verification is required |
 | Hosting | Vercel | |
-| Error tracking | Sentry | |
+| Error tracking | Sentry or GlitchTip (`@sentry/nextjs`) | Set up with the `error-tracking` skill (G-006) |
 | Analytics | Plausible / PostHog | Watch cookie consent |
 | Test | Vitest (unit), Playwright (e2e) | |
 
@@ -159,7 +159,7 @@ npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-resul
 - [ ] Core Web Vitals: LCP < 2.5s, CLS < 0.1, INP < 200ms
 - [ ] `not-found.tsx` and `error.tsx` customized
 - [ ] Domain + `www` redirect + SSL (Vercel automatic)
-- [ ] Sentry source maps are uploaded
+- [ ] Source maps are uploaded, if chosen in the `error-tracking` skill
 
 ## Maintenance (extra)
 

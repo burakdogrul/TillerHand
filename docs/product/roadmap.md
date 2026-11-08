@@ -31,7 +31,7 @@
 > The product opens to other people here, when the MVP is done. Until then only you try it, on your own computer.
 
 - [ ] G-005: **First deploy** — done when: the prod URL opens
-- [ ] G-006: Error tracking (Sentry etc.) connected — done when: a test error shows up in the dashboard
+- [ ] G-006: Error tracking (Sentry or GlitchTip) connected with the `error-tracking` skill — done when: a test error shows up in the dashboard
 - [ ] G-030: `docs/security/checklist.md` checklist complete
 - [ ] G-031: `docs/legal/privacy-kvkk.md` texts published
 - [ ] G-032: `docs/operations/release-checklist.md` checklist complete (`/release`)

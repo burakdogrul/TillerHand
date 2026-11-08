@@ -819,7 +819,7 @@
   "template.04": "G-003: Lint, biçimlendirme, tip denetimi, test kurulumu — bitti sayılır: 4 komut da çalıştığında",
   "template.05": "G-004: Pre-commit ve CI (`docs/architecture/stack.md` → \"Automatic checks\") — bitti sayılır: gizli bilgi içeren deneme commit'i reddedildiğinde; GitHub'da CI yeşil olduğunda",
   "template.06": "G-005: **İlk yayın** — bitti sayılır: canlı adres açıldığında",
-  "template.07": "G-006: Hata izleme (Sentry vb.) bağlandı — bitti sayılır: deneme hatası izleme panelinde göründüğünde",
+  "template.07": "G-006: Hata izleme (Sentry ya da GlitchTip) `error-tracking` skill'iyle bağlandı — bitti sayılır: deneme hatası izleme panelinde göründüğünde",
   "template.08": "G-007: Tasarım sistemi koda taşındı (arayüz varsa): `DESIGN.md` değerleri tema/CSS değişkenlerinde — bitti sayılır: örnek bir ekran yalnız bu değerleri kullandığında",
   "template.09": "Aşama 1 — Çekirdek (MVP'nin olmazsa olmazları)",
   "template.10": "G-010: [İlk dilim: ana akış, önce `/try` sonra `/lock`] — bitti sayılır: [PRD'deki ölçütler]",

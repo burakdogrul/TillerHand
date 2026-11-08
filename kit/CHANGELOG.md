@@ -2,6 +2,15 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.72.0] - 2026-11-08
+
+### Added
+- `error-tracking` skill: sets up Sentry or GlitchTip (hosted or on your own server) for Next.js, FastAPI or Expo. It asks which provider with each one's cost and limits (with source and date), and records the account, cost and KVKK processor row. It keeps the user's name, email and IP, cookies, request headers and bodies, and URL query strings out of every event; `event.user` keeps only `id`. The DSN comes from an environment variable (empty means off), and the `error_tracking` flag drops events in `beforeSend` while it is off, so turning it off needs no redeploy. Source map upload is asked after the setup works; its token stays a CI secret.
+
+### Changed
+- Roadmap G-006, the release checklist, `CLAUDE.md` and the error tracking rows of each stack's `stack.md` point to the `error-tracking` skill and name GlitchTip. The source map item of the web-saas and mobile checklists applies only if you chose it in the skill. **Adapt by hand:** in an installed project, change G-006 in `docs/product/roadmap.md` if you want the new wording.
+- web-saas `.gitignore`: add `.env.sentry-build-plugin` (the Sentry wizard writes a token copy there). **Adapt by hand:** add the line to an installed web-saas project's `.gitignore`.
+
 ## [3.71.0] - 2026-11-07
 
 ### Added

@@ -36,6 +36,7 @@
 | `logo-design` | Logo, icon, favicon, brand pack (SVG, needs no API) |
 | `ui-motion` | In-app animation and transitions |
 | `motion-video` | Promo video: landing page demo loop, or a 20-second launch clip of a finished project with generated music (renderAt(t) + Playwright + ffmpeg) |
+| `error-tracking` | Roadmap G-006 and `/release`: Sentry or GlitchTip for Next.js, FastAPI or Expo, personal data off, `error_tracking` flag, optional source maps |
 
 ## Tools (MCP)
 

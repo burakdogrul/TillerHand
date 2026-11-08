@@ -33,7 +33,7 @@
 | Secure storage | `expo-secure-store` | Tokens go here, not in AsyncStorage |
 | In-app purchases | RevenueCat | Digital content = store payment is required |
 | Build / release | EAS Build, EAS Submit, EAS Update | |
-| Error tracking | Sentry (`@sentry/react-native`) | |
+| Error tracking | Sentry or GlitchTip (`@sentry/react-native`) | Set up with the `error-tracking` skill (G-006) |
 | Test | Jest + React Native Testing Library, Maestro (e2e) | |
 
 ## Commands
@@ -155,7 +155,7 @@ maestro test .maestro/ --format junit --output test-results/junit-e2e.xml
 - [ ] At least a few days of testing in the TestFlight / Google Play internal test track
 - [ ] Android: the current Google Play **target API level** requirement is met
 - [ ] EAS Update: `runtimeVersion` policy is set; only JS changes go out through OTA
-- [ ] Sentry symbol/source maps are uploaded
+- [ ] Symbol/source maps are uploaded, if chosen in the `error-tracking` skill
 - [ ] Performance: cold start < 3 s (on a mid-range Android), list scrolling does not stutter
 
 ## Maintenance (extra)

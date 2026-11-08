@@ -9,7 +9,7 @@
 | Data | Why it is collected (purpose) | Legal basis | Where it is stored (country) | How long | Who it is shared with |
 |---|---|---|---|---|---|
 | Email | Account, notification | Performance of a contract | [Service, region] | Until the account is deleted | [Email service] |
-| IP, device information | Security, error tracking | Legitimate interest | | | [Sentry etc.] |
+| IP, device information | Security, error tracking | Legitimate interest | | | [Sentry / GlitchTip] |
 | [...] | | | | | |
 
 Rule: **No purpose, no collection.** Do not ask for data you do not use.

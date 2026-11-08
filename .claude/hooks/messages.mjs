@@ -947,7 +947,7 @@ export const MESSAGES = {
   "template.04": { en: "G-003: Lint, format, type check, test setup — done when: all 4 commands work" },
   "template.05": { en: "G-004: Pre-commit + CI (`docs/architecture/stack.md` → \"Automatic checks\") — done when: a trial commit with a secret is rejected; CI is green on GitHub" },
   "template.06": { en: "G-005: **First deploy** — done when: the prod URL opens" },
-  "template.07": { en: "G-006: Error tracking (Sentry etc.) connected — done when: a test error shows up in the dashboard" },
+  "template.07": { en: "G-006: Error tracking (Sentry or GlitchTip) connected with the `error-tracking` skill — done when: a test error shows up in the dashboard" },
   "template.08": { en: "G-007: Design system moved into code (if there is an interface): `DESIGN.md` tokens in theme/CSS variables — done when: a sample screen uses only tokens" },
   "template.09": { en: "Phase 1 — Core (the must-haves of the MVP)" },
   "template.10": { en: "G-010: [First slice: the main flow, `/try` then `/lock`] — done when: [criteria in the PRD]" },
