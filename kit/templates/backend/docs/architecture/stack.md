@@ -81,6 +81,18 @@ tests/
 Dockerfile  pyproject.toml  uv.lock
 ```
 
+## Seed data
+
+Sample data for the **local database only**, so the API has something to return after a reset. No real personal data: invented names, `example.com` addresses, made-up phone numbers.
+
+- **Python:** `scripts/seed.py`, written with the app's own SQLAlchemy models and session, run after `uv run alembic upgrade head`.
+- **Node** (Drizzle or Prisma): `scripts/seed.ts`, written with the project's own client. Prisma's seed command can run the same file; check the current Prisma docs for where it is set.
+- **Small and hand-written by default:** a few records per table, fixed ids, the same result on every run. Running it twice must not fail or double the data (look the record up first, or an upsert).
+- **More volume:** Faker with a fixed seed, so every run gives the same data. Faker is a new package: look up its current version, then add it through the package gate.
+- The script reads `DATABASE_URL` and stops if its host is not `localhost`, `127.0.0.1` or the local compose service. The destructive command shield refuses a seed command whose text targets a remote database (a connection URL or `psql -h`). It cannot see an address in `.env` or one set by an earlier command, so the script's own check is what counts.
+- Write the run command into the `seed:` line of `AGENTS.md` → Commands (e.g. `uv run python scripts/seed.py`).
+- `/lock` updates the seed when the trial's fake data moves to the real schema.
+
 ## Coding rules
 
 - Keep the router thin; business logic goes in `services/`.

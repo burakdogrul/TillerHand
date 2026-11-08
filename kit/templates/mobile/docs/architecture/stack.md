@@ -83,6 +83,19 @@ tests/                          # shared test helpers
 app.config.ts  eas.json
 ```
 
+## Seed data
+
+Sample data for the **local database only**, so the app has something to show after a reset. No real personal data: invented names, `example.com` addresses, made-up phone numbers.
+
+- **Supabase:** `supabase/seed.sql`. Supabase loads it after the migrations on the first `npx -y supabase@2.120.0 start` and on every `db reset` (setting: `[db.seed]` in `supabase/config.toml`; source: https://supabase.com/docs/guides/local-development/seeding-your-database, 2026-11-08). `db reset` deletes the local data, so the destructive command shield blocks it: the user runs it.
+- The app shows the seed only when it runs against the local Supabase: the user puts the URL and key from `supabase status` (`npx -y supabase@2.120.0 status`) into the local env file (the AI does not write `.env` files). On a phone or the Android emulator, `127.0.0.1` is the device itself: use the computer's network address.
+- **Firebase or your own API:** seed the local emulator or the backend project's own seed (the `backend` template); the same rules apply.
+- **Small and hand-written by default:** a few records per table, fixed ids, the same result on every run. Running it twice must not fail or double the data (`insert … on conflict do nothing`).
+- **More volume:** Faker with a fixed seed, so every run gives the same data. Faker is a new package: look up its current version, then add it through the package gate.
+- Seed only the local database, never a hosted project. The destructive command shield refuses a seed command whose text targets a remote database (a connection URL, `psql -h`, Supabase's `--linked` or `--include-seed`), a shared dev project included. It cannot see an address in `.env` or one set by an earlier command, so the script's own check is what counts.
+- Write the run command into the `seed:` line of `AGENTS.md` → Commands: a `psql` call on the local address that `npx -y supabase@2.120.0 status` prints, with `-f supabase/seed.sql` (it needs a local `psql` client: list it in README → Requirements).
+- `/lock` updates the seed when the trial's fake data moves to the real schema.
+
 ## Coding rules
 
 - **Everything in the app bundle is public.** Do not put a secret, service key or admin key into the app; secret operations run on the server.

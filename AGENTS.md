@@ -74,6 +74,7 @@ test:        [ ]
 lint:        [ ]
 type check: [ ]
 build:       [ ]
+seed:        [ ]
 ```
 
 ## Definition of "done"

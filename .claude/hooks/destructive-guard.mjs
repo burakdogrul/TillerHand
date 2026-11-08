@@ -38,7 +38,20 @@ const DESTRUCTIVE = [
 ];
 
 // Database addresses other than localhost count as prod (or a shared environment)
-const PROD_DB = /\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis|rediss):\/\/[^\s'"]*@(?!localhost|127\.0\.0\.1|0\.0\.0\.0|db[:/]|postgres[:/]|host\.docker\.internal)[^\s'"/:]+/i;
+// (user info is optional, the host comes after the last @, a driver suffix such as postgresql+psycopg counts, a comma host list
+// counts host by host, and a local name must be the whole host: localhost.evil.com is remote)
+const LOCAL_NAME = /^(localhost|127\.0\.0\.1|::1|\[::1\]|0\.0\.0\.0|host\.docker\.internal|db|postgres)$/i;
+// A unix socket path is local; a shell variable or a following flag is not a host the shield can judge
+const isRemoteHost = (h) => h !== '' && !/^[/$-]/.test(h) && !LOCAL_NAME.test(h) && !LOCAL_NAME.test(h.replace(/:\d+$/, ''));
+const anyRemote = (list) => list.split(',').some(isRemoteHost);
+// Two readings of what follows ://, remote if either is: up to the first / ? # (an @ in the query must not move the host),
+// and after the last @ (a password with # or / in it must not hide the host)
+const hostsOf = (rest) => {
+  const auth = rest.split(/[/?#]/)[0];
+  return [auth.slice(auth.lastIndexOf('@') + 1), rest.slice(rest.lastIndexOf('@') + 1).split(/[/?#]/)[0]];
+};
+const DB_URL = /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb|redis|rediss)(?:\+[\w-]+)?:\/\/([^\s'"`;&|)\\]*)/gi;
+const PROD_DB = { test: (k) => [...k.matchAll(DB_URL)].some((m) => hostsOf(m[1]).some(anyRemote)) };
 const PROD_MARK = /\b(--prod(uction)?\b|NODE_ENV=production|ENV=production|DATABASE_URL_PROD|PROD_DATABASE_URL)\b/;
 
 // Pulling prod secrets onto the agent's machine: the local environment and the AI connect to the dev project only (dev/prod split)
@@ -460,6 +473,24 @@ export function evaluate(command, ctx = {}) {
   const c = command.replace(PLAIN_COMMIT, '$1""');
   return strictest(testWrite, inline, evaluateOne(c), evaluateOne(unquote(c)), evaluateOne(blankQuoted(c)), obfuscationOne(command), hookScriptIssue(command));
 }
+// Seed data goes to the local database only: a remote target in the command text is refused, a shared dev project included.
+// shortcut: an address in .env or set by an earlier command is invisible here; the seed script's own host check covers it.
+// A host given apart from a URL: PGHOST= / DB_HOST= and the like, host= (conninfo or URI query), any --host, a client's -h (attached too)
+const HOST_VALUE = /(?:(?<![\w-])[A-Z_]*HOST(?:ADDR)?=|\s--host(?:=|\s+))['"]?([^\s'"&;|]+)/gi;
+// Every -h of a database client's command counts, not only the first
+const CLIENT_SEGMENT = /\b(?:psql|mysql|mariadb|mongosh|pg_restore)\b[^;&|]*/gi;
+const SHORT_HOST = /\s-h\s*['"]?([^\s'"&;|]+)/g;
+// An http(s) project address in a *_URL= assignment (SUPABASE_URL=https://…): the seed reaches that project through its client
+const ENV_URL = /(?<![\w-])[A-Z_]*URL=['"]?https?:\/\/([^\s'"`;&|)\\]*)/gi;
+const REMOTE_HOST_SPEC = { test: (k) => [...k.matchAll(HOST_VALUE), ...(k.match(CLIENT_SEGMENT) ?? []).flatMap((s) => [...s.matchAll(SHORT_HOST)])].some((m) => anyRemote(m[1]))
+  || [...k.matchAll(ENV_URL)].some((m) => hostsOf(m[1]).some(anyRemote)) };
+// --include-seed and seed --linked always target the hosted project; a --local beside them (or in a comment) does not count.
+// Checked per command segment with plain tests: one regex spanning both words backtracks badly on a long command.
+const SUPABASE_REMOTE_SEED = { test: (k) => k.split(/[;&|]/).some((s) => /\bsupabase\b/i.test(s)
+  && (/--include-seed\b/i.test(s) || (/\bseed\b/i.test(s) && /--linked\b/i.test(s)))) };
+// "seed" inside a longer name counts too (seed_db.py, run-seeder.js, npm run seeds)
+const remoteSeed = (k, prodDb) => SUPABASE_REMOTE_SEED.test(k)
+  || (/seed/i.test(k) && (prodDb || /(?<![\w-])--prod(uction)?\b/.test(k) || REMOTE_HOST_SPEC.test(k)));
 function evaluateOne(command) {
   const k = command.replace(/\s+/g, ' ');
   const prodDb = PROD_DB.test(k) || PROD_MARK.test(k);
@@ -471,6 +502,8 @@ function evaluateOne(command) {
       return { decision: 'deny', reason: `${reason}${prodDb ? ' — a PROD/remote database is targeted' : ''}. The AI cannot run this command. If needed, the user takes a backup first and runs it themselves (in Claude Code with "! command" or in their own terminal).` };
     }
   }
+  // Before the asked list: supabase db push --include-seed would only be asked as a migration
+  if (remoteSeed(k, prodDb)) return { decision: 'deny', reason: tr('guard.destructive.remoteSeed') };
   for (const [re, key] of NEEDS_APPROVAL) {
     if (re.test(k)) {
       return prodDb

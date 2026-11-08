@@ -49,7 +49,7 @@ export function readCommands(md, names = CHECKS) {
 }
 
 // Keys under "## Commands" the kit does not know (a label written in another language): named, not silently ignored
-const KNOWN_KEYS = ['dev', 'preview', 'test', 'lint', 'type check', 'build'];
+const KNOWN_KEYS = ['dev', 'preview', 'test', 'lint', 'type check', 'build', 'seed'];
 export function unknownCommandKeys(md) {
   const section = md.match(/^## Commands[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
   const fenced = [...section.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)].map((m) => m[1]).join('\n'); // prose around the block is not a key
@@ -202,7 +202,7 @@ export function fakeCheck(root) {
 }
 
 export const approvalNeeded = (list, unknown = []) => `command approval needed\nAGENTS.md → Commands is new or changed; these commands do not run unapproved:\n${commandList(list)}\n` +
-  (unknown.length ? `Keys the gate does not read (they never run; use dev, preview, test, lint, type check, build): ${unknown.join(', ')}\n` : '') +
+  (unknown.length ? `Keys the gate does not read (they never run; use dev, preview, test, lint, type check, build, seed): ${unknown.join(', ')}\n` : '') +
   'Show the commands to the user and ask. If they approve: node .claude/hooks/gate.mjs --approve, then run the command again.';
 
 // Spec drift (F-23): a "must not change" behavior whose test is missing or red stops the gate; no result is only a note
@@ -246,7 +246,7 @@ export function runGate(root) {
     : empty ? 'Result: EMPTY, no check ran. Fill in AGENTS.md → Commands; the commit gate stays closed (if the user wants, commit-gate.mjs --skip).'
     : 'Result: GREEN.';
   const unknown = unknownCommandKeys(readAgents(root));
-  const warning = unknown.length ? [`⚠ AGENTS.md → Commands has keys the gate does not read: ${unknown.join(', ')}. Use dev, preview, test, lint, type check, build.`] : [];
+  const warning = unknown.length ? [`⚠ AGENTS.md → Commands has keys the gate does not read: ${unknown.join(', ')}. Use dev, preview, test, lint, type check, build, seed.`] : [];
   return { passed, text: [`## Gate · ${files.length} files changed`, ...checks.map(line), ...warning, result].join('\n') };
 }
 

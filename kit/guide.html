@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.72.0</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.73.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -958,7 +958,7 @@ npx tillerhand init
     <thead><tr><th>Layer</th><th>What it does</th></tr></thead>
     <tbody>
       <tr><td>Secret block</td><td>Blocks API keys (Anthropic, OpenAI, Stripe, AWS, GitHub, Supabase…) written to code or docs; also scans before a commit</td></tr>
-      <tr><td>Destructive command shield</td><td><code>DROP</code>, <code>TRUNCATE</code>, unconditional <code>DELETE</code>, <code>db reset</code> pulling prod environment variables onto the machine and deleting cloud data (S3 buckets, databases, resource groups, apps, repositories) are blocked; prod deploy, rollback, store submission, migrations, cluster and hosting deletes, package and release publishing and deleting the main branch are asked</td></tr>
+      <tr><td>Destructive command shield</td><td><code>DROP</code>, <code>TRUNCATE</code>, unconditional <code>DELETE</code>, <code>db reset</code>, pulling prod environment variables onto the machine, deleting cloud data (S3 buckets, databases, resource groups, apps, repositories) and seeding a remote database are blocked; prod deploy, rollback, store submission, migrations, cluster and hosting deletes, package and release publishing and deleting the main branch are asked</td></tr>
       <tr><td>Package gate</td><td>A package that is installed, or downloaded and run with <code>npx</code> or <code>uvx</code>, is checked against the registry: if it doesn't exist it is blocked; if it is very new, rarely downloaded or looks like a popular package, it is asked. A git or URL source, another registry or index, and cargo, go, gem and composer installs are asked, since they cannot be checked. Dependencies the AI adds to <code>package.json</code>, <code>requirements.txt</code> or <code>pyproject.toml</code> go through the same check</td></tr>
       <tr><td>Structure guard</td><td>A new file outside the map is asked; clutter such as <code>*.bak</code>, <code>*-old.*</code>, copies and <code>temp/</code> is blocked; made from the shell (<code>cp a.ts a.bak</code>) it is asked</td></tr>
       <tr><td>Config approval</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> and workflow files don't change without your approval</td></tr>
@@ -1108,6 +1108,7 @@ Pending decision: email service</pre>
     <article class="tile"><h3>Promo video</h3><p class="stack">motion-video · renderAt(t) · Playwright · ffmpeg</p><ul><li>You choose the length, style, rhythm and music, then approve a script first</li><li>A demo loop with a real cursor, or a launch clip with generated music and share text</li><li>Closed-form springs (verified with a test)</li><li>Changing only the music or one scene does not render the whole video again</li></ul></article>
     <article class="tile"><h3>Interface motion and 3D</h3><p class="stack">ui-motion · Motion · Reanimated · GSAP · three.js</p><ul><li>Duration tokens, springs, transform/opacity only</li><li>The reduced-motion preference is mandatory</li><li>3D: lazy loading, a static fallback, mobile GPU</li></ul></article>
     <article class="tile"><h3>Error tracking</h3><p class="stack">error-tracking · Sentry · GlitchTip</p><ul><li>Next.js, FastAPI or Expo, asked with the cost of each provider</li><li>No name, email, IP, cookies or request bodies leave the app</li><li>The error_tracking flag turns it off without a redeploy</li><li>Source maps only if you say yes; the token stays a CI secret</li></ul></article>
+    <article class="tile"><h3>Seed data</h3><p class="stack">seed: · supabase/seed.sql · scripts/seed.py</p><ul><li>Each stack uses its own way: Supabase seed.sql, or a Python or Node script</li><li>Small hand-written records by default; Faker with a fixed seed when you need volume</li><li>Local database only: a seed aimed at a remote address is refused</li><li>/lock updates it when the trial moves to the real schema</li></ul></article>
     <article class="tile"><h3>Review and discovery</h3><p class="stack">rea · Understand-Anything · awesome-design-md</p><ul><li>How a competitor's feature works: only in software you are authorized to examine, with approval first</li><li>A code map for people: suggested by /adopt, /handoff, /release first</li></ul></article>
     <article class="tile"><h3>Security</h3><p class="stack">security-guidance · claude-security · Trail of Bits</p><ul><li>While writing: a risky-pattern warning</li><li>At the commit: a review by a separate model</li><li>/findings-security: a multi-agent, verified scan</li></ul></article>
     <article class="tile"><h3>Code intelligence and stack rules</h3><p class="stack">typescript-lsp · pyright-lsp · Vercel · Expo · Supabase</p><ul><li>Type errors after every edit; invented APIs are caught before compiling</li><li>React, React Native, Postgres and Core Web Vitals rules turn on by type</li></ul></article>
@@ -1307,7 +1308,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.72.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.73.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

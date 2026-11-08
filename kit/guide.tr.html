@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.72.0</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.73.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -958,7 +958,7 @@ npx tillerhand init
     <thead><tr><th>Katman</th><th>Ne yapar</th></tr></thead>
     <tbody>
       <tr><td>Sır engeli</td><td>Koda veya dokümana yazılan API anahtarını (Anthropic, OpenAI, Stripe, AWS, GitHub, Supabase…) engeller; commit öncesi de tarar</td></tr>
-      <tr><td>Yıkıcı komut kalkanı</td><td><code>DROP</code>, <code>TRUNCATE</code>, koşulsuz <code>DELETE</code>, <code>db reset</code> , prod ortam değişkenlerini makineye çekmek ve bulut verisini silmek (S3 kovası, veritabanı, kaynak grubu, uygulama, depo) engellenir; prod deploy, geri alma, mağazaya gönderim, migration, küme ve barındırma silmeleri, paket ve sürüm yayımlama ve ana dalı silmek sorulur</td></tr>
+      <tr><td>Yıkıcı komut kalkanı</td><td><code>DROP</code>, <code>TRUNCATE</code>, koşulsuz <code>DELETE</code>, <code>db reset</code>, prod ortam değişkenlerini makineye çekmek, bulut verisini silmek (S3 kovası, veritabanı, kaynak grubu, uygulama, depo) ve uzak veritabanına seed yüklemek engellenir; prod deploy, geri alma, mağazaya gönderim, migration, küme ve barındırma silmeleri, paket ve sürüm yayımlama ve ana dalı silmek sorulur</td></tr>
       <tr><td>Paket kapısı</td><td>Kurulan ya da <code>npx</code>, <code>uvx</code> ile indirilip çalıştırılan paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur. Git ya da URL kaynağı, başka bir kayıt ya da dizin ve cargo, go, gem, composer kurulumları denetlenemediği için sorulur. AI'nın <code>package.json</code>, <code>requirements.txt</code> ya da <code>pyproject.toml</code>'a eklediği bağımlılıklar da aynı denetimden geçer</td></tr>
       <tr><td>Yapı koruyucu</td><td>Harita dışı yeni dosya sorulur; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir; kabukta oluşturulursa (<code>cp a.ts a.bak</code>) sorulur</td></tr>
       <tr><td>Yapılandırma onayı</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> ve iş akışı dosyaları onayın olmadan değişmez</td></tr>
@@ -1108,6 +1108,7 @@ Bekleyen karar: e-posta servisi</pre>
     <article class="tile"><h3>Tanıtım videosu</h3><p class="stack">motion-video · renderAt(t) · Playwright · ffmpeg</p><ul><li>Süreyi, stili, ritmi ve müziği sen seçersin, önce senaryoyu onaylarsın</li><li>Gerçek imleçli demo döngüsü ya da üretilmiş müzik ve paylaşım metniyle tanıtım klibi</li><li>Kapalı formlu yaylar (testle doğrulandı)</li><li>Yalnız müziği veya bir sahneyi değiştirmek videonun tamamını yeniden üretmez</li></ul></article>
     <article class="tile"><h3>Arayüz hareketi ve 3D</h3><p class="stack">ui-motion · Motion · Reanimated · GSAP · three.js</p><ul><li>Süre belirteçleri, yaylar, sadece transform/opacity</li><li>Hareket azaltma tercihi zorunlu</li><li>3D: tembel yükleme, statik yedek, mobil GPU</li></ul></article>
     <article class="tile"><h3>Hata izleme</h3><p class="stack">error-tracking · Sentry · GlitchTip</p><ul><li>Next.js, FastAPI ya da Expo; sağlayıcı maliyetiyle birlikte sorulur</li><li>Ad, e-posta, IP, çerez ve istek gövdesi uygulamadan çıkmaz</li><li>error_tracking bayrağı yeniden dağıtım gerektirmeden kapatır</li><li>Source map yalnız evet dersen; token CI sırrı olarak kalır</li></ul></article>
+    <article class="tile"><h3>Örnek veri</h3><p class="stack">seed: · supabase/seed.sql · scripts/seed.py</p><ul><li>Her yığın kendi yolunu kullanır: Supabase seed.sql, ya da Python veya Node betiği</li><li>Varsayılan olarak küçük, elle yazılmış kayıtlar; hacim gerekince sabit tohumlu Faker</li><li>Yalnız yerel veritabanı: uzak adrese giden seed reddedilir</li><li>Deneme gerçek şemaya geçince /lock günceller</li></ul></article>
     <article class="tile"><h3>İnceleme ve keşif</h3><p class="stack">rea · Understand-Anything · awesome-design-md</p><ul><li>Rakip özelliği nasıl çalışıyor: sadece yetkili olduğun yazılımda, önce onay</li><li>İnsan için kod haritası: /adopt, /handoff, /release first önerir</li></ul></article>
     <article class="tile"><h3>Güvenlik</h3><p class="stack">security-guidance · claude-security · Trail of Bits</p><ul><li>Yazarken: riskli kalıp uyarısı</li><li>Commit'te: ayrı modelle inceleme</li><li>/findings-security: çok ajanlı, doğrulanmış tarama</li></ul></article>
     <article class="tile"><h3>Kod zekâsı ve stack kuralları</h3><p class="stack">typescript-lsp · pyright-lsp · Vercel · Expo · Supabase</p><ul><li>Her düzenlemeden sonra tip hatası; uydurma API derlemeden yakalanır</li><li>React, React Native, Postgres, Core Web Vitals kuralları tipe göre açılır</li></ul></article>
@@ -1307,7 +1308,7 @@ Bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.72.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.73.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

@@ -31,7 +31,7 @@ A test that is **green on first run** proves nothing yet: the code came first. B
 
 ## Harden
 
-Follow `.claude/commands/build.md` steps 2c-7. Fix the review findings, turn the red tests green, replace every fake part with the real one, and add error, empty and loading states. If there is a UI, run the `/design` brief here if it was not done. Delete `docs/product/try/<topic>.md`: what matters now lives in the PRD. The gate lets trial code pass on a `try/*` branch, so confirm yourself that no `try:fake` marker and no `*.fake.*` file is left. Commit the result on the branch (`node .claude/hooks/commit-gate.mjs --skip "try round"`, then `git commit`); a gate result from a `try/*` branch never opens the commit gate.
+Follow `.claude/commands/build.md` steps 2c-7. Fix the review findings, turn the red tests green, replace every fake part with the real one, and add error, empty and loading states. If there is a UI, run the `/design` brief here if it was not done. When the fake data moves to the real schema, write or update the seed for it (`stack.md` → Seed data, the `seed:` line in `AGENTS.md`). Delete `docs/product/try/<topic>.md`: what matters now lives in the PRD. The gate lets trial code pass on a `try/*` branch, so confirm yourself that no `try:fake` marker and no `*.fake.*` file is left. Commit the result on the branch (`node .claude/hooks/commit-gate.mjs --skip "try round"`, then `git commit`); a gate result from a `try/*` branch never opens the commit gate.
 
 ## Merge
 

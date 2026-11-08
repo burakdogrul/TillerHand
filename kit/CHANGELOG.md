@@ -2,6 +2,16 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.73.0] - 2026-11-08
+
+### Added
+- Seed data: each stack's `stack.md` has a "Seed data" section. Supabase uses `supabase/seed.sql` (loaded on the first `supabase start` and on every `db reset`), Python `scripts/seed.py`, Node with Drizzle or Prisma `scripts/seed.ts`. By default the seed holds a few hand-written records with fixed ids, no real personal data, and running it twice changes nothing; Faker with a fixed seed only when you need volume, through the package gate. **Adapt by hand:** copy the section into an installed project's `docs/architecture/stack.md`.
+- A `seed:` line in `AGENTS.md` → Commands, and the gate knows the key. `/start` leaves it empty until there is a schema; `/lock` writes or updates the seed when the trial's fake data moves to the real schema. **Adapt by hand:** add `seed:        [ ]` under `build:` in an installed project's `AGENTS.md`.
+
+### Changed
+- Destructive command shield: a seed command whose text targets a remote database is refused, a shared dev project included: a connection URL, a host given with `-h`/`--host`, `PGHOST=`, `DB_HOST=` and the like, or `host=`, Supabase's `--linked` or `--include-seed` (a `--local` beside it does not count), or `--prod`. Before, a remote `psql` call was only asked. The shield cannot see an address in `.env`, so the seed script checks its own host.
+- Every database rule of the shield now also counts as remote an address with no user name, one with a driver suffix (`postgresql+psycopg://`), a host that only starts with `localhost` (`localhost.example.com`) and a host list with one remote host in it (`localhost,db.example.com`).
+
 ## [3.72.0] - 2026-11-08
 
 ### Added
