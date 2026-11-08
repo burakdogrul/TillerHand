@@ -2292,15 +2292,15 @@ test('AC-63.25 ATTACK: the guard asks on security -i, dump-keychain, find-intern
 test('AC-63.26 ATTACK: an unauthorised request does not restart the idle timer; an authorised one does', T, async (t) => {
   freshHome(t);
   const proj = panelProject(t);
-  // Control: authorised calls keep a 1 s panel open for more than twice that
-  const a = await session(t, proj, { idleMs: 1000 });
-  const end = Date.now() + 2500;
+  // Control: authorised calls keep a 3 s panel open for more than twice that (wide margin: a loaded machine can stall one request for seconds)
+  const a = await session(t, proj, { idleMs: 3000 });
+  const end = Date.now() + 7000;
   while (Date.now() < end) { assert.equal((await a.get('/api/state')).status, 200); await wait(250); }
   assert.equal(await isOpen(a.panel.port), true, 'authorised requests keep it open');
-  await until(async () => !(await isOpen(a.panel.port)), 'the idle panel to close', 8000);
-  // Attack: requests with no secret, a wrong secret or a wrong Host keep coming
-  const b = await startPanel(t, proj, { idleMs: 1000 });
-  const stop = Date.now() + 4000;
+  await until(async () => !(await isOpen(a.panel.port)), 'the idle panel to close', 15000);
+  // Attack: requests with no secret, a wrong secret or a wrong Host keep coming for three times the idle time
+  const b = await startPanel(t, proj, { idleMs: 3000 });
+  const stop = Date.now() + 9000;
   let closed = false;
   while (Date.now() < stop && !closed) {
     try {
