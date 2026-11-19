@@ -2,6 +2,11 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.75.3] - 2026-11-19
+
+### Fixed
+- Preference text is checked against an allow-list instead of a list of bad characters: after `prefs.mjs --add`, anything but letters, digits, punctuation, symbols and the plain space is asked. This covers control characters, tabs, line breaks and unusual spaces (no-break, em, ideographic, line separator), which `prefs.mjs` turns into a plain space when it saves.
+
 ## [3.75.2] - 2026-11-19
 
 ### Fixed

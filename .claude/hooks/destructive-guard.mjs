@@ -441,12 +441,13 @@ export function hookScriptIssue(command) {
 // Cyrillic letter is asked too: it can stand in for a Latin one (nеver) and slip past the word list
 const PREFS_ADD = /prefs\.mjs['"]?\s+['"]?--add\b/i;
 const INSTRUCTION_LIKE = /https?:\/\/|\.claude\b|\.env\b|~[\\/]|\b(hooks?|permissions?|guards?|approv\w*|bypass\w*|disabl\w*|settings|mcp|izin\w*|onay\w*|kanca\w*|sorma\w*|atla\w*|skip\w*|push\w*|force\w*|review\w*|deploy\w*)\b|--no-verify|[Ͱ-ϿЀ-ӿ]|ignore\s+previous|without\s+(asking|confirm)|no\s+confirm|(never|do\s+not|don'?t)\s+ask/i;
-export const UNSEEN = /[\p{Cf}\p{Mn}\p{Me}⠀]|\p{Default_Ignorable_Code_Point}/u;
+// An allow-list, not a list of bad characters (3.75.3): only letters, digits, punctuation, symbols and the plain space
+// pass; ignorable code points (Hangul fillers are letters by category) and the Braille blank (a symbol) are asked too
+export const UNSEEN = /[^\p{L}\p{N}\p{P}\p{S} ]|⠀|\p{Default_Ignorable_Code_Point}/u;
 export function prefsTextIssue(command) {
   const m = command.match(PREFS_ADD);
   // Raw, unquoted and NFKC-folded (fullwidth ｎｅｖｅｒ): "n""ever ask" hides the words from the raw text only. An
-  // invisible, ignorable or combining character (zero-width, BOM, soft hyphen, bidi control, combining mark, variation
-  // selector, Hangul filler, Braille blank) is asked as it is: it splits words unseen (3.75.2)
+  // invisible, control, odd-space, ignorable or combining character (UNSEEN) is asked as it is: it splits words unseen
   const rest = m && command.slice(m.index + m[0].length);
   return m && (UNSEEN.test(rest) || [rest, unquote(rest)].some((s) => INSTRUCTION_LIKE.test(s) || INSTRUCTION_LIKE.test(s.normalize('NFKC'))))
     ? { decision: 'ask', reason: tr('guard.destructive.prefsInstruction') } : null;

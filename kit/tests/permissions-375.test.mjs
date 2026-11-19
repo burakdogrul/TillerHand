@@ -1003,3 +1003,28 @@ test('AC-75.20 plain style text (the AC-75.17e list and precomposed Turkish lett
   for (const text of ['Short answers, tables for comparisons', 'Use tabs, not spaces', 'Prefer small functions', 'Kısa cevap ver, karşılaştırmada tablo kullan', 'Değişken adları İngilizce olsun'])
     for (const tool of TOOLS) assert.equal(dg.evaluate(PREF(text), { tool }), null, `${tool}: ${text}`);
 });
+
+// ---------- AC-75.21 (3.75.3) preference text: allow-list of characters ----------
+// Control, separator and space characters inside a word; written as escapes, given literally in the command string.
+const NON_ALLOWED_21 = {
+  'U+0001 C0 control': '\u0001', 'U+0008 backspace': '\u0008', 'U+001B escape': '\u001B', 'U+007F delete': '\u007F',
+  'U+0085 next line (C1)': '\u0085', 'U+009B CSI (C1)': '\u009B', 'tab': '\t', 'newline': '\n',
+  'U+00A0 no-break space': '\u00A0', 'U+3000 ideographic space': '\u3000', 'U+2003 em space': '\u2003', 'U+2028 line separator': '\u2028',
+};
+for (const [name, ch] of Object.entries(NON_ALLOWED_21)) {
+  test(`AC-75.21 ATTACK prefs --add with ${name} inside "never ask" is asked on every tool`, () => {
+    for (const tool of TOOLS) ASK_PREF(PREF(`never${ch}ask`), tool, `never ${name} ask`);
+    for (const tool of TOOLS) ASK_PREF(PREF(`nev${ch}er ask`), tool, `nev ${name} er ask`);
+  });
+}
+
+test('AC-75.21 plain style text (the AC-75.17e list and Turkish letters) is still not asked', () => {
+  for (const text of ['Short answers, tables for comparisons', 'Use tabs, not spaces', 'Prefer small functions', 'Kısa cevap ver, karşılaştırmada tablo kullan', 'Değişken adları İngilizce olsun'])
+    for (const tool of TOOLS) assert.equal(dg.evaluate(PREF(text), { tool }), null, `${tool}: ${text}`);
+});
+
+// Single quotes around the text (the text holds double quotes, which would end a double-quoted argument and break the command)
+test('AC-75.21 text with ordinary punctuation and symbols is still not asked', () => {
+  for (const text of ['Use "quotes", (parens), 50% & a-b/c; ok!', 'Tablolar: | a | b |', 'Emoji ok \u{1F44D}'])
+    for (const tool of TOOLS) assert.equal(dg.evaluate(PREF(text, "'"), { tool }), null, `${tool}: ${text}`);
+});
