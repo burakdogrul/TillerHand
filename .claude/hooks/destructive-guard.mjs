@@ -443,9 +443,10 @@ const PREFS_ADD = /prefs\.mjs['"]?\s+['"]?--add\b/i;
 const INSTRUCTION_LIKE = /https?:\/\/|\.claude\b|\.env\b|~[\\/]|\b(hooks?|permissions?|guards?|approv\w*|bypass\w*|disabl\w*|settings|mcp|izin\w*|onay\w*|kanca\w*|sorma\w*|atla\w*|skip\w*|push\w*|force\w*|review\w*|deploy\w*)\b|--no-verify|[Ͱ-ϿЀ-ӿ]|ignore\s+previous|without\s+(asking|confirm)|no\s+confirm|(never|do\s+not|don'?t)\s+ask/i;
 export function prefsTextIssue(command) {
   const m = command.match(PREFS_ADD);
-  // Raw and unquoted: "n""ever ask" hides the words from the raw text only
+  // Raw, unquoted and NFKC-folded (fullwidth ｎｅｖｅｒ): "n""ever ask" hides the words from the raw text only. An
+  // invisible or format character (zero-width, BOM, soft hyphen, bidi control) is asked as it is: it splits words unseen
   const rest = m && command.slice(m.index + m[0].length);
-  return m && (INSTRUCTION_LIKE.test(rest) || INSTRUCTION_LIKE.test(unquote(rest)))
+  return m && (/\p{Cf}/u.test(rest) || [rest, unquote(rest), unquote(rest).normalize('NFKC')].some((s) => INSTRUCTION_LIKE.test(s)))
     ? { decision: 'ask', reason: tr('guard.destructive.prefsInstruction') } : null;
 }
 

@@ -2,6 +2,11 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.75.1] - 2026-11-19
+
+### Fixed
+- A preference text the shield cannot read as written is asked: an invisible or format character (zero-width space, BOM, soft hyphen, bidi control) anywhere after `prefs.mjs --add`, and fullwidth letters that fold to an instruction word (`ｎｅｖｅｒ ａｓｋ`). Shell expansions (`$X`, `$(…)`, backticks, `$'…'`) were already asked. `prefs.mjs` drops invisible format characters before it saves a preference.
+
 ## [3.75.0] - 2026-11-19
 
 ### Changed

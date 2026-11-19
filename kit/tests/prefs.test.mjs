@@ -232,3 +232,16 @@ test('A-48.6 preferences: with neither file, reading creates nothing', () => {
   assert.equal(fs.existsSync(path.join(home, '.vibe-kit')), false, 'no folder, no file');
   fs.rmSync(home, { recursive: true, force: true });
 });
+
+test('AC-75.19 preferences: --add removes invisible characters from the saved text (zero-width space, soft hyphen, BOM)', () => {
+  const home = newHome();
+  const cli = cliIn(home);
+  const file = path.join(home, '.vibe-kit', 'preferences.md');
+  assert.equal(cli('--add', 'code', 'Short\u200B answers').status, 0);
+  assert.equal(cli('--add', 'code', 'Sma\u00ADll fun\uFEFFctions').status, 0);
+  const saved = fs.readFileSync(file, 'utf8');
+  assert.match(saved, /^- Short answers$/m);
+  assert.match(saved, /^- Small functions$/m);
+  assert.doesNotMatch(saved, /[\u200B-\u200D\u2060\uFEFF\u00AD\u202E]/, 'no invisible character reaches the file');
+  fs.rmSync(home, { recursive: true, force: true });
+});
