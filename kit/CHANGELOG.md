@@ -2,6 +2,11 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.75.2] - 2026-11-19
+
+### Fixed
+- Preference text: every ignorable or combining character is asked too (combining marks, variation selectors, Hangul fillers, the combining grapheme joiner, tag characters, the Braille blank), and fullwidth letters are folded in the raw text as well as the unquoted one. `prefs.mjs` drops the same characters before it saves; precomposed letters such as `ç` and `İ` stay.
+
 ## [3.75.1] - 2026-11-19
 
 ### Fixed

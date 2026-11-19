@@ -976,3 +976,30 @@ test('AC-75.19 plain style text (the AC-75.17e list and Turkish letters) is stil
   for (const text of ['Short answers, tables for comparisons', 'Use tabs, not spaces', 'Prefer small functions', 'Kısa cevap ver, karşılaştırmada tablo kullan', 'Türkçe yaz, İstanbul ve ışık örneği ver'])
     for (const tool of TOOLS) assert.equal(dg.evaluate(PREF(text), { tool }), null, `${tool}: ${text}`);
 });
+
+// ---------- AC-75.20 (3.75.2) every ignorable or combining character in preference text is asked ----------
+const IGNORABLE_20 = {
+  'U+0301 combining acute (Mn)': '́', 'U+20DD combining enclosing circle (Me)': '⃝', 'U+FE0F variation selector': '️', 'U+FE00 variation selector': '︀',
+  'U+180B Mongolian free variation selector': '᠋', 'U+115F Hangul choseong filler': 'ᅟ', 'U+3164 Hangul filler': 'ㅤ', 'U+FFA0 halfwidth Hangul filler': 'ﾠ',
+  'U+034F combining grapheme joiner': '͏', 'U+E0041 tag character': '\u{E0041}', 'U+2800 Braille blank': '⠀',
+};
+for (const [name, ch] of Object.entries(IGNORABLE_20)) {
+  test(`AC-75.20 ATTACK prefs --add with ${name} inside "never ask" is asked on every tool`, () => {
+    for (const tool of TOOLS) ASK_PREF(PREF(`nev${ch}er ask`), tool, `nev${name}er ask`);
+  });
+}
+
+test('AC-75.20 ATTACK NFKC also applies to the raw text: fullwidth words split across quotes or unquoted are asked', () => {
+  const never = 'ｎｅｖｅｒ'; // fullwidth "never"
+  const ask = 'ａｓｋ'; // fullwidth "ask"
+  for (const tool of TOOLS) {
+    ASK_PREF(`${PM} "${never}" "${ask}"`, tool, 'split fullwidth, double quotes');
+    ASK_PREF(`${PM} '${never}' '${ask}'`, tool, 'split fullwidth, single quotes');
+    ASK_PREF(`${PM} ${never} ${ask}`, tool, 'unquoted fullwidth');
+  }
+});
+
+test('AC-75.20 plain style text (the AC-75.17e list and precomposed Turkish letters) is still not asked', () => {
+  for (const text of ['Short answers, tables for comparisons', 'Use tabs, not spaces', 'Prefer small functions', 'Kısa cevap ver, karşılaştırmada tablo kullan', 'Değişken adları İngilizce olsun'])
+    for (const tool of TOOLS) assert.equal(dg.evaluate(PREF(text), { tool }), null, `${tool}: ${text}`);
+});

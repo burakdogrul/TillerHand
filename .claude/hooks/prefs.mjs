@@ -31,8 +31,9 @@ const fold = (s) => s.toLowerCase().trim();
 const categoryOf = (heading) => Object.keys(CATEGORIES).find((k) => fold(k) === fold(heading) || fold(CATEGORIES[k]) === fold(heading));
 // Duplicate check on user text in any language: case and accents folded, dotless i as i ("KISA" = "kısa", "İ" = "i")
 const folded = (s) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\u0131/g, 'i');
-// Control characters become a blank; invisible format characters (zero-width, BOM, soft hyphen, bidi) go (3.75.1)
-const clean = (s) => String(s ?? '').replace(/\p{Cf}/gu, '').replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim();
+// Control characters become a blank; invisible, ignorable and combining characters (zero-width, BOM, soft hyphen, bidi,
+// combining marks, variation selectors, Hangul fillers, Braille blank) go (3.75.1, 3.75.2). Precomposed letters stay
+const clean = (s) => String(s ?? '').replace(/[\p{Cf}\p{Mn}\p{Me}⠀]|\p{Default_Ignorable_Code_Point}/gu, '').replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim();
 const valid = (t) => t && t.length <= MAX_LENGTH && !findSecrets(t).length;
 
 // items: preferences that pass the same checks as --add; unknown: non-empty lines that are not a preference

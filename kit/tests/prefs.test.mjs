@@ -245,3 +245,16 @@ test('AC-75.19 preferences: --add removes invisible characters from the saved te
   assert.doesNotMatch(saved, /[\u200B-\u200D\u2060\uFEFF\u00AD\u202E]/, 'no invisible character reaches the file');
   fs.rmSync(home, { recursive: true, force: true });
 });
+
+test('AC-75.20 preferences: --add removes combining marks, variation selectors and Hangul fillers but keeps precomposed Turkish letters', () => {
+  const home = newHome();
+  const cli = cliIn(home);
+  const file = path.join(home, '.vibe-kit', 'preferences.md');
+  assert.equal(cli('--add', 'code', 'Short\u0301 answ\uFE0Fers\u3164').status, 0);
+  assert.equal(cli('--add', 'code', 'K\u0131sa \u00E7\u011F\u00FC\u015F\u00F6\u0130').status, 0);
+  const saved = fs.readFileSync(file, 'utf8');
+  assert.match(saved, /^- Short answers$/m);
+  assert.match(saved, /^- K\u0131sa \u00E7\u011F\u00FC\u015F\u00F6\u0130$/m);
+  assert.doesNotMatch(saved, /[\u0301\uFE0F\u3164]/, 'no combining mark, variation selector or filler reaches the file');
+  fs.rmSync(home, { recursive: true, force: true });
+});
