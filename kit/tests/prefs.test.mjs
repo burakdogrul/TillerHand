@@ -76,11 +76,13 @@ test('preferences: the CLI writes under the home folder only, the session start 
   const s = spawnSync(process.execPath, [path.join(HOOKS, 'session-start.mjs')], { input: '{}', encoding: 'utf8', env: { ...homeEnv(home), CLAUDE_PROJECT_DIR: project } });
   assert.match(s.stdout, /style preferences[^"]*Seçenekleri kısa yaz/);
   assert.equal(cli('--remove', '1').status, 0);
-  assert.equal(permissionEquivalent('node .claude/hooks/prefs.mjs --add kod "x"')?.decision, 'ask', 'Codex/Antigravity');
-  assert.equal(permissionEquivalent('node .claude/hooks/prefs.mjs --add code "x"')?.decision, 'ask', 'Codex/Antigravity, English key');
+  assert.equal(permissionEquivalent('node .claude/hooks/prefs.mjs --add kod "x"'), null, '3.75.0: Codex/Antigravity allow --add; the script validates and evaluate() asks for instruction-like text');
+  assert.equal(permissionEquivalent('node .claude/hooks/prefs.mjs --add code "x"'), null, '3.75.0: Codex/Antigravity, English key');
+  assert.equal(permissionEquivalent('node .claude/hooks/prefs.mjs --remove 1')?.decision, 'ask', 'removing is still asked');
   assert.equal(permissionEquivalent('node .claude/hooks/prefs.mjs --list'), null);
   const settings = JSON.parse(fs.readFileSync(path.join(HOOKS, '..', 'settings.json'), 'utf8'));
-  assert.ok(settings.permissions.ask.includes('Bash(node .claude/hooks/prefs.mjs --add:*)') && settings.permissions.allow.includes('Bash(node .claude/hooks/prefs.mjs --list)'));
+  assert.ok(settings.permissions.allow.includes('Bash(node .claude/hooks/prefs.mjs --add:*)') && settings.permissions.allow.includes('Bash(node .claude/hooks/prefs.mjs --list)'), '3.75.0: --add is allowed');
+  assert.ok(!settings.permissions.ask.includes('Bash(node .claude/hooks/prefs.mjs --add:*)') && settings.permissions.ask.includes('Bash(node .claude/hooks/prefs.mjs --remove:*)'), '--remove stays asked');
   for (const d of [home, project]) fs.rmSync(d, { recursive: true, force: true });
 });
 

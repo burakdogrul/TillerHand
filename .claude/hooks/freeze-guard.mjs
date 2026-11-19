@@ -2,7 +2,7 @@
 // Edit lock (/freeze): while the lock is on, the AI may write only to the chosen folder; keeps the work from spreading
 // to other files while debugging or on a risky feature. State: .claude/state/freeze.json → { "dir": "src/features/auth" }
 //   PreToolUse (Write|Edit|MultiEdit|NotebookEdit) hook: while locked, writes outside the folder are denied.
-//   Shell writes (sed -i, mv, > …) are in destructive-guard: an existing file outside the lock or plan is asked.
+//   Shell writes (sed -i, mv, > …) are in destructive-guard: an existing file outside the lock is asked, outside the plan denied.
 //   On Codex and Antigravity it also applies the file side of the Claude Code permission list (PROTECTED): those tools
 //   have no settings.json; without it the AI could change the lock, the hooks and the rules itself.
 //   node .claude/hooks/freeze-guard.mjs --set <folder>   lock
@@ -11,9 +11,10 @@
 // Scope shield (F-06): after /plan-task approval the plan's file list is saved; while a plan is active a write to an
 // EXISTING file not on the list is asked. New files are the structure guard's job; docs/, CHANGELOG.md are free. No plan: silent.
 // State: .claude/state/plan.json → { "task": "G-012", "paths": ["src/a.ts", "src/features/invoice/"] } (ending in /: folder)
-//   node .claude/hooks/freeze-guard.mjs --plan-save <task> <path...>   save when no plan is active (asked: the user sees the list)
-//   node .claude/hooks/freeze-guard.mjs --plan-add <path...>           widen the list (with user approval)
-//   node .claude/hooks/freeze-guard.mjs --plan-end                     close when the task is done (asked)
+//   node .claude/hooks/freeze-guard.mjs --plan-save <task> <path...>   save when no plan is active
+//   node .claude/hooks/freeze-guard.mjs --plan-add <path...>           widen the list after the user accepts it in AskUserQuestion;
+//                                                                       each widening is kept in "added" and printed
+//   node .claude/hooks/freeze-guard.mjs --plan-end                     close when the task is done
 import fs from 'node:fs';
 import path from 'node:path';
 import { readInput, decide, findRoot, isMain, reviewOff, rootFor } from './shared.mjs';
@@ -80,10 +81,22 @@ function normalPlanPath(y) {
   return !r || r.startsWith('..') || path.isAbsolute(r) ? null : r + (/[\\/]$/.test(y) ? '/' : '');
 }
 
+// Earlier widenings in plan.json (readPlan returns only task and paths)
+const pastAdded = () => {
+  try { const a = JSON.parse(fs.readFileSync(planPath(), 'utf8')).added; return Array.isArray(a) ? a.filter((x) => typeof x?.path === 'string') : []; } catch { return []; }
+};
+
+// Every save, widening and end is one line in .claude/state/plan-log.jsonl: --plan-add runs without a permission prompt
+// (3.75.0), so this log keeps what the scope was, and it outlives plan.json
+const logPlan = (mode, task, paths) => fs.appendFileSync(path.join(root, '.claude', 'state', 'plan-log.jsonl'),
+  `${JSON.stringify({ mode: mode.replace('--plan-', ''), task, paths, date: new Date().toISOString() })}\n`);
+
 function setPlan(mode, args) {
   const current = readPlan();
   if (mode === '--plan-end') {
     fs.rmSync(planPath(), { force: true });
+    fs.mkdirSync(path.dirname(planPath()), { recursive: true });
+    logPlan(mode, current?.task ?? null, current?.paths ?? []);
     return console.log(current ? `Scope shield closed (${current.task}).` : 'No active plan.');
   }
   const [task, ...paths] = mode === '--plan-save' ? args : [null, ...args];
@@ -91,11 +104,22 @@ function setPlan(mode, args) {
   if (mode === '--plan-save' && current) fail(`A plan is active (${current.task}). To widen the scope, use --plan-add with user approval; if the task is done, run --plan-end first.`);
   if (mode === '--plan-add' && !current) fail('No active plan; run --plan-save <task> <path...> first.');
   if ((mode === '--plan-save' && !task) || !paths.length) fail(`Usage: ${mode === '--plan-save' ? '--plan-save <task> <path...>' : '--plan-add <path...>'}`);
+  // A glob is no plan path (inScope compares text): "src/*" or "**" would read as a file name, not widen the scope.
+  // [..] stays: it is a literal folder name in Next.js dynamic routes (src/app/[id]/page.tsx)
+  const glob = paths.find((y) => /[*?{}]/.test(y));
+  if (glob) fail(`A glob is not a plan path; name the files or folders (folder/ ends in /): ${glob}`);
   const normal = paths.map(normalPlanPath);
   if (normal.includes(null)) fail(`A path outside the project is not added to the plan: ${paths[normal.indexOf(null)]}`);
-  const plan = current ? { task: current.task, paths: [...new Set([...current.paths, ...normal])] } : { task, paths: [...new Set(normal)] };
+  // --plan-add is allowed (3.75.0): what it widened is kept and printed, so the widening shows in the transcript and the file
+  const date = new Date().toISOString();
+  const fresh = current ? [...new Set(normal)].filter((y) => !current.paths.includes(y)) : [];
+  const plan = current
+    ? { task: current.task, paths: [...current.paths, ...fresh], added: [...pastAdded(), ...fresh.map((y) => ({ path: y, date }))] }
+    : { task, paths: [...new Set(normal)] };
   writePlan(plan);
-  console.log(`Scope shield: ${plan.task} · ${plan.paths.length} paths. Writing to an existing file outside the list is asked.`);
+  logPlan(mode, plan.task, current ? fresh : plan.paths);
+  if (current) console.log(fresh.length ? `Plan widened (${plan.task}): ${fresh.join(', ')}` : `Already in the plan (${plan.task}).`);
+  console.log(`Scope shield: ${plan.task} · ${plan.paths.length} paths. Changing an existing file outside the list is refused; ask the user, then --plan-add.`);
 }
 
 const MODES = ['--set', '--off', '--status', '--plan-save', '--plan-add', '--plan-end'];
@@ -182,9 +206,10 @@ function hook() {
   const plan = readPlan(g.root);
   for (const [i, p] of (plan ? paths : []).entries()) {
     const rel = relPath(p, groot);
-    // A new file is not asked (the structure guard looks at it); deleting and overwriting an existing one is
+    // A new file is free (the structure guard looks at it); deleting and overwriting an existing one is refused with a
+    // pointer to AskUserQuestion and --plan-add (3.75.0: denied, not asked, so it opens no permission prompt)
     if (inScope(rel, plan.paths) || !(g.files[i].deleted || fs.existsSync(p))) continue;
-    decide(g.tool, 'ask', t(g.root, 'guard.freeze.scopeAsk', { rel: rel || t(g.root, 'guard.freeze.unknownPath'), task: plan.task }));
+    decide(g.tool, 'deny', t(g.root, 'guard.freeze.scopeAsk', { rel: rel || t(g.root, 'guard.freeze.unknownPath'), task: plan.task }));
   }
   process.exit(0);
 }

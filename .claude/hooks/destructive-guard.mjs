@@ -302,7 +302,8 @@ export function scopeIssue(command, dir, root) {
       return { decision: 'ask', reason: t(root, 'guard.destructive.lockOutside', { rel, lock }) };
     }
     if (plan && !inScope(fs.statSync(p).isDirectory() ? `${rel}/` : rel, plan.paths)) {
-      return { decision: 'ask', reason: t(root, 'guard.destructive.planOutside', { rel, task: plan.task }) };
+      // Denied with a pointer, as freeze-guard does for the file tools (3.75.0): no permission prompt, the AI asks the user
+      return { decision: 'deny', reason: t(root, 'guard.destructive.planOutside', { rel, task: plan.task }) };
     }
   }
   return null;
@@ -361,12 +362,10 @@ const PERMISSION_EQUIVALENT = [
   ['ask', /\bgit\s+push\b/i, 'guard.destructive.perm.push'],
   ['ask', /freeze-guard\.mjs['"]?\s+['"]?--off\b/i, 'guard.destructive.perm.freezeOff'],
   ['ask', /tools\.mjs['"]?\s+['"]?--commands\b/i, 'guard.destructive.perm.toolsCommands'],
-  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-add\b/i, 'guard.destructive.perm.planAdd'],
-  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-save\b/i, 'guard.destructive.perm.planSave'],
-  ['ask', /freeze-guard\.mjs['"]?\s+['"]?--plan-end\b/i, 'guard.destructive.perm.planEnd'],
   ['ask', /commit-gate\.mjs\b[^;&|\n]*--skip\b/i, 'guard.destructive.perm.commitSkip'],
   ['ask', /commit-gate\.mjs\b[^;&|\n]*--accept-tests\b/i, 'guard.destructive.perm.commitAcceptTests'],
-  ['ask', /prefs\.mjs['"]?\s+['"]?--(add|remove)\b/i, 'guard.destructive.perm.prefsEdit'],
+  // --add is allowed since 3.75.0 (prefsInstruction below asks the risky texts); --remove can drop the wrong line: asked
+  ['ask', /prefs\.mjs['"]?\s+['"]?--remove\b/i, 'guard.destructive.perm.prefsEdit'],
   ['ask', /(?<!(?:^|[\s'"=])(?:\.[\\/]|\$\{?CLAUDE_PROJECT_DIR\}?[\\/]?)?\.claude[\\/]?hooks[\\/]?commit-)gate\.mjs['"]?\s+['"]?--approve\b/i, 'guard.destructive.perm.gateApprove'],
   // Shell counterpart of the PROTECTED rule on file tools: a command that names a rule or guard file and writes/deletes is asked
   // (.git: the gate command approval and git hooks live there)
@@ -437,6 +436,19 @@ export function hookScriptIssue(command) {
     ? { decision: 'ask', reason: tr('guard.destructive.indirectHook') } : null;
 }
 
+// prefs.mjs --add is allowed, and its text is loaded into every session of every project: a text that reads like a
+// permission, guard or instruction (an injected "never ask before pushing") is asked, every tool (3.75.0). A Greek or
+// Cyrillic letter is asked too: it can stand in for a Latin one (nеver) and slip past the word list
+const PREFS_ADD = /prefs\.mjs['"]?\s+['"]?--add\b/i;
+const INSTRUCTION_LIKE = /https?:\/\/|\.claude\b|\.env\b|~[\\/]|\b(hooks?|permissions?|guards?|approv\w*|bypass\w*|disabl\w*|settings|mcp|izin\w*|onay\w*|kanca\w*|sorma\w*|atla\w*|skip\w*|push\w*|force\w*|review\w*|deploy\w*)\b|--no-verify|[Ͱ-ϿЀ-ӿ]|ignore\s+previous|without\s+(asking|confirm)|no\s+confirm|(never|do\s+not|don'?t)\s+ask/i;
+export function prefsTextIssue(command) {
+  const m = command.match(PREFS_ADD);
+  // Raw and unquoted: "n""ever ask" hides the words from the raw text only
+  const rest = m && command.slice(m.index + m[0].length);
+  return m && (INSTRUCTION_LIKE.test(rest) || INSTRUCTION_LIKE.test(unquote(rest)))
+    ? { decision: 'ask', reason: tr('guard.destructive.prefsInstruction') } : null;
+}
+
 // Separators inside quotes turned into spaces: a quoted & or | ("a & b") must not split a command so its later flags escape the rules
 const blankQuoted = (s) => s.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => q.replace(/[;&|\n]/g, ' '));
 // Quoted text with spaces is an argument (grep "<td>Test", node -e "… rm …"), not a command: blanked. A one-word quoted
@@ -471,7 +483,7 @@ export function evaluate(command, ctx = {}) {
     ? { decision: 'ask', reason: tr('guard.destructive.inlineTest') } : null;
   // A plain commit's message is text, not a command (same rule as permissionEquivalent)
   const c = command.replace(PLAIN_COMMIT, '$1""');
-  return strictest(testWrite, inline, evaluateOne(c), evaluateOne(unquote(c)), evaluateOne(blankQuoted(c)), obfuscationOne(command), hookScriptIssue(command));
+  return strictest(testWrite, inline, evaluateOne(c), evaluateOne(unquote(c)), evaluateOne(blankQuoted(c)), obfuscationOne(command), hookScriptIssue(command), prefsTextIssue(command));
 }
 // Seed data goes to the local database only: a remote target in the command text is refused, a shared dev project included.
 // shortcut: an address in .env or set by an earlier command is invisible here; the seed script's own host check covers it.

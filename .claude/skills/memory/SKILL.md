@@ -48,7 +48,7 @@ Person card (JSON for `person --file`):
 ## When to write
 
 - **Receipt**: at the end of a session that changed files, if something is worth knowing next time. One sentence and the file names; no tool output, diffs, commands or environment values. The session id is in the Stop reminder, or the `session` value in `.claude/state/edit-rounds.json`. In Claude Code the Stop hook reminds once per session; if nothing is worth keeping, finish without one.
-- **Note**: when the user says "remember", or when a fact cost real effort to learn and is not in the code. Ask first unless the user asked for it (the command asks for approval anyway).
+- **Note**: when the user says "remember", or when a fact cost real effort to learn and is not in the code. Ask first unless the user asked for it (the command runs without a permission prompt, so the question is yours to ask).
 - **Person**: only when the user tells you about a person and wants them remembered.
 - A message with `[kaydetme]` or `[no-memory]` keeps that session out of memory: no receipt, no note, no reminder.
 

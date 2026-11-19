@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.74.1-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.75.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -237,7 +237,7 @@ Her proje bu düzende başlar ve bu düzende kalır. Kod özellik bazlıdır: bi
 └── AGENTS.md · CLAUDE.md · README.md · CHANGELOG.md
 ```
 
-Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosyaları engellenir; CI her PR'da yapıyı denetler.
+Harita dışı yeni dosya yönlendirmeyle reddedilir (AI dosyayı yerine koyar ya da sana sorup klasörü ekler), `*.bak` ve `*-old.*` gibi dağınıklık dosyaları engellenir; CI her PR'da yapıyı denetler.
 
 ## Koruma katmanları
 
@@ -246,16 +246,18 @@ Harita dışı yeni dosya sorulur, `*.bak` ve `*-old.*` gibi dağınıklık dosy
 | Sır engeli | Koda veya dokümana yazılan API anahtarını engeller |
 | Yıkıcı komut kalkanı | `DROP`, koşulsuz `DELETE`, `db reset` ve bulut verisini silmek engellenir; prod deploy, geri alma ve yayımlama sorulur; `rm -rf` engellidir, git-ignored bağımlılık ve derleme klasörlerini `clean.mjs` temizler |
 | Paket kapısı | Var olmayan paketi engeller (kurulumda, `npx`, `uvx` ile çalıştırmada ve bağımlılık dosyalarında); çok yeni, popüler bir pakete benzeyen ve denetleyemediği kaynakları (git, URL, başka kayıt) sorar |
-| Yapı koruyucu | Harita dışı dosyayı sorar, dağınıklık dosyalarını engeller |
+| Yapı koruyucu | Harita dışı yeni dosyayı reddeder ve AI'ya doğru yeri gösterir; yeni bir yer sana çoktan seçmeli soru olarak gelir. Dağınıklık dosyalarını engeller |
 | Test ayrımı | Test dosyasına yalnız `test-writer` ajanı yazar; ana oturum ve kod ajanı denerse engellenir |
 | Test koruması | Silinen, atlanan veya gevşetilen testi sorar |
 | Deterministik kapı | Lint, tip, test ve Semgrep çalışmadan commit açılmaz; koda yazılmış makineye özel yolu yakalar |
 | Commit kapısı | Kurul denetimi ve yeşil kapı olmadan commit atılmaz; patch veya betikle değişen test dosyası da durur; elle değiştirdiysen `--accept-tests` kabul eder, denetim yine çalışır; merge, revert gibi commit üreten komutlar sorulur; `/try` turları denetim istemez, `/lock` dilimin tamamını denetler, `main`'i commit olmadan taşımak sorulur |
 | PDF koruması | Bütün bir PDF bağlama okunmaz: önce `document-to-markdown` dönüştürür; taranmış sayfa veya grafik `pages` ile okunur |
 | Düzenleme kilidi | `/freeze <klasör>` açıkken AI sadece o klasöre yazar |
-| Kapsam kalkanı | Onaylı planın dışındaki dosyaya yazım sorulur |
+| Kapsam kalkanı | Onaylı planın dışındaki var olan dosyanın değişmesini reddeder; AI planı genişletmeden önce sana sorar |
 | Yapılandırma onayı | Kural ve koruma dosyaları onayın olmadan değişmez |
 | Dev/prod ayrımı | AI ve yerel ortam sadece dev veritabanına bağlanır |
+
+**Az izin penceresi.** Rutin iş izin penceresiyle durmaz. Test, lint, tip denetimi, build, hafıza notları, kayıtlı tercihler ve plan güncellemeleri izin listesinde. Yalnız AI'ya yön veren korumalar (yapı haritası, plan kapsamı) pencere açmak yerine yönlendirmeyle reddeder; senin vereceğin bir karar çoktan seçmeli soru olarak gelir. Auto modda (Claude Code'un v2.1.283 sonrası terminaldeki başlangıç modu; Shift+Tab modu değiştirir) dosya düzenlemesi de sorulmaz; varsayılan modda sorulur. Her modda sorulmaya devam eder: push, PR açma ve birleştirme, hafızadan silme ve dışa aktarma, anahtar ve limit, rol ve oturum çalıştırma, kit kurulumu, eklenti açma, commit kapısını atlama, kural ve koruma dosyaları, test dosyaları, prod veritabanı ve `.env`.
 
 ## Komutlar
 

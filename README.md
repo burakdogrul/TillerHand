@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.74.1-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.75.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -237,7 +237,7 @@ Every project starts in this layout and stays in it. Code is organized by featur
 └── AGENTS.md · CLAUDE.md · README.md · CHANGELOG.md
 ```
 
-A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is blocked, and CI checks the structure on every PR.
+A new file outside the map is refused with a pointer (the AI puts it in its place, or asks you and adds the folder), clutter like `*.bak` and `*-old.*` is blocked, and CI checks the structure on every PR.
 
 ## Guardrails
 
@@ -246,16 +246,18 @@ A new file outside the map is asked about, clutter like `*.bak` and `*-old.*` is
 | Secret guard | Blocks API keys written into code or docs |
 | Destructive-command shield | Blocks `DROP`, unconditional `DELETE`, `db reset` and cloud data deletion; asks before prod deploys, rollbacks and publishing; `rm -rf` is blocked, and `clean.mjs` clears git-ignored dependency and build folders |
 | Package gate | Blocks packages that don't exist (on install, on `npx`, `uvx` runs and in dependency files); asks about very new ones, lookalikes of popular ones and sources it can't check (git, URLs, other registries) |
-| Structure guard | Asks about files outside the map, blocks clutter files |
+| Structure guard | Refuses a new file outside the map and points the AI to the right place; a new place is a multiple-choice question to you. Blocks clutter files |
 | Test separation | Only the `test-writer` agent writes test files; the main session and the coding agent are blocked |
 | Test guard | Asks before a test is deleted, skipped or weakened |
 | Deterministic gate | No commit until lint, type check, tests and Semgrep have run; catches machine-specific paths written into code |
 | Commit gate | No commit without a board review and a green gate; a test file changed by a patch or a script stops it too; if you changed it by hand, `--accept-tests` accepts it and the review still runs; merge, revert and other commands that make commits are asked; `/try` rounds need no review, `/lock` reviews the whole slice, and moving `main` without a commit is asked |
 | PDF guard | A whole PDF is not read into the context: `document-to-markdown` converts it first; a scanned page or a chart is read with `pages` |
 | Edit lock | With `/freeze <folder>` on, the AI writes only inside that folder |
-| Scope shield | Asks before writing to a file outside the approved plan |
+| Scope shield | Refuses changes to an existing file outside the approved plan; the AI asks you before it widens the plan |
 | Config approval | Rule and guard files never change without your approval |
 | Dev/prod split | The AI and the local setup connect to the dev database only |
+
+**Few permission prompts.** Routine work does not stop for a prompt. Tests, lint, type check, build, memory notes, saved preferences and plan updates are on the allow list. Guards that only steer the AI (the structure map, the plan scope) refuse with a pointer instead of opening a prompt, and a choice that is yours comes as a multiple-choice question. In auto mode (Claude Code's starting mode in the terminal from v2.1.283; Shift+Tab switches modes) file edits are not asked either; in the default mode they are. Still asked in every mode: push, opening and merging PRs, deleting or exporting memory, keys and limits, running roles and sessions, kit install, switching plugins on, skipping the commit gate, rule and guard files, test files, the prod database and `.env`.
 
 ## Commands
 

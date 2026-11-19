@@ -147,7 +147,7 @@ for (const type of ['web-saas', 'backend']) {
     const refused = ['prisma/schema.prisma', 'prisma/seed.ts', 'prisma/migrations/1_init/migration.sql', 'drizzle/0001_init.sql', 'drizzle.config.ts', 'prisma.config.ts']
       .filter((f) => check(f, map) !== null);
     assert.deepEqual(refused, []);
-    assert.equal(check('notes.md', map)?.decision, 'ask', 'a stray root file is still asked');
+    assert.equal(check('notes.md', map)?.decision, 'deny', 'a stray root file is denied (3.75.0)');
   });
 }
 

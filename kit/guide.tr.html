@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.74.1</b> Claude Code için başlangıç kiti · MIT</span>
+      <span class="pill"><b>v3.75.0</b> Claude Code için başlangıç kiti · MIT</span>
       <h1>Kodu AI yazar.<br><em>Dümen sende.</em></h1>
       <p class="sub">TillerHand, Claude Code ile bir ürünü fikirden canlıya ve bakıma kadar götürür. Her önemli kararda AI sana seçenekleri, önerisini ve her seçeneğin bedelini sunar. Bir uzman kurulu işi denetler, korumalar hatayı daha olmadan durdurur.</p>
       <div class="setup">
@@ -960,19 +960,20 @@ npx tillerhand init
       <tr><td>Sır engeli</td><td>Koda veya dokümana yazılan API anahtarını (Anthropic, OpenAI, Stripe, AWS, GitHub, Supabase…) engeller; commit öncesi de tarar</td></tr>
       <tr><td>Yıkıcı komut kalkanı</td><td><code>DROP</code>, <code>TRUNCATE</code>, koşulsuz <code>DELETE</code>, <code>db reset</code>, prod ortam değişkenlerini makineye çekmek, bulut verisini silmek (S3 kovası, veritabanı, kaynak grubu, uygulama, depo) ve uzak veritabanına seed yüklemek engellenir; prod deploy, geri alma, mağazaya gönderim, migration, küme ve barındırma silmeleri, paket ve sürüm yayımlama ve ana dalı silmek sorulur</td></tr>
       <tr><td>Paket kapısı</td><td>Kurulan ya da <code>npx</code>, <code>uvx</code> ile indirilip çalıştırılan paket kayıt defterinden doğrulanır: yoksa engellenir; çok yeni, az indirilmiş veya popüler bir pakete benziyorsa sorulur. Git ya da URL kaynağı, başka bir kayıt ya da dizin ve cargo, go, gem, composer kurulumları denetlenemediği için sorulur. AI'nın <code>package.json</code>, <code>requirements.txt</code> ya da <code>pyproject.toml</code>'a eklediği bağımlılıklar da aynı denetimden geçer</td></tr>
-      <tr><td>Yapı koruyucu</td><td>Harita dışı yeni dosya sorulur; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir; kabukta oluşturulursa (<code>cp a.ts a.bak</code>) sorulur</td></tr>
+      <tr><td>Yapı koruyucu</td><td>Harita dışı yeni dosya yönlendirmeyle reddedilir: AI dosyayı yerine ya da <code>sandbox/</code> altına koyar veya sana sorar (çoktan seçmeli) ve klasörü <code>structure-guard.mjs --add</code> ile ekler; <code>*.bak</code>, <code>*-old.*</code>, kopya ve <code>temp/</code> gibi dağınıklıklar engellenir; kabukta oluşturulursa dağınıklık adı (<code>cp a.ts a.bak</code>) sorulur, harita dışı dosya aynı şekilde reddedilir; commit'li <code>.gitignore</code>'un yok saydığı yollar (derleme çıktısı, test kayıtları) serbesttir</td></tr>
       <tr><td>Yapılandırma onayı</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> ve iş akışı dosyaları onayın olmadan değişmez</td></tr>
       <tr><td>Test ayrımı</td><td>Testleri kodu yazan değil, ayrı bir ajan (<code>test-writer</code>; güvenlik, ödeme veya veri silen işlerde farklı model önerilir) koddan önce yazar. Test dosyasına bu ajan dışında kimse yazamaz: ana oturum ve kod ajanı denerse engellenir. Patch veya betikle dolaylı değişen test dosyası da commit kapısında durur. Böylece kodu yazan testi kendi koduna göre şekillendiremez</td></tr>
       <tr><td>Test koruması</td><td>Beklenti silmek veya yoruma almak, <code>.skip</code>/<code>.only</code>, gevşek beklenti, test dosyasını silmek veya taşımak ve test ayarında kapsamı daraltmak sorulur; kabukla test dosyasına yazmak da</td></tr>
       <tr><td>Deterministik kapı</td><td><code>gate.mjs --run</code>: lint, tip kontrolü, test ve Semgrep çalışır; çıktı kurula girdi olur, kırmızı kontrol REJECT sayılır. Spec'teki "değişmemesi gereken" davranışların testi yoksa veya kırmızıysa kapı kırmızıdır. Eklenen bir satırda bu makineye özel bir yol (proje klasörünün ya da ev klasörünün tam yolu) varsa da kırmızıdır. Yeni veya değişen komut önce sana gösterilip onaylatılır</td></tr>
       <tr><td>Commit kapısı</td><td>Kurul denetimi ve aynı değişiklikler için yeşil kapı olmadan commit atılmaz; görev sonu onayı commit için de geçerli, aynı değişiklik iki kez denetlenmez; denetimi atlamak (<code>--skip</code>) ve denetlenecek değişiklik olmadan commit üreten komutlar (<code>git merge</code>, <code>git revert</code>…) her seferinde sorulur; <code>try/*</code> dalındaki commit'ler denetim istemez, çünkü <code>/lock</code> dilimin tamamını denetler; o dalı açmak bir kez sorulur, <code>main</code>'i commit olmadan taşımak sorulur; elle değiştirdiğin test <code>--accept-tests</code> ile geçer, denetim yine çalışır</td></tr>
       <tr><td>Düzenleme kilidi</td><td><code>/freeze &lt;klasör&gt;</code> açıkken AI sadece o klasöre yazar; kabukla dışarı yazmak sorulur, sembolik bağdan kaçılamaz</td></tr>
-      <tr><td>Kapsam kalkanı</td><td><code>/plan-task</code> onayından sonra planın dosya listesi kaydedilir; listede olmayan mevcut dosyaya yazım sorulur. Kalkanı açmak ve kapatmak da sorulur</td></tr>
+      <tr><td>Kapsam kalkanı</td><td><code>/plan-task</code> onayından sonra planın dosya listesi kaydedilir; listede olmayan mevcut dosyanın değişmesi kabukta da reddedilir; AI planı <code>--plan-add</code> ile genişletmeden önce sana sorar, her genişletme planda ve <code>.claude/state/plan-log.jsonl</code> içinde kayıtlı kalır. Düzenleme kilidini kapatmak sorulur</td></tr>
       <tr><td>Düzenleme turu sayacı</td><td>Aynı kod dosyası bir oturumda 5., 10. kez düzenlenince Semgrep ve güvenlik incelemesi hatırlatılır</td></tr>
       <tr><td>Dev/prod ayrımı</td><td>Yerel ortam ve AI (salt-okunur MCP dahil) sadece dev projesine bağlanır; prod sırları barındırma panelinde kalır</td></tr>
       <tr><td>Güvenlik incelemesi</td><td><code>security-guidance</code>: yazarken riskli kalıp uyarısı (istemcide service_role, kişisel veri logu, innerHTML), commit'te ayrı modelle inceleme</td></tr>
     </tbody>
   </table></div>
+  <p><b>Az izin penceresi.</b> Rutin iş pencere açmadan yürür: test, lint, tip denetimi, build, hafıza notları, kayıtlı tercihler ve plan güncellemeleri izin listesinde. Yalnız AI'ya yön veren korumalar pencere açmak yerine yönlendirmeyle reddeder; senin vereceğin karar çoktan seçmeli soru olarak gelir. Auto modda (Claude Code'un v2.1.283 sonrası terminaldeki başlangıç modu; <kbd>Shift+Tab</kbd> modu değiştirir) dosya düzenlemesi de sorulmaz; varsayılan modda sorulur. Kit başlangıç modu ayarlamaz. Her modda sorulmaya devam eder: push, PR açma ve birleştirme, hafızadan silme ve dışa aktarma, anahtar ve limit, rol ve oturum çalıştırma, kit kurulumu, eklenti açma, commit kapısını atlama, kural ve koruma dosyaları, test dosyaları, prod veritabanı ve <code>.env</code>. İzin ya da talimat gibi okunan bir tercih metni de sorulur.</p>
   <div class="table-wrap"><table>
     <thead><tr><th>Ne zaman</th><th>Nerede</th><th>Ne yakalar</th></tr></thead>
     <tbody>
@@ -1005,7 +1006,7 @@ npx tillerhand init
 <section id="yapi">
   <p class="path">.claude/structure.json · docs/architecture/structure.md</p>
   <h2>Proje yapısı korunur</h2>
-  <p class="lead">Kod özellik bazlıdır: bir özelliğe ait her şey <code>features/&lt;özellik&gt;/</code> altında. Yeni bir dosya yapı haritası dışına yazılmak istenirse sana sorulur; dağınıklık dosyaları engellenir. Deneme işleri <code>sandbox/</code>, eski dokümanlar <code>docs/archive/</code> altına gider.</p>
+  <p class="lead">Kod özellik bazlıdır: bir özelliğe ait her şey <code>features/&lt;özellik&gt;/</code> altında. Yeni bir dosya yapı haritası dışına yazılmak istenirse AI doğru yere yönlendirilir, yeni bir yer sana çoktan seçmeli soru olarak gelir; dağınıklık dosyaları engellenir. Deneme işleri <code>sandbox/</code>, eski dokümanlar <code>docs/archive/</code> altına gider.</p>
 <pre class="term">.claude/         <span class="c"># komutlar, ajanlar, hook'lar, kurul, bulgular, structure.json</span>
 .github/         <span class="c"># CI, Dependabot, canlı izleme, bulut ajanları</span>
 docs/
@@ -1310,7 +1311,7 @@ Bekleyen karar: e-posta servisi</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Sürüm 3.74.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
+    <span>Sürüm 3.75.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT lisansı</a> · KVKK bölümü kontrol listesidir, hukuki görüş değildir.</span>
   </div>
 </footer>
 

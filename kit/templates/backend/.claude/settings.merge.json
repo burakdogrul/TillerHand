@@ -5,6 +5,7 @@
       "Bash(uv run pytest:*)",
       "Bash(uv run ruff check:*)",
       "Bash(uv run ruff format:*)",
+      "Bash(uv run mypy:*)",
       "Bash(uv tree --outdated:*)",
       "Bash(uv run --with pip-audit pip-audit:*)"
     ]

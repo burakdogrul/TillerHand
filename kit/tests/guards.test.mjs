@@ -229,7 +229,7 @@ test('structure guard: map, sandbox, clutter patterns', async () => {
   };
   assert.equal(checkPath('src/features/invoice/components/List.tsx', map), null);
   assert.equal(checkPath('sandbox/trial.ts', map), null, 'sandbox is free');
-  assert.equal(checkPath('src/utils/x.ts', map)?.decision, 'ask', 'off the map is asked');
+  assert.equal(checkPath('src/utils/x.ts', map)?.decision, 'deny', 'off the map is denied (3.75.0: with guidance, not asked)');
   assert.equal(checkPath('src/lib/db-old.ts', map)?.decision, 'deny', 'an old-version file is denied');
   assert.equal(checkPath('docs/plan copy.md', map)?.decision, 'deny');
   assert.equal(checkPath(['src', 'lib', 'db.ts'].join(String.fromCharCode(92)), map), null, 'Windows separator');

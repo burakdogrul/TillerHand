@@ -104,7 +104,7 @@ test('structure guard and edit lock: root is cwd on Codex, workspacePaths on Ant
   for (const tool of TOOLS) {
     assert.equal(run('structure-guard.mjs', tool, root, write(tool, root, 'src/a.ts', 'x')), null, `${tool}: in map`);
     assert.equal(run('structure-guard.mjs', tool, root, write(tool, root, 'src/a.bak', 'x')), 'deny', `${tool}: clutter`);
-    assert.equal(run('structure-guard.mjs', tool, root, write(tool, root, 'other/a.ts', 'x')), tool === 'codex' ? 'deny' : 'ask', `${tool}: off map`);
+    assert.equal(run('structure-guard.mjs', tool, root, write(tool, root, 'other/a.ts', 'x')), 'deny', `${tool}: off map (3.75.0: denied on every tool)`);
   }
   fs.writeFileSync(path.join(root, '.claude', 'state', 'freeze.json'), JSON.stringify({ dir: 'src/auth' }));
   for (const tool of TOOLS) {

@@ -562,15 +562,19 @@ T('[kit remove] --yes keeps a populated memory folder byte for byte', (t) => {
 // ================= 9. settings.json =================
 
 const settings = JSON.parse(fs.readFileSync(path.join(REPO, '.claude', 'settings.json'), 'utf8'));
-const NEED_ASK = ['Bash(node .claude/hooks/memory.mjs receipt:*)', 'Edit(./.kit.local.json)', 'Write(./.kit.local.json)'];
+const NEED_ASK = ['Edit(./.kit.local.json)', 'Write(./.kit.local.json)'];
+const RECEIPT = 'Bash(node .claude/hooks/memory.mjs receipt:*)'; // 3.75.0: moved from ask to allow
 
-T('[settings] permissions.ask holds memory.mjs receipt and Edit/Write of ./.kit.local.json', () => {
+T('[settings] permissions.ask holds Edit/Write of ./.kit.local.json; memory.mjs receipt is allowed (3.75.0)', () => {
   for (const rule of NEED_ASK) assert.ok(settings.permissions.ask.includes(rule), rule);
+  assert.ok(settings.permissions.allow.includes(RECEIPT), 'receipt in allow');
+  assert.equal(settings.permissions.ask.includes(RECEIPT), false, 'receipt not in ask');
 });
 
-T('[settings] none of them is in allow, and neither is any other memory.mjs receipt or .kit.local.json rule', () => {
+T('[settings] none of the .kit.local.json rules is in allow, and no other .kit.local.json rule is', () => {
   for (const rule of NEED_ASK) assert.equal(settings.permissions.allow.includes(rule), false, rule);
-  assert.deepEqual(settings.permissions.allow.filter((r) => /memory\.mjs receipt|\.kit\.local\.json/.test(r)), []);
+  assert.deepEqual(settings.permissions.allow.filter((r) => /\.kit\.local\.json/.test(r)), []);
+  assert.deepEqual(settings.permissions.allow.filter((r) => /memory\.mjs receipt/.test(r)), [RECEIPT], 'exactly one receipt rule');
 });
 
 // ================= 10. guard-secrets without memory.mjs (only --staged may need memory.mjs) =================

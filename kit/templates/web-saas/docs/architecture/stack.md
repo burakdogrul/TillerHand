@@ -55,7 +55,7 @@ npx supabase migration new [name]   # new migration
 
 ## Folder structure
 
-Feature-based structure and rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is asked about, CI checks it).
+Feature-based structure and rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is refused with a pointer, CI checks it).
 ```
 src/
 ├── app/                        # ONLY routes: page, layout, loading, error, route handler. No business logic.

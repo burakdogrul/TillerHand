@@ -330,8 +330,8 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   const own = ['Bash(npm test)', 'Bash(node scripts/x.mjs --onayla)', 'Bash(node .claude/hooks/tools.mjs --ac)'];
   const old = { permissions: { allow: [own[0], ...oldAllow, own[1]], ask: [...oldAsk, ...formerKit, own[2]] }, hooks: stop('--sessiz') };
   const { settings: s, added, removed } = migrateSettings(old, kit);
-  assert.ok(added.includes('ask: Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'added rules are listed for the report');
-  assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'new ask rule added');
+  assert.ok(added.includes('allow: Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'added rules are listed for the report (3.75.0: --plan-add is allowed)');
+  assert.ok(s.permissions.allow.includes('Bash(node .claude/hooks/freeze-guard.mjs --plan-add:*)'), 'new allow rule added');
   assert.ok(s.permissions.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'));
   assert.deepEqual(removed, [], 'no old kit rule is in this project: nothing removed');
   assert.deepEqual(s.permissions.ask.slice(0, formerKit.length), formerKit, 'the Turkish-named rules are not in OLD_RULES: kept, in order');
@@ -341,7 +341,7 @@ test('3.15.0 update settings migration: missing kit permission rules are added, 
   assert.deepEqual(s.hooks, stop('--sessiz'), 'the old Turkish flag is not read or rewritten');
   const save = 'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)';
   const moved = migrateSettings({ permissions: { allow: [save] } }, kit).settings.permissions;
-  assert.ok(!moved.allow.includes(save) && moved.ask.includes(save), '3.28.0: --plan-save moves from allow to ask');
+  assert.ok(moved.allow.includes(save) && !moved.ask.includes(save), '3.75.0: --plan-save stays in allow (it moved to ask in 3.28.0 and is back in allow)');
   const broad = 'Bash(node .claude/hooks/tools.mjs:*)';
   const narrowed = migrateSettings({ permissions: { allow: [broad] } }, kit).settings.permissions;
   assert.ok(!narrowed.allow.includes(broad) && narrowed.ask.includes('Bash(node .claude/hooks/tools.mjs --enable:*)'), '3.10.0 broad tools.mjs rule is removed');

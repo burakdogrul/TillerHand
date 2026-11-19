@@ -39,10 +39,10 @@ test('F-06 silent without a plan; once a plan is saved an existing file off the 
   assert.equal(edit('src/lib/c.ts'), null, 'folder prefix');
   assert.equal(edit('src/ödeme dosyası.ts'), null, 'Turkish path with spaces');
   const off = edit('src/b.ts');
-  assert.equal(off.decision, 'ask');
+  assert.equal(off.decision, 'deny', '3.75.0: denied with guidance, not asked');
   assert.match(off.reason, /Scope shield.*src\/b\.ts.*G-1/);
-  assert.equal(edit(path.join(p, 'src/b.ts')).decision, 'ask', 'absolute path');
-  assert.equal(edit('src/lib/../b.ts').decision, 'ask', 'with ..');
+  assert.equal(edit(path.join(p, 'src/b.ts')).decision, 'deny', 'absolute path');
+  assert.equal(edit('src/lib/../b.ts').decision, 'deny', 'with ..');
   assert.equal(edit('src/new.ts'), null, 'new file: the structure guard looks at it');
   assert.equal(edit('docs/note.md'), null, 'docs is free');
   assert.equal(edit('CHANGELOG.md'), null);
@@ -53,10 +53,10 @@ test('F-06 an active plan does not widen without a question; add and end work; t
   const again = cli('--plan-save', 'G-2', 'src/b.ts');
   assert.equal(again.status, 1);
   assert.match(again.stderr, /plan is active/);
-  assert.equal(edit('src/b.ts').decision, 'ask', 'list unchanged');
-  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-add src/b.ts')?.decision, 'ask', 'Codex/Antigravity equivalent');
-  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-end')?.decision, 'ask', '3.28.0: closing the shield is asked too');
-  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-save G-2 src/')?.decision, 'ask', '--plan-end + --plan-save must not widen unasked');
+  assert.equal(edit('src/b.ts').decision, 'deny', 'list unchanged');
+  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-add src/b.ts'), null, '3.75.0: allowed on Codex/Antigravity too (the path rules are in the script)');
+  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-end'), null, '3.75.0: closing the shield is allowed');
+  assert.equal(permissionEquivalent('node .claude/hooks/freeze-guard.mjs --plan-save G-2 src/'), null, '3.75.0: allowed; the script refuses a second plan');
   assert.equal(cli('--plan-add', 'src/b.ts').status, 0);
   assert.equal(edit('src/b.ts'), null);
   assert.equal(cli('--plan-add', '../dis.ts').status, 1, 'a path outside the project is not added');
@@ -72,7 +72,7 @@ test('F-06 Codex and Antigravity; the lock comes first; a broken plan file does 
   const del = hook({ tool_name: 'apply_patch', turn_id: 't', cwd: p, tool_input: { command: '*** Begin Patch\n*** Delete File: src/b.ts\n*** End Patch' } }, { CLAUDE_PROJECT_DIR: '' });
   assert.equal(del?.decision, 'deny');
   const ag = hook({ toolCall: { name: 'replace_file_content', args: { TargetFile: path.join(p, 'src/b.ts'), TargetContent: 'x', ReplacementContent: 'y' } }, workspacePaths: [p] }, { CLAUDE_PROJECT_DIR: '' });
-  assert.equal(ag?.decision, 'ask');
+  assert.equal(ag?.decision, 'deny');
   cli('--set', 'src/lib');
   assert.equal(edit('src/a.ts').decision, 'deny', 'in the plan but outside the lock');
   fs.rmSync(path.join(p, '.claude/state/freeze.json'));
@@ -82,8 +82,9 @@ test('F-06 Codex and Antigravity; the lock comes first; a broken plan file does 
 });
 
 test('F-06 audit: a quoted mode is asked too; called from a subfolder the plan is written to the project root', () => {
-  for (const k of ["node .claude/hooks/freeze-guard.mjs '--plan-add' x", 'node ".claude/hooks/freeze-guard.mjs" "--plan-add" x', "node .claude/hooks/freeze-guard.mjs '--off'"])
-    assert.equal(permissionEquivalent(k)?.decision, 'ask', k);
+  for (const k of ["node .claude/hooks/freeze-guard.mjs '--plan-add' x", 'node ".claude/hooks/freeze-guard.mjs" "--plan-add" x'])
+    assert.equal(permissionEquivalent(k), null, `3.75.0: ${k}`);
+  assert.equal(permissionEquivalent("node .claude/hooks/freeze-guard.mjs '--off'")?.decision, 'ask', 'a quoted --off is still asked');
   fs.mkdirSync(path.join(p, 'src', 'alt'), { recursive: true });
   const env = { ...process.env };
   delete env.CLAUDE_PROJECT_DIR;
@@ -120,10 +121,12 @@ test('3.14.1 shell: while a plan is active a shell write to an existing file off
   for (const k of ['sed -i s/x/y/ src/b.ts', 'echo y > src/b.ts', 'echo y >> src/b.ts', 'mv src/b.ts src/b2.ts', 'git checkout -- src/b.ts',
     'sed -i s/x/y/ "src/ödeme dosyası.ts"', 'cd src && sed -i s/x/y/ b.ts', 'Set-Content -Path src/b.ts -Value y']) {
     const r = shell(k);
-    assert.equal(r?.permissionDecision, 'ask', k);
+    assert.equal(r?.permissionDecision, 'deny', `${k} (3.75.0: denied with guidance, not asked)`);
     assert.match(r.permissionDecisionReason, /Scope shield/, k);
+    assert.match(r.permissionDecisionReason, /AskUserQuestion/, k);
+    assert.match(r.permissionDecisionReason, /--plan-add/, k);
   }
-  assert.equal(shell('sed -i s/x/y/ b.ts', path.join(p, 'src'))?.permissionDecision, 'ask', 'relative to the session cwd');
+  assert.equal(shell('sed -i s/x/y/ b.ts', path.join(p, 'src'))?.permissionDecision, 'deny', 'relative to the session cwd');
   for (const k of ['sed -i s/x/y/ src/a.ts', 'cat src/b.ts', 'grep x src/b.ts > /dev/null', 'echo y > src/new.ts', 'echo y > docs/not.md', 'node --test 2>&1'])
     assert.equal(shell(k), null, k);
   cli('--plan-end');
@@ -143,7 +146,7 @@ test('3.14.1 symlink/junction: a file outside cannot be written from inside the 
   fs.symlinkSync(p, link, 'junction');
   try {
     cli('--plan-save', 'G-5', 'src/lib/');
-    assert.equal(edit('src/lib/up/src/b.ts')?.decision, 'ask', 'real path is src/b.ts');
+    assert.equal(edit('src/lib/up/src/b.ts')?.decision, 'deny', 'real path is src/b.ts');
     cli('--plan-end');
     cli('--set', 'src/lib');
     assert.equal(edit('src/lib/up/src/b.ts')?.decision, 'deny');
@@ -158,13 +161,14 @@ test('3.14.1 symlink/junction: a file outside cannot be written from inside the 
 
 test('3.14.1 audit: MSYS paths, globs, variables, root targets, subshells and the wide writer list are asked', () => {
   cli('--plan-save', 'G-7', 'src/a.ts');
-  const asked = [
-    'sed -i s/x/y/ src/*.ts', 'rm -r src/*', 'mv * ../', 'sed -i s/x/y/ $PWD/src/b.ts', 'sed -i s/x/y/ `pwd`/src/b.ts',
-    'git checkout .', 'git restore .', 'git checkout -- .', 'echo x >| src/b.ts', 'ln -sf x src/b.ts', 'curl -o src/b.ts http://x',
-    'dd if=/dev/zero of=src/b.ts', 'git apply x.patch', 'git stash', 'patch -p1 < x.patch', '(cd src && sed -i s/x/y/ b.ts)',
-    'pushd src && sed -i s/x/y/ b.ts', 'npx prettier --write src/b.ts', 'npx eslint --fix src/b.ts',
+  // 3.75.0: a command that resolves to an existing file outside the plan is denied; one that cannot be resolved, or that targets the root, is still asked
+  const denied = [
+    'sed -i s/x/y/ src/*.ts', 'rm -r src/*', 'sed -i s/x/y/ $PWD/src/b.ts', 'echo x >| src/b.ts', 'ln -sf x src/b.ts', 'curl -o src/b.ts http://x',
+    'dd if=/dev/zero of=src/b.ts', '(cd src && sed -i s/x/y/ b.ts)', 'pushd src && sed -i s/x/y/ b.ts', 'npx prettier --write src/b.ts', 'npx eslint --fix src/b.ts',
   ];
-  if (process.platform === 'win32') asked.push(`sed -i s/x/y/ /${p[0].toLowerCase()}${p.slice(2).replace(/\\/g, '/')}/src/b.ts`);
+  const asked = ['mv * ../', 'sed -i s/x/y/ `pwd`/src/b.ts', 'git checkout .', 'git restore .', 'git checkout -- .', 'git apply x.patch', 'git stash', 'patch -p1 < x.patch'];
+  if (process.platform === 'win32') denied.push(`sed -i s/x/y/ /${p[0].toLowerCase()}${p.slice(2).replace(/\\/g, '/')}/src/b.ts`);
+  for (const k of denied) assert.equal(shell(k)?.permissionDecision, 'deny', k);
   for (const k of asked) assert.equal(shell(k)?.permissionDecision, 'ask', k);
   for (const k of ['grep -rn tee src', "sed -i 's/a*/b/' src/a.ts", "sed -i 's/$/x/' src/a.ts", 'git status', 'npx prettier --check src/b.ts'])
     assert.equal(shell(k), null, k);
@@ -247,6 +251,6 @@ test('3.14.1 NotebookEdit hits the shield', () => {
   write('src/n.ipynb', '{}');
   cli('--plan-save', 'G-6', 'src/a.ts');
   const r = hook({ tool_name: 'NotebookEdit', cwd: p, tool_input: { notebook_path: path.join(p, 'src/n.ipynb'), new_source: 'x' } });
-  assert.equal(r?.decision, 'ask');
+  assert.equal(r?.decision, 'deny');
   cli('--plan-end');
 });

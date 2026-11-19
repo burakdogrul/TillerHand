@@ -131,7 +131,7 @@ test('W-4 structure-guard: the map is applied relative to the worktree (allowed,
   const ok = run('src/x.ts');
   assert.equal(ok.stdout, '', 'allowed by the map: no decision');
   assert.equal(decisionOf(run('x.bak')), 'deny', 'clutter');
-  assert.equal(decisionOf(run('lib/y.ts')), 'ask', 'off the worktree map (the main path would sit under .claude/**)');
+  assert.equal(decisionOf(run('lib/y.ts')), 'deny', 'off the worktree map (the main path would sit under .claude/**)');
 }));
 
 test('W-4 structure-guard: the worktree own structure.json is the one read', git, () => withRepo(({ main, wt }) => {

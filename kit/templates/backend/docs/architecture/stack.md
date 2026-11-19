@@ -57,7 +57,7 @@ docker build -t [name] . && docker run --env-file .env -p 8000:8000 [name]
 
 ## Folder structure
 
-Feature-based structure and rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is asked about, CI checks it).
+Feature-based structure and rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is refused with a pointer, CI checks it).
 ```
 app/
 ├── main.py                     # app, router registration, /health

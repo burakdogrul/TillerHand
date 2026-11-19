@@ -447,7 +447,7 @@ test('B9 Codex/Antigravity: a commit message that names --skip is text, not a ca
     assert.equal(permissionEquivalent(c)?.decision, 'ask', c);
   // the same trick must not hide any other rule either
   for (const c of ['echo "git commit -m "; node .claude/hooks/gate.mjs --approve; echo "e"', 'echo "git commit -m "; rm -rf /tmp/x; echo "e"',
-    'echo "git commit -m "; node .claude/hooks/prefs.mjs --add avoid x; echo "e"', 'git commit -m "a\\"; rm -rf /tmp/x; echo \\""', 'git commit -m "a”; rm -rf /tmp/x; “b"'])
+    'echo "git commit -m "; node .claude/hooks/prefs.mjs --remove 1; echo "e"', 'git commit -m "a\\"; rm -rf /tmp/x; echo \\""', 'git commit -m "a”; rm -rf /tmp/x; “b"'])
     assert.ok(permissionEquivalent(c), c);
   assert.equal(permissionEquivalent('git add -A && git commit -qm "docs: gate.mjs --approve and commit-gate.mjs --skip explained"'), null, 'git add && git commit');
 });

@@ -3,7 +3,8 @@
 // One file for all projects: ~/.vibe-kit/preferences.md. Git never sees
 // it; the session-start hook loads it every session.
 //   node .claude/hooks/prefs.mjs --list                          numbered list
-//   node .claude/hooks/prefs.mjs --add <category> "<preference>"     only with the user's approval (asked)
+//   node .claude/hooks/prefs.mjs --add <category> "<preference>"     after the user picks it in AskUserQuestion; prints the saved text
+//     (allowed; text that reads like a permission or instruction is asked by destructive-guard)
 //   node .claude/hooks/prefs.mjs --remove <no>                   (asked)
 // Categories: conversation, questions, reports, code, avoid.
 // A project rule goes to AGENTS.md → Learned rules, not here.
@@ -106,7 +107,7 @@ if (isMain(import.meta.url)) {
   if (mode === '--add') {
     const r = addPref(a, rest.join(' '));
     if (r.error) fail(r.error);
-    console.log(r.existing ? `This preference is already saved (${CATEGORIES[r.existing]}).` : `Preference saved (${CATEGORIES[categoryKey(a)]}): ${prefsFile()}`);
+    console.log(r.existing ? `This preference is already saved (${CATEGORIES[r.existing]}).` : `Preference saved (${CATEGORIES[categoryKey(a)]}): "${clean(rest.join(' '))}" in ${prefsFile()}`);
   } else if (mode === '--remove') {
     const error = removePref(a);
     if (error) fail(error);

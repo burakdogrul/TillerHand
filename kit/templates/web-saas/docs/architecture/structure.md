@@ -63,7 +63,7 @@ supabase/migrations/            # database changes ONLY here (prisma/ or drizzle
 
 ## Rules
 
-1. **A new file goes to its place in the map.** Writing outside the `.claude/structure.json` map is asked about; clutter patterns (`*.bak`, `*-old.*`, `* copy*`, `temp/`, `deneme*`) are blocked. CI checks the whole repo on every PR.
+1. **A new file goes to its place in the map.** Writing outside the `.claude/structure.json` map is refused with a pointer to the right place; a new permanent place is asked with AskUserQuestion and, once accepted, added with `node .claude/hooks/structure-guard.mjs --add <folder>`; clutter patterns (`*.bak`, `*-old.*`, `* copy*`, `temp/`, `deneme*`) are blocked. CI checks the whole repo on every PR.
 2. **By feature.** Everything that belongs to a feature (component, logic, test) stays under `features/<feature>/`. When a piece of code starts to be used by two features, it moves to the shared layer (`components/`, `lib/`, `shared/`).
 3. **Features do not reach into each other.** `features/a` does not import the internal files of another feature; it uses only what that feature exposes from its `index` file.
 4. **Naming:** Folders and files use `kebab-case`. React component files may use `PascalCase.tsx`; Python modules use `snake_case.py`. A feature folder name is singular and English (`invoice`, `customer`).

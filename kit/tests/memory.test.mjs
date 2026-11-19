@@ -952,11 +952,12 @@ T('[wiring] settings.json Stop chain runs `memory.mjs --hook stop`', () => {
   assert.ok(JSON.stringify(settings.hooks.Stop).includes('memory.mjs --hook stop'));
 });
 
-T('[wiring] allow has memory.mjs search, recap and doctor; ask has add, person, forget and compact', () => {
+T('[wiring] allow has memory.mjs search, recap, doctor, add and compact; ask has person and forget (3.75.0)', () => {
   const has = (list, sub) => list.some((r) => /^Bash\(node \.claude\/hooks\/memory\.mjs /.test(r) && r.startsWith(`Bash(node .claude/hooks/memory.mjs ${sub}`));
-  for (const sub of ['search', 'recap', 'doctor']) assert.ok(has(settings.permissions.allow, sub), `allow ${sub}`);
-  for (const sub of ['add', 'person', 'forget', 'compact']) assert.ok(has(settings.permissions.ask, sub), `ask ${sub}`);
-  for (const sub of ['add', 'person', 'forget', 'compact']) assert.equal(has(settings.permissions.allow, sub), false, `${sub} must not be allowed`);
+  for (const sub of ['search', 'recap', 'doctor', 'add', 'compact']) assert.ok(has(settings.permissions.allow, sub), `allow ${sub}`);
+  for (const sub of ['add', 'compact']) assert.equal(has(settings.permissions.ask, sub), false, `${sub} must not be asked`);
+  for (const sub of ['person', 'forget']) assert.ok(has(settings.permissions.ask, sub), `ask ${sub}`);
+  for (const sub of ['person', 'forget']) assert.equal(has(settings.permissions.allow, sub), false, `${sub} must not be allowed`);
 });
 
 T('[wiring] deny has Read and Edit of .claude/state/memory/**', () => {

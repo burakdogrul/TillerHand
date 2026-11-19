@@ -54,7 +54,7 @@ maestro test .maestro/                  # e2e
 
 ## Folder structure
 
-Structure by feature and its rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is asked about, CI checks it).
+Structure by feature and its rules: `docs/architecture/structure.md`. Map: `.claude/structure.json` (writing outside it is refused with a pointer, CI checks it).
 ```
 src/
 ├── app/                        # ONLY screens and navigation (Expo Router). No business logic.

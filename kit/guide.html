@@ -361,7 +361,7 @@ footer .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 <section class="hero">
   <div class="container">
     <div>
-      <span class="pill"><b>v3.74.1</b> Starter kit for Claude Code · MIT</span>
+      <span class="pill"><b>v3.75.0</b> Starter kit for Claude Code · MIT</span>
       <h1>The AI builds.<br><em>You steer.</em></h1>
       <p class="sub">TillerHand takes a product from idea to production and maintenance with Claude Code. At every important decision the AI gives you the options, its recommendation and the cost of each option. An expert board reviews the work, and guardrails stop mistakes before they happen.</p>
       <div class="setup">
@@ -960,19 +960,20 @@ npx tillerhand init
       <tr><td>Secret block</td><td>Blocks API keys (Anthropic, OpenAI, Stripe, AWS, GitHub, Supabase…) written to code or docs; also scans before a commit</td></tr>
       <tr><td>Destructive command shield</td><td><code>DROP</code>, <code>TRUNCATE</code>, unconditional <code>DELETE</code>, <code>db reset</code>, pulling prod environment variables onto the machine, deleting cloud data (S3 buckets, databases, resource groups, apps, repositories) and seeding a remote database are blocked; prod deploy, rollback, store submission, migrations, cluster and hosting deletes, package and release publishing and deleting the main branch are asked</td></tr>
       <tr><td>Package gate</td><td>A package that is installed, or downloaded and run with <code>npx</code> or <code>uvx</code>, is checked against the registry: if it doesn't exist it is blocked; if it is very new, rarely downloaded or looks like a popular package, it is asked. A git or URL source, another registry or index, and cargo, go, gem and composer installs are asked, since they cannot be checked. Dependencies the AI adds to <code>package.json</code>, <code>requirements.txt</code> or <code>pyproject.toml</code> go through the same check</td></tr>
-      <tr><td>Structure guard</td><td>A new file outside the map is asked; clutter such as <code>*.bak</code>, <code>*-old.*</code>, copies and <code>temp/</code> is blocked; made from the shell (<code>cp a.ts a.bak</code>) it is asked</td></tr>
+      <tr><td>Structure guard</td><td>A new file outside the map is refused with a pointer: the AI puts it in its place or under <code>sandbox/</code>, or asks you (multiple choice) and adds the folder with <code>structure-guard.mjs --add</code>; clutter such as <code>*.bak</code>, <code>*-old.*</code>, copies and <code>temp/</code> is blocked; made from the shell, a clutter name (<code>cp a.ts a.bak</code>) is asked and an off-map file is refused the same way; paths a committed <code>.gitignore</code> ignores (build output, test logs) are free</td></tr>
       <tr><td>Config approval</td><td><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, <code>.mcp.json</code> and workflow files don't change without your approval</td></tr>
       <tr><td>Test separation</td><td>The tests are written before the code by a separate agent (<code>test-writer</code>; a different model is suggested for security, payment or data-deleting work), not by whoever writes the code. Nobody but this agent can write to a test file: the main session and the code agent are blocked if they try. A test file changed indirectly by a patch or script also stops at the commit gate. So whoever writes the code can't shape the test to fit their own code</td></tr>
       <tr><td>Test protection</td><td>Deleting or commenting out an assertion, <code>.skip</code>/<code>.only</code>, a loosened assertion, deleting or moving a test file, and narrowing coverage in the test config are asked; so is writing to a test file through the shell</td></tr>
       <tr><td>Deterministic gate</td><td><code>gate.mjs --run</code>: lint, type check, tests and Semgrep run; the output feeds the board, and a red check counts as REJECT. If the "must not change" behaviors in the spec have no test or the test is red, the gate is red. It is also red if an added line contains a path specific to this machine (the full path of the project folder or the home folder). A new or changed command is first shown to you for approval</td></tr>
       <tr><td>Commit gate</td><td>No commit without a board review and a green gate for the same changes; the task-end approval also counts for the commit, so the same change is not reviewed twice; skipping the review (<code>--skip</code>) and commands that make commits with nothing to review (<code>git merge</code>, <code>git revert</code>…) are asked every time; commits on a <code>try/*</code> branch need no review, because <code>/lock</code> reviews the whole slice; opening that branch asks once, and moving <code>main</code> without a commit is asked; a test you changed by hand goes through with <code>--accept-tests</code>, and the review still runs</td></tr>
       <tr><td>Edit lock</td><td>While <code>/freeze &lt;folder&gt;</code> is on, the AI writes only to that folder; writing outside through the shell is asked, and a symlink can't escape it</td></tr>
-      <tr><td>Scope shield</td><td>After <code>/plan-task</code> approval, the plan's file list is saved; writing to an existing file not on the list is asked. Turning the shield on and off is asked too</td></tr>
+      <tr><td>Scope shield</td><td>After <code>/plan-task</code> approval, the plan's file list is saved; changing an existing file not on the list is refused, from the shell too; the AI asks you before it widens the plan with <code>--plan-add</code>, and each widening is kept in the plan and in <code>.claude/state/plan-log.jsonl</code>. Turning the edit lock off is asked</td></tr>
       <tr><td>Edit round counter</td><td>When the same code file is edited for the 5th and 10th time in a session, a Semgrep and security review reminder appears</td></tr>
       <tr><td>Dev/prod separation</td><td>The local environment and the AI (including read-only MCP) connect only to the dev project; prod secrets stay in the hosting dashboard</td></tr>
       <tr><td>Security review</td><td><code>security-guidance</code>: a risky-pattern warning while writing (service_role on the client, personal data in logs, innerHTML), and a review by a separate model at the commit</td></tr>
     </tbody>
   </table></div>
+  <p><b>Few permission prompts.</b> Routine work runs without a prompt: tests, lint, type check, build, memory notes, saved preferences and plan updates are on the allow list. Guards that only steer the AI refuse with a pointer instead of opening a prompt, and a choice that is yours comes as a multiple-choice question. In auto mode (Claude Code's starting mode in the terminal from v2.1.283; <kbd>Shift+Tab</kbd> switches modes) file edits are not asked either; in the default mode they are. The kit does not set a starting mode. Still asked in every mode: push, opening and merging PRs, deleting or exporting memory, keys and limits, running roles and sessions, kit install, switching plugins on, skipping the commit gate, rule and guard files, test files, the prod database and <code>.env</code>. A preference text that reads like a permission or instruction is asked too.</p>
   <div class="table-wrap"><table>
     <thead><tr><th>When</th><th>Where</th><th>What it catches</th></tr></thead>
     <tbody>
@@ -1005,7 +1006,7 @@ npx tillerhand init
 <section id="structure">
   <p class="path">.claude/structure.json · docs/architecture/structure.md</p>
   <h2>The project structure is protected</h2>
-  <p class="lead">The code is organized by feature: everything that belongs to a feature lives under <code>features/&lt;feature&gt;/</code>. If a new file is about to be written outside the structure map, you are asked; clutter files are blocked. Trial work goes to <code>sandbox/</code>, outdated docs to <code>docs/archive/</code>.</p>
+  <p class="lead">The code is organized by feature: everything that belongs to a feature lives under <code>features/&lt;feature&gt;/</code>. If a new file is about to be written outside the structure map, the AI is pointed to the right place, and a new place comes to you as a multiple-choice question; clutter files are blocked. Trial work goes to <code>sandbox/</code>, outdated docs to <code>docs/archive/</code>.</p>
 <pre class="term">.claude/         <span class="c"># commands, agents, hooks, board, findings, structure.json</span>
 .github/         <span class="c"># CI, Dependabot, live monitoring, cloud agents</span>
 docs/
@@ -1310,7 +1311,7 @@ Pending decision: email service</pre>
 <footer>
   <div class="container">
     <a class="brand" href="#top" style="font-size:16px"><svg class="mark" style="width:22px;height:22px"><use href="#mark"/></svg>TillerHand</a>
-    <span>Version 3.74.1 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
+    <span>Version 3.75.0 · <a href="https://github.com/burakdogrul/TillerHand">GitHub</a> · <a href="https://github.com/burakdogrul/TillerHand/blob/main/LICENSE">MIT license</a> · The KVKK section is a checklist, not legal advice.</span>
   </div>
 </footer>
 

@@ -120,15 +120,18 @@ const OLD_RULES = {
   allow: [
     // 3.19.1: in the project folder the CLI loads a repo's .playwright/cli.config.json (it can run a program); asked, not allowed
     ...['open', 'snapshot', 'console', 'requests', 'screenshot'].map((c) => `Bash(npx -y @playwright/cli@0.1.22 ${c}:*)`),
-    // 3.28.0: --plan-end + --plan-save widened or dropped the scope shield unasked; both are asked now
-    'Bash(node .claude/hooks/freeze-guard.mjs --plan-save:*)', 'Bash(node .claude/hooks/freeze-guard.mjs --plan-end)',
     // 3.10.0 allowed every tools.mjs flag; --enable and --commands are asked since 3.10.1, the broad rule skipped that
     'Bash(node .claude/hooks/tools.mjs:*)',
     // 3.49.2: lang.mjs --write saves the texts approval prompts show; only --show, --check, --export and --set stay allowed
     'Bash(node .claude/hooks/lang.mjs:*)',
     // 3.49.2: kit.mjs install copies files over the project, the guards included; asked, not allowed
     'Bash(node kit/kit.mjs install:*)'],
-  ask: [],
+  // 3.75.0: routine steps prompted in every mode (auto too); they are allowed now. The scope shield and the structure map
+  // deny with a pointer to AskUserQuestion instead, and preference text that reads like an instruction is asked by the shield
+  ask: [
+    ...['add:*', 'compact:*', 'init:*', 'receipt:*'].map((c) => `Bash(node .claude/hooks/memory.mjs ${c})`),
+    'Bash(node .claude/hooks/prefs.mjs --add:*)',
+    ...['--plan-add:*', '--plan-save:*', '--plan-end'].map((c) => `Bash(node .claude/hooks/freeze-guard.mjs ${c})`)],
 };
 
 // settings.json belongs to the project and is not replaced on update, but the kit's permission rules must reach it:
@@ -428,7 +431,11 @@ function update({ project, addons: newAddons, tool }) {
       let local, migrated;
       try {
         local = JSON.parse(read(target));
-        migrated = migrateSettings(local, JSON.parse(read(source)));
+        // The stack's and add-ons' settings.merge.json are patches applied at install; their permission rules (3.75.0:
+        // npm test, vitest, mypy…) reach an installed project only if the update reads them too
+        const kitSettings = patches.filter((p) => p.kind === 'merge' && p.target === rel)
+          .reduce((acc, p) => merge(acc, JSON.parse(read(p.source))), JSON.parse(read(source)));
+        migrated = migrateSettings(local, kitSettings);
       } catch (e) { report.conflicts.push(`${rel} (permissions not added: ${e.message})`); continue; }
       if (JSON.stringify(migrated.settings) !== JSON.stringify(local)) {
         fs.writeFileSync(target, JSON.stringify(migrated.settings, null, 2) + '\n');
