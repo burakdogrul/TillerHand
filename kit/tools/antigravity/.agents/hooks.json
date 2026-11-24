@@ -1,19 +1,19 @@
 {
   "kit-session": {
     "SessionStart": [
-      { "type": "command", "command": "node .claude/hooks/session-start.mjs" }
+      { "type": "command", "command": "node ../.claude/hooks/session-start.mjs" }
     ]
   },
   "kit-file-guards": {
     "PreToolUse": [
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|write_file|edit_file",
         "hooks": [
-          { "type": "command", "command": "node .claude/hooks/guard-secrets.mjs" },
-          { "type": "command", "command": "node .claude/hooks/freeze-guard.mjs" },
-          { "type": "command", "command": "node .claude/hooks/structure-guard.mjs" },
-          { "type": "command", "command": "node .claude/hooks/test-guard.mjs" },
-          { "type": "command", "command": "node .claude/hooks/package-gate.mjs", "timeout": 30 }
+          { "type": "command", "command": "node ../.claude/hooks/guard-secrets.mjs" },
+          { "type": "command", "command": "node ../.claude/hooks/freeze-guard.mjs" },
+          { "type": "command", "command": "node ../.claude/hooks/structure-guard.mjs" },
+          { "type": "command", "command": "node ../.claude/hooks/test-guard.mjs" },
+          { "type": "command", "command": "node ../.claude/hooks/package-gate.mjs", "timeout": 30 }
         ]
       }
     ]
@@ -21,14 +21,14 @@
   "kit-edit-rounds": {
     "PostToolUse": [
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|write_file|edit_file",
         "hooks": [
-          { "type": "command", "command": "node .claude/hooks/edit-rounds.mjs" }
+          { "type": "command", "command": "node ../.claude/hooks/edit-rounds.mjs" }
         ]
       }
     ],
     "PreInvocation": [
-      { "type": "command", "command": "node .claude/hooks/edit-rounds.mjs --inject" }
+      { "type": "command", "command": "node ../.claude/hooks/edit-rounds.mjs --inject" }
     ]
   },
   "kit-read-guard": {
@@ -36,7 +36,7 @@
       {
         "matcher": "*",
         "hooks": [
-          { "type": "command", "command": "node .claude/hooks/freeze-guard.mjs" }
+          { "type": "command", "command": "node ../.claude/hooks/freeze-guard.mjs" }
         ]
       }
     ]
@@ -46,10 +46,10 @@
       {
         "matcher": "run_command",
         "hooks": [
-          { "type": "command", "command": "node .claude/hooks/guard-secrets.mjs" },
-          { "type": "command", "command": "node .claude/hooks/destructive-guard.mjs" },
-          { "type": "command", "command": "node .claude/hooks/package-gate.mjs", "timeout": 30 },
-          { "type": "command", "command": "node .claude/hooks/commit-gate.mjs" }
+          { "type": "command", "command": "node ../.claude/hooks/guard-secrets.mjs" },
+          { "type": "command", "command": "node ../.claude/hooks/destructive-guard.mjs" },
+          { "type": "command", "command": "node ../.claude/hooks/package-gate.mjs", "timeout": 30 },
+          { "type": "command", "command": "node ../.claude/hooks/commit-gate.mjs" }
         ]
       }
     ]

@@ -5,6 +5,7 @@
 //   Antigravity: { toolCall: { name, args }, workspacePaths }. Tools: run_command (CommandLine),
 //                write_to_file (TargetFile, CodeContent), replace_file_content (ReplacementContent),
 //                multi_replace_file_content (ReplacementChunks[].ReplacementContent).
+//                CLI (agy 1.5.16): write_file (Path, Content), edit_file (Path, Target, Replacement), read_file (Path).
 // Source: learn.chatgpt.com/docs/hooks, antigravity.google/docs/hooks (2026-10-23).
 // Principle: if a write or command tool lacks the expected field, do not allow it (empty path, every argument is scanned).
 import fs from 'node:fs';
@@ -44,6 +45,7 @@ export function isMain(metaUrl) {
 export const reviewOff = (s) => /^\*\*Commit review:\*\*[ \t]*off(?![\p{L}\p{N}])/imu.test(s ?? '');
 
 const AG_WRITE = ['write_to_file', 'replace_file_content', 'multi_replace_file_content'];
+const AG_CLI_WRITE = ['write_file', 'edit_file'];
 
 // Claude Code passes CLAUDE_PROJECT_DIR to hooks; Codex does not. Codex has no "ask", so a misdetection stays on the safe side.
 export function detectTool(g) {
@@ -186,6 +188,12 @@ export function parseInput(g) {
         after: full ? (isText(args.CodeContent) ? args.CodeContent : '') : join('ReplacementContent'),
         edits: full ? undefined : chunks.map((c) => ({ old: String(c?.TargetContent ?? ''), new: String(c?.ReplacementContent ?? ''), all: c?.AllowMultiple === true })),
       });
+    }
+    if (AG_CLI_WRITE.includes(name)) {
+      const full = name === 'write_file';
+      const before = full ? undefined : (isText(args.Target) ? args.Target : '');
+      const after = full ? (isText(args.Content) ? args.Content : '') : (isText(args.Replacement) ? args.Replacement : '');
+      result.files.push({ path: isText(args.Path) ? args.Path : '', text: JSON.stringify(args), before, after, edits: full ? undefined : [{ old: before, new: after, all: false }] });
     }
     // Reads: independent of the tool name, every string in the arguments counts as a possible path (unknown read tools too)
     result.reads = texts(args);

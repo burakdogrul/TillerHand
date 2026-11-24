@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.75.3-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Sürüm" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-3.76.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-haz%C4%B1r-d97757?style=flat-square">
   <img alt="Codex ve Antigravity" src="https://img.shields.io/badge/ayr%C4%B1ca-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -350,7 +350,7 @@ node .claude/hooks/models.mjs --remove-key <ad>
 
 ## Codex ve Antigravity
 
-Kit Claude Code için yazıldı; kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü ve durum çubuğu bu araçlarda yok, commit kapısı orada da çalışır. Bu araçlar ajan kimliği bildirmediği için test ayrımı orada kural metninde kalır. Kurulum: `node <kit>/kit/kit.mjs init --tool codex` (veya `antigravity`).
+Kit Claude Code için yazıldı; kurallar, komutlar ve korumalar OpenAI Codex ve Google Antigravity'de de çalışır. Kurul tek modelle yürür; soru arayüzü ve durum çubuğu bu araçlarda yok, commit kapısı orada da çalışır. Bu araçlar ajan kimliği bildirmediği için test ayrımı orada kural metninde kalır. Antigravity'de `/models` her kit ajanına bir kademe verir (`pro`, `flash` ya da `inherit`); ana model Antigravity'nin kendi seçicisinden gelir. Kurulum: `node <kit>/kit/kit.mjs init --tool codex` (veya `antigravity`).
 
 ## Ölçüm
 

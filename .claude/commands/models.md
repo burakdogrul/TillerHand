@@ -3,7 +3,16 @@ description: Opens the model panel to choose which model runs which role or job,
 argument-hint: [empty]
 ---
 
-Roles and models are explained in `docs/workflow/models.md`. Available in Claude Code; Codex not yet, Antigravity not supported.
+Roles and models are explained in `docs/workflow/models.md`. Available in Claude Code and Antigravity; Codex not yet.
+
+## In Antigravity
+
+If you are Antigravity (your shell has `ANTIGRAVITY_AGENT=1`), use only this section; the panel and the Claude models below do not apply.
+
+1. Show the current tiers: `node .claude/hooks/antigravity-agents.mjs --show`.
+2. Tell the user in two sentences: Antigravity gives each kit agent a tier, not a named model: `pro`, `flash`, or `inherit` (the main session's model). The main session's model is the one chosen in Antigravity's model picker; the kit cannot change it.
+3. Ask with `ask_question`, one question per agent that should change, options `pro`, `flash`, `inherit`. Recommend `pro` for test-writer, security-auditor, board-chair and council-advisor, `flash` for code-reviewer on small changes.
+4. Save: `node .claude/hooks/antigravity-agents.mjs --set test-writer=pro code-reviewer=flash`. It writes only the `model:` line of `.agents/agents/<agent>.md` and creates the file from `.claude/agents/<agent>.md` if it is missing. Give the result back in one line. Stop here.
 
 The main path is the panel, a local page in the user's browser with three tabs: usage, jobs and providers. The chat path further down is for when there is no browser (SSH, cloud).
 

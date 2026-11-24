@@ -2,6 +2,17 @@
 
 The kit version is in `kit/VERSION`. To update a project, run `/kit-update` in it.
 Items with an "Adapt by hand" note concern files owned by the project; the update does not touch them.
+## [3.76.0] - 2026-11-24
+
+### Added
+- `/models` works in Antigravity. The kit sees it runs there (`ANTIGRAVITY_AGENT=1`) and gives each kit agent a tier, `pro`, `flash` or `inherit`, with `node .claude/hooks/antigravity-agents.mjs --show` and `--set test-writer=pro`. Only the `model:` line of `.agents/agents/<agent>.md` changes; a missing file is created from `.claude/agents/<agent>.md`. Antigravity takes a tier, not a named model, per agent, and the main model comes from its own picker.
+
+### Fixed
+- Antigravity CLI: the guards now see `write_file` and `edit_file` (the IDE names stay), so secret, freeze, structure and test checks apply there too.
+- Antigravity CLI runs hooks from the `.agents/` folder, so `.agents/hooks.json` now calls `node ../.claude/hooks/...`. Before, every tool call was blocked there because the hook scripts were not found. Adapt by hand: if your project has its own `.agents/hooks.json`, change `node .claude/hooks/` to `node ../.claude/hooks/`. The folder was measured on the CLI; if the Antigravity IDE runs hooks from the project root instead, its tool calls are blocked (the safe side) and the kit must be told.
+
+### Docs
+- Models from Antigravity cannot be called from Claude Code: Google's Antigravity FAQ says wrapping `agy` inside another coding agent is not supported on consumer plans.
 ## [3.75.3] - 2026-11-19
 
 ### Fixed

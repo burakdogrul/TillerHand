@@ -1104,7 +1104,7 @@ test('3.50.0: wiring: Codex Bash and Antigravity run_command run commit-gate.mjs
   assert.equal(cx.commandWindows, 'node .claude/hooks/commit-gate.mjs');
   const run = json('kit/tools/antigravity/.agents/hooks.json')['kit-command-guards'].PreToolUse.find((b) => b.matcher === 'run_command');
   assert.notEqual(run, undefined, 'Antigravity kit-command-guards has a run_command block');
-  assert.equal(run.hooks.some((h) => h.type === 'command' && h.command === 'node .claude/hooks/commit-gate.mjs'), true, 'Antigravity run_command runs commit-gate.mjs');
+  assert.equal(run.hooks.some((h) => h.type === 'command' && h.command === 'node ../.claude/hooks/commit-gate.mjs'), true, 'Antigravity run_command runs commit-gate.mjs');
 });
 
 // ---------- 3.50.1: history-writing git verbs and indirect git calls are asked; an error in the gate does not pass a commit ----------

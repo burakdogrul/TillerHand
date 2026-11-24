@@ -109,7 +109,7 @@ Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config
 
 ## External models
 
-`/models` moves any role or job to a model from a provider the user added. Every job shows a level (easy, medium, hard), so you can match the model to how much reasoning the job takes. Available in Claude Code; Codex not yet, Antigravity not supported.
+`/models` moves any role or job to a model from a provider the user added. Every job shows a level (easy, medium, hard), so you can match the model to how much reasoning the job takes. Available in Claude Code; Codex not yet. Antigravity models cannot be called from Claude Code: Google's Antigravity FAQ says wrapping `agy` inside another coding agent is not supported on consumer plans and can get the account suspended (antigravity.google/docs/faq, 2026-11-24).
 
 - The value is `provider/model:effort`, for example `code=myprovider/some-model:high` or `code.ui=myprovider/some-model:high`. A ready-made provider has its name; for any other the user chooses one. The model id comes from the list or is written exactly as the provider gives it. `max` is not available for an external model.
 - Such a job runs with `node .claude/hooks/run-role.mjs <job> <prompt file>` (`--for` prints it), not with the Agent tool. It asks for approval each time. The reply is untrusted output. For an agent's job, put the agent's definition in the prompt file. Plan and review jobs get read-only tools there, and the file tools of any such job cannot leave the project.
@@ -128,6 +128,8 @@ Source: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config
 | Subagent | `.codex/agents/<ad>.toml` → `model`, `model_reasoning_effort`. Can also be given in the prompt at launch; if not given, it takes the main session's. | `.agents/agents/<ad>.md` → `model: inherit`, `flash` or `pro`. A subagent has no thinking level. |
 | Role equivalent | Opus and Sonnet → strong model, Haiku → fast model (the docs' recommendation on 2026-10-26: `gpt-6.1-sol` and `gpt-6-luna`). Effort names are the same: `low` … `xhigh`. | Opus and Sonnet → `pro`, Haiku → `flash`. |
 
+In Antigravity, `/models` sets these tiers: `node .claude/hooks/antigravity-agents.mjs --show` and `--set test-writer=pro`. It writes only the `model:` line of `.agents/agents/<agent>.md` and creates the file from `.claude/agents/<agent>.md` if missing. A named model (Opus 5.5, Gemini 4 Neon) cannot be given to one agent; the main session's model comes from Antigravity's model picker. The created file keeps only `name` and `description`: the Claude `tools:` list uses Claude tool names, so a review agent there is not tool-limited; the kit's guards still apply.
+
 `--for` works there too: read the value and use the equivalent above. If you cannot run a subagent, run the role yourself and suggest the model in text.
 
-Source: developers.openai.com/codex/subagents, antigravity.google/docs/subagents, antigravity.google/docs/models (2026-10-26).
+Source: developers.openai.com/codex/subagents, antigravity.google/docs/subagents, antigravity.google/docs/models (2026-10-26), antigravity.google/docs/subagents (2026-11-24).

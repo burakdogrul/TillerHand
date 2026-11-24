@@ -179,3 +179,47 @@ test('F-10 --commands CLI: status shows the mode, a bad mode and a broken settin
   assert.ok(!fs.existsSync(file));
   fs.rmSync(p, { recursive: true, force: true });
 });
+
+// 3.76.0: Antigravity CLI runs hooks with the working directory <project>/.agents/, so kit hooks are reached with ../
+const AG_HOOKS = json(path.join(ROOT, 'kit/tools/antigravity/.agents/hooks.json'));
+// Every { type: 'command', command } entry, flat (SessionStart) or nested under matcher groups
+const agCommands = () => {
+  const out = [];
+  const walk = (n) => { if (Array.isArray(n)) n.forEach(walk); else if (n && typeof n === 'object') { if (typeof n.command === 'string') out.push(n.command); Object.values(n).forEach(walk); } };
+  walk(AG_HOOKS);
+  return out;
+};
+const agMatchers = () => {
+  const out = [];
+  for (const group of Object.values(AG_HOOKS)) for (const [event, list] of Object.entries(group)) for (const e of list) if (typeof e.matcher === 'string') out.push({ event, matcher: e.matcher });
+  return out;
+};
+
+test('AC-76.30 Antigravity hooks.json: every kit hook command is "node ../.claude/hooks/<file>.mjs", none starts with "node .claude/"', () => {
+  const cmds = agCommands();
+  assert.ok(cmds.length >= 10, `commands found: ${cmds.length}`);
+  for (const c of cmds) {
+    assert.match(c, /^node \.\.\/\.claude\/hooks\/[\w-]+\.mjs( \S.*)?$/, c);
+    assert.ok(!c.startsWith('node .claude/'), c);
+  }
+});
+
+test('AC-76.31 Antigravity hooks.json: every referenced hook script exists in the repo', () => {
+  for (const c of agCommands()) {
+    const file = c.match(/^node \.\.\/(\.claude\/hooks\/[\w-]+\.mjs)/)?.[1];
+    assert.notEqual(file, undefined, c);
+    assert.ok(fs.existsSync(path.join(ROOT, file)), `${c}: ${file} is missing`);
+  }
+});
+
+test('AC-76.32 Antigravity hooks.json: every write matcher also covers write_file and edit_file, and matches them exactly', () => {
+  const writers = agMatchers().filter((m) => m.matcher.includes('write_to_file'));
+  assert.deepEqual(writers.map((m) => m.event).sort(), ['PostToolUse', 'PreToolUse'], 'a Pre and a Post write matcher');
+  for (const { event, matcher } of writers) {
+    const parts = matcher.split('|');
+    for (const name of ['write_file', 'edit_file', 'write_to_file', 'replace_file_content', 'multi_replace_file_content']) assert.ok(parts.includes(name), `${event}: ${name} in ${matcher}`);
+    const re = new RegExp(`^(?:${matcher})$`);
+    for (const name of ['write_file', 'edit_file', 'write_to_file']) assert.ok(re.test(name), `${event}: matches ${name}`);
+    for (const name of ['read_file', 'run_command', 'write_file_x', 'view_file']) assert.ok(!re.test(name), `${event}: must not match ${name}`);
+  }
+});

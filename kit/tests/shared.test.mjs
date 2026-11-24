@@ -367,3 +367,86 @@ test('3.49.12: ATTACK parseInput: a Codex apply_patch whose patch text is in too
   assert.ok(g.files[1].text.includes('new line'), `b.ts added text: ${JSON.stringify(g.files[1].text)}`);
   assert.equal(g.files[1].text.includes('old line'), false, 'a removed line is not added text');
 });
+
+// 3.76.0: Antigravity CLI (agy) tool names write_file / edit_file / read_file, args Path, Content, Target, Replacement
+const agy = (name, args, root = '/p') => ({ toolCall: { name, args, id: 'c1' }, cwd: root, hookEventName: 'PreToolUse', conversationId: 'conv-1' });
+
+test('AC-76.20 parseInput: Antigravity CLI write_file is a full write of Path with Content', () => {
+  const g = parseInput(agy('write_file', { Path: '/p/a.ts', Content: 'hello world' }));
+  assert.equal(g.tool, 'antigravity');
+  assert.equal(g.session, 'conv-1');
+  assert.equal(g.files.length, 1);
+  assert.equal(g.files[0].path, '/p/a.ts');
+  assert.equal(g.files[0].after, 'hello world');
+  assert.equal(g.files[0].before, undefined, 'a full write: the script checks the disk');
+  assert.ok(g.files[0].text.includes('hello world') && g.files[0].text.includes('/p/a.ts'), 'every argument is scanned');
+});
+
+test('AC-76.21 parseInput: Antigravity CLI edit_file is one edit from Target to Replacement', () => {
+  const g = parseInput(agy('edit_file', { Path: '/p/a.ts', Target: 'old text', Replacement: 'new text' }));
+  assert.equal(g.files.length, 1);
+  assert.equal(g.files[0].path, '/p/a.ts');
+  assert.equal(g.files[0].before, 'old text');
+  assert.equal(g.files[0].after, 'new text');
+  assert.deepEqual(g.files[0].edits, [{ old: 'old text', new: 'new text', all: false }]);
+  assert.ok(g.files[0].text.includes('new text'));
+});
+
+test('AC-76.22 parseInput: Antigravity CLI read_file is a read, not a write', () => {
+  const g = parseInput(agy('read_file', { Path: '/p/.env' }));
+  assert.deepEqual(g.files, []);
+  assert.ok(g.reads.includes('/p/.env'));
+});
+
+test('AC-76.23 parseInput: the Antigravity IDE tool names keep working', () => {
+  const w = parseInput({ toolCall: { name: 'write_to_file', args: { TargetFile: '/p/a.ts', CodeContent: 'x1' } } }).files;
+  assert.deepEqual(w.map((f) => [f.path, f.before, f.after]), [['/p/a.ts', undefined, 'x1']]);
+  const r = parseInput({ toolCall: { name: 'replace_file_content', args: { TargetFile: '/p/a.ts', TargetContent: 'o', ReplacementContent: 'n' } } }).files;
+  assert.deepEqual(r.map((f) => [f.path, f.before, f.after]), [['/p/a.ts', 'o', 'n']]);
+  const m = parseInput({ toolCall: { name: 'multi_replace_file_content', args: { TargetFile: '/p/a.ts', ReplacementChunks: [{ TargetContent: 'a', ReplacementContent: 'b' }, { TargetContent: 'c', ReplacementContent: 'd', AllowMultiple: true }] } } }).files;
+  assert.deepEqual(m[0].edits, [{ old: 'a', new: 'b', all: false }, { old: 'c', new: 'd', all: true }]);
+});
+
+test('AC-76.24 ATTACK parseInput: write_file without a usable Path still yields a file entry with path "" (not skipped)', () => {
+  for (const args of [{ Content: 'x' }, { Path: 5, Content: 'x' }, { Path: null, Content: 'x' }, { Path: { a: 1 }, Content: 'x' }, { Path: ['/p/a'], Content: 'x' }, {}]) {
+    const g = parseInput(agy('write_file', args));
+    assert.equal(g.files.length, 1, JSON.stringify(args));
+    assert.equal(g.files[0].path, '', JSON.stringify(args));
+  }
+  const g = parseInput(agy('write_file', { Path: '/p/a.ts', Content: { not: 'text' } }));
+  assert.equal(g.files[0].after, '', 'a non-string Content is an empty after');
+  assert.ok(g.files[0].text.includes('not'), 'but it is still scanned');
+});
+
+test('AC-76.25 ATTACK parseInput: edit_file with a non-string Target gets before "" and a missing Path gets path ""', () => {
+  for (const Target of [undefined, null, 7, { a: 1 }, ['x']]) {
+    const g = parseInput(agy('edit_file', { Path: '/p/a.ts', Target, Replacement: 'r' }));
+    assert.equal(g.files.length, 1);
+    assert.equal(g.files[0].before, '', JSON.stringify(Target));
+    assert.equal(g.files[0].after, 'r');
+  }
+  const g = parseInput(agy('edit_file', { Target: 'o', Replacement: 'r' }));
+  assert.equal(g.files.length, 1);
+  assert.equal(g.files[0].path, '');
+});
+
+test('AC-76.26 guards cover the Antigravity CLI tool names: secret, lock and structure', () => {
+  const root = tempRoot('agy-cli');
+  try {
+    const mk = (name, args) => agy(name, args, root);
+    assert.equal(run('guard-secrets.mjs', 'antigravity', root, mk('write_file', { Path: path.join(root, 'a.ts'), Content: `k = "${SECRET}"` })), 'deny', 'secret in write_file');
+    assert.equal(run('guard-secrets.mjs', 'antigravity', root, mk('edit_file', { Path: path.join(root, 'a.ts'), Target: 'k', Replacement: `k = "${SECRET}"` })), 'deny', 'secret in edit_file');
+    assert.equal(run('guard-secrets.mjs', 'antigravity', root, mk('write_file', { Path: path.join(root, 'a.ts'), Content: 'const k = process.env.K' })), null, 'clean write');
+    fs.mkdirSync(path.join(root, '.claude', 'state'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.claude', 'state', 'freeze.json'), JSON.stringify({ dir: 'src/auth' }));
+    assert.equal(run('freeze-guard.mjs', 'antigravity', root, mk('write_file', { Path: path.join(root, 'src/lib/x.ts'), Content: 'x' })), 'deny', 'outside the lock');
+    assert.equal(run('freeze-guard.mjs', 'antigravity', root, mk('edit_file', { Path: path.join(root, 'src/auth/x.ts'), Target: 'a', Replacement: 'b' })), null, 'inside the lock');
+    assert.equal(run('freeze-guard.mjs', 'antigravity', root, mk('write_file', { Content: 'x' })), 'deny', 'no path: the lock denies');
+    assert.equal(run('freeze-guard.mjs', 'antigravity', root, mk('read_file', { Path: path.join(root, '.env') })), 'deny', 'read_file cannot read .env');
+    fs.writeFileSync(path.join(root, '.claude', 'structure.json'), JSON.stringify({ allow: ['src/**'], deny: ['**/*.bak'] }));
+    fs.rmSync(path.join(root, '.claude', 'state', 'freeze.json'));
+    assert.equal(run('structure-guard.mjs', 'antigravity', root, mk('write_file', { Path: path.join(root, 'src/a.bak'), Content: 'x' })), 'deny', 'clutter');
+    assert.equal(run('structure-guard.mjs', 'antigravity', root, mk('edit_file', { Path: path.join(root, 'other/a.ts'), Target: 'a', Replacement: 'b' })), 'deny', 'off the map');
+    assert.equal(run('structure-guard.mjs', 'antigravity', root, mk('write_file', { Path: path.join(root, 'src/a.ts'), Content: 'x' })), null, 'in the map');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
