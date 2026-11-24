@@ -4,7 +4,6 @@
     "allow": [
       "Bash(node .claude/hooks/away.mjs --off)",
       "Bash(node .claude/hooks/away.mjs --status)",
-      "Bash(node .claude/hooks/away.mjs --push)",
       "Bash(git status)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -216,7 +215,7 @@
         ]
       },
       {
-        "matcher": "Bash|Edit|Write|AskUserQuestion",
+        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|AskUserQuestion",
         "hooks": [
           {
             "type": "command",
@@ -393,6 +392,8 @@
   "skillOverrides": {
     "models": "name-only",
     "ask-mode": "name-only",
+    "away": "name-only",
+    "back": "name-only",
     "board": "name-only",
     "dashboard": "name-only",
     "findings-all": "name-only",

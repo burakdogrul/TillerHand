@@ -5,7 +5,7 @@ Items with an "Adapt by hand" note concern files owned by the project; the updat
 ## [3.77.0] - 2026-11-24
 
 ### Added
-- Away mode, Claude Code only: `/away` before you leave, `/back` when you return. With bypass mode on (Shift+Tab), no approval prompt stops the work. The kit's own asks and its ask rules are refused and queued instead of opening a prompt; a question takes the recommended option on an easy-to-undo decision (recorded as `automatic (away)`) and parks the task on a hard-to-undo one (database, auth, payment, data model). Deleting data, deploys, spending, `.env` and rule files wait for you; push works through `node .claude/hooks/away.mjs --push` (plain push, no force). Only you can turn it on: `away.mjs --on` always asks. `/back` shows the queue and asks what to do.
+- Away mode, Claude Code only: `/away` before you leave, `/back` when you return. With bypass mode on (Shift+Tab), no approval prompt stops the work. The kit's own asks and its ask rules are refused and queued instead of opening a prompt; a question takes the recommended option on an easy-to-undo decision (recorded as `automatic (away)`) and parks the task on a hard-to-undo one (database, auth, payment, data model). Push, deleting data, deploys, spending, `.env` and rule files wait for you. Away mode only turns asks into refusals, never into permissions, so it opens nothing even if turned on by mistake. `/back` shows the queue (kept in `.claude/state/away-queue-<time>.jsonl`) and asks what to do.
 
 ## [3.76.0] - 2026-11-24
 

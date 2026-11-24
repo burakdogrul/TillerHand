@@ -130,7 +130,7 @@ test('AC-77.3 --status prints off, then on, as the first word; exit 0', () => {
   } finally { cleanup(root); }
 });
 
-test('AC-77.4 --off deletes away.json, prints the queue numbered, then empties it', async () => {
+test('AC-77.4 --off deletes away.json, prints the queue numbered, then moves it to away-queue-<timestamp>.jsonl', async () => {
   const root = project();
   try {
     awayOn(root);
@@ -142,10 +142,28 @@ test('AC-77.4 --off deletes away.json, prints the queue numbered, then empties i
     assert.equal(fs.existsSync(stateFile(root, 'away.json')), false);
     assert.match(r.stdout, /^1\. \[question\] Use Postgres or SQLite\?$/m);
     assert.match(r.stdout, /^2\. \[command\] git push origin main$/m);
-    assert.deepEqual(queueOf(root), []);
+    assert.equal(queueOf(root).length, 0, 'the live queue is empty after --off');
+  } finally { cleanup(root); }
+});
+
+test('AC-77.4 --off keeps the queue: away-queue.jsonl is renamed to away-queue-<timestamp>.jsonl with the same lines; a second --off prints "Nothing queued"', async () => {
+  const root = project();
+  try {
+    awayOn(root);
+    const m = await mod(root);
+    m.addToQueue(root, 'question', 'Use Postgres or SQLite?');
+    m.addToQueue(root, 'edit', 'CLAUDE.md');
+    const lines = fs.readFileSync(stateFile(root, 'away-queue.jsonl'), 'utf8');
+    const r = away(root, ['--off']);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(fs.existsSync(stateFile(root, 'away-queue.jsonl')), false);
+    const kept = fs.readdirSync(path.join(root, '.claude', 'state')).filter((f) => /^away-queue-.+\.jsonl$/.test(f));
+    assert.equal(kept.length, 1);
+    assert.equal(fs.readFileSync(stateFile(root, kept[0]), 'utf8'), lines);
     const again = away(root, ['--off']);
     assert.equal(again.status, 0, again.stderr);
     assert.match(again.stdout, /Nothing queued/);
+    assert.equal(fs.readdirSync(path.join(root, '.claude', 'state')).filter((f) => /^away-queue-.+\.jsonl$/.test(f)).length, 1);
   } finally { cleanup(root); }
 });
 
@@ -180,50 +198,19 @@ const pushProject = () => {
   return { root, bare, head: git(root, 'rev-parse', 'HEAD').stdout.trim(), remote: () => git(bare, 'rev-parse', 'main').stdout.trim() };
 };
 
-test('AC-77.5 --push while away runs plain git push and the remote receives the commit', () => {
-  const p = pushProject();
-  try {
-    awayOn(p.root);
-    assert.notEqual(p.remote(), p.head);
-    const r = away(p.root, ['--push']);
-    assert.equal(r.status, 0, r.stderr);
-    assert.equal(p.remote(), p.head);
-  } finally { cleanup(p.root); cleanup(p.bare); }
-});
-
-test('AC-77.5 --push while not away exits 1 with "only in away mode" and pushes nothing', () => {
+test('AC-77.5 ATTACK --push no longer exists: exit 1 (usage), away or not, with any arguments, and git is never run', () => {
   const p = pushProject();
   try {
     const before = p.remote();
-    const r = away(p.root, ['--push']);
-    assert.equal(r.status, 1);
-    assert.match(r.stdout + r.stderr, /only in away mode/);
-    assert.equal(p.remote(), before);
-  } finally { cleanup(p.root); cleanup(p.bare); }
-});
-
-test('AC-77.5 ATTACK --push with any extra argument is refused and pushes nothing', () => {
-  const p = pushProject();
-  try {
-    awayOn(p.root);
-    const before = p.remote();
-    for (const extra of [['--force'], ['origin'], ['-f'], ['--force-with-lease'], ['origin', 'main'], ['--delete', 'origin', 'main']]) {
-      const r = away(p.root, ['--push', ...extra]);
-      assert.equal(r.status, 1, extra.join(' '));
-      assert.equal(p.remote(), before, extra.join(' '));
+    assert.notEqual(before, p.head);
+    for (const on of [false, true]) {
+      if (on) awayOn(p.root);
+      for (const extra of [[], ['--force'], ['origin', 'main']]) {
+        const r = away(p.root, ['--push', ...extra]);
+        assert.equal(r.status, 1, `away=${on} ${extra.join(' ')}`);
+        assert.equal(p.remote(), before, `away=${on} ${extra.join(' ')}`);
+      }
     }
-  } finally { cleanup(p.root); cleanup(p.bare); }
-});
-
-test('AC-77.5 --push exits with the code git exits with when the push fails', () => {
-  const p = pushProject();
-  try {
-    awayOn(p.root);
-    assert.equal(git(p.root, 'remote', 'set-url', 'origin', path.join(p.bare, 'does-not-exist')).status, 0);
-    const direct = git(p.root, 'push').status;
-    assert.notEqual(direct, 0);
-    const r = away(p.root, ['--push']);
-    assert.equal(r.status, direct);
   } finally { cleanup(p.root); cleanup(p.bare); }
 });
 
@@ -290,13 +277,14 @@ test('AC-77.8 hook away + Bash matching an ask rule: deny and queued as command'
   } finally { cleanup(root); }
 });
 
-test('AC-77.8 hook away + git push: deny, queued, reason points at away.mjs --push', () => {
+test('AC-77.8 hook away + git push: deny starting "Away mode:", queued, no pointer to a push command', () => {
   const root = project();
   try {
     awayOn(root);
     const o = bash(root, 'git push origin main');
     assert.equal(o.permissionDecision, 'deny');
-    assert.match(o.permissionDecisionReason, /away\.mjs --push/);
+    assert.ok(o.permissionDecisionReason.startsWith('Away mode:'), o.permissionDecisionReason);
+    assert.ok(!o.permissionDecisionReason.includes('--push'), o.permissionDecisionReason);
     assert.deepEqual(queueOf(root).map((i) => [i.kind, i.text]), [['command', 'git push origin main']]);
   } finally { cleanup(root); }
 });
@@ -305,10 +293,12 @@ test('AC-77.8 ATTACK hook away: extra spaces, leading spaces and chained command
   const root = project();
   try {
     awayOn(root);
-    for (const c of ['git  push', '   git push', 'git   push   origin  main', 'git push && echo done']) {
+    for (const c of ['git  push', '   git push', 'git   push   origin  main', 'git push && echo done', 'git push;echo x']) {
       const o = bash(root, c);
       assert.equal(o?.permissionDecision, 'deny', c);
     }
+    assert.equal(queueOf(root).length, 5);
+    assert.deepEqual([...new Set(queueOf(root).map((i) => i.kind))], ['command']);
   } finally { cleanup(root); }
 });
 
@@ -343,6 +333,23 @@ test('AC-77.9 hook away + Edit/Write on a path matching an ask rule: deny and qu
   } finally { cleanup(root); }
 });
 
+test('AC-77.9 hook away + MultiEdit (file_path) and NotebookEdit (notebook_path) on ask-rule paths: deny and queued as edit; elsewhere allowed', () => {
+  const root = project();
+  try {
+    awayOn(root);
+    const multi = (p) => hook(root, { hook_event_name: 'PreToolUse', tool_name: 'MultiEdit', tool_input: { file_path: p, edits: [{ old_string: 'a', new_string: 'b' }] } });
+    const nb = (p) => hook(root, { hook_event_name: 'PreToolUse', tool_name: 'NotebookEdit', tool_input: { notebook_path: p, new_source: 'x' } });
+    assert.equal(multi('CLAUDE.md')?.permissionDecision, 'deny');
+    assert.equal(multi(path.join(root, '.claude', 'hooks', 'x.mjs'))?.permissionDecision, 'deny');
+    assert.equal(nb('.claude/n.ipynb')?.permissionDecision, 'deny');
+    assert.equal(nb(path.join(root, '.claude', 'n.ipynb'))?.permissionDecision, 'deny');
+    assert.deepEqual(queueOf(root).map((i) => i.kind), ['edit', 'edit', 'edit', 'edit']);
+    assert.equal(multi('src/a.js'), null);
+    assert.equal(nb('notebooks/n.ipynb'), null);
+    assert.equal(queueOf(root).length, 4);
+  } finally { cleanup(root); }
+});
+
 test('AC-77.9 hook away + Edit/Write outside every ask rule is allowed (src/a.js, CLAUDE.md in another folder, a look-alike name)', () => {
   const root = project();
   try {
@@ -354,15 +361,45 @@ test('AC-77.9 hook away + Edit/Write outside every ask rule is allowed (src/a.js
   } finally { cleanup(root); }
 });
 
-test('AC-77.10 hook away: away.mjs --push, --off, --status and ordinary commands are allowed', () => {
+test('AC-77.10 hook away: away.mjs --off, --status and ordinary commands are not denied', () => {
   const root = project();
   try {
     awayOn(root);
-    for (const c of ['node .claude/hooks/away.mjs --push', 'node .claude/hooks/away.mjs --off', 'node .claude/hooks/away.mjs --status', 'npm test', 'node .claude/hooks/away.mjs --on']) {
+    for (const c of ['node .claude/hooks/away.mjs --off', 'node .claude/hooks/away.mjs --status', 'npm test', 'node .claude/hooks/away.mjs --on']) {
       assert.equal(bash(root, c), null, c);
     }
     assert.deepEqual(queueOf(root), []);
     assert.equal(fs.existsSync(stateFile(root, 'away.json')), true);
+  } finally { cleanup(root); }
+});
+
+test('AC-77.15 ATTACK away mode only denies: no hook mode ever prints an allow decision', () => {
+  const root = project();
+  try {
+    awayOn(root);
+    const inputs = [
+      { tool_name: 'AskUserQuestion', tool_input: { questions: [{ question: 'q?' }] } },
+      { tool_name: 'Bash', tool_input: { command: 'git push' } },
+      { tool_name: 'Bash', tool_input: { command: 'npm test' } },
+      { tool_name: 'Bash', tool_input: { command: 'node .claude/hooks/away.mjs --on' } },
+      { tool_name: 'Bash', tool_input: { command: 'node .claude/hooks/gate.mjs --approve' } },
+      { tool_name: 'Edit', tool_input: { file_path: 'CLAUDE.md' } },
+      { tool_name: 'Edit', tool_input: { file_path: 'src/a.js' } },
+      { tool_name: 'Write', tool_input: { file_path: '.claude/settings.json' } },
+      { tool_name: 'MultiEdit', tool_input: { file_path: 'CLAUDE.md' } },
+      { tool_name: 'NotebookEdit', tool_input: { notebook_path: '.claude/n.ipynb' } },
+      { tool_name: 'Read', tool_input: { file_path: 'src/a.js' } },
+      { tool_name: 'Bash', tool_input: {} },
+      {}, [], null,
+    ];
+    for (const mode of ['--hook', '--prompt', '--status', '--off', '--on', '--bogus']) {
+      for (const i of inputs) {
+        const r = away(root, [mode], JSON.stringify(i));
+        assert.ok(!/"permissionDecision"\s*:\s*"allow"/.test(r.stdout), `${mode} ${JSON.stringify(i)}: ${r.stdout}`);
+        assert.ok(!/"decision"\s*:\s*"(?:allow|approve)"/.test(r.stdout), `${mode} ${JSON.stringify(i)}: ${r.stdout}`);
+        awayOn(root);
+      }
+    }
   } finally { cleanup(root); }
 });
 
@@ -477,23 +514,25 @@ test('AC-77.12 decide(): away, a command the guard allows stays silent', () => {
 
 const settings = JSON.parse(fs.readFileSync(path.join(REPO, '.claude', 'settings.json'), 'utf8'));
 
-test('AC-77.13 settings: --on asks, --off / --status / --push are allowed', () => {
+test('AC-77.13 settings: --on asks, --off and --status are allowed', () => {
   assert.ok(settings.permissions.ask.includes('Bash(node .claude/hooks/away.mjs --on)'));
-  for (const f of ['--off', '--status', '--push']) {
+  assert.ok(!settings.permissions.allow.includes('Bash(node .claude/hooks/away.mjs --on)'));
+  for (const f of ['--off', '--status']) {
     assert.ok(settings.permissions.allow.includes(`Bash(node .claude/hooks/away.mjs ${f})`), f);
     assert.ok(!settings.permissions.ask.includes(`Bash(node .claude/hooks/away.mjs ${f})`), f);
   }
 });
 
-test('AC-77.13 settings: --push is allowed only without arguments (no :* prefix rule)', () => {
-  const rules = [...settings.permissions.allow, ...settings.permissions.ask];
-  assert.deepEqual(rules.filter((r) => /away\.mjs --push/.test(r)), ['Bash(node .claude/hooks/away.mjs --push)']);
+test('AC-77.13 ATTACK settings: away mode grants nothing: no allow rule mentions away.mjs --push, and the only away allow rules are --off and --status', () => {
+  const rules = settings.permissions.allow.filter((r) => r.includes('away.mjs'));
+  assert.deepEqual(rules.sort(), ['Bash(node .claude/hooks/away.mjs --off)', 'Bash(node .claude/hooks/away.mjs --status)']);
+  assert.equal(settings.permissions.allow.filter((r) => r.includes('--push') && r.includes('away')).length, 0);
 });
 
-test('AC-77.13 settings: a PreToolUse hook covers Bash, Edit, Write and AskUserQuestion and runs away.mjs --hook', () => {
+test('AC-77.13 settings: a PreToolUse hook covers Bash, Edit, Write, MultiEdit, NotebookEdit and AskUserQuestion and runs away.mjs --hook', () => {
   const blocks = settings.hooks.PreToolUse.filter((b) => b.hooks.some((h) => h.command.includes('away.mjs" --hook')));
   assert.equal(blocks.length, 1);
-  for (const t of ['Bash', 'Edit', 'Write', 'AskUserQuestion']) assert.match(t, new RegExp(`^(?:${blocks[0].matcher})$`), t);
+  for (const t of ['Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'AskUserQuestion']) assert.match(t, new RegExp(`^(?:${blocks[0].matcher})$`), t);
   assert.equal(blocks[0].hooks.find((h) => h.command.includes('away.mjs" --hook')).type, 'command');
 });
 

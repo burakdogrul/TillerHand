@@ -239,7 +239,8 @@ export function decisionText(tool, decision, reason) {
   return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: decision, permissionDecisionReason: reason } });
 }
 
-// Away mode (/away): the user is not at the computer, so an approval prompt would stop the work until they return
+// Away mode (/away): the user is not at the computer, so an approval prompt would stop the work until they return.
+// It only turns asks into denies, never into allows, so a state file the AI could create itself grants nothing.
 const awayDir = (root) => path.join(root, '.claude', 'state');
 export const isAway = (root) => { try { return fs.existsSync(path.join(awayDir(root), 'away.json')); } catch { return false; } };
 export function addToQueue(root, kind, text) {
