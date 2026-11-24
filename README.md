@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.76.0-2a78d6?style=flat-square"></a>
+  <a href="kit/CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-3.77.0-2a78d6?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2a78d6?style=flat-square"></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-ready-d97757?style=flat-square">
   <img alt="Also Codex and Antigravity" src="https://img.shields.io/badge/also-Codex%20%C2%B7%20Antigravity-5b6577?style=flat-square">
@@ -280,6 +280,7 @@ A new file outside the map is refused with a pointer (the AI puts it in its plac
 | `/dashboard` | Dashboard |
 | `/rollback` | Returns to the last working state |
 | `/freeze <folder>` | Locks edits to one folder |
+| `/away`, `/back` | Away mode: no approval prompt stops the work while you are gone; questions and blocked steps wait for `/back` |
 | `/wrap-up` | Closes the session and saves progress |
 | `/release [first]` | Launch checks; `first` also walks you through hosting, domain, backups and rollback |
 | `/maintain` | Weekly, monthly and quarterly maintenance |

@@ -2,6 +2,9 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
+      "Bash(node .claude/hooks/away.mjs --off)",
+      "Bash(node .claude/hooks/away.mjs --status)",
+      "Bash(node .claude/hooks/away.mjs --push)",
       "Bash(git status)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -52,6 +55,7 @@
       "Bash(node .claude/hooks/structure-guard.mjs --add:*)"
     ],
     "ask": [
+      "Bash(node .claude/hooks/away.mjs --on)",
       "Bash(node .claude/hooks/models.mjs --set-key:*)",
       "Bash(node .claude/hooks/models.mjs --remove-key:*)",
       "Bash(node .claude/hooks/models.mjs --set-limit:*)",
@@ -210,6 +214,15 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/structure-guard.mjs\""
           }
         ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/away.mjs\" --hook"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -253,6 +266,11 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/reminder.mjs\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/away.mjs\" --prompt",
             "timeout": 5
           }
         ]

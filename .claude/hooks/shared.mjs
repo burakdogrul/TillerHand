@@ -239,7 +239,26 @@ export function decisionText(tool, decision, reason) {
   return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: decision, permissionDecisionReason: reason } });
 }
 
+// Away mode (/away): the user is not at the computer, so an approval prompt would stop the work until they return
+const awayDir = (root) => path.join(root, '.claude', 'state');
+export const isAway = (root) => { try { return fs.existsSync(path.join(awayDir(root), 'away.json')); } catch { return false; } };
+export function addToQueue(root, kind, text) {
+  try {
+    fs.mkdirSync(awayDir(root), { recursive: true });
+    fs.appendFileSync(path.join(awayDir(root), 'away-queue.jsonl'), `${JSON.stringify({ date: new Date().toISOString(), kind, text: String(text ?? '').slice(0, 2000) })}\n`);
+  } catch { /* the deny still stops the action */ }
+}
+
 export function decide(tool, decision, reason) {
+  if (decision === 'ask') {
+    let root = null;
+    try { root = findRoot(); } catch { /* no project: decide as usual */ }
+    if (root && isAway(root)) {
+      addToQueue(root, 'ask', reason);
+      decision = 'deny';
+      reason = `Away mode: the user is not here, so this was queued for when they return; skip this step and go on with other work. ${reason}`;
+    }
+  }
   console.log(decisionText(tool, decision, reason));
   process.exit(0);
 }
