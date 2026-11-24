@@ -3,7 +3,7 @@ description: Ends away mode and goes through what was queued while the user was 
 argument-hint: [empty]
 ---
 
-1. Run `node .claude/hooks/away.mjs --off`. It turns away mode off and prints the queue, then empties it.
+1. Run `node .claude/hooks/away.mjs --off`. It turns away mode off and prints the queue, then keeps it as `.claude/state/away-queue-<time>.jsonl`.
 2. Tell the user they can leave bypass mode now (Shift+Tab).
 3. Go through the queue with the user, in this order:
    - `question`: ask each with AskUserQuestion, options as in the decision protocol, recommended first.
